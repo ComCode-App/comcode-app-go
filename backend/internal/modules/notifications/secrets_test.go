@@ -169,9 +169,10 @@ func TestVerificationCodeNeverReadableFromRowOrInbox(t *testing.T) {
 func TestPasswordResetRetrySendsTheRealCode(t *testing.T) {
 	f := newSecretsFixture(t, 1)
 	ctx := context.Background()
-	err := f.auth.ForgotPassword(ctx, f.email)
-	if err == nil {
-		t.Fatal("ForgotPassword: want the inline smtp failure")
+	// The inline smtp failure is logged, not returned: the reset request must answer like an
+	// unknown email (TEC-1116). The failed row below is what gets retried.
+	if err := f.auth.ForgotPassword(ctx, f.email); err != nil {
+		t.Fatalf("ForgotPassword must look accepted despite the smtp failure, got %v", err)
 	}
 
 	r := f.row(t, "auth.password_reset")

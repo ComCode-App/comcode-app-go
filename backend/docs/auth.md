@@ -106,7 +106,7 @@ Login and forgot-password keep a per-email cap across IPs so a botnet cannot gue
 ## Account enumeration (TEC-1101)
 
 - Login verifies the password first. An unknown email runs an Argon2 check against a dummy hash (computed once, same parameters), so it costs as much as a wrong password, and both return the same `401 INVALID_CREDENTIALS` "Email or password is incorrect". A disabled or suspended account is reported (`403`) only after the correct password; 2FA (`MFA_REQUIRED`, `INVALID_MFA_CODE`, `MFA_NOT_ENROLLED`) also follows a correct password.
-- `POST /v1/auth/password/forgot` always answers `accepted`; `POST /v1/auth/password/reset` and `POST /v1/auth/email/verify` answer an unknown email like a wrong code.
+- `POST /v1/auth/password/forgot` always answers `accepted`, also when issuing the code or enqueuing the email fails for a registered email: that failure is logged at ERROR (`password_reset_request_failed`, with `request_id`, email redacted) and sent to the error tracker instead of returning a 500 (TEC-1116); `POST /v1/auth/password/reset` and `POST /v1/auth/email/verify` answer an unknown email like a wrong code.
 - `POST /v1/auth/email/verify-request` only mails the caller's own address. An `email` field naming another address is ignored with the same `accepted` response.
 
 ## Security emails
