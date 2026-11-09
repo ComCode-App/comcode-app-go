@@ -42,6 +42,7 @@ Canonical env is the **repo-root** `.env`. Compose files are `compose.local.yml`
 | [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | `X-Request-ID` correlation (BFF → API → queue), 5xx/panic and job-failure logs, Sentry/GlitchTip error tracking (DSNs managed in the admin panel, `SENTRY_DSN` fallback; lazy catcher on visitor pages) and Prometheus (`METRICS_ADDR`) |
 | [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) | Local / prod commands |
 | [docs/EXTENDING.md](./docs/EXTENDING.md) | How to add a feature (narrative) |
+| [docs/BOILERPLATE_SYNC.md](./docs/BOILERPLATE_SYNC.md) | Boilerplate sync record: last reviewed SHA, per-commit PORT / ZATEN VAR / ATLA decisions, method for the next sync |
 | [backend/API_CONVENTIONS.md](./backend/API_CONVENTIONS.md) | Envelope, lists, meta |
 | [backend/DATABASE_RULES.md](./backend/DATABASE_RULES.md) | Migrations + sqlc |
 | [backend/docs/auth.md](./backend/docs/auth.md) | JWT, roles, permissions |
