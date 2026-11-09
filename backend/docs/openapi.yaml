@@ -1991,6 +1991,35 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /v1/platform/notifications/{uuid}:
+    get:
+      tags: [Platform]
+      operationId: getPlatformNotificationByUUID
+      summary: Get a platform notification
+      description: |
+        Detail of one notification of any channel (email included), with `user` when the row has an owner.
+        Without `platform.notifications.read_all` only the caller's own rows are visible; others answer 404.
+        Secrets (verification / reset codes, invitation links) stay masked as on the stored row.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotification"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/platform/notifications/meta:
     get:
       tags: [Platform]

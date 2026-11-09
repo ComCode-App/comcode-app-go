@@ -250,6 +250,22 @@ func (h *Handler) ListPlatform(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, page)
 }
 
+// GetPlatform serves the platform notification detail page (any channel, masked content).
+func (h *Handler) GetPlatform(w http.ResponseWriter, r *http.Request) {
+	p := authctx.MustPrincipal(r.Context())
+	id, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "notification uuid is invalid")
+		return
+	}
+	n, err := h.svc.GetPlatform(r.Context(), p, id)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, n)
+}
+
 func (h *Handler) PlatformMeta(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, resourcemeta.PlatformNotifications())
 }

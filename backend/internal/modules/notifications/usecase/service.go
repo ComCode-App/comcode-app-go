@@ -16,6 +16,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications/templates"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/crypto"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/queue"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/apiquery"
 	"github.com/google/uuid"
@@ -565,6 +566,40 @@ func (s *Service) ListPlatform(
 		items = append(items, n)
 	}
 	return apiquery.NewPage(items, total, q.Limit, q.Offset), nil
+}
+
+// GetPlatform returns one notification for the platform detail page, whatever its channel
+// (TEC-1120: the inbox endpoint answers 404 for email rows). Without
+// platform.notifications.read_all only the caller's own rows are visible; other rows answer
+// ErrNotFound, as they are absent from the caller's list. The row only ever holds the masked
+// rendering of secrets (TEC-1099) and sealed_content is never projected.
+func (s *Service) GetPlatform(ctx context.Context, actor authctx.Principal, id uuid.UUID) (model.Notification, error) {
+	row, err := s.q.GetNotificationByUUID(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.Notification{}, ErrNotFound
+		}
+		return model.Notification{}, err
+	}
+	own := row.UserID.Valid && row.UserID.Int64 == actor.UserInternal
+	if !own && !actor.HasPermission(rbac.PermPlatformNotificationsReadAll) {
+		return model.Notification{}, ErrNotFound
+	}
+	n := s.project(row)
+	if !own {
+		// The signed action link is redeemable by the owner only.
+		n.SignedActionURL = nil
+	}
+	if row.UserID.Valid {
+		u, err := s.q.GetUserByID(ctx, row.UserID.Int64)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return model.Notification{}, err
+		}
+		if err == nil {
+			n.User = &model.NotificationUser{UUID: u.Uuid, Name: u.Name, Surname: u.Surname, Email: u.Email}
+		}
+	}
+	return n, nil
 }
 
 // ResolveUserID resolves public uuid to internal id.
