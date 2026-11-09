@@ -62,9 +62,10 @@ var commonPlaceholders = []string{
 	"change_me", "changeme", "change-me", "secret", "password", "minioadmin",
 }
 
-// guardedSecret is one secret env key the backend reads. TEC-1092 (env schema)
-// will tie this table to the `secret:` keys of deploy/env/schema, so a secret
-// added there cannot skip the guard.
+// guardedSecret is one secret env key the backend reads. Every `secret:` key of
+// deploy/env/schema has a row here or a reasoned exemption, and every row is a
+// schema secret whose generated length meets MinLen (schema_test.go), so a
+// secret added to the schema cannot skip the guard.
 type guardedSecret struct {
 	Key   string
 	Value func(Config) string
@@ -133,6 +134,6 @@ func (c Config) secretGuard() error {
 	if len(problems) == 0 {
 		return nil
 	}
-	return fmt.Errorf("config: refusing to start with APP_ENV=%s: %s (generate secrets with `openssl rand -base64 32`, see docs/DEVELOPMENT.md)",
+	return fmt.Errorf("config: refusing to start with APP_ENV=%s: %s (generate production secrets with `make prod-env-init`, see docs/DEVELOPMENT.md)",
 		c.App.Env, strings.Join(problems, "; "))
 }

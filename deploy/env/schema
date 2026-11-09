@@ -1,0 +1,200 @@
+## deploy/env/schema — single source of truth for the production env (.env.server).
+## Tooling: scripts/prod-env.sh init | upgrade | check | example. Design: docs/design/env-core.md.
+##
+## "##" lines are schema-only notes. "#" lines and blank lines are copied into
+## generated files (.env.server, .env.server.example), so write them for operators.
+##
+## One managed key per line:  KEY | rule
+##   ask:<default>            prompt (or --set KEY=…); <default> is a template, may be empty
+##   derive:<template>        computed; {KEY} = an earlier key, plus {APP_HOST} {APP_SCHEME} {APP_LABEL}
+##                            (hostname, scheme and first host label of APP_URL)
+##   const:<value>            fixed value (written once; the operator may edit it)
+##   secret:hex|b64|alnum:<n> generated once (hex/b64: n bytes, alnum: n chars), kept forever
+##   vapid:public|private     Web Push key pair, generated together
+##   empty                    managed but blank: the operator fills it, or blank keeps the
+##                            default (compose.prod.yml / backend/internal/config)
+##
+## Directives:
+##   @version N               bump on every change below; stamped as ENV_SCHEMA_VERSION
+##   @rename OLD NEW N        at version N, OLD became NEW (upgrade moves the value)
+##   @remove KEY N            at version N, KEY was dropped (upgrade comments it out)
+##   @norotate KEY            `upgrade --rotate` refuses KEY (rotating destroys data)
+##   @unmanaged KEY reason    the backend reads KEY, but it is not an operator value
+##                            (compose.prod.yml fixes it, an alias, or a one-off tool input).
+##                            Never written to .env.server.
+##
+## scripts/check-env-sync.sh fails when the Go backend reads a key that is
+## neither a managed key nor @unmanaged here, or when an @unmanaged key is no
+## longer read. compose.prod.yml-only knobs (COMPOSE_PROJECT_NAME, APP_NETWORK_NAME,
+## *_VOLUME_NAME) keep their compose defaults; .env.example documents them.
+
+@version 1
+
+@norotate APP_ENCRYPTION_KEY
+@norotate DB_PASSWORD
+
+## Fixed by compose.prod.yml for the backend/worker containers (service DNS, role).
+@unmanaged APP_ENV compose.prod.yml sets production
+@unmanaged APP_HTTP_ADDR compose.prod.yml sets :8080
+@unmanaged DB_HOST compose.prod.yml points at ${NAME_PREFIX}-postgres
+@unmanaged DB_PORT compose.prod.yml sets 5432
+@unmanaged REDIS_ADDR compose.prod.yml points at ${NAME_PREFIX}-redis:6379
+@unmanaged S3_ENDPOINT compose.prod.yml points at ${NAME_PREFIX}-seaweedfs:8333
+@unmanaged S3_USE_PATH_STYLE compose.prod.yml sets true (SeaweedFS)
+@unmanaged CENTRIFUGO_API_URL compose.prod.yml points at the centrifugo service
+@unmanaged MEILI_HOST compose.prod.yml points at ${NAME_PREFIX}-meilisearch:7700
+@unmanaged QUEUE_WORKER_INPROCESS compose.prod.yml sets false (the worker container runs jobs)
+## Not delivered on purpose (reasons in deploy/env/compose-env.allow).
+@unmanaged CENTRIFUGO_ENABLED Centrifugo is part of the prod stack
+@unmanaged REDIS_DB each app has its own Redis; DB 0
+@unmanaged MAIL_DRIVER only smtp is implemented
+@unmanaged SMTP_FROM legacy alias of MAIL_FROM
+@unmanaged S3_PUBLIC_BASE_URL alias of STORAGE_PUBLIC_BASE_URL
+@unmanaged STORAGE_LOCAL_PATH only for STORAGE_DRIVER=local
+@unmanaged DATABASE_URL migrate service DSN (built by compose) and cmd/migrate-legacy input
+@unmanaged LEGACY_EXPORT_URL one-off input to cmd/migrate-legacy, passed at exec time
+@unmanaged LEGACY_EXPORT_TOKEN one-off input to cmd/migrate-legacy, passed at exec time
+
+# --- Identity ---
+# Public origin of the app (the frontend domain). Every URL below derives from it.
+APP_URL | ask:{AUTH_URL}
+# Unique per app on a host: names containers, volumes and the app network.
+# Plain Docker host only (Dokploy creates it): docker network create dokploy-network
+NAME_PREFIX | ask:{APP_LABEL}
+# Container images: <IMAGE_REPO>-backend:<IMAGE_TAG> and <IMAGE_REPO>-frontend:<IMAGE_TAG>
+# (GHCR, lowercase). IMAGE_TAG is main (latest build), v0.N or sha-<short> to pin a deploy.
+# compose.prod.yml still reads BACKEND_IMAGE / FRONTEND_IMAGE: when you change
+# IMAGE_REPO or IMAGE_TAG, change those two as well (prod-env.sh check reports a mismatch).
+IMAGE_REPO | ask:ghcr.io/comcode-app/comcode-app-go
+IMAGE_TAG | const:main
+BACKEND_IMAGE | derive:{IMAGE_REPO}-backend:{IMAGE_TAG}
+FRONTEND_IMAGE | derive:{IMAGE_REPO}-frontend:{IMAGE_TAG}
+
+# --- Public URLs ---
+AUTH_URL | derive:{APP_URL}
+PUBLIC_FRONTEND_URL | derive:{APP_URL}
+CORS_ALLOWED_ORIGINS | derive:{APP_URL}
+# Passkey relying party: the bare frontend domain.
+AUTH_WEBAUTHN_RP_ID | derive:{APP_HOST}
+CENTRIFUGO_ALLOWED_ORIGINS | derive:{APP_URL}
+# Centrifugo has its own domain (Dokploy: service centrifugo, container port 8000).
+CENTRIFUGO_WS_URL | ask:wss://realtime.{APP_HOST}/connection/websocket
+NEXT_PUBLIC_CENTRIFUGO_URL | derive:{CENTRIFUGO_WS_URL}
+
+# --- Database, cache ---
+DB_USER | const:app
+DB_NAME | const:app
+# Postgres stores this in its volume at first start. To change it, ALTER USER first,
+# then edit this file by hand; `--rotate` refuses it.
+DB_PASSWORD | secret:alnum:32
+REDIS_PASSWORD | secret:alnum:32
+
+# --- Object storage (SeaweedFS S3 gateway) ---
+S3_BUCKET | const:app
+# Media domain (Dokploy: service comcode-seaweedfs, container port 8333), path-style:
+# the bucket is the first path segment. Anonymous users may only GET objects.
+STORAGE_PUBLIC_BASE_URL | ask:https://media.{APP_HOST}/{S3_BUCKET}
+# Also the SeaweedFS admin identity.
+S3_ACCESS_KEY | secret:alnum:20
+S3_SECRET_KEY | secret:alnum:40
+
+# --- Signing and encryption secrets ---
+JWT_ACCESS_SECRET | secret:hex:32
+JWT_REFRESH_SECRET | secret:hex:32
+# Auth.js session secret (frontend).
+AUTH_SECRET | secret:b64:32
+AUTH_ADAPTER_SECRET | secret:hex:32
+# Encrypts credentials stored in the database (OAuth, TOTP, iyzico/PayTR keys, webhook
+# and error-tracking secrets) and seeds the analytics visitor hash.
+# Never rotate it: the stored credentials become unreadable.
+APP_ENCRYPTION_KEY | secret:b64:32
+CENTRIFUGO_API_KEY | secret:hex:32
+CENTRIFUGO_TOKEN_HMAC_SECRET | secret:hex:32
+MEILI_MASTER_KEY | secret:hex:32
+
+# --- Web Push (VAPID) ---
+VAPID_PUBLIC_KEY | vapid:public
+VAPID_PRIVATE_KEY | vapid:private
+VAPID_SUBJECT | derive:mailto:noreply@{APP_HOST}
+
+# --- Mail (fill in your SMTP provider) ---
+MAIL_FROM | derive:noreply@{APP_HOST}
+# Sender display name (blank: App).
+MAIL_FROM_NAME | empty
+SMTP_HOST | empty
+SMTP_PORT | const:587
+SMTP_USERNAME | empty
+# secret: from your SMTP provider.
+SMTP_PASSWORD | empty
+# auto (blank): implicit TLS on 465, STARTTLS when offered | implicit | starttls | none
+SMTP_TLS | empty
+
+# --- Billing ---
+# iyzico / PayTR credentials are not env vars: enter them in the admin panel
+# (stored encrypted with APP_ENCRYPTION_KEY). GeoIP (MaxMind) and analytics
+# settings live in the admin panel too.
+# Recurring charges of saved cards. Off until you opt in.
+BILLING_RENEWAL_ENABLED | const:false
+# Retry offsets in days after a failed renewal (blank: 1,3,7); each must be below the grace period.
+BILLING_RETRY_DAYS | empty
+# Days a failed subscription keeps its entitlements (blank: 14, range 1-365).
+BILLING_GRACE_DAYS | empty
+
+# --- Error tracking and metrics (optional; blank = off) ---
+# DSNs are managed in the admin panel (Platform -> Ayarlar -> Hata izleme). SENTRY_DSN
+# (Sentry or GlitchTip) is the API/worker fallback while the panel has no backend DSN.
+SENTRY_DSN | empty
+# Blank: production.
+SENTRY_ENVIRONMENT | empty
+# e.g. the deployed version or commit SHA.
+SENTRY_RELEASE | empty
+# Internal-only Prometheus listener of the API and worker, e.g. :9091 (never routed).
+METRICS_ADDR | empty
+
+# --- Optional tuning (blank keeps the default in brackets) ---
+# Backend
+APP_NAME | empty
+# CIDRs whose X-Forwarded-For the API trusts [loopback + private ranges].
+TRUSTED_PROXIES | empty
+# [info] debug | info | warn | error ; [json] json | text
+LOG_LEVEL | empty
+LOG_FORMAT | empty
+# Go durations: [30s] [120s] [120s]
+HTTP_READ_TIMEOUT | empty
+HTTP_WRITE_TIMEOUT | empty
+HTTP_IDLE_TIMEOUT | empty
+# [disable]
+DB_SSLMODE | empty
+# Postgres pool size per process [20].
+DB_MAX_CONNS | empty
+# [15m] [168h]
+JWT_ACCESS_TTL | empty
+JWT_REFRESH_TTL | empty
+# Realtime connection token lifetime [1h].
+CENTRIFUGO_TOKEN_TTL | empty
+# Object storage driver [s3]; S3_ENDPOINT is the bundled SeaweedFS.
+STORAGE_DRIVER | empty
+# Upload size limit in bytes [10485760].
+STORAGE_MAX_BYTES | empty
+# [us-east-1]
+S3_REGION | empty
+# Background jobs [true] and worker concurrency [10].
+QUEUE_ENABLED | empty
+QUEUE_CONCURRENCY | empty
+# Bulk actions: largest synchronous batch [50], rollback window in hours [24].
+BULK_SYNC_MAX | empty
+BULK_ROLLBACK_HOURS | empty
+# Command palette search [true], driver [meilisearch], index prefix [app].
+SEARCH_ENABLED | empty
+SEARCH_DRIVER | empty
+MEILI_INDEX_PREFIX | empty
+# Frontend
+# BFF upstream [http://${NAME_PREFIX}-backend:8080/v1].
+API_URL | empty
+# [true]
+AUTH_TRUST_HOST | empty
+# Baked into the frontend bundle at build time: [/api] [true] [tr] [en].
+NEXT_PUBLIC_BFF_BASE_URL | empty
+NEXT_PUBLIC_REALTIME_ENABLED | empty
+NEXT_PUBLIC_DEFAULT_LOCALE | empty
+NEXT_PUBLIC_FALLBACK_LOCALE | empty

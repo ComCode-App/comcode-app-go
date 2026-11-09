@@ -10,7 +10,7 @@ Canonical env is the **repo-root** `.env`. Compose files are `compose.local.yml`
 
 | Skill | When |
 |-------|------|
-| [boilerplate-first-setup](./.agents/skills/boilerplate-first-setup/SKILL.md) | Clone, `.env`, Docker names, Dokploy, `make local-dev` |
+| [boilerplate-first-setup](./.agents/skills/boilerplate-first-setup/SKILL.md) | Clone, `.env`, Docker names, production env (`make prod-env-init`), Dokploy, `make local-dev` |
 | [monorepo-playbooks](./.agents/skills/monorepo-playbooks/SKILL.md) | Cross-app work; repo map |
 | [add-platform-resource](./.agents/skills/add-platform-resource/SKILL.md) | New list resource (module → RBAC → OpenAPI → UI → nav) |
 | [nav-engine](./.agents/skills/nav-engine/SKILL.md) | Sidebar catalog, badges, info |
@@ -41,7 +41,8 @@ Canonical env is the **repo-root** `.env`. Compose files are `compose.local.yml`
 | [docs/WEBHOOKS.md](./docs/WEBHOOKS.md) | Outbound webhooks: endpoints, events, signature, retries |
 | [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | `X-Request-ID` correlation (BFF → API → queue), 5xx/panic and job-failure logs, Sentry/GlitchTip error tracking (DSNs managed in the admin panel, `SENTRY_DSN` fallback; lazy catcher on visitor pages) and Prometheus (`METRICS_ADDR`) |
 | [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) | Local / prod commands |
-| [docs/EXTENDING.md](./docs/EXTENDING.md) | How to add a feature (narrative) |
+| [docs/EXTENDING.md](./docs/EXTENDING.md) | How to add a feature (narrative), incl. new env vars |
+| [docs/design/env-core.md](./docs/design/env-core.md) | Env schema, `prod-env.sh`, env CI checks, boot guard |
 | [docs/BOILERPLATE_SYNC.md](./docs/BOILERPLATE_SYNC.md) | Boilerplate sync record: last reviewed SHA, per-commit PORT / ZATEN VAR / ATLA decisions, method for the next sync |
 | [backend/API_CONVENTIONS.md](./backend/API_CONVENTIONS.md) | Envelope, lists, meta |
 | [backend/DATABASE_RULES.md](./backend/DATABASE_RULES.md) | Migrations + sqlc |
@@ -56,3 +57,4 @@ Canonical env is the **repo-root** `.env`. Compose files are `compose.local.yml`
 - Permission slugs are added only via migration + `internal/platform/rbac` + `frontend/src/config/permissions.ts`.
 - Owned app data carries `account_id`. App use cases/repositories take the active account (`authctx.Principal.Account`) as a required scope; never a nil "all rows" filter. Writes need the `app.*.write` permission **and** an owner/admin account role. Platform routes use separate unscoped methods.
 - After OpenAPI changes: `cd frontend && pnpm api:generate`.
+- Production env comes from `deploy/env/schema` (`make prod-env-init`), never from a copy of `.env.example`. New env vars follow `docs/EXTENDING.md` → "Environment variables"; `.env.server.example` is generated (`scripts/prod-env.sh example`), never hand-edited. `make env-check` must pass.

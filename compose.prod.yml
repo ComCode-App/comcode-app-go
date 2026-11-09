@@ -16,6 +16,10 @@ x-backend-environment: &backend-environment
   APP_NAME: ${APP_NAME:-api}
   APP_ENV: production
   APP_HTTP_ADDR: :8080
+  # Operator tunables below use KEY: ${KEY:-}: empty keeps the config.go default.
+  HTTP_READ_TIMEOUT: ${HTTP_READ_TIMEOUT:-}
+  HTTP_WRITE_TIMEOUT: ${HTTP_WRITE_TIMEOUT:-}
+  HTTP_IDLE_TIMEOUT: ${HTTP_IDLE_TIMEOUT:-}
   # X-Forwarded-For is honoured only from these peers (BFF, Traefik on the Docker network).
   TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7}
   DB_HOST: ${NAME_PREFIX:-app}-postgres
@@ -24,10 +28,12 @@ x-backend-environment: &backend-environment
   DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
   DB_NAME: ${DB_NAME:?DB_NAME is required}
   DB_SSLMODE: ${DB_SSLMODE:-disable}
+  DB_MAX_CONNS: ${DB_MAX_CONNS:-}
   REDIS_ADDR: ${NAME_PREFIX:-app}-redis:6379
   REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
   STORAGE_DRIVER: ${STORAGE_DRIVER:-s3}
   STORAGE_PUBLIC_BASE_URL: ${STORAGE_PUBLIC_BASE_URL:?STORAGE_PUBLIC_BASE_URL is required}
+  STORAGE_MAX_BYTES: ${STORAGE_MAX_BYTES:-}
   # Prefixed container name: a short `seaweedfs` would collide with other stacks on dokploy-network.
   S3_ENDPOINT: http://${NAME_PREFIX:-app}-seaweedfs:8333
   S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY is required}
@@ -39,8 +45,11 @@ x-backend-environment: &backend-environment
   CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY:?CENTRIFUGO_API_KEY is required}
   CENTRIFUGO_TOKEN_HMAC_SECRET: ${CENTRIFUGO_TOKEN_HMAC_SECRET:?CENTRIFUGO_TOKEN_HMAC_SECRET is required}
   CENTRIFUGO_WS_URL: ${CENTRIFUGO_WS_URL:?CENTRIFUGO_WS_URL is required}
+  CENTRIFUGO_TOKEN_TTL: ${CENTRIFUGO_TOKEN_TTL:-}
   JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
   JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+  JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-}
+  JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-}
   AUTH_ADAPTER_SECRET: ${AUTH_ADAPTER_SECRET:?AUTH_ADAPTER_SECRET is required}
   APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?APP_ENCRYPTION_KEY is required}
   CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
@@ -61,6 +70,8 @@ x-backend-environment: &backend-environment
   QUEUE_ENABLED: ${QUEUE_ENABLED:-true}
   QUEUE_WORKER_INPROCESS: "false"
   QUEUE_CONCURRENCY: ${QUEUE_CONCURRENCY:-10}
+  BULK_SYNC_MAX: ${BULK_SYNC_MAX:-}
+  BULK_ROLLBACK_HOURS: ${BULK_ROLLBACK_HOURS:-}
   VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
   VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
   VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:noreply@example.com}

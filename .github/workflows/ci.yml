@@ -28,6 +28,7 @@ jobs:
   # Path filter. Plain `git diff` (no third-party action) decides which jobs
   # run. Outputs gate every downstream job. Mapping (first match wins):
   #   docs/** , *.md , .github/* (other than this file) -> nothing
+  #   deploy/env/**          -> nothing in this table (env only, see below)
   #   compose.prod.yml , deploy/** , Dockerfiles        -> infra (image build)
   #   backend/cmd/** , backend/deploy/** , go.mod/go.sum -> backend + infra
   #   frontend package.json / pnpm-lock.yaml / next.config.* -> frontend + infra
@@ -39,6 +40,11 @@ jobs:
   #   mobile/**              -> mobile, mobile_release (only used when the
   #                             MOBILE_ENABLED repo variable is 'true')
   #   this workflow file     -> full (run everything)
+  # Separately, `env` (the env job, docs/design/env-core.md) is set by
+  # deploy/env/**, compose*.yml, .env.example, .env.server.example, Makefile,
+  # the env scripts (scripts/prod-env*.sh, check-env-sync.sh, check-compose-env*.sh),
+  # backend/internal/config/**, and any backend Go diff line that adds or
+  # removes an env read (getEnv/getInt/.../os.Getenv/os.LookupEnv).
   # Diff base: pull_request -> the PR base; push to cc-collective-branch -> the
   # previous push (fallback: merge-base with main, else full). push to main and
   # workflow_dispatch -> full, so main is never green on skipped tests.
@@ -52,6 +58,7 @@ jobs:
       frontend: ${{ steps.f.outputs.frontend }}
       contracts: ${{ steps.f.outputs.contracts }}
       e2e: ${{ steps.f.outputs.e2e }}
+      env: ${{ steps.f.outputs.env }}
       infra: ${{ steps.f.outputs.infra }}
       mobile: ${{ steps.f.outputs.mobile }}
       full: ${{ steps.f.outputs.full }}
@@ -71,7 +78,7 @@ jobs:
         run: |
           set -euo pipefail
           backend=false; frontend=false; contracts=false; e2e=false
-          infra=false; mobile=false; full=false
+          env=false; infra=false; mobile=false; full=false
           files=""
 
           # main: the diff (BEFORE..SHA) only decides mobile_release; every
@@ -116,6 +123,7 @@ jobs:
               # Order matters: first match wins (case globs, * spans '/').
               case "$file" in
                 docs/*|*.md|.github/*)              : ;;   # nothing (before app dirs: backend/*.md is docs)
+                deploy/env/*)                       : ;;   # env only (set below), no image build
                 compose.prod.yml|deploy/*)          infra=true ;;
                 */Dockerfile|Dockerfile)            infra=true ;;
                 # Image-shaping files outside the Dockerfile: the build loop
@@ -136,8 +144,24 @@ jobs:
             done <<< "$files"
           fi
 
+          # env: the env schema, its scripts, compose files and backend env reads.
+          if [ "$full" != "true" ] && [ -n "$files" ]; then
+            while IFS= read -r file; do
+              case "$file" in
+                deploy/env/*|compose*.yml|.env.example|.env.server.example|Makefile) env=true ;;
+                scripts/prod-env*.sh|scripts/check-env-sync.sh|scripts/check-compose-env*.sh) env=true ;;
+                backend/internal/config/*) env=true ;;
+              esac
+            done <<< "$files"
+            if [ "$env" != "true" ] && git diff "$base" "$SHA" -- 'backend/*.go' \
+                 | grep -E '^[-+].*\b(getEnv|getInt|getInt64|getBool|getDuration|getFloat|os\.Getenv|os\.LookupEnv)\(' >/dev/null; then
+              # (grep without -q reads the whole diff: no SIGPIPE under pipefail)
+              env=true
+            fi
+          fi
+
           if [ "$full" = "true" ] || [ "$main_push" = "true" ]; then
-            backend=true; frontend=true; contracts=true; e2e=true; infra=true; mobile=true
+            backend=true; frontend=true; contracts=true; e2e=true; env=true; infra=true; mobile=true
           fi
           # E2E drives the real API + Next.js build: any app change re-runs it.
           if [ "$backend" = "true" ] || [ "$frontend" = "true" ]; then
@@ -163,6 +187,7 @@ jobs:
             echo "frontend=$frontend"
             echo "contracts=$contracts"
             echo "e2e=$e2e"
+            echo "env=$env"
             echo "infra=$infra"
             echo "mobile=$mobile"
             echo "full=$full"
@@ -170,7 +195,7 @@ jobs:
             echo "images=$images"
           } >> "$GITHUB_OUTPUT"
 
-          echo "backend=$backend frontend=$frontend contracts=$contracts e2e=$e2e infra=$infra mobile=$mobile full=$full mobile_release=$mobile_release"
+          echo "backend=$backend frontend=$frontend contracts=$contracts e2e=$e2e env=$env infra=$infra mobile=$mobile full=$full mobile_release=$mobile_release"
 
   backend:
     needs: changes
@@ -278,9 +303,24 @@ jobs:
         working-directory: .
         run: node scripts/check-i18n.mjs
 
-  # TODO(TEC-1092): add the `env` job (env-core: scripts/check-env-sync.sh,
-  # scripts/check-compose-env.sh, prod-env tests) once env-core is ported, and
-  # add it to the `ci` gate below.
+  # Env config (docs/design/env-core.md): .env.server.example matches
+  # deploy/env/schema, .env.example has every schema key, every backend env
+  # read is in the schema, prod-env tests pass (they also run `docker compose
+  # config` on compose.prod.yml), and every backend env read reaches the
+  # backend/worker containers. Same as `make env-check`.
+  env:
+    needs: changes
+    if: needs.changes.outputs.env == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Env schema sync
+        run: scripts/check-env-sync.sh
+      - name: Backend env reaches compose.prod.yml
+        run: |
+          scripts/check-compose-env.sh
+          scripts/check-compose-env.test.sh
 
   # Playwright smoke suite against a throwaway stack (scripts/e2e.sh): infra from
   # compose.local.yml, the Go API built from source, the production Next.js build.
@@ -561,7 +601,7 @@ jobs:
   # protection (not the individual jobs, which skip by design).
   ci:
     if: always()
-    needs: [changes, backend, frontend, e2e, image-build, mobile, mobile-release]
+    needs: [changes, backend, frontend, e2e, env, image-build, mobile, mobile-release]
     runs-on: ubuntu-24.04
     steps:
       - name: Gate

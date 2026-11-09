@@ -24,8 +24,8 @@ Do **not** keep a long-lived `frontend/.env.local` for API URLs. Do **not** trea
 
 ```sh
 cp .env.example .env
-# production later:
-cp .env.example .env.server   # then replace every secret
+# production later (never a copy of .env.example):
+make prod-env-init             # generates .env.server from deploy/env/schema
 ```
 
 `API_URL` **must** include `/v1` (default `http://127.0.0.1:8080/v1`).
@@ -106,13 +106,13 @@ Browser must **never** assemble S3 (SeaweedFS) URLs from object keys. Use API-re
 
 ## 7. Production / Dokploy
 
-1. `docker network create dokploy-network` (once)
-2. Fill `.env.server` — every `${VAR:?…}` is required
+1. `docker network create dokploy-network` (once, plain Docker host; Dokploy creates it)
+2. `make prod-env-init` (asks for `APP_URL`, derives every URL, generates every secret), then fill `SMTP_*`. Details: `docs/DEVELOPMENT.md` → Environment file. New env var: `docs/EXTENDING.md` → Environment variables.
 3. `make prod-config` then `make prod-up`
 
 Dokploy-attached: **comcode-seaweedfs, centrifugo, backend, frontend**. Domains: `docs/DEVELOPMENT.md` → Dokploy domains. Postgres / Redis / Meilisearch / worker stay on the private app network.
 
-`SEARCH_*` / `MEILI_*` enable Cmd+K. `APP_ENCRYPTION_KEY` (32-byte raw or base64) encrypts GitHub App secrets. Generate: `openssl rand -base64 32`.
+`SEARCH_*` / `MEILI_*` enable Cmd+K. `APP_ENCRYPTION_KEY` (32-byte raw or base64) encrypts credentials stored in the database; `make prod-env-init` generates it and `--rotate` refuses it.
 
 ## 8. After clone checklist
 
