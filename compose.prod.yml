@@ -60,6 +60,8 @@ x-backend-environment: &backend-environment
   # Public site URL (card / share links, emails) and passkey RP id (the bare domain).
   PUBLIC_FRONTEND_URL: ${PUBLIC_FRONTEND_URL:?PUBLIC_FRONTEND_URL is required}
   AUTH_WEBAUTHN_RP_ID: ${AUTH_WEBAUTHN_RP_ID:?AUTH_WEBAUTHN_RP_ID is required}
+  # App Store / Play review sign-in (email:code,...); blank = off.
+  AUTH_REVIEW_ACCOUNTS: ${AUTH_REVIEW_ACCOUNTS:-}
   MAIL_FROM: ${MAIL_FROM:-noreply@localhost}
   MAIL_FROM_NAME: ${MAIL_FROM_NAME:-App}
   BILLING_RENEWAL_ENABLED: ${BILLING_RENEWAL_ENABLED:-false}

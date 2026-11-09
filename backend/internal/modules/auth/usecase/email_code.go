@@ -2,7 +2,9 @@ package usecase
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -29,6 +31,49 @@ const (
 // ErrInvalidEmailCode covers wrong, expired, exhausted or already used email sign-in codes,
 // and unknown emails (TEC-1121).
 var ErrInvalidEmailCode = errors.New("invalid email code")
+
+// SetReviewAccounts installs the App Store / Play review allowlist (email -> fixed 6-digit
+// code, AUTH_REVIEW_ACCOUNTS, validated by config at boot). nil / empty disables it (TEC-1182).
+//
+// A fixed code signs in only its own email, only an existing active account, and never
+// creates one. Request for such an account sends no email; MFA and the handler's rate limits
+// apply as for any email code.
+func (u *AuthUseCase) SetReviewAccounts(accounts map[string]string) {
+	out := make(map[string]string, len(accounts))
+	for email, code := range accounts {
+		email = normalizeEmail(email)
+		code = strings.TrimSpace(code)
+		if email != "" && code != "" {
+			out[email] = code
+		}
+	}
+	u.reviewAccounts = out
+}
+
+// isReviewAccount reports whether user is a configured review account that may use its fixed
+// code: the email is listed and the account exists and is active.
+func (u *AuthUseCase) isReviewAccount(user model.User) bool {
+	if user.ID == 0 || user.Status != "active" {
+		return false
+	}
+	_, ok := u.reviewAccounts[normalizeEmail(user.Email)]
+	return ok
+}
+
+// reviewCodeMatches compares code with user's fixed review code in constant time.
+func (u *AuthUseCase) reviewCodeMatches(user model.User, code string) bool {
+	if !u.isReviewAccount(user) || code == "" {
+		return false
+	}
+	fixed := u.reviewAccounts[normalizeEmail(user.Email)]
+	return subtle.ConstantTimeCompare([]byte(fixed), []byte(code)) == 1
+}
+
+// emailFingerprint is a short, non-reversible tag for an email in audit logs.
+func emailFingerprint(email string) string {
+	sum := sha256.Sum256([]byte(normalizeEmail(email)))
+	return hex.EncodeToString(sum[:6])
+}
 
 // RequestLoginCode emails a one-time sign-in code (TEC-1121). From the caller's point of view
 // it always succeeds for a well-formed email, so the response never reveals whether the email
@@ -65,6 +110,13 @@ func (u *AuthUseCase) sendLoginCode(ctx context.Context, email string) error {
 		}
 		// Sign-up by email code: the code proves the mailbox and verify creates the account.
 		return u.issueLoginCode(ctx, model.User{Email: email, Name: emailLocalPart(email)})
+	}
+	if u.isReviewAccount(user) {
+		// The store reviewer signs in with the fixed code; nothing is mailed (TEC-1182).
+		if u.log != nil {
+			u.log.InfoContext(ctx, "auth_review_account_code_request", "user_id", user.ID)
+		}
+		return nil
 	}
 	return u.issueLoginCode(ctx, user)
 }
@@ -127,6 +179,9 @@ func (u *AuthUseCase) reportLoginCodeFailure(ctx context.Context, err error) {
 // (ErrUserDisabled) only after a valid code. Users with authenticator 2FA get ErrMFARequired on
 // the first call; the email code stays valid so the client retries with the same code plus
 // totpCode. A wrong totpCode burns one of the email code's attempts.
+//
+// A configured review account (SetReviewAccounts) may use its fixed code instead of an emailed
+// one; the MFA rules above still apply and the email is not marked verified by it.
 func (u *AuthUseCase) VerifyLoginCode(ctx context.Context, email, code, totpCode string, meta model.SessionMeta) (model.Tokens, error) {
 	email = normalizeEmail(email)
 	code = strings.TrimSpace(code)
@@ -140,9 +195,12 @@ func (u *AuthUseCase) VerifyLoginCode(ctx context.Context, email, code, totpCode
 		}
 		return model.Tokens{}, err
 	}
-	otpID, err := u.checkEmailCode(ctx, email, code)
-	if err != nil {
-		return model.Tokens{}, err
+	var otpID int64 // 0 = fixed review code, nothing stored to consume
+	reviewCode := u.reviewCodeMatches(user, code)
+	if !reviewCode {
+		if otpID, err = u.checkEmailCode(ctx, email, code); err != nil {
+			return model.Tokens{}, err
+		}
 	}
 	if user.Status != "active" {
 		return model.Tokens{}, ErrUserDisabled
@@ -151,11 +209,19 @@ func (u *AuthUseCase) VerifyLoginCode(ctx context.Context, email, code, totpCode
 		u.countFailedSecondFactor(ctx, otpID, err)
 		return model.Tokens{}, err
 	}
-	if err := u.consumeEmailCode(ctx, otpID); err != nil {
+	if reviewCode {
+		// Audit trail for every review sign-in; never the code or the email in clear.
+		log := u.log
+		if log == nil {
+			log = slog.Default()
+		}
+		log.InfoContext(ctx, "auth_review_code_used",
+			"user_id", user.ID, "email_sha256", emailFingerprint(email), "request_id", reqid.From(ctx))
+	} else if err := u.consumeEmailCode(ctx, otpID); err != nil {
 		return model.Tokens{}, err
 	}
-	if !user.EmailVerified {
-		// The code proves control of the mailbox.
+	if !reviewCode && !user.EmailVerified {
+		// The emailed code proves control of the mailbox (a fixed review code does not).
 		if updated, err := u.repo.SetEmailVerified(ctx, user.ID); err == nil {
 			user = updated
 		}

@@ -157,3 +157,36 @@ func TestEmailCodeEndpointsRateLimited(t *testing.T) {
 		})
 	}
 }
+
+// TEC-1182: a review account answers request-code byte-for-byte like any other email, and the
+// fixed code is subject to the same per-email verify budget (429 before the code is checked).
+func TestEmailCodeReviewAccountSameResponseAndRateLimit(t *testing.T) {
+	repo := &codeRepo{loginRepo: loginRepo{users: map[string]model.User{
+		"review@x.io": {ID: 1, Email: "review@x.io", Status: "active"},
+	}}, codes: map[string]string{}}
+	tokens, _ := jwt.NewManager("test-secret-key-32-bytes-minimum!", time.Minute, time.Hour)
+	uc := usecase.New(repo, tokens)
+	uc.SetAuthSettings(closedRegistration{})
+	uc.SetReviewAccounts(map[string]string{"review@x.io": "246810"})
+	mr := miniredis.RunT(t)
+	lim := ratelimit.New(redis.NewClient(&redis.Options{Addr: mr.Addr()}), "test")
+	h := &Handler{uc: uc}
+	h.SetRateLimiter(lim)
+
+	want := postJSON(t, h.RequestEmailCode, "/v1/auth/email-code/request", map[string]string{"email": "nobody@x.io"})
+	got := postJSON(t, h.RequestEmailCode, "/v1/auth/email-code/request", map[string]string{"email": "review@x.io"})
+	if got.Code != http.StatusOK || !bytes.Equal(got.Body.Bytes(), want.Body.Bytes()) {
+		t.Fatalf("review account: %d %s differs from unknown email %d %s", got.Code, got.Body.String(), want.Code, want.Body.String())
+	}
+	if len(repo.codes) != 0 {
+		t.Fatal("no code may be issued for a review account")
+	}
+
+	for i := 0; i < emailCodeVerifyEmailLimit; i++ {
+		lim.Allow(context.Background(), "email_code_verify_email", "review@x.io", emailCodeVerifyEmailLimit, emailCodeRateWindow)
+	}
+	rec := postJSON(t, h.VerifyEmailCode, "/v1/auth/email-code/verify", map[string]string{"email": "Review@x.io", "code": "246810"})
+	if rec.Code != http.StatusTooManyRequests || rec.Header().Get("Retry-After") == "" {
+		t.Fatalf("the fixed code must be rate limited like any code, got %d %s", rec.Code, rec.Body.String())
+	}
+}

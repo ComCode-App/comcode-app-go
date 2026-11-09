@@ -344,6 +344,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	authSettingsSvc := authsettingsusecase.New(deps.Queries)
 	uc.SetAuthSettings(authSettingsSvc)
 	uc.SetAccessPolicy(stepUpSvc)
+	uc.SetReviewAccounts(cfg.Auth.ReviewAccounts)
+	if n := len(cfg.Auth.ReviewAccounts); n > 0 {
+		// Count only: the emails and codes are secrets (TEC-1182).
+		log.Info("auth_review_accounts_enabled", "count", n)
+	}
 	uc.SetSecretBox(secretBox, cfg.App.Name)
 	entitlementSvc := entitlement.New(deps.Queries)
 	entitlementSvc.SetUsageAlerter(notifmodule.NewQuotaAlerter(notifSvc, deps.Queries, log))

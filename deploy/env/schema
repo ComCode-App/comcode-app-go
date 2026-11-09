@@ -33,6 +33,7 @@
 ## v2 (TEC-1095): compose.prod.yml builds the image names from IMAGE_REPO / IMAGE_TAG.
 @remove BACKEND_IMAGE 2
 @remove FRONTEND_IMAGE 2
+## v3 (TEC-1182): optional AUTH_REVIEW_ACCOUNTS (app store review sign-in).
 
 @norotate APP_ENCRYPTION_KEY
 @norotate DB_PASSWORD
@@ -130,6 +131,13 @@ SMTP_USERNAME | empty
 SMTP_PASSWORD | empty
 # auto (blank): implicit TLS on 465, STARTTLS when offered | implicit | starttls | none
 SMTP_TLS | empty
+
+# --- App Store / Play review accounts (optional; blank = off) ---
+# secret: email:code[,email:code]. The email must belong to an existing active account; it
+# then signs in with the fixed 6-digit code (no email is sent). Weak codes (123456, 000000,
+# ...) stop the API at boot. Rotate the code after each store review and blank it when no
+# review is pending. See backend/docs/auth.md.
+AUTH_REVIEW_ACCOUNTS | empty
 
 # --- Billing ---
 # iyzico / PayTR credentials are not env vars: enter them in the admin panel
