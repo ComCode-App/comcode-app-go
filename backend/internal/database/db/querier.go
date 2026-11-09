@@ -662,6 +662,8 @@ type Querier interface {
 	MarkOutboxFailed(ctx context.Context, arg MarkOutboxFailedParams) error
 	MarkOutboxPublished(ctx context.Context, id int64) error
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
+	// OAuth sign-up / user import stores a random hash; the user never chose a password.
+	MarkUserPasswordUnset(ctx context.Context, id int64) error
 	// TEC-953: one row per visitor and hour feeds the platform unique visitor KPI.
 	MarkVisitorHour(ctx context.Context, arg MarkVisitorHourParams) error
 	NextUpgradeAttempt(ctx context.Context, arg NextUpgradeAttemptParams) (int32, error)

@@ -944,6 +944,10 @@ paths:
       tags: [Auth]
       operationId: getAuthIdentities
       summary: List linked OAuth identities
+      description: |
+        Also reports the user's other sign-in methods: `has_password` is false when the
+        user never chose a password (OAuth sign-up stores a random hash; any password
+        update, including a password reset, sets it), `has_passkey` when a passkey exists.
       security:
         - bearerAuth: []
       responses:
@@ -963,6 +967,9 @@ paths:
       tags: [Auth]
       operationId: deleteAuthIdentity
       summary: Unlink an OAuth identity
+      description: |
+        `409 LAST_SIGN_IN_METHOD` when the user has no password, no passkey and this is
+        their last linked identity (TEC-1105).
       security:
         - bearerAuth: []
       parameters:
@@ -983,6 +990,8 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/LastSignInMethod"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1040,6 +1049,9 @@ paths:
       tags: [Auth]
       operationId: deleteAuthPasskey
       summary: Delete a passkey
+      description: |
+        `409 LAST_SIGN_IN_METHOD` when the user has no password, no linked identity and
+        this is their last passkey (TEC-1105).
       security:
         - bearerAuth: []
       parameters:
@@ -1055,6 +1067,8 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/LastSignInMethod"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -11826,6 +11840,14 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+    LastSignInMethod:
+      description: |
+        `LAST_SIGN_IN_METHOD`: the change would leave the user without any way to sign in.
+        Set a password (password reset) or add another sign-in method first.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     InternalError:
       description: Unexpected server error
       content:
@@ -13681,12 +13703,18 @@ components:
 
     IdentityList:
       type: object
-      required: [items, total]
+      required: [items, total, has_password, has_passkey]
       properties:
         items:
           type: array
           items: { $ref: "#/components/schemas/LinkedIdentity" }
         total: { type: integer, format: int64 }
+        has_password:
+          type: boolean
+          description: False when the user never chose a password (OAuth sign-up).
+        has_passkey:
+          type: boolean
+          description: True when at least one passkey is registered.
 
     EnvelopeIdentityList:
       type: object

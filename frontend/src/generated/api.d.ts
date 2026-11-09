@@ -572,7 +572,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List linked OAuth identities */
+        /**
+         * List linked OAuth identities
+         * @description Also reports the user's other sign-in methods: `has_password` is false when the
+         *     user never chose a password (OAuth sign-up stores a random hash; any password
+         *     update, including a password reset, sets it), `has_passkey` when a passkey exists.
+         */
         get: operations["getAuthIdentities"];
         put?: never;
         post?: never;
@@ -592,7 +597,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Unlink an OAuth identity */
+        /**
+         * Unlink an OAuth identity
+         * @description `409 LAST_SIGN_IN_METHOD` when the user has no password, no passkey and this is
+         *     their last linked identity (TEC-1105).
+         */
         delete: operations["deleteAuthIdentity"];
         options?: never;
         head?: never;
@@ -629,7 +638,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete a passkey */
+        /**
+         * Delete a passkey
+         * @description `409 LAST_SIGN_IN_METHOD` when the user has no password, no linked identity and
+         *     this is their last passkey (TEC-1105).
+         */
         delete: operations["deleteAuthPasskey"];
         options?: never;
         head?: never;
@@ -8873,6 +8886,10 @@ export interface components {
             items: components["schemas"]["LinkedIdentity"][];
             /** Format: int64 */
             total: number;
+            /** @description False when the user never chose a password (OAuth sign-up). */
+            has_password: boolean;
+            /** @description True when at least one passkey is registered. */
+            has_passkey: boolean;
         };
         EnvelopeIdentityList: {
             /** @enum {boolean} */
@@ -12147,6 +12164,18 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /**
+         * @description `LAST_SIGN_IN_METHOD`: the change would leave the user without any way to sign in.
+         *     Set a password (password reset) or add another sign-in method first.
+         */
+        LastSignInMethod: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description Unexpected server error */
         InternalError: {
             headers: {
@@ -13122,6 +13151,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["LastSignInMethod"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -13170,6 +13200,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["LastSignInMethod"];
             500: components["responses"]["InternalError"];
         };
     };

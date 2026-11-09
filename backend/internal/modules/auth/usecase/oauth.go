@@ -143,6 +143,9 @@ func (u *OAuthUseCase) UnlinkOAuthAccountForUser(ctx context.Context, userUUID u
 		}
 		return err
 	}
+	if err := ensureSignInMethodLeft(ctx, u.repo, user, signInMethodRemoval{provider: provider}); err != nil {
+		return err
+	}
 	if err := u.repo.DeleteOAuthAccountByUserProvider(ctx, user.ID, provider); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			return ErrNotFound
@@ -173,7 +176,14 @@ func (u *OAuthUseCase) ListIdentities(ctx context.Context, userUUID uuid.UUID) (
 			LinkedAt:    row.CreatedAt,
 		})
 	}
-	return model.IdentityList{Items: items, Total: int64(len(items))}, nil
+	passkeys, err := u.repo.ListPasskeysByUserID(ctx, user.ID)
+	if err != nil {
+		return model.IdentityList{}, err
+	}
+	return model.IdentityList{
+		Items: items, Total: int64(len(items)),
+		HasPassword: user.PasswordSet, HasPasskey: len(passkeys) > 0,
+	}, nil
 }
 
 // OAuthAccountExists reports whether a provider account is already linked.

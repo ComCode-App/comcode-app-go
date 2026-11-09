@@ -26,6 +26,9 @@ type memRepo struct {
 	sessions    []*memSession
 	accounts    map[int64]*memAccount
 	nextAccount int64
+
+	// otps maps email+"|"+type to the active code hash (nil: no active OTP).
+	otps map[string]string
 }
 
 type memSession struct {
@@ -65,6 +68,7 @@ func (r *memRepo) CreateUser(_ context.Context, u model.User, emailVerified bool
 	r.nextID++
 	u.ID = r.nextID
 	u.UUID = uuid.New()
+	u.PasswordSet = true // DB default
 	if emailVerified {
 		u.EmailVerified = true
 	}
@@ -106,6 +110,19 @@ func (r *memRepo) UpdatePassword(_ context.Context, userID int64, hash string) e
 		return repository.ErrNotFound
 	}
 	u.PasswordHash = hash
+	u.PasswordSet = true
+	r.users[userID] = u
+	r.byEmail[u.Email] = u
+	r.byUUID[u.UUID] = u
+	return nil
+}
+
+func (r *memRepo) MarkPasswordUnset(_ context.Context, userID int64) error {
+	u, ok := r.users[userID]
+	if !ok {
+		return repository.ErrNotFound
+	}
+	u.PasswordSet = false
 	r.users[userID] = u
 	r.byEmail[u.Email] = u
 	r.byUUID[u.UUID] = u
@@ -458,7 +475,10 @@ func (r *memRepo) CreateOTP(context.Context, *int64, string, string, string, tim
 	return nil
 }
 func (r *memRepo) InvalidateOTPs(context.Context, string, string) error { return nil }
-func (r *memRepo) GetActiveOTP(context.Context, string, string) (int64, string, int32, int32, error) {
+func (r *memRepo) GetActiveOTP(_ context.Context, email, otpType string) (int64, string, int32, int32, error) {
+	if hash, ok := r.otps[email+"|"+otpType]; ok {
+		return 1, hash, 0, 5, nil
+	}
 	return 0, "", 0, 0, repository.ErrNotFound
 }
 func (r *memRepo) IncrementOTPAttempts(context.Context, int64) (int32, int32, error) {
