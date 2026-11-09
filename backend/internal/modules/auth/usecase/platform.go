@@ -429,22 +429,30 @@ func (u *AuthUseCase) ListPlatformPermissions(ctx context.Context, limit, offset
 }
 
 // CanSubscribeChannel authorizes Centrifugo subscription channels.
+//
+// It is an explicit allowlist: every channel family the backend publishes to
+// is listed here with its ownership check, and anything else is denied.
+//   - system.notifications: super admins only.
+//   - user:{uuid}: only the caller's own canonical user channel.
+//
+// conversation:{uuid}, workspace:{uuid} and any account-scoped channel are
+// denied: nothing publishes to them, and they used to be granted without an
+// ownership check. A future publisher must add its family here together with
+// a membership/ownership check.
 func (u *AuthUseCase) CanSubscribeChannel(
-	ctx context.Context,
+	_ context.Context,
 	userUUID uuid.UUID,
 	isSuperAdmin bool,
 	channel string,
 ) (bool, error) {
-	if channel == realtime.ChannelSystemNotifications {
+	switch {
+	case channel == realtime.ChannelSystemNotifications:
 		return isSuperAdmin, nil
-	}
-	if uid, ok := realtime.ParseUserChannel(channel); ok {
-		return uid == userUUID, nil
-	}
-	if _, ok := realtime.ParseConversationChannel(channel); ok {
+	case userUUID != uuid.Nil && channel == realtime.UserChannel(userUUID):
 		return true, nil
+	default:
+		return false, nil
 	}
-	return false, nil
 }
 
 func passwordHash(raw string) (string, error) {

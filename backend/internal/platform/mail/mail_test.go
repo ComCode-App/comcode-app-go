@@ -18,6 +18,12 @@ import (
 
 // fakeSMTP answers just enough SMTP for one message and returns the DATA payload.
 func fakeSMTP(ln net.Listener) <-chan string {
+	return fakeSMTPQuit(ln, "221 bye")
+}
+
+// fakeSMTPQuit is fakeSMTP with a custom QUIT reply; an empty reply drops the
+// connection without answering.
+func fakeSMTPQuit(ln net.Listener, quitReply string) <-chan string {
 	got := make(chan string, 1)
 	go func() {
 		conn, err := ln.Accept()
@@ -55,7 +61,9 @@ func fakeSMTP(ln net.Listener) <-chan string {
 				inData = true
 				write("354 go")
 			case cmd == "QUIT":
-				write("221 bye")
+				if quitReply != "" {
+					write(quitReply)
+				}
 				return
 			default:
 				write("250 ok")
@@ -124,6 +132,27 @@ func TestSendPlainWithoutAuth(t *testing.T) {
 		t.Fatalf("send: %v", err)
 	}
 	<-got
+}
+
+// Once DATA is accepted the message is delivered: a failing QUIT must not turn
+// the send into an error, or the queue retries and the recipient gets a duplicate.
+func TestSendSucceedsWhenQuitFailsAfterData(t *testing.T) {
+	for name, reply := range map[string]string{"error reply": "421 closing", "dropped connection": ""} {
+		t.Run(name, func(t *testing.T) {
+			ln, err := net.Listen("tcp", "127.0.0.1:0")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = ln.Close() }()
+			got := fakeSMTPQuit(ln, reply)
+			host, port := addr(ln)
+			s := NewSMTPSender(config.SMTPConfig{Host: host, Port: port, From: "noreply@x.test", TLS: TLSNone})
+			if err := s.Send(context.Background(), testMsg); err != nil {
+				t.Fatalf("send reported failure after DATA was accepted: %v", err)
+			}
+			<-got
+		})
+	}
 }
 
 func TestSendDoesNotHangOnSilentServer(t *testing.T) {
