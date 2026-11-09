@@ -66,7 +66,7 @@ func newSecretsFixture(t *testing.T, failures int) *secretsFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f := &secretsFixture{d: d, mail: &flakyMail{failures: failures}, user: d.CreateUser(t)}
+	f := &secretsFixture{d: d, mail: &flakyMail{failures: failures}, user: d.CreateUnverifiedUser(t)}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	f.svc = usecase.New(d.Queries, nil,
 		[]providers.Provider{providers.InappProvider{}, providers.EmailProvider{Mail: f.mail}}, log).
