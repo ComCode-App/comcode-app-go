@@ -1,0 +1,59 @@
+"use client";
+
+import { get, Controller, useFormContext } from "react-hook-form";
+
+import { FormFieldShell } from "@/components/forms/form-field";
+import {
+  AsyncCombobox,
+  type AsyncComboboxProps,
+  type ComboboxOption,
+} from "@/components/ui/async-combobox";
+
+type AppComboboxProps = {
+  name: string;
+  label?: string;
+  description?: string;
+  className?: string;
+} & Omit<AsyncComboboxProps, "value" | "onValueChange" | "id" | "aria-invalid">;
+
+/** RHF combobox — static `options` or async `loadOptions` (API). */
+export function AppCombobox({
+  name,
+  label,
+  description,
+  className,
+  ...props
+}: AppComboboxProps) {
+  const {
+    control,
+    formState: { errors },
+  } = useFormContext();
+  // get() resolves nested names such as `limits.profiles:max`
+  const error = get(errors, name)?.message as string | undefined;
+
+  return (
+    <FormFieldShell
+      name={name}
+      label={label}
+      description={description}
+      error={error}
+      className={className}
+    >
+      <Controller
+        name={name}
+        control={control}
+        render={({ field }) => (
+          <AsyncCombobox
+            id={name}
+            value={field.value ?? ""}
+            onValueChange={field.onChange}
+            aria-invalid={Boolean(error)}
+            {...props}
+          />
+        )}
+      />
+    </FormFieldShell>
+  );
+}
+
+export type { ComboboxOption };

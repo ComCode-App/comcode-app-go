@@ -1,0 +1,191 @@
+name: ${COMPOSE_PROJECT_NAME:-${NAME_PREFIX:-app}}
+
+# Local infrastructure only. Backend (air) and frontend (pnpm) run on the host
+# via `make local-dev`. No dokploy-network.
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: ${NAME_PREFIX:-app}-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me}
+      POSTGRES_DB: ${DB_NAME:-app}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app
+
+  redis:
+    image: redis:8-alpine
+    container_name: ${NAME_PREFIX:-app}-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - app
+
+  seaweedfs:
+    # S3-compatible object store (master + volume + filer + S3 gateway in one process).
+    # Credentials come from S3_ACCESS_KEY / S3_SECRET_KEY; anonymous users may only GET objects
+    # of S3_BUCKET (public media URLs). Listing, writes and deletes need the key.
+    image: chrislusf/seaweedfs:4.47
+    container_name: ${NAME_PREFIX:-app}-seaweedfs
+    restart: unless-stopped
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        cat > /tmp/s3.json <<JSON
+        {"identities": [
+          {"name": "app", "credentials": [{"accessKey": "$$S3_ACCESS_KEY", "secretKey": "$$S3_SECRET_KEY"}], "actions": ["Admin", "Read", "List", "Tagging", "Write"]},
+          {"name": "anonymous", "actions": ["Read:$$S3_BUCKET"]}
+        ]}
+        JSON
+        # master/volume/filer have no auth: keep them on the container loopback, expose only S3.
+        exec weed server -dir=/data -ip=127.0.0.1 -ip.bind=127.0.0.1 -s3.ip.bind=0.0.0.0 -volume.max=0 -s3 -s3.port=8333 -s3.config=/tmp/s3.json
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-app-dev-s3-access}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-app-dev-s3-secret-change-me}
+      S3_BUCKET: ${S3_BUCKET:-app}
+    ports:
+      - "${S3_API_PORT:-8333}:8333"
+    volumes:
+      - seaweedfs_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8333/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - app
+
+  seaweedfs-init:
+    image: chrislusf/seaweedfs:4.47
+    container_name: ${NAME_PREFIX:-app}-seaweedfs-init
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        # Create the bucket through the S3 API (SigV4). 409 = it already exists.
+        code=$$(curl -s -o /tmp/out -w '%{http_code}' --aws-sigv4 "aws:amz:us-east-1:s3" \
+          --user "$$S3_ACCESS_KEY:$$S3_SECRET_KEY" -X PUT "http://seaweedfs:8333/$$S3_BUCKET")
+        case "$$code" in
+          200) echo "created bucket $$S3_BUCKET" ;;
+          409) grep -q BucketAlreadyOwnedByYou /tmp/out && echo "bucket $$S3_BUCKET exists" || { cat /tmp/out; exit 1; } ;;
+          *) echo "create bucket failed: $$code"; cat /tmp/out; exit 1 ;;
+        esac
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-app-dev-s3-access}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-app-dev-s3-secret-change-me}
+      S3_BUCKET: ${S3_BUCKET:-app}
+    restart: "no"
+    networks:
+      - app
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    platform: linux/amd64
+    container_name: ${NAME_PREFIX:-app}-mailhog
+    restart: unless-stopped
+    ports:
+      - "${MAILHOG_SMTP_PORT:-1025}:1025"
+      - "${MAILHOG_UI_PORT:-8025}:8025"
+    networks:
+      - app
+
+  adminer:
+    image: adminer:4
+    container_name: ${NAME_PREFIX:-app}-adminer
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - "${ADMINER_PORT:-8081}:8080"
+    networks:
+      - app
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: ${NAME_PREFIX:-app}-meilisearch
+    restart: unless-stopped
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-app-dev-meili-master-key-change-me}
+    ports:
+      - "${MEILI_PORT:-7700}:7700"
+    volumes:
+      - meili_data:/meili_data
+    healthcheck:
+      # Use 127.0.0.1 — BusyBox wget resolves localhost to ::1; Meili listens on IPv4 only.
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:7700/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - app
+
+  centrifugo:
+    image: centrifugo/centrifugo:v5
+    container_name: ${NAME_PREFIX:-app}-centrifugo
+    restart: unless-stopped
+    command: centrifugo -c config.json
+    environment:
+      CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY:-app-centrifugo-api-key-change-me}
+      CENTRIFUGO_TOKEN_HMAC_SECRET_KEY: ${CENTRIFUGO_TOKEN_HMAC_SECRET:-app-centrifugo-token-hmac-change-me}
+      CENTRIFUGO_ALLOWED_ORIGINS: ${CENTRIFUGO_ALLOWED_ORIGINS:-http://localhost:3000 http://127.0.0.1:3000}
+    ports:
+      - "${CENTRIFUGO_PORT:-8000}:8000"
+    volumes:
+      - ./deploy/centrifugo/config.json:/centrifugo/config.json:ro
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD", "centrifugo", "healthcheck", "--address=http://localhost:8000"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app
+
+volumes:
+  postgres_data:
+    name: ${POSTGRES_VOLUME_NAME:-${NAME_PREFIX:-app}-postgres}
+  redis_data:
+    name: ${REDIS_VOLUME_NAME:-${NAME_PREFIX:-app}-redis}
+  seaweedfs_data:
+    name: ${SEAWEEDFS_VOLUME_NAME:-${NAME_PREFIX:-app}-seaweedfs}
+  meili_data:
+    name: ${MEILI_VOLUME_NAME:-${NAME_PREFIX:-app}-meilisearch}
+
+networks:
+  app:
+    name: ${LOCAL_NETWORK_NAME:-${NAME_PREFIX:-app}}
+    driver: bridge

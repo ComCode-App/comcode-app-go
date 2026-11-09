@@ -1,0 +1,359 @@
+{
+  "app": {
+    "title": "Shader Background Studio",
+    "subtitle": "JSON-Driven Background Generator & Live Visualizer",
+    "search": "Search shaders...",
+    "allShaders": "All Shader Types",
+    "presets": "Presets",
+    "shuffle": "Shuffle All",
+    "shuffleColors": "Shuffle Colors",
+    "shuffleParams": "Shuffle Params",
+    "reset": "Reset",
+    "exportJson": "Download JSON",
+    "copyJson": "Copy JSON",
+    "importJson": "Import JSON",
+    "exportPng": "Export Image (PNG)",
+    "copyReactCode": "Copy React Code",
+    "aspectRatio": "Aspect Ratio",
+    "responsive": "Responsive / Full",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit Fullscreen",
+    "parameters": "Parameters",
+    "colorPalette": "Color Palette",
+    "addColor": "Add Color",
+    "removeColor": "Remove",
+    "imageMask": "Image Mask",
+    "uploadImage": "Upload Image",
+    "clearImage": "Clear Image"
+  },
+  "categories": {
+    "all": "All",
+    "effects": "Effects & Gradients",
+    "patterns": "Patterns & Particles",
+    "noise": "Noise & Waves",
+    "imageFilters": "Image Filters",
+    "logo": "Logo & Material Effects"
+  },
+  "commonParams": {
+    "speed": "Animation Speed",
+    "frame": "Frame / Start Time Offset",
+    "scale": "Scale / Zoom",
+    "rotation": "Rotation Angle (Degrees)",
+    "offsetX": "Horizontal Offset (X)",
+    "offsetY": "Vertical Offset (Y)",
+    "fit": "Canvas Fit Mode",
+    "worldWidth": "Virtual World Width",
+    "worldHeight": "Virtual World Height",
+    "originX": "Center Origin X",
+    "originY": "Center Origin Y"
+  },
+  "fitOptions": {
+    "contain": "Contain",
+    "cover": "Cover"
+  },
+  "shaders": {
+    "mesh-gradient": {
+      "name": "Mesh Gradient",
+      "description": "A flowing interplay of multi-color spots moving with organic fluid distortion.",
+      "params": {
+        "colors": "Gradient Colors (Up to 10)",
+        "distortion": "Noise Distortion Power",
+        "swirl": "Swirl Vortex Distortion",
+        "grainMixer": "Grain Edge Distortion",
+        "grainOverlay": "Grain Overlay Intensity"
+      }
+    },
+    "static-mesh-gradient": {
+      "name": "Static Mesh Gradient",
+      "description": "Multi-point mesh gradients with high fidelity warping and grain control.",
+      "params": {
+        "colors": "Gradient Colors (Up to 10)",
+        "distortionX": "Horizontal Distortion",
+        "distortionY": "Vertical Distortion",
+        "grainMixer": "Grain Mixer",
+        "grainOverlay": "Grain Overlay Intensity"
+      }
+    },
+    "static-radial-gradient": {
+      "name": "Static Radial Gradient",
+      "description": "Multi-color radial gradient with focal point control, shape deformation, and grain.",
+      "params": {
+        "colors": "Gradient Colors (Up to 10)",
+        "radius": "Gradient Radius",
+        "distortion": "Shape Distortion",
+        "grainMixer": "Grain Mixer",
+        "grainOverlay": "Grain Overlay"
+      }
+    },
+    "grain-gradient": {
+      "name": "Grain Gradient",
+      "description": "Textured noise gradient available in multiple abstract geometrical forms.",
+      "params": {
+        "colors": "Shape Colors",
+        "colorBack": "Background Color",
+        "shape": "Form / Shape Type",
+        "grain": "Grain Intensity",
+        "softness": "Transition Softness"
+      }
+    },
+    "warp": {
+      "name": "Warp",
+      "description": "Swirling fluid color fields warped over stripes, checks, or edge patterns.",
+      "params": {
+        "colors": "Palette (Up to 10 colors)",
+        "shape": "Base Pattern Type",
+        "shapeScale": "Pattern Scale",
+        "proportion": "Color Proportion / Balance",
+        "softness": "Edge Softness",
+        "distortion": "Noise Distortion",
+        "swirl": "Swirl Power",
+        "swirlIterations": "Swirl Iteration Passes"
+      }
+    },
+    "swirl": {
+      "name": "Swirl",
+      "description": "Hypnotic twisted concentric and circular rotating color ribbons.",
+      "params": {
+        "colors": "Ribbon Colors",
+        "colorBack": "Background Color",
+        "swirl": "Swirl Intensity",
+        "density": "Ribbon Density"
+      }
+    },
+    "spiral": {
+      "name": "Spiral",
+      "description": "Mesmerizing geometric spirals morphing into fluid whirlpool forms.",
+      "params": {
+        "colorFront": "Spiral Front Color",
+        "colorBack": "Background Color",
+        "density": "Spiral Density",
+        "thickness": "Line Thickness",
+        "softness": "Edge Softness"
+      }
+    },
+    "god-rays": {
+      "name": "God Rays",
+      "description": "Volumetric dramatic light rays radiating with a glowing core.",
+      "params": {
+        "colors": "Ray Colors (Up to 5)",
+        "density": "Ray Density",
+        "glow": "Center Glow Intensity",
+        "noise": "Noise Distortion"
+      }
+    },
+    "pulsing-border": {
+      "name": "Pulsing Border",
+      "description": "Luminous light streaks running around a gradient glowing frame.",
+      "params": {
+        "colors": "Frame Colors",
+        "colorBack": "Background Color",
+        "thickness": "Frame Thickness",
+        "glow": "Glow Intensity"
+      }
+    },
+    "color-panels": {
+      "name": "Color Panels",
+      "description": "Translucent 3D glowing glass panels rotating in space.",
+      "params": {
+        "colors": "Panel Colors",
+        "colorBack": "Background Color",
+        "opacity": "Panel Opacity"
+      }
+    },
+    "smoke-ring": {
+      "name": "Smoke Ring",
+      "description": "Organic concentric smoky clouds with layered fractal turbulence.",
+      "params": {
+        "colors": "Smoke Colors",
+        "colorBack": "Background Color",
+        "thickness": "Ring Thickness",
+        "noise": "Smoke Turbulence"
+      }
+    },
+    "dithering": {
+      "name": "Dithering",
+      "description": "Retro 2-color pixel dither effect with multiple underlying dynamic patterns.",
+      "params": {
+        "colorFront": "Foreground Pixel Color",
+        "colorBack": "Background Color",
+        "shape": "Pattern Shape",
+        "type": "Dither Algorithm",
+        "scale": "Pixel Scale"
+      }
+    },
+    "dot-grid": {
+      "name": "Dot Grid",
+      "description": "Clean, modern grid pattern made of shapes (circles, diamonds, squares).",
+      "params": {
+        "colorFront": "Dot Color",
+        "colorBack": "Background Color",
+        "shape": "Dot Shape",
+        "size": "Dot Size",
+        "gapX": "Horizontal Gap",
+        "gapY": "Vertical Gap"
+      }
+    },
+    "dot-orbit": {
+      "name": "Dot Orbit",
+      "description": "Multi-color playful dots spinning around individual orbital center points.",
+      "params": {
+        "colors": "Dot Colors (Up to 40)",
+        "colorBack": "Background Color",
+        "dotSize": "Dot Size",
+        "orbitRadius": "Orbit Radius"
+      }
+    },
+    "metaballs": {
+      "name": "Metaballs",
+      "description": "Organic viscous blobs floating and merging into fluid shapes.",
+      "params": {
+        "colors": "Blob Colors (Up to 20)",
+        "colorBack": "Background Color",
+        "count": "Blob Count",
+        "viscosity": "Viscosity / Merge Power"
+      }
+    },
+    "neuro-noise": {
+      "name": "Neuro Noise",
+      "description": "Futuristic glowing neural network filaments and cybernetic synapses.",
+      "params": {
+        "colorFront": "Filament Color",
+        "colorBack": "Background Color",
+        "brightness": "Glow Brightness"
+      }
+    },
+    "simplex-noise": {
+      "name": "Simplex Noise",
+      "description": "Smooth continuous flowing contour noise waves in vivid color palettes.",
+      "params": {
+        "colors": "Color Palette",
+        "stepsPerColor": "Steps Per Color",
+        "softness": "Transition Softness"
+      }
+    },
+    "perlin-noise": {
+      "name": "Perlin Noise",
+      "description": "Classic multi-octave 3D Perlin noise waves with smooth transitions.",
+      "params": {
+        "colors": "Color Palette",
+        "octaves": "Octave Count",
+        "lacunarity": "Lacunarity / Frequency"
+      }
+    },
+    "voronoi": {
+      "name": "Voronoi",
+      "description": "Anti-aliased animated Voronoi cellular diagram with customizable borders.",
+      "params": {
+        "colors": "Cell Colors",
+        "borderWidth": "Border Width",
+        "borderColor": "Border Color"
+      }
+    },
+    "waves": {
+      "name": "Waves",
+      "description": "Configurable wave lines ranging from sharp zigzags to soothing flow.",
+      "params": {
+        "colorFront": "Line Color",
+        "colorBack": "Background Color",
+        "spacing": "Line Spacing",
+        "amplitude": "Wave Amplitude"
+      }
+    },
+    "paper-texture": {
+      "name": "Paper Texture",
+      "description": "Realistic multi-layered fiber paper, cardboard, and tactile parchment.",
+      "params": {
+        "colorBack": "Paper Color",
+        "roughness": "Texture Roughness",
+        "contrast": "Texture Contrast"
+      }
+    },
+    "fluted-glass": {
+      "name": "Fluted Glass",
+      "description": "Glass rib distortion creating elegant optical refraction and privacy blur.",
+      "params": {
+        "distortion": "Refraction Distortion",
+        "gridShape": "Grid Pattern"
+      }
+    },
+    "water": {
+      "name": "Water Caustics",
+      "description": "Realistically animated water surface ripples and refractive light caustics.",
+      "params": {
+        "colorBack": "Water Tint Color",
+        "distortion": "Wave Intensity"
+      }
+    },
+    "image-dithering": {
+      "name": "Image Dithering",
+      "description": "Transform images into retro 1-bit or multi-tone artistic dither prints.",
+      "params": {
+        "colorFront": "Foreground Color",
+        "colorBack": "Background Color",
+        "type": "Dither Type"
+      }
+    },
+    "halftone-dots": {
+      "name": "Halftone Dots",
+      "description": "Newspaper-style halftone printing dots with customizable grids.",
+      "params": {
+        "colorFront": "Dot Color",
+        "colorBack": "Background Color",
+        "grid": "Grid Layout"
+      }
+    },
+    "halftone-cmyk": {
+      "name": "Halftone CMYK",
+      "description": "Authentic 4-color offset printing CMYK halftone separation.",
+      "params": {
+        "size": "Dot Size",
+        "softness": "Dot Softness"
+      }
+    },
+    "lens-distortion": {
+      "name": "Lens Distortion",
+      "description": "Realistic optical lens aberration, barrel curvature, and RGB splitting.",
+      "params": {
+        "distortion": "Barrel / Pincushion Distortion",
+        "chromaticAberration": "Chromatic Aberration (RGB Split)"
+      }
+    },
+    "liquidMetal": {
+      "name": "Liquid Metal",
+      "description": "Futuristic chrome-like liquid metal ripples on logos or abstract shapes.",
+      "params": {
+        "colorBack": "Base Metal Color",
+        "colorTint": "Tint / Highlight Color",
+        "shape": "Shape Mask",
+        "repetition": "Wave Repetition",
+        "softness": "Softness",
+        "distortion": "Distortion",
+        "contour": "Contour Distortion",
+        "angle": "Wave Angle"
+      }
+    },
+    "heatmap": {
+      "name": "Heatmap",
+      "description": "Thermal glowing energy contour waves flowing across logos.",
+      "params": {
+        "colors": "Thermal Colors",
+        "colorBack": "Background Color",
+        "shape": "Shape"
+      }
+    },
+    "gem-smoke": {
+      "name": "Gem Smoke",
+      "description": "Iridescent colorful glowing smoke swirling through crystal shapes.",
+      "params": {
+        "colors": "Smoke Colors",
+        "colorBack": "Background Color",
+        "colorInner": "Inner Crystal Color",
+        "shape": "Shape",
+        "outerGlow": "Outer Glow",
+        "innerGlow": "Inner Glow",
+        "innerDistortion": "Inner Smoke Distortion",
+        "outerDistortion": "Outer Smoke Distortion"
+      }
+    }
+  }
+}

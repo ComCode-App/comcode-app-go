@@ -1,0 +1,255 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "../styles/theme.css";
+@import "../components/editor/themes/editor-theme.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  html {
+    @apply overflow-x-hidden;
+  }
+
+  body {
+    @apply bg-background text-foreground min-h-svh w-full font-sans antialiased;
+    @apply has-[div[data-variant="inset"]]:bg-background;
+    @apply text-[0.9375rem] leading-relaxed;
+    letter-spacing: -0.012em;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--comcode-accent) 28%, transparent);
+    color: var(--foreground);
+  }
+
+  h1 {
+    @apply text-3xl font-semibold tracking-tight;
+    letter-spacing: -0.03em;
+  }
+
+  h2 {
+    @apply text-2xl font-semibold tracking-tight;
+    letter-spacing: -0.028em;
+  }
+
+  h3 {
+    @apply text-xl font-semibold tracking-tight;
+    letter-spacing: -0.024em;
+  }
+
+  h4,
+  .font-display {
+    @apply text-lg font-semibold tracking-tight;
+    letter-spacing: -0.02em;
+  }
+
+  body[data-scroll-locked] {
+    overflow: unset !important;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  @media screen and (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+/* ComCode surface utilities */
+@layer utilities {
+  .comcode-auth-bg {
+    background-color: var(--background);
+    background-image:
+      radial-gradient(
+        ellipse 90% 55% at 50% -15%,
+        color-mix(in oklch, var(--comcode-accent) 22%, transparent),
+        transparent 68%
+      ),
+      radial-gradient(
+        ellipse 55% 45% at 100% 90%,
+        color-mix(in oklch, var(--comcode-purple) 14%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 45% 35% at 0% 75%,
+        color-mix(in oklch, var(--comcode-accent) 10%, transparent),
+        transparent 55%
+      );
+  }
+
+  .dark .comcode-auth-bg {
+    background-color: oklch(0.06 0.012 305);
+    background-image:
+      radial-gradient(
+        ellipse 90% 55% at 50% -15%,
+        color-mix(in oklch, var(--comcode-accent) 30%, transparent),
+        transparent 68%
+      ),
+      radial-gradient(
+        ellipse 55% 45% at 100% 90%,
+        color-mix(in oklch, var(--comcode-purple) 20%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 45% 35% at 0% 75%,
+        color-mix(in oklch, var(--comcode-accent) 14%, transparent),
+        transparent 55%
+      );
+  }
+
+  .comcode-auth-grid {
+    background-image:
+      linear-gradient(
+        color-mix(in oklch, var(--border) 65%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in oklch, var(--border) 65%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, black 25%, transparent 100%);
+  }
+
+  .comcode-glass-card {
+    background: var(--comcode-surface-glass);
+    box-shadow: var(--shadow-comcode-lg);
+    backdrop-filter: blur(12px);
+  }
+
+  .comcode-content-glow {
+    background-image: radial-gradient(
+      ellipse 70% 45% at 50% 0%,
+      color-mix(in oklch, var(--comcode-accent) 9%, transparent),
+      transparent 70%
+    );
+  }
+
+  .comcode-brand-gradient {
+    background: var(--comcode-gradient);
+  }
+
+  /* App shell topbar — tinted glass, not flat white */
+  .comcode-topbar {
+    position: relative;
+    isolation: isolate;
+    background: color-mix(
+      in oklch,
+      var(--background) 78%,
+      var(--comcode-accent-soft) 22%
+    );
+    border-bottom: 1px solid
+      color-mix(in oklch, var(--comcode-accent) 14%, var(--border));
+    backdrop-filter: blur(20px) saturate(1.15);
+    box-shadow:
+      0 1px 0 color-mix(in oklch, var(--comcode-accent) 6%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 40%, transparent);
+  }
+
+  .comcode-topbar::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0 0 auto 0;
+    z-index: 0;
+    height: 100%;
+    background: radial-gradient(
+      ellipse 80% 120% at 50% -40%,
+      color-mix(in oklch, var(--comcode-accent) 10%, transparent),
+      transparent 55%
+    );
+  }
+
+  .comcode-topbar::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: auto 0 0 0;
+    z-index: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in oklch, var(--comcode-accent) 55%, transparent) 25%,
+      color-mix(in oklch, var(--comcode-purple) 55%, transparent) 75%,
+      transparent 100%
+    );
+    opacity: 0.45;
+  }
+
+  .dark .comcode-topbar {
+    background: color-mix(
+      in oklch,
+      var(--card) 88%,
+      var(--comcode-purple) 12%
+    );
+    border-bottom-color: color-mix(
+      in oklch,
+      var(--comcode-accent) 22%,
+      transparent
+    );
+    box-shadow:
+      0 1px 0 color-mix(in oklch, var(--comcode-accent) 8%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 6%, transparent);
+  }
+
+  .comcode-shell-inset {
+    background: color-mix(
+      in oklch,
+      var(--background) 90%,
+      var(--comcode-accent-soft) 10%
+    );
+  }
+
+  .dark .comcode-shell-inset {
+    background: color-mix(
+      in oklch,
+      var(--background) 94%,
+      var(--comcode-purple) 6%
+    );
+  }
+}
+[data-brand] {
+  --primary: var(--brand-primary, var(--primary));
+  --primary-foreground: var(
+    --brand-primary-foreground,
+    --primary-foreground
+  );
+  --accent: var(--brand-accent, var(--accent));
+  --radius: var(--brand-radius, var(--radius));
+}
+
+/* 
+ * Browser Autofill / Autocomplete Styling Reset
+ * Neutralizes WebKit/Blink (Chrome, Edge, Safari) default autofill background without breaking input background colors
+ */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus,
+select:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--foreground) !important;
+  transition: background-color 5000000s ease-in-out 0s, color 5000000s ease-in-out 0s !important;
+  caret-color: var(--foreground) !important;
+}
+

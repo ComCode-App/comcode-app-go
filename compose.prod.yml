@@ -1,0 +1,350 @@
+name: ${COMPOSE_PROJECT_NAME:-${NAME_PREFIX:-app}-prod}
+
+x-backend-image: &backend-image
+  image: ${BACKEND_IMAGE:?BACKEND_IMAGE is required}
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+
+x-frontend-image: &frontend-image
+  image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE is required}
+  build:
+    context: ./frontend
+    dockerfile: Dockerfile
+
+x-backend-environment: &backend-environment
+  APP_NAME: ${APP_NAME:-api}
+  APP_ENV: production
+  APP_HTTP_ADDR: :8080
+  # X-Forwarded-For is honoured only from these peers (BFF, Traefik on the Docker network).
+  TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7}
+  DB_HOST: ${NAME_PREFIX:-app}-postgres
+  DB_PORT: "5432"
+  DB_USER: ${DB_USER:?DB_USER is required}
+  DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+  DB_NAME: ${DB_NAME:?DB_NAME is required}
+  DB_SSLMODE: ${DB_SSLMODE:-disable}
+  REDIS_ADDR: ${NAME_PREFIX:-app}-redis:6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+  STORAGE_DRIVER: ${STORAGE_DRIVER:-s3}
+  STORAGE_PUBLIC_BASE_URL: ${STORAGE_PUBLIC_BASE_URL:?STORAGE_PUBLIC_BASE_URL is required}
+  # Prefixed container name: a short `seaweedfs` would collide with other stacks on dokploy-network.
+  S3_ENDPOINT: http://${NAME_PREFIX:-app}-seaweedfs:8333
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY is required}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
+  S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required}
+  S3_REGION: ${S3_REGION:-us-east-1}
+  S3_USE_PATH_STYLE: "true"
+  CENTRIFUGO_API_URL: http://centrifugo.${APP_NETWORK_NAME:-${NAME_PREFIX:-app}-app}:8000
+  CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY:?CENTRIFUGO_API_KEY is required}
+  CENTRIFUGO_TOKEN_HMAC_SECRET: ${CENTRIFUGO_TOKEN_HMAC_SECRET:?CENTRIFUGO_TOKEN_HMAC_SECRET is required}
+  CENTRIFUGO_WS_URL: ${CENTRIFUGO_WS_URL:?CENTRIFUGO_WS_URL is required}
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+  AUTH_ADAPTER_SECRET: ${AUTH_ADAPTER_SECRET:?AUTH_ADAPTER_SECRET is required}
+  APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
+  # Public site URL (card / share links, emails) and passkey RP id (the bare domain).
+  PUBLIC_FRONTEND_URL: ${PUBLIC_FRONTEND_URL:?PUBLIC_FRONTEND_URL is required}
+  AUTH_WEBAUTHN_RP_ID: ${AUTH_WEBAUTHN_RP_ID:?AUTH_WEBAUTHN_RP_ID is required}
+  MAIL_FROM: ${MAIL_FROM:-noreply@localhost}
+  MAIL_FROM_NAME: ${MAIL_FROM_NAME:-App}
+  BILLING_RENEWAL_ENABLED: ${BILLING_RENEWAL_ENABLED:-false}
+  BILLING_RETRY_DAYS: ${BILLING_RETRY_DAYS:-1,3,7}
+  BILLING_GRACE_DAYS: ${BILLING_GRACE_DAYS:-14}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USERNAME: ${SMTP_USERNAME:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  # auto: implicit TLS on 465, STARTTLS when offered on other ports | implicit | starttls | none
+  SMTP_TLS: ${SMTP_TLS:-auto}
+  QUEUE_ENABLED: ${QUEUE_ENABLED:-true}
+  QUEUE_WORKER_INPROCESS: "false"
+  QUEUE_CONCURRENCY: ${QUEUE_CONCURRENCY:-10}
+  VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+  VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+  VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:noreply@example.com}
+  SEARCH_ENABLED: ${SEARCH_ENABLED:-true}
+  SEARCH_DRIVER: ${SEARCH_DRIVER:-meilisearch}
+  MEILI_HOST: http://${NAME_PREFIX:-app}-meilisearch:7700
+  MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?MEILI_MASTER_KEY is required}
+  MEILI_INDEX_PREFIX: ${MEILI_INDEX_PREFIX:-app}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  LOG_FORMAT: ${LOG_FORMAT:-json}
+  # Optional observability (docs/OBSERVABILITY.md). Empty = disabled.
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+  SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+  # Internal-only Prometheus listener (not published, not routed by Traefik), e.g. ":9091".
+  METRICS_ADDR: ${METRICS_ADDR:-}
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: ${NAME_PREFIX:-app}-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:?DB_USER is required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: ${DB_NAME:?DB_NAME is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app
+
+  redis:
+    image: redis:8-alpine
+    container_name: ${NAME_PREFIX:-app}-redis
+    restart: unless-stopped
+    command:
+      - /bin/sh
+      - -c
+      - exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - app
+
+  # Service key is prefixed because this container joins the shared dokploy-network, where every
+  # service key becomes a DNS name. Pick this service in Dokploy → Domains (port 8333).
+  comcode-seaweedfs:
+    # S3-compatible object store (master + volume + filer + S3 gateway in one process).
+    # Credentials come from S3_ACCESS_KEY / S3_SECRET_KEY; anonymous users may only GET objects
+    # of S3_BUCKET (public media URLs). Listing, writes and deletes need the key.
+    image: chrislusf/seaweedfs:4.47
+    container_name: ${NAME_PREFIX:-app}-seaweedfs
+    restart: unless-stopped
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        cat > /tmp/s3.json <<JSON
+        {"identities": [
+          {"name": "app", "credentials": [{"accessKey": "$$S3_ACCESS_KEY", "secretKey": "$$S3_SECRET_KEY"}], "actions": ["Admin", "Read", "List", "Tagging", "Write"]},
+          {"name": "anonymous", "actions": ["Read:$$S3_BUCKET"]}
+        ]}
+        JSON
+        # master/volume/filer have no auth: keep them on the container loopback, expose only S3.
+        exec weed server -dir=/data -ip=127.0.0.1 -ip.bind=127.0.0.1 -s3.ip.bind=0.0.0.0 -volume.max=0 -s3 -s3.port=8333 -s3.config=/tmp/s3.json
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY is required}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
+      S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required}
+    volumes:
+      - seaweedfs_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8333/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - app
+      - dokploy-network
+
+  comcode-seaweedfs-init:
+    image: chrislusf/seaweedfs:4.47
+    container_name: ${NAME_PREFIX:-app}-seaweedfs-init
+    depends_on:
+      comcode-seaweedfs:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        # Create the bucket through the S3 API (SigV4). 409 = it already exists.
+        code=$$(curl -s -o /tmp/out -w '%{http_code}' --aws-sigv4 "aws:amz:us-east-1:s3" \
+          --user "$$S3_ACCESS_KEY:$$S3_SECRET_KEY" -X PUT "http://${NAME_PREFIX:-app}-seaweedfs:8333/$$S3_BUCKET")
+        case "$$code" in
+          200) echo "created bucket $$S3_BUCKET" ;;
+          409) grep -q BucketAlreadyOwnedByYou /tmp/out && echo "bucket $$S3_BUCKET exists" || { cat /tmp/out; exit 1; } ;;
+          *) echo "create bucket failed: $$code"; cat /tmp/out; exit 1 ;;
+        esac
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY is required}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
+      S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required}
+    restart: "no"
+    networks:
+      - app
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: ${NAME_PREFIX:-app}-meilisearch
+    restart: unless-stopped
+    environment:
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?MEILI_MASTER_KEY is required}
+    volumes:
+      - meili_data:/meili_data
+    healthcheck:
+      # Use 127.0.0.1 — BusyBox wget resolves localhost to ::1; Meili listens on IPv4 only.
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:7700/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - app
+
+  centrifugo:
+    image: centrifugo/centrifugo:v5
+    container_name: ${NAME_PREFIX:-app}-centrifugo
+    restart: unless-stopped
+    command: centrifugo -c config.json
+    environment:
+      CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY:?CENTRIFUGO_API_KEY is required}
+      CENTRIFUGO_TOKEN_HMAC_SECRET_KEY: ${CENTRIFUGO_TOKEN_HMAC_SECRET:?CENTRIFUGO_TOKEN_HMAC_SECRET is required}
+      CENTRIFUGO_ALLOWED_ORIGINS: ${CENTRIFUGO_ALLOWED_ORIGINS:?CENTRIFUGO_ALLOWED_ORIGINS is required}
+    volumes:
+      - ./deploy/centrifugo/config.prod.json:/centrifugo/config.json:ro
+    expose:
+      - "8000"
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD", "centrifugo", "healthcheck", "--address=http://localhost:8000"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app
+      - dokploy-network
+
+  migrate:
+    <<: *backend-image
+    container_name: ${NAME_PREFIX:-app}-migrate
+    environment:
+      DATABASE_URL: postgres://${DB_USER:?DB_USER is required}:${DB_PASSWORD:?DB_PASSWORD is required}@${NAME_PREFIX:-app}-postgres:5432/${DB_NAME:?DB_NAME is required}?sslmode=${DB_SSLMODE:-disable}
+      APP_ROLE: migrate
+      AUTO_MIGRATE: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - app
+
+  backend:
+    <<: *backend-image
+    container_name: ${NAME_PREFIX:-app}-backend
+    environment:
+      <<: *backend-environment
+      APP_ROLE: server
+      AUTO_MIGRATE: "false"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      comcode-seaweedfs-init:
+        condition: service_completed_successfully
+      centrifugo:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - app
+      - dokploy-network
+
+  worker:
+    <<: *backend-image
+    container_name: ${NAME_PREFIX:-app}-worker
+    environment:
+      <<: *backend-environment
+      APP_ROLE: worker
+      AUTO_MIGRATE: "false"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      comcode-seaweedfs-init:
+        condition: service_completed_successfully
+      centrifugo:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app
+
+  frontend:
+    <<: *frontend-image
+    container_name: ${NAME_PREFIX:-app}-frontend
+    environment:
+      API_URL: ${API_URL:-http://${NAME_PREFIX:-app}-backend:8080/v1}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
+      AUTH_URL: ${AUTH_URL:?AUTH_URL is required}
+      AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
+      AUTH_ADAPTER_SECRET: ${AUTH_ADAPTER_SECRET:-}
+      NEXT_PUBLIC_BFF_BASE_URL: ${NEXT_PUBLIC_BFF_BASE_URL:-/api}
+      NEXT_PUBLIC_REALTIME_ENABLED: ${NEXT_PUBLIC_REALTIME_ENABLED:-true}
+      NEXT_PUBLIC_CENTRIFUGO_URL: ${NEXT_PUBLIC_CENTRIFUGO_URL:-}
+      NEXT_PUBLIC_DEFAULT_LOCALE: ${NEXT_PUBLIC_DEFAULT_LOCALE:-tr}
+      NEXT_PUBLIC_FALLBACK_LOCALE: ${NEXT_PUBLIC_FALLBACK_LOCALE:-en}
+    depends_on:
+      backend:
+        condition: service_healthy
+    expose:
+      - "3000"
+    healthcheck:
+      # Real route is /health (not /api/v1/health). Unhealthy containers are
+      # dropped by Traefik → domain returns "404 page not found".
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - app
+      - dokploy-network
+
+volumes:
+  postgres_data:
+    name: ${POSTGRES_VOLUME_NAME:-${NAME_PREFIX:-app}-prod-postgres}
+  redis_data:
+    name: ${REDIS_VOLUME_NAME:-${NAME_PREFIX:-app}-prod-redis}
+  seaweedfs_data:
+    name: ${SEAWEEDFS_VOLUME_NAME:-${NAME_PREFIX:-app}-prod-seaweedfs}
+  meili_data:
+    name: ${MEILI_VOLUME_NAME:-${NAME_PREFIX:-app}-prod-meilisearch}
+
+networks:
+  app:
+    name: ${APP_NETWORK_NAME:-${NAME_PREFIX:-app}-app}
+    driver: bridge
+  dokploy-network:
+    name: dokploy-network
+    external: true

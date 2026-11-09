@@ -1,0 +1,21 @@
+# ComCode
+
+Digital business card platform: Go HTTP API (`backend/`) + Next.js BFF (`frontend/`). Profiles, public pages at /{username}, NFC/QR cards (/c/{code}), smart links (/s/{slug}), vCard, visitor analytics, product catalog, orders, billing (iyzico/PayTR), plans with per-account quotas. Resources belong to accounts (personal + company); see docs/TENANCY_AND_ACCESS.md. Object storage is S3 (SeaweedFS).
+
+Planning lives in Linear only (project ComCode); reference issues as COM-123 (formerly TEC-123).
+
+## Start here
+
+- AGENTS.md — agent entry, skills, hard rules
+- docs/ARCHITECTURE.md — repo map, shells, request flow
+- docs/TENANCY_AND_ACCESS.md — accounts, roles, entitlement
+- docs/PUBLIC_PROFILES.md — /{username}, usernames, backgrounds, visitor API
+- docs/URL_ROUTING_AND_SMART_LINKS_ARCHITECTURE.md — routes registry, cards, smart links
+- docs/ANALYTICS.md, docs/EVENTS.md, docs/GEOIP.md — events and analytics
+- docs/DEVELOPMENT.md — env, local-dev, Dokploy
+- docs/EXTENDING.md — how to add a module
+- backend/API_CONVENTIONS.md — HTTP envelope and lists
+- backend/docs/auth.md — RBAC, JWT, rate limits
+- frontend/README.md — BFF and panels
+
+Canonical env: repo-root `.env`. Login: /platform/login. API: /v1/... (spec: backend/docs/openapi.yaml, checked against routes in CI).

@@ -1,0 +1,3 @@
+legacy_hash,target_type,target_value,owner_email,owner_name,created_at,extra_json
+Abc560,url,https://example.test/old-card,,Legacy Owner,2020-01-02T03:04:05Z,"{""old_id"":560}"
+login,url,https://example.test/reserved,,,,{}

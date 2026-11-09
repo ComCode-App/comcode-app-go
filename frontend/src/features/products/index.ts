@@ -1,0 +1,10 @@
+export { ProductsPage } from "./components/products-page";
+export { ProductDialog } from "./components/product-dialog";
+export { Bounded3DStage } from "./components/Bounded3DStage";
+export { ViewboxStudioModal } from "./components/ViewboxStudioModal";
+export { productsService } from "./services/products.service";
+export { productsQueryKeys } from "./hooks/query-keys";
+export { useProductMutations } from "./hooks/use-products";
+export * from "./schemas/product-form";
+export type * from "./services/products.service";
+export type * from "./components/Bounded3DStage";

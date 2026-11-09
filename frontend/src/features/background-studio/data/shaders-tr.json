@@ -1,0 +1,359 @@
+{
+  "app": {
+    "title": "Shader Arka Plan Editörü",
+    "subtitle": "JSON Tabanlı Arka Plan Üretici & Canlı Görüntüleyici",
+    "search": "Shader ara...",
+    "allShaders": "Tüm Shader Tipleri",
+    "presets": "Hazır Şablonlar",
+    "shuffle": "Rastgele Karıştır",
+    "shuffleColors": "Renkleri Karıştır",
+    "shuffleParams": "Parametreleri Karıştır",
+    "reset": "Sıfırla",
+    "exportJson": "JSON İndir",
+    "copyJson": "JSON Kopyala",
+    "importJson": "JSON Yükle",
+    "exportPng": "Görsel (PNG) İndir",
+    "copyReactCode": "React Kodu Kopyala",
+    "aspectRatio": "Ekran Oranı",
+    "responsive": "Dinamik / Esnek",
+    "fullscreen": "Tam Ekran",
+    "exitFullscreen": "Tam Ekrandan Çık",
+    "parameters": "Parametreler",
+    "colorPalette": "Renk Paleti",
+    "addColor": "Renk Ekle",
+    "removeColor": "Kaldır",
+    "imageMask": "Görsel Maskesi",
+    "uploadImage": "Görsel Yükle",
+    "clearImage": "Görseli Kaldır"
+  },
+  "categories": {
+    "all": "Tümü",
+    "effects": "Efektler & Gradyanlar",
+    "patterns": "Desenler & Parçacıklar",
+    "noise": "Gürültü & Dalgalar",
+    "imageFilters": "Görsel Filtreleri",
+    "logo": "Logo & Materyal Efektleri"
+  },
+  "commonParams": {
+    "speed": "Animasyon Hızı",
+    "frame": "Kare / Zaman Başlangıcı",
+    "scale": "Ölçek (Zoom)",
+    "rotation": "Döndürme Açısı (Derece)",
+    "offsetX": "Yatay Konum (X)",
+    "offsetY": "Dikey Konum (Y)",
+    "fit": "Sığdırma Modu",
+    "worldWidth": "Sanal Genişlik",
+    "worldHeight": "Sanal Yükseklik",
+    "originX": "Merkez Noktası X",
+    "originY": "Merkez Noktası Y"
+  },
+  "fitOptions": {
+    "contain": "Sığdır (Contain)",
+    "cover": "Kapla (Cover)"
+  },
+  "shaders": {
+    "mesh-gradient": {
+      "name": "Mesh Gradient",
+      "description": "Organik akışkan bozulmalarla hareket eden çok renkli akıcı gradyan.",
+      "params": {
+        "colors": "Gradyan Renkleri (En fazla 10 renk)",
+        "distortion": "Organik Gürültü Bozulma Gücü",
+        "swirl": "Girdap Bozulma Gücü",
+        "grainMixer": "Kenar Gren Bozulma Gücü",
+        "grainOverlay": "Gren Katmanı Yoğunluğu"
+      }
+    },
+    "static-mesh-gradient": {
+      "name": "Static Mesh Gradient",
+      "description": "Yüksek kaliteli deformasyon ve gren kontrolüne sahip statik çok noktalı mesh gradyan.",
+      "params": {
+        "colors": "Gradyan Renkleri (En fazla 10 renk)",
+        "distortionX": "Yatay Bozulma Gücü",
+        "distortionY": "Dikey Bozulma Gücü",
+        "grainMixer": "Gren Karışımı",
+        "grainOverlay": "Gren Katmanı Yoğunluğu"
+      }
+    },
+    "static-radial-gradient": {
+      "name": "Static Radial Gradient",
+      "description": "Odak noktası kontrolü, şekil deformasyonu ve grenli radyal gradyan.",
+      "params": {
+        "colors": "Gradyan Renkleri (En fazla 10 renk)",
+        "radius": "Gradyan Yarıçapı",
+        "distortion": "Şekil Bozulması",
+        "grainMixer": "Gren Karışımı",
+        "grainOverlay": "Gren Katmanı"
+      }
+    },
+    "grain-gradient": {
+      "name": "Grain Gradient",
+      "description": "Farklı soyut geometrik formlarda dokulu ve grenli gradyan.",
+      "params": {
+        "colors": "Form Renkleri",
+        "colorBack": "Arka Plan Rengi",
+        "shape": "Form / Şekil Tipi",
+        "grain": "Gren Yoğunluğu",
+        "softness": "Renk Geçiş Yumuşaklığı"
+      }
+    },
+    "warp": {
+      "name": "Warp",
+      "description": "Çizgi, damalı veya kenar desenleri üzerinde bükülen akışkan renk alanları.",
+      "params": {
+        "colors": "Renk Paleti (En fazla 10 renk)",
+        "shape": "Temel Taban Deseni",
+        "shapeScale": "Desen Ölçeği",
+        "proportion": "Renk Dağılım Oranı",
+        "softness": "Geçiş Yumuşaklığı",
+        "distortion": "Gürültü Bozulması",
+        "swirl": "Girdap Gücü",
+        "swirlIterations": "Girdap Katman Sayısı"
+      }
+    },
+    "swirl": {
+      "name": "Swirl",
+      "description": "Dönen ve bükülen hipnotik dairesel renk şeritleri.",
+      "params": {
+        "colors": "Şerit Renkleri",
+        "colorBack": "Arka Plan Rengi",
+        "swirl": "Girdap Miktarı",
+        "density": "Şerit Yoğunluğu"
+      }
+    },
+    "spiral": {
+      "name": "Spiral",
+      "description": "Akışkan girdap formlarına dönüşen büyüleyici geometrik spiraller.",
+      "params": {
+        "colorFront": "Spiral Ön Rengi",
+        "colorBack": "Arka Plan Rengi",
+        "density": "Spiral Yoğunluğu",
+        "thickness": "Çizgi Kalınlığı",
+        "softness": "Kenar Yumuşaklığı"
+      }
+    },
+    "god-rays": {
+      "name": "God Rays",
+      "description": "Merkezden yayılan dramatik, sinematik ışık hüzmeleri ve merkez ışıması.",
+      "params": {
+        "colors": "Işık Renkleri (En fazla 5 renk)",
+        "density": "Işın Yoğunluğu",
+        "glow": "Merkez Parlaklık / Işıma",
+        "noise": "Gürültü Bozulması"
+      }
+    },
+    "pulsing-border": {
+      "name": "Pulsing Border",
+      "description": "Parlayan gradyan çerçeve etrafında koşan dinamik ışık izleri.",
+      "params": {
+        "colors": "Çerçeve Renkleri",
+        "colorBack": "Arka Plan Rengi",
+        "thickness": "Çerçeve Kalınlığı",
+        "glow": "Işıma Parlaklığı"
+      }
+    },
+    "color-panels": {
+      "name": "Color Panels",
+      "description": "Uzayda dönen yarı saydam parıldayan 3D cam paneller.",
+      "params": {
+        "colors": "Panel Renkleri",
+        "colorBack": "Arka Plan Rengi",
+        "opacity": "Panel Saydamlığı"
+      }
+    },
+    "smoke-ring": {
+      "name": "Smoke Ring",
+      "description": "Katmanlı fraktal türbülans ile organik duman halkaları.",
+      "params": {
+        "colors": "Duman Renkleri",
+        "colorBack": "Arka Plan Rengi",
+        "thickness": "Halka Kalınlığı",
+        "noise": "Duman Türbülansı"
+      }
+    },
+    "dithering": {
+      "name": "Dithering",
+      "description": "Farklı dinamik desenlere sahip retro 2-renkli piksel dither efekti.",
+      "params": {
+        "colorFront": "Ön Piksel Rengi",
+        "colorBack": "Arka Plan Rengi",
+        "shape": "Desen Tipi",
+        "type": "Dither Algoritması",
+        "scale": "Piksel Ölçeği"
+      }
+    },
+    "dot-grid": {
+      "name": "Dot Grid",
+      "description": "Daire, kare veya elmaslardan oluşan modern ve temiz nokta ızgarası.",
+      "params": {
+        "colorFront": "Nokta Rengi",
+        "colorBack": "Arka Plan Rengi",
+        "shape": "Nokta Şekli",
+        "size": "Nokta Boyutu",
+        "gapX": "Yatay Boşluk",
+        "gapY": "Dikey Boşluk"
+      }
+    },
+    "dot-orbit": {
+      "name": "Dot Orbit",
+      "description": "Kendi yörüngelerinde dönen çok renkli eğlenceli ve dinamik noktalar.",
+      "params": {
+        "colors": "Nokta Renkleri (En fazla 40 renk)",
+        "colorBack": "Arka Plan Rengi",
+        "dotSize": "Nokta Boyutu",
+        "orbitRadius": "Yörünge Çapı"
+      }
+    },
+    "metaballs": {
+      "name": "Metaballs",
+      "description": "Birbirine yapışıp ayrılan organik akışkan sıvı damlacıkları.",
+      "params": {
+        "colors": "Damlacık Renkleri (En fazla 20 renk)",
+        "colorBack": "Arka Plan Rengi",
+        "count": "Damlacık Sayısı",
+        "viscosity": "Akışkanlık / Viskozite"
+      }
+    },
+    "neuro-noise": {
+      "name": "Neuro Noise",
+      "description": "Fütüristik parlayan nöral ağ lifleri ve sibernetik sinir ağları.",
+      "params": {
+        "colorFront": "Ağ Lif Rengi",
+        "colorBack": "Arka Plan Rengi",
+        "brightness": "Parlaklık / Işıma"
+      }
+    },
+    "simplex-noise": {
+      "name": "Simplex Noise",
+      "description": "Canlı renk paletlerinde yumuşak kıvrımlı akıcı simplex gürültü dalgaları.",
+      "params": {
+        "colors": "Renk Paleti",
+        "stepsPerColor": "Renk Başına Adım Sayısı",
+        "softness": "Geçiş Yumuşaklığı"
+      }
+    },
+    "perlin-noise": {
+      "name": "Perlin Noise",
+      "description": "Klasik çok oktavlı 3D Perlin gürültüsü ve yumuşak topolojik geçişler.",
+      "params": {
+        "colors": "Renk Paleti",
+        "octaves": "Oktav Sayısı",
+        "lacunarity": "Sıklık / Lakünarite"
+      }
+    },
+    "voronoi": {
+      "name": "Voronoi",
+      "description": "Yumuşak kenarlı, animasyonlu organik hücresel Voronoi örüntüsü.",
+      "params": {
+        "colors": "Hücre Renkleri",
+        "borderWidth": "Kenarlık Kalınlığı",
+        "borderColor": "Kenarlık Rengi"
+      }
+    },
+    "waves": {
+      "name": "Waves",
+      "description": "Keskin zikzaklardan dingin dalgalara kadar ayarlanabilir çizgi deseni.",
+      "params": {
+        "colorFront": "Çizgi Rengi",
+        "colorBack": "Arka Plan Rengi",
+        "spacing": "Çizgi Aralığı",
+        "amplitude": "Dalga Genliği"
+      }
+    },
+    "paper-texture": {
+      "name": "Paper Texture",
+      "description": "Gerçekçi çok katmanlı lifli kağıt, karton ve dokunsal arka plan efekti.",
+      "params": {
+        "colorBack": "Kağıt Rengi",
+        "roughness": "Pürüzlülük / Doku",
+        "contrast": "Doku Kontrastı"
+      }
+    },
+    "fluted-glass": {
+      "name": "Fluted Glass",
+      "description": "Zarif optik kırılma ve estetik buzlu cam oluklu filtre.",
+      "params": {
+        "distortion": "Kırılma Bozulması",
+        "gridShape": "Izgara Deseni"
+      }
+    },
+    "water": {
+      "name": "Water Caustics",
+      "description": "Gerçekçi su dalgalanmaları ve ışık kostik yansımaları.",
+      "params": {
+        "colorBack": "Su Ton Rengi",
+        "distortion": "Dalga Şiddeti"
+      }
+    },
+    "image-dithering": {
+      "name": "Image Dithering",
+      "description": "Görsel ve logoları retro dither piksel baskı sanatına dönüştüren filtre.",
+      "params": {
+        "colorFront": "Ön Renk",
+        "colorBack": "Arka Renk",
+        "type": "Dither Tipi"
+      }
+    },
+    "halftone-dots": {
+      "name": "Halftone Dots",
+      "description": "Gazete ve retro çizgi roman tarzı yarıton nokta baskı efekti.",
+      "params": {
+        "colorFront": "Nokta Rengi",
+        "colorBack": "Arka Plan",
+        "grid": "Izgara Düzeni"
+      }
+    },
+    "halftone-cmyk": {
+      "name": "Halftone CMYK",
+      "description": "Gerçekçi 4 renkli ofset baskı CMYK yarıton renk ayrımı.",
+      "params": {
+        "size": "Nokta Boyutu",
+        "softness": "Nokta Yumuşaklığı"
+      }
+    },
+    "lens-distortion": {
+      "name": "Lens Distortion",
+      "description": "Optik lens bükülmesi ve RGB kromatik sapma renk ayrışması.",
+      "params": {
+        "distortion": "Lens Bükülmesi (Barrel/Pincushion)",
+        "chromaticAberration": "Kromatik Sapma (RGB Ayrışması)"
+      }
+    },
+    "liquidMetal": {
+      "name": "Liquid Metal",
+      "description": "Logo veya şekiller üzerinde fütüristik krom sıvı metal yansımaları.",
+      "params": {
+        "colorBack": "Taban Metal Rengi",
+        "colorTint": "Ton / Yansıma Rengi",
+        "shape": "Geometrik Maske",
+        "repetition": "Dalga Sıklığı",
+        "softness": "Yumuşaklık",
+        "distortion": "Bozulma",
+        "contour": "Kontur Bozulması",
+        "angle": "Dalga Açısı"
+      }
+    },
+    "heatmap": {
+      "name": "Heatmap",
+      "description": "Şekil ve logolar üzerinde akan termal ışıltılı ısı dalgaları.",
+      "params": {
+        "colors": "Termal Renkler",
+        "colorBack": "Arka Plan Rengi",
+        "shape": "Şekil"
+      }
+    },
+    "gem-smoke": {
+      "name": "Gem Smoke",
+      "description": "Kristal şekiller içerisinden süzülen büyüleyici renkli duman.",
+      "params": {
+        "colors": "Duman Renkleri",
+        "colorBack": "Arka Plan Rengi",
+        "colorInner": "İç Kristal Rengi",
+        "shape": "Şekil",
+        "outerGlow": "Dış Işıma",
+        "innerGlow": "İç Işıma",
+        "innerDistortion": "İç Duman Bozulması",
+        "outerDistortion": "Dış Duman Bozulması"
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+user_id,uniqid_id,username,name,email,active,deactivated,ikon2,firmalogo
+tec955-comcode,comcode,comcode,ComCode,owner-comcode@example.test,1,0,teknoloji.png,
+tec955-own,ownhash955,ownhash955,Own Hash,own@example.test,1,0,İnşaat.png,
+tec955-promote,promote955,promote955,Promote Me,promote@example.test,1,0,,9fb0ef66357ed7603c61bf3dff03842f.png
+tec955-claimed,claimed955,claimed-card-955,Claimed Card,claimed@example.test,1,0,bilinmeyen.png,
+tec955-invalid,invalid955,arda ezikoğlu,Arda,arda@example.test,1,0,bilisim.png,
+tec955-taken,taken955,ownhash955,Wants Another Hash,taken@example.test,1,0,,
