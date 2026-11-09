@@ -51,8 +51,13 @@ Super admin bypasses permission checks in `HasPermission`. Most platform HTTP ro
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/v1/auth/identities` | Bearer |
+| GET | `/v1/auth/identities` | Bearer → `{items, total, has_password, has_passkey}` |
 | DELETE | `/v1/auth/identities/{provider}` | Bearer (`github`, `google`, `facebook`, `apple`) |
+
+Last sign-in method guard (TEC-1105):
+
+- `has_password` comes from `users.password_set` (migration 000073). OAuth sign-up and user imports store a random hash and set it `false`; every password update (reset, change, admin set) sets it `true`. An OAuth-only user sets a password through the password reset flow.
+- `DELETE /v1/auth/identities/{provider}` and `DELETE /v1/auth/passkeys/{uuid}` answer `409 LAST_SIGN_IN_METHOD` when the user has no password and the identity / passkey is their last sign-in method (no other identity, no other passkey).
 
 GitHub: `GET/PATCH /v1/platform/integrations/github`. Google / Facebook / Apple: `/v1/platform/integrations/{provider}`. Auth policy: `GET/PATCH /v1/platform/auth/settings`.
 

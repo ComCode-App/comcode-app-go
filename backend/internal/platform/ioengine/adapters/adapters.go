@@ -132,6 +132,10 @@ func (a *UsersAdapter) ApplyRow(ctx context.Context, row map[string]any, default
 	if err != nil {
 		return ioengine.RowResult{OK: false, Error: err.Error()}, nil
 	}
+	// The random password above is never shown to anyone (TEC-1105).
+	if err := a.q.MarkUserPasswordUnset(ctx, created.ID); err != nil {
+		return ioengine.RowResult{}, err
+	}
 	_ = a.q.UpdateUserLocale(ctx, db.UpdateUserLocaleParams{ID: created.ID, Locale: locale})
 	for _, rs := range roleSlugs {
 		_ = a.q.AssignUserRoleBySlug(ctx, db.AssignUserRoleBySlugParams{UserID: created.ID, Slug: rs})

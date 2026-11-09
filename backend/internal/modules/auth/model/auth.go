@@ -18,6 +18,9 @@ type User struct {
 	Locale        string
 	EmailVerified bool
 	CreatedAt     time.Time
+	// PasswordSet is false when the user never chose a password (OAuth sign-up
+	// and user imports store a random hash).
+	PasswordSet bool
 }
 
 // UserAuthMethod is a login option linked to a platform user.
