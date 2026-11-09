@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/database/db"
@@ -82,6 +83,15 @@ func (a *UsersAdapter) ApplyItem(ctx context.Context, action, entityUUID string)
 		"status":     user.Status,
 		"role_slugs": roleSlugs,
 	}
+	if slices.Contains(roleSlugs, rbac.RoleSuperAdmin) {
+		ok, err := a.actorIsSuperAdmin(ctx)
+		if err != nil {
+			return bulkengine.BulkItemResult{}, err
+		}
+		if !ok {
+			return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: errSuperAdminTarget}, nil
+		}
+	}
 	switch action {
 	case "disable":
 		if user.Status == "disabled" {
@@ -124,6 +134,9 @@ func (a *UsersAdapter) RevertItem(ctx context.Context, action, entityUUID string
 	if err != nil {
 		return err
 	}
+	if err := a.guardRevertSuperAdmin(ctx, user.ID, previous); err != nil {
+		return err
+	}
 	prevStatus, _ := previous["status"].(string)
 	if prevStatus == "" {
 		prevStatus = "active"
@@ -158,6 +171,39 @@ func (a *UsersAdapter) RevertItem(ctx context.Context, action, entityUUID string
 				_ = a.q.AssignUserRoleBySlug(ctx, db.AssignUserRoleBySlugParams{UserID: user.ID, Slug: slug})
 			}
 		}
+	}
+	return nil
+}
+
+// errSuperAdminTarget is the item error when a non-super-admin actor targets a super admin.
+const errSuperAdminTarget = "only a super admin can change a super admin account"
+
+// actorIsSuperAdmin reports whether the job's actor (bulkengine.ActorFrom) currently holds the
+// super_admin role. A context without an actor is never trusted.
+func (a *UsersAdapter) actorIsSuperAdmin(ctx context.Context) (bool, error) {
+	actorID, ok := bulkengine.ActorFrom(ctx)
+	if !ok {
+		return false, nil
+	}
+	return a.q.UserHasRoleSlug(ctx, db.UserHasRoleSlugParams{UserID: actorID, Slug: rbac.RoleSuperAdmin})
+}
+
+// guardRevertSuperAdmin stops a non-super-admin rollback from changing a super admin or from
+// restoring a role snapshot that contains super_admin.
+func (a *UsersAdapter) guardRevertSuperAdmin(ctx context.Context, userID int64, previous map[string]any) error {
+	isSA, err := a.q.UserHasRoleSlug(ctx, db.UserHasRoleSlugParams{UserID: userID, Slug: rbac.RoleSuperAdmin})
+	if err != nil {
+		return err
+	}
+	if !isSA && !slices.Contains(stringSlice(previous["role_slugs"]), rbac.RoleSuperAdmin) {
+		return nil
+	}
+	ok, err := a.actorIsSuperAdmin(ctx)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errors.New(errSuperAdminTarget)
 	}
 	return nil
 }

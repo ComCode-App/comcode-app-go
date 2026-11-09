@@ -573,6 +573,8 @@ func writeUsecaseError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Unauthorized(w, r, "Session is no longer valid")
 	case errors.Is(err, usecase.ErrAccountSuspended):
 		response.Forbidden(w, r, "Account is suspended")
+	case errors.Is(err, usecase.ErrSuperAdminRequired):
+		response.Forbidden(w, r, "Only a super admin can change super admin accounts or the super_admin role")
 	case errors.Is(err, usecase.ErrForbidden):
 		response.Forbidden(w, r, "You do not have access to this resource")
 	case errors.Is(err, usecase.ErrNotFound):

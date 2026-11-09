@@ -34,6 +34,10 @@ var (
 	ErrAccountSuspended     = errors.New("account is suspended")
 )
 
+// ErrSuperAdminRequired: only a super admin may grant or remove the super_admin role or change a
+// super admin account (roles, status, password, impersonation). It wraps ErrForbidden (403).
+var ErrSuperAdminRequired = fmt.Errorf("%w: only a super admin can change super admin accounts or the super_admin role", ErrForbidden)
+
 // Repository is the persistence port for auth use cases.
 type Repository interface {
 	CreateUser(ctx context.Context, u model.User, emailVerified bool) (model.User, error)
