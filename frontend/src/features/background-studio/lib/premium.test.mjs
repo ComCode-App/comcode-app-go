@@ -18,6 +18,10 @@ test("static shader list matches the backend (TEC-947)", () => {
   assert.deepEqual(tiers.static, goStatic);
   const types = fs.readFileSync(path.join(here, "../data/shader-types.ts"), "utf8");
   for (const id of tiers.static) {
-    assert.ok(types.includes(`'${id}'`), `${id} is not a known shader type`);
+    // Quote style is Prettier's call; accept either.
+    assert.ok(
+      types.includes(`'${id}'`) || types.includes(`"${id}"`),
+      `${id} is not a known shader type`,
+    );
   }
 });
