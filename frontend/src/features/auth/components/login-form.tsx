@@ -21,6 +21,7 @@ import {
   createLoginSchema,
   type LoginFormValues,
 } from "@/features/auth/schemas";
+import { safeNextPath } from "@/lib/auth/safe-next";
 import { defaultHomeForUser } from "@/lib/auth/types";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
@@ -28,13 +29,6 @@ import { fetchAppPublicConfig } from "@/services/app-config.service";
 import { z } from "zod";
 
 import { AuthCard } from "./auth-card";
-
-function resolveNext(raw: string | null, fallback: string) {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
-    return fallback;
-  }
-  return raw;
-}
 
 type OAuthId = "github" | "google" | "facebook" | "apple";
 
@@ -109,7 +103,7 @@ export function LoginForm() {
       setFormError(t("errors.role_mismatch"));
       return false;
     }
-    const next = resolveNext(searchParams.get("next"), home);
+    const next = safeNextPath(searchParams.get("next"), home);
     router.replace(next);
     return true;
   };
@@ -240,7 +234,7 @@ export function LoginForm() {
       }
       await signIn(provider, {
         redirect: true,
-        callbackUrl: resolveNext(searchParams.get("next"), routes.platform.home),
+        callbackUrl: safeNextPath(searchParams.get("next"), routes.platform.home),
       });
     } catch {
       setFormError(t("auth.oauth.sign_in_error"));
