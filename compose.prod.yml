@@ -23,7 +23,7 @@ x-backend-environment: &backend-environment
   HTTP_READ_TIMEOUT: ${HTTP_READ_TIMEOUT:-}
   HTTP_WRITE_TIMEOUT: ${HTTP_WRITE_TIMEOUT:-}
   HTTP_IDLE_TIMEOUT: ${HTTP_IDLE_TIMEOUT:-}
-  # X-Forwarded-For is honoured only from these peers (BFF, Traefik on the Docker network).
+  # X-Forwarded-For is honoured only from these peers (the frontend BFF on the app network).
   TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7}
   DB_HOST: ${NAME_PREFIX:-app}-postgres
   DB_PORT: "5432"
@@ -275,7 +275,9 @@ services:
     expose:
       - "8080"
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/readyz"]
+      # Liveness only: /healthz does not touch Postgres/Redis, so a dependency blip does not
+      # flip the container to unhealthy. /readyz still reports dependency state on demand.
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/healthz"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -284,9 +286,11 @@ services:
     # over Docker's 10s default so a deploy never SIGKILLs a request mid-flight.
     stop_grace_period: 30s
     restart: unless-stopped
+    # Private: only the app network. The browser reaches the API through the frontend BFF
+    # (/api → API_URL), payment callbacks through APP_URL/api/v1/public/payment/…; no
+    # Dokploy domain may point at this service.
     networks:
       - app
-      - dokploy-network
 
   worker:
     <<: *backend-image
