@@ -36,11 +36,20 @@ const nextConfig: NextConfig = {
     ];
   },
   async redirects() {
-    return companyRedirects.map(([from, to]) => ({
-      source: `/account/${from}`,
-      destination: `/company/${to}`,
-      permanent: true,
-    }));
+    return [
+      ...companyRedirects.map(([from, to]) => ({
+        source: `/account/${from}`,
+        destination: `/company/${to}`,
+        permanent: true,
+      })),
+      // Cmd+K role hits indexed before TEC-1112 point at /platform/roles/{uuid};
+      // roles live under System Settings. Drop after the next `make search-reindex`.
+      {
+        source: "/platform/roles/:path*",
+        destination: "/platform/settings/roles/:path*",
+        permanent: false,
+      },
+    ];
   },
 };
 
