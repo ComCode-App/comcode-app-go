@@ -81,6 +81,10 @@ type EnqueueInput struct {
 	TemplateVars map[string]string
 	SourceEvent  string
 	Language     string
-	// SecurityEmail bypasses email preference (password reset / verification).
+	// SecurityEmail bypasses email preference (password reset / verification) and
+	// treats the default secret template vars (see usecase.DefaultSecretVars) as secret.
 	SecurityEmail bool
+	// SecretVars names further template vars that must never be stored readable. Rows keep
+	// a masked rendering; the real email is stored encrypted until delivery succeeds.
+	SecretVars []string
 }

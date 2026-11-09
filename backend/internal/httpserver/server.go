@@ -281,6 +281,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	}
 	notifSvc := notifusecase.New(deps.Queries, deps.Queue, provs, log)
 	notifSvc.WithActionSigner(cfg.JWT.AccessSecret, 0)
+	notifSvc.WithEncryptionKey(cfg.App.Env, cfg.Encryption.Key)
 	notifSvc.WithVAPID(notifusecase.VAPIDConfig{
 		PublicKey:  cfg.VAPID.PublicKey,
 		PrivateKey: cfg.VAPID.PrivateKey,

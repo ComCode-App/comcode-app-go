@@ -104,7 +104,8 @@ func main() {
 	var worker *queue.Worker
 	if cfg.Queue.Enabled {
 		queueClient = queue.NewClient(cfg.Redis)
-		notifSvc := notifusecase.New(queries, queueClient, provs, log)
+		notifSvc := notifusecase.New(queries, queueClient, provs, log).
+			WithEncryptionKey(cfg.App.Env, cfg.Encryption.Key)
 		if cfg.Queue.WorkerInProcess {
 			worker = queue.NewWorker(cfg, log, notifSvc.Deliver).
 				WithLogPurge(logsSvc.ApplyDueRules)
