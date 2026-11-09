@@ -79,6 +79,7 @@ Browser
 - Access and refresh tokens never enter JavaScript. The BFF stores them in HttpOnly cookies and strips them from JSON responses.
 - NextAuth is the frontend session layer; the Go adapter talks to `/v1/internal/auth/*`.
 - OpenAPI types are generated into `frontend/src/generated/api.d.ts` via `pnpm api:generate`.
+- Security headers for every Next route live in `frontend/src/config/security-headers.ts` (TEC-1102). No page can be framed (`X-Frame-Options: DENY`, `frame-ancestors 'none'`), public profiles included (TEC-1119); only the storage previews the app frames itself allow `'self'`. Invite-token pages add `Referrer-Policy: no-referrer` in `next.config.ts` (TEC-1104).
 
 ## Backend layers
 

@@ -24,7 +24,7 @@ const noReferrerPaths = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  // Security headers (TEC-1102); public profile framing is still open, see the module.
+  // Security headers (TEC-1102); no page is frameable by other sites (TEC-1119), see the module.
   // Invite-token pages come last so their no-referrer wins over the base policy (TEC-1104).
   async headers() {
     return [

@@ -54,6 +54,7 @@ Writes need an owner or admin role in the active account (docs/TENANCY_AND_ACCES
   - `contact.{phone,email,website,whatsapp,address}.click`
   - `social.link.click` (`platform` property)
   - `bank.iban.copy`
+- No embedding (TEC-1119): visitor pages (`/{username}`, `/c/*`, `/s/*`, `/share/*`) cannot be shown in an iframe on another site. Every route sends `X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors 'none'` (`config/security-headers.ts`, applied from `next.config.ts`). Only the storage preview responses the app frames itself (`/api/v1/platform/storage/objects/preview`, `/api/v1/public/storage/*`) allow `'self'`. Embedding on partner sites would need an explicit `frame-ancestors` allowlist, an owner decision.
 - The internal Linear feedback widget is not loaded on visitor pages (`components/common/feedback-widget.tsx`).
 - Bundle budget (TEC-858): `[username]`, `c` and `s` sit outside `app/(shell)`, so they get only the root `PublicProviders` (locale, theme, toasts) and the public i18n namespaces in `lib/i18n/messages.ts`.
   - No session, React Query, step-up, realtime or dialog providers there. Do not call `useAuth`, `usePermission`, `useDialogs` or React Query hooks from visitor components.
