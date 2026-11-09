@@ -7,6 +7,7 @@ import {
   Loader2,
   Monitor,
   Shield,
+  Smartphone,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
@@ -29,7 +30,14 @@ import { datetime } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
 import { authService, type DeviceSession } from "@/services/auth.service";
 
+function isMobile(item: DeviceSession) {
+  return item.client_type === "mobile";
+}
+
+/** Mobile sessions show the app's device name; web sessions the browser user agent. */
 function sessionLabel(item: DeviceSession, fallback: string) {
+  const device = isMobile(item) ? item.device_name?.trim() : undefined;
+  if (device) return device;
   const ua = item.user_agent?.trim();
   return ua && ua.length > 0 ? ua : fallback;
 }
@@ -152,7 +160,11 @@ export function SessionManager() {
               className="border-border bg-card flex flex-col gap-4 rounded-xl border p-4 shadow-xs sm:flex-row sm:items-start"
             >
               <div className="bg-primary/10 text-primary flex size-11 shrink-0 items-center justify-center rounded-lg">
-                <Monitor className="size-5" aria-hidden />
+                {isMobile(item) ? (
+                  <Smartphone className="size-5" aria-hidden />
+                ) : (
+                  <Monitor className="size-5" aria-hidden />
+                )}
               </div>
               <div className="min-w-0 flex-1 space-y-3">
                 <div className="space-y-1">
@@ -160,6 +172,16 @@ export function SessionManager() {
                     {sessionLabel(item, t("auth.sessions.unknown_device"))}
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline">
+                      {isMobile(item)
+                        ? t("auth.sessions.client_mobile")
+                        : t("auth.sessions.client_web")}
+                    </Badge>
+                    {isMobile(item) && item.app_version ? (
+                      <Badge variant="secondary">
+                        {t("auth.sessions.app_version")}: {item.app_version}
+                      </Badge>
+                    ) : null}
                     {item.current ? (
                       <Badge variant="success">
                         {t("auth.sessions.current")}

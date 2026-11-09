@@ -44,6 +44,10 @@ export type DeviceSession = {
   created_at: string;
   expires_at: string;
   impersonated: boolean;
+  /** "web" or "mobile" (TEC-1179). */
+  client_type?: "web" | "mobile";
+  device_name?: string | null;
+  app_version?: string | null;
 };
 
 type SessionListResult = {

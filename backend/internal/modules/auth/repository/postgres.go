@@ -301,6 +301,32 @@ func int64Param(v *int64) pgtype.Int8 {
 	return pgtype.Int8{Int64: *v, Valid: true}
 }
 
+func textParam(v string) pgtype.Text {
+	if v == "" {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: v, Valid: true}
+}
+
+func textPtr(v pgtype.Text) *string {
+	if !v.Valid || v.String == "" {
+		return nil
+	}
+	s := v.String
+	return &s
+}
+
+func clientTypeParam(v string) string {
+	if v == model.ClientMobile {
+		return model.ClientMobile
+	}
+	return model.ClientWeb
+}
+
+func timestamptz(t time.Time) pgtype.Timestamptz {
+	return pgtype.Timestamptz{Time: t.UTC(), Valid: true}
+}
+
 func mapRefreshSession(row db.RefreshToken) model.RefreshSession {
 	return model.RefreshSession{
 		UUID:               row.Uuid,
@@ -308,6 +334,8 @@ func mapRefreshSession(row db.RefreshToken) model.RefreshSession {
 		UserID:             row.UserID,
 		ImpersonatorUserID: int64Ptr(row.ImpersonatorUserID),
 		ActiveAccountID:    int64Ptr(row.ActiveAccountID),
+		ClientType:         row.ClientType,
+		ExpiresAt:          row.ExpiresAt.Time,
 	}
 }
 
@@ -321,6 +349,9 @@ func (r *Postgres) SaveRefresh(ctx context.Context, userID int64, hash string, e
 		IpAddress:          ip,
 		ImpersonatorUserID: int64Param(meta.ImpersonatorUserID),
 		ActiveAccountID:    int64Param(meta.ActiveAccountID),
+		ClientType:         clientTypeParam(meta.ClientType),
+		DeviceName:         textParam(meta.DeviceName),
+		AppVersion:         textParam(meta.AppVersion),
 	})
 	if err != nil {
 		return model.RefreshSession{}, err
@@ -328,16 +359,19 @@ func (r *Postgres) SaveRefresh(ctx context.Context, userID int64, hash string, e
 	return mapRefreshSession(row), nil
 }
 
-// RotateRefresh atomically revokes a valid refresh token and issues its successor
-// in the same family. Returns ErrNotFound when the token is unknown, revoked or expired.
-func (r *Postgres) RotateRefresh(ctx context.Context, oldHash, newHash string, expiresAt time.Time, meta model.SessionMeta) (model.RefreshSession, error) {
+// RotateRefresh atomically revokes a valid refresh token (marking it rotated) and issues its
+// successor in the same family; the successor's expiry follows the family's client type.
+// Returns ErrNotFound when the token is unknown, revoked or expired.
+func (r *Postgres) RotateRefresh(ctx context.Context, oldHash, newHash string, exp model.RefreshExpiry, meta model.SessionMeta) (model.RefreshSession, error) {
 	ua, ip := sessionMetaParams(meta)
 	row, err := r.q.RotateRefreshTokenByHash(ctx, db.RotateRefreshTokenByHashParams{
-		OldTokenHash: oldHash,
-		NewTokenHash: newHash,
-		ExpiresAt:    pgtype.Timestamptz{Time: expiresAt.UTC(), Valid: true},
-		UserAgent:    ua,
-		IpAddress:    ip,
+		OldTokenHash:    oldHash,
+		NewTokenHash:    newHash,
+		WebExpiresAt:    timestamptz(exp.Web),
+		MobileExpiresAt: timestamptz(exp.Mobile),
+		UserAgent:       ua,
+		IpAddress:       ip,
+		AppVersion:      textParam(meta.AppVersion),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -349,12 +383,13 @@ func (r *Postgres) RotateRefresh(ctx context.Context, oldHash, newHash string, e
 }
 
 // RotateRefreshFamilyWithAccount re-issues the live token of a session family with a new active account.
-func (r *Postgres) RotateRefreshFamilyWithAccount(ctx context.Context, familyUUID uuid.UUID, userID int64, newHash string, expiresAt time.Time, accountID int64) (model.RefreshSession, error) {
+func (r *Postgres) RotateRefreshFamilyWithAccount(ctx context.Context, familyUUID uuid.UUID, userID int64, newHash string, exp model.RefreshExpiry, accountID int64) (model.RefreshSession, error) {
 	row, err := r.q.RotateRefreshFamilyWithAccount(ctx, db.RotateRefreshFamilyWithAccountParams{
 		FamilyUuid:      familyUUID,
 		UserID:          userID,
 		NewTokenHash:    newHash,
-		ExpiresAt:       pgtype.Timestamptz{Time: expiresAt.UTC(), Valid: true},
+		WebExpiresAt:    timestamptz(exp.Web),
+		MobileExpiresAt: timestamptz(exp.Mobile),
 		ActiveAccountID: pgtype.Int8{Int64: accountID, Valid: true},
 	})
 	if err != nil {
@@ -379,6 +414,26 @@ func (r *Postgres) GetActiveSessionFamily(ctx context.Context, familyUUID uuid.U
 	return mapRefreshSession(row), nil
 }
 
+// FindRotatedRefresh returns a refresh token that was already rotated, with WithinRace set
+// while the rotation is younger than raceWindow (database clock). ErrNotFound when the token
+// is unknown or was revoked without rotation (logout, session revocation).
+func (r *Postgres) FindRotatedRefresh(ctx context.Context, hash string, raceWindow time.Duration) (model.RotatedRefresh, error) {
+	row, err := r.q.GetRotatedRefreshToken(ctx, db.GetRotatedRefreshTokenParams{
+		TokenHash: hash, RaceSeconds: raceWindow.Seconds(),
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.RotatedRefresh{}, ErrNotFound
+		}
+		return model.RotatedRefresh{}, err
+	}
+	return model.RotatedRefresh{
+		UserID: row.UserID, FamilyUUID: row.FamilyUuid, ClientType: row.ClientType,
+		DeviceName: textPtr(row.DeviceName), UserAgent: textPtr(row.UserAgent),
+		WithinRace: row.WithinRace,
+	}, nil
+}
+
 // RevokeRefresh revokes the whole session family of a refresh token (logout).
 func (r *Postgres) RevokeRefresh(ctx context.Context, hash string) error {
 	return r.q.RevokeRefreshFamilyByHash(ctx, hash)
@@ -400,6 +455,9 @@ func (r *Postgres) ListActiveSessions(ctx context.Context, userID int64) ([]mode
 			CreatedAt:    row.CreatedAt.Time,
 			ExpiresAt:    row.ExpiresAt.Time,
 			Impersonated: row.ImpersonatorUserID.Valid,
+			ClientType:   row.ClientType,
+			DeviceName:   textPtr(row.DeviceName),
+			AppVersion:   textPtr(row.AppVersion),
 		}
 		if row.UserAgent.Valid && row.UserAgent.String != "" {
 			ua := row.UserAgent.String

@@ -97,15 +97,14 @@ func (u *AuthUseCase) SwitchAccount(ctx context.Context, p authctx.Principal, ac
 	if err != nil {
 		return model.AccountSwitchResult{}, err
 	}
-	refreshExp := u.now().UTC().Add(u.tokens.RefreshTTL())
-	session, err := u.repo.RotateRefreshFamilyWithAccount(ctx, p.SessionID, p.UserInternal, tokenHash(rawRefresh), refreshExp, membership.ID)
+	session, err := u.repo.RotateRefreshFamilyWithAccount(ctx, p.SessionID, p.UserInternal, tokenHash(rawRefresh), u.refreshExpiry(), membership.ID)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			return model.AccountSwitchResult{}, ErrSessionRevoked
 		}
 		return model.AccountSwitchResult{}, err
 	}
-	tokens, err := u.issueAccessForSession(ctx, user, session, rawRefresh, refreshExp)
+	tokens, err := u.issueAccessForSession(ctx, user, session, rawRefresh, session.ExpiresAt)
 	if err != nil {
 		return model.AccountSwitchResult{}, err
 	}

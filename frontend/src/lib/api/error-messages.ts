@@ -31,6 +31,7 @@ export const API_ERROR_MESSAGE_KEYS: Readonly<Record<string, string>> = {
   INVALID_MFA_CODE: "errors.codes.invalid_mfa_code",
   LAST_SIGN_IN_METHOD: "auth.oauth.last_sign_in_method",
   INVALID_EMAIL_CODE: "errors.codes.invalid_email_code",
+  REFRESH_RACE: "errors.codes.refresh_race",
   REALTIME_DISABLED: "errors.codes.realtime_disabled",
   // Routes / public profile.
   INVALID_PASSCODE: "errors.codes.invalid_passcode",

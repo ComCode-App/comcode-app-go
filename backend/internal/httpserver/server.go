@@ -267,6 +267,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("httpserver: jwt: %w", err)
 	}
+	if err := tokens.SetMobileRefreshTTL(cfg.JWT.RefreshTTLMobile); err != nil {
+		return nil, fmt.Errorf("httpserver: jwt: %w", err)
+	}
 
 	mailer := mail.NewSMTPSender(cfg.SMTP)
 	// The exchange visitor copy attaches the owner's vCard at send time (TEC-940); the profiles
