@@ -47,6 +47,7 @@ Canonical env is the **repo-root** `.env`. Compose files are `compose.local.yml`
 | [docs/OWNER_CHECKLIST.md](./docs/OWNER_CHECKLIST.md) | Owner-only GitHub / GHCR / Dokploy settings (agents never change them) |
 | [docs/design/env-core.md](./docs/design/env-core.md) | Env schema, `prod-env.sh`, env CI checks, boot guard |
 | [docs/design/account-deletion.md](./docs/design/account-deletion.md) | Self-service account deletion design (proposal, owner decisions pending) |
+| [docs/design/mobile.md](./docs/design/mobile.md) | Mobile app design: native sign-in, QR sign-in, Expo push, v1 scope, sub-issues (proposal, owner decisions pending) |
 | [docs/BOILERPLATE_SYNC.md](./docs/BOILERPLATE_SYNC.md) | Boilerplate sync record: last reviewed SHA, per-commit PORT / ZATEN VAR / ATLA decisions, method for the next sync |
 | [backend/API_CONVENTIONS.md](./backend/API_CONVENTIONS.md) | Envelope, lists, meta |
 | [backend/DATABASE_RULES.md](./backend/DATABASE_RULES.md) | Migrations + sqlc |
