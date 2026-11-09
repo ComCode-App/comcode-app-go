@@ -19,6 +19,15 @@ FROM base AS build
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Release provenance (TEC-1094), set by CI as build args; local builds report "dev".
+# NEXT_PUBLIC_* values are inlined by `pnpm build` wherever the code reads them, so the
+# version can be shown in the UI later without a runtime lookup.
+ARG APP_VERSION=dev
+ARG APP_COMMIT=
+ARG APP_BUILT_AT=
+ENV NEXT_PUBLIC_APP_VERSION=${APP_VERSION}
+ENV NEXT_PUBLIC_APP_COMMIT=${APP_COMMIT}
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
@@ -30,6 +39,14 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
+
+# Same provenance for the Node server (process.env) and `docker inspect`.
+ARG APP_VERSION=dev
+ARG APP_COMMIT=
+ARG APP_BUILT_AT=
+ENV APP_VERSION=${APP_VERSION}
+ENV APP_COMMIT=${APP_COMMIT}
+ENV APP_BUILT_AT=${APP_BUILT_AT}
 
 RUN addgroup -S -g 10001 app \
     && adduser -S -D -H -u 10001 -G app app

@@ -692,6 +692,17 @@ type AppLog struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type AppRelease struct {
+	ID          int64              `json:"id"`
+	Version     string             `json:"version"`
+	GitCommit   string             `json:"git_commit"`
+	BuiltAt     pgtype.Timestamptz `json:"built_at"`
+	Notes       string             `json:"notes"`
+	BootCount   int64              `json:"boot_count"`
+	FirstSeenAt pgtype.Timestamptz `json:"first_seen_at"`
+	LastSeenAt  pgtype.Timestamptz `json:"last_seen_at"`
+}
+
 type AppSetting struct {
 	ID            int16              `json:"id"`
 	LogoObjectKey pgtype.Text        `json:"logo_object_key"`

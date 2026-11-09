@@ -8,16 +8,27 @@ name: CI
 # every pull request (any base) and manual runs. Feature branches are tested
 # through their pull request, so there is no push trigger for them (that only
 # duplicated the runs).
+#
+# Releases (TEC-1094): ONLY a push to main publishes images to GHCR
+# (:main, :sha-<short>, :v0.N) and cuts the v0.N git tag Dokploy deploys
+# (release-meta -> publish-images -> release-tag). Every other ref builds the
+# images without pushing. The one exception is a manual run of a non-main ref
+# with push_test_image=true, which pushes :test-<short-sha> and nothing else.
 on:
   push:
     branches: [main, cc-collective-branch]
   pull_request:
   workflow_dispatch:
+    inputs:
+      push_test_image:
+        description: "Also push every image as :test-<short-sha> to GHCR (refused on main; never :main / :v0.* / :sha-*)"
+        type: boolean
+        default: false
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  # Branches and PRs: newest push wins. main: never cancel mid-run (release
-  # jobs from TEC-1094 must not be cut off half way).
+  # Branches and PRs: newest push wins. main: never cancel mid-run, or a
+  # publish could land without its v0.N tag (and release numbers could skip).
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
@@ -365,10 +376,11 @@ jobs:
           retention-days: 7
 
   # Build every build-context image (deploy/images.json), NO push. Runs on any
-  # app or infra change of a PR / non-main push (docs-only changes skip it);
-  # the per-image gha cache keeps the untouched image near-instant. On main,
-  # publishing to GHCR (release-meta, publish-images, release-tag) is added by
-  # TEC-1094. Non-release builds are versioned sha-<short>.
+  # app or infra change of a PR / non-main push / manual run (docs-only changes
+  # skip it); the per-image gha cache keeps the untouched image near-instant.
+  # There is no registry login here and push is hardcoded false. On main the
+  # images are built by publish-images instead. Non-release builds bake the
+  # version sha-<short>.
   image-build:
     needs: changes
     if: >-
@@ -396,6 +408,10 @@ jobs:
           context: ${{ matrix.image.context }}
           file: ${{ matrix.image.context }}/${{ matrix.image.dockerfile }}
           push: false
+          build-args: |
+            APP_VERSION=${{ steps.meta.outputs.version }}
+            APP_COMMIT=${{ github.sha }}
+            APP_BUILT_AT=${{ steps.meta.outputs.built_at }}
           labels: |
             org.opencontainers.image.version=${{ steps.meta.outputs.version }}
             org.opencontainers.image.created=${{ steps.meta.outputs.built_at }}
@@ -403,6 +419,262 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha,scope=${{ matrix.image.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image.service }}
+
+  # ---------------------------------------------------------------------------
+  # Releases (TEC-1094). main push ONLY. Three layers keep any other ref from
+  # pushing :main / :v0.* / :sha-* or cutting a tag:
+  #   1. job `if:` requires event push + ref refs/heads/main;
+  #   2. the step that computes tags hard-fails on any other ref/event;
+  #   3. packages/contents write permissions exist only on these jobs.
+  # publish-images has no always(): GitHub's implicit success() means EVERY
+  # needed job (backend, frontend, e2e, env, release-meta) must be `success`.
+  # A skipped test job is not success, so untested code is never published.
+  # (Every main push runs the full suite: see the changes job.)
+  # ---------------------------------------------------------------------------
+
+  # Decide the release ONCE, before any image is built, so every image bakes
+  # the same provenance and release-tag cuts exactly this version.
+  #   version  v0.N, N = highest existing v0.<int> tag + 1 (v0.1 when there is
+  #            none; a v0.0 baseline tag created by the owner also gives v0.1)
+  #   notes    `git log --no-merges` since the previous v0.* tag (capped at 200
+  #            lines); there is no hand-kept CHANGELOG
+  #   release  base64 release.json {version, git_commit, built_at, notes}; the
+  #            backend embeds it (internal/platform/release) and upserts it into
+  #            app_releases on boot
+  release-meta:
+    needs: changes
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.m.outputs.version }}
+      built_at: ${{ steps.m.outputs.built_at }}
+      release_b64: ${{ steps.m.outputs.release_b64 }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: m
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "push" ] || [ "$REF" != "refs/heads/main" ]; then
+            echo "::error title=Not a release ref::release-meta only runs for a push to main (got $EVENT $REF)."
+            exit 1
+          fi
+          git fetch --tags --force --quiet
+          last="$(git tag -l 'v0.*' | sed -n 's/^v0\.\([0-9]\+\)$/\1/p' | sort -n | tail -1)"
+          version="v0.$(( ${last:-0} + 1 ))"
+          if [ -n "$last" ]; then
+            range="v0.${last}..${GITHUB_SHA}"; since="since v0.${last}"
+          else
+            range="${GITHUB_SHA}"; since="(first release)"
+          fi
+          log="$(git log --no-merges --pretty='- %s (%h)' "$range")"
+          total="$(printf '%s' "$log" | grep -c '^- ' || true)"
+          notes="$(printf '%s\n' "$log" | head -n 200)"
+          if [ "${total:-0}" -gt 200 ]; then
+            notes="${notes}"$'\n'"- ...and $(( total - 200 )) more commits ${since}."
+          fi
+          [ -n "$log" ] || notes="- No code changes ${since} (redeploy)."
+          built_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          release_b64="$(jq -nc --arg v "$version" --arg c "$GITHUB_SHA" --arg b "$built_at" --arg n "$notes" \
+            '{version:$v, git_commit:$c, built_at:$b, notes:$n}' | base64 -w0)"
+          {
+            echo "version=$version"
+            echo "built_at=$built_at"
+            echo "release_b64=$release_b64"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "### Release $version ($since)"
+            echo
+            echo "$notes"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Green main push: build + push every image in deploy/images.json to GHCR as
+  # :main (mutable, newest build), :sha-<short> and :v0.N. The image path is
+  # derived from the repository, lowercased (ghcr.io/<owner>/<repo>-<service>,
+  # here ghcr.io/comcode-app/comcode-app-go-backend), never a hardcoded app
+  # name. Provenance goes in as build args (APP_VERSION, APP_COMMIT,
+  # APP_BUILT_AT, APP_RELEASE_JSON_B64) and OCI labels on every image.
+  publish-images:
+    needs: [changes, backend, frontend, e2e, env, release-meta]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.changes.outputs.images) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - id: meta
+        name: Compute tags (main push only)
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          VERSION: ${{ needs.release-meta.outputs.version }}
+          SERVICE: ${{ matrix.image.service }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "push" ] || [ "$REF" != "refs/heads/main" ]; then
+            echo "::error title=Refusing to publish::release tags are only pushed from a push to main (got $EVENT $REF)."
+            exit 1
+          fi
+          if ! [[ "$VERSION" =~ ^v0\.[0-9]+$ ]]; then
+            echo "::error title=Bad version::release-meta returned '$VERSION', expected v0.N."
+            exit 1
+          fi
+          image="ghcr.io/${GITHUB_REPOSITORY,,}-${SERVICE}"   # ghcr.io requires lowercase
+          short="${GITHUB_SHA::7}"
+          {
+            echo "image=$image"
+            echo "tags<<EOF"
+            echo "$image:main"
+            echo "$image:sha-$short"
+            echo "$image:$VERSION"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push ${{ matrix.image.service }}
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.context }}/${{ matrix.image.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            APP_VERSION=${{ needs.release-meta.outputs.version }}
+            APP_COMMIT=${{ github.sha }}
+            APP_BUILT_AT=${{ needs.release-meta.outputs.built_at }}
+            APP_RELEASE_JSON_B64=${{ needs.release-meta.outputs.release_b64 }}
+          labels: |
+            org.opencontainers.image.version=${{ needs.release-meta.outputs.version }}
+            org.opencontainers.image.created=${{ needs.release-meta.outputs.built_at }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=${{ matrix.image.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.service }}
+
+  # Every image is on GHCR -> cut the version release-meta chose (the one baked
+  # into the images) as an annotated tag whose message is the release notes.
+  # Dokploy deploys v0.* tags; the backend then upserts the release into
+  # app_releases on boot. A re-run that finds the tag on this commit is a no-op.
+  release-tag:
+    needs: [release-meta, publish-images]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Tag ${{ needs.release-meta.outputs.version }}
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          TAG: ${{ needs.release-meta.outputs.version }}
+          RELEASE_B64: ${{ needs.release-meta.outputs.release_b64 }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "push" ] || [ "$REF" != "refs/heads/main" ]; then
+            echo "::error title=Refusing to tag::v0.* tags are only cut from a push to main (got $EVENT $REF)."
+            exit 1
+          fi
+          if ! [[ "$TAG" =~ ^v0\.[0-9]+$ ]]; then
+            echo "::error title=Bad version::release-meta returned '$TAG', expected v0.N."
+            exit 1
+          fi
+          git fetch --tags --force --quiet
+          if existing="$(git rev-parse -q --verify "refs/tags/${TAG}^{commit}")"; then
+            if [ "$existing" = "$GITHUB_SHA" ]; then
+              echo "$TAG already points at ${GITHUB_SHA::7} (re-run); nothing to do."
+              exit 0
+            fi
+            echo "::error title=Tag taken::$TAG already exists at ${existing::7}, but the images were baked as $TAG for ${GITHUB_SHA::7}. Re-run the whole workflow so release-meta picks the next number."
+            exit 1
+          fi
+          notes="$(printf '%s' "$RELEASE_B64" | base64 -d | jq -r '.notes')"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$TAG" -m "$notes" "$GITHUB_SHA"
+          git push origin "refs/tags/$TAG"
+          echo "Tagged **$TAG** at \`${GITHUB_SHA::7}\`. Dokploy deploys v0.* tags." >> "$GITHUB_STEP_SUMMARY"
+
+  # Manual trial push from a NON-main ref: Actions -> CI -> Run workflow, pick
+  # the branch, tick push_test_image. Pushes ONLY :test-<short-sha> (never
+  # :main, :v0.* or :sha-*) and only after the full suite passed (a manual run
+  # is always full). Refused on main by the job `if:` and again by the step.
+  publish-test-image:
+    needs: [changes, backend, frontend, e2e, env]
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.push_test_image == true &&
+      github.ref != 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.changes.outputs.images) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - id: meta
+        name: Compute test tag (non-main manual run only)
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          SERVICE: ${{ matrix.image.service }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "workflow_dispatch" ] || [ "$REF" = "refs/heads/main" ]; then
+            echo "::error title=Refusing test push::test images are only pushed from a manual run of a non-main ref (got $EVENT $REF)."
+            exit 1
+          fi
+          version="test-${GITHUB_SHA::7}"
+          {
+            echo "version=$version"
+            echo "tag=ghcr.io/${GITHUB_REPOSITORY,,}-${SERVICE}:$version"
+            echo "built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push ${{ matrix.image.service }} (${{ steps.meta.outputs.version }})
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.context }}/${{ matrix.image.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tag }}
+          build-args: |
+            APP_VERSION=${{ steps.meta.outputs.version }}
+            APP_COMMIT=${{ github.sha }}
+            APP_BUILT_AT=${{ steps.meta.outputs.built_at }}
+          labels: |
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+            org.opencontainers.image.created=${{ steps.meta.outputs.built_at }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=${{ matrix.image.service }}
 
   # ---------------------------------------------------------------------------
   # Mobile (Expo). OFF unless the repo variable MOBILE_ENABLED is 'true'
@@ -596,12 +868,14 @@ jobs:
           gh pr merge "${{ steps.pr.outputs.number }}" --merge --match-head-commit "$GITHUB_SHA"
 
   # Single required status check. Passes when every gated job is success or
-  # skipped (path-filtered, or mobile gated off by MOBILE_ENABLED); fails if
-  # any failed or was cancelled. Make THIS the required check in branch
-  # protection (not the individual jobs, which skip by design).
+  # skipped (path-filtered, mobile gated off by MOBILE_ENABLED, release jobs
+  # off main, the test push when not requested); fails if any failed or was
+  # cancelled. On main a failed publish or tag therefore turns the run red.
+  # Make THIS the required check in branch protection (not the individual
+  # jobs, which skip by design).
   ci:
     if: always()
-    needs: [changes, backend, frontend, e2e, env, image-build, mobile, mobile-release]
+    needs: [changes, backend, frontend, e2e, env, image-build, release-meta, publish-images, release-tag, publish-test-image, mobile, mobile-release]
     runs-on: ubuntu-24.04
     steps:
       - name: Gate
