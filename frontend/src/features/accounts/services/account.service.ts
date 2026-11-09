@@ -47,6 +47,18 @@ export type InvitePreview = {
   user_exists: boolean;
 };
 
+/**
+ * POST /v1/account/members: a verified user is added (201, the member); any other address gets
+ * an email invite instead (202, TEC-1104).
+ */
+export type AddMemberResult = AccountMember | { status: "invited"; invite: AccountInvite };
+
+export function isInvitedResult(
+  result: AddMemberResult,
+): result is { status: "invited"; invite: AccountInvite } {
+  return "status" in result && result.status === "invited";
+}
+
 export type InviteAcceptResult = {
   account_uuid: string;
   account_name: string;
@@ -69,7 +81,7 @@ export const accountService = {
   },
 
   async addMember(body: { email: string; role: AccountRole }) {
-    return platformRequest<AccountMember>("POST", "/v1/account/members", { body });
+    return platformRequest<AddMemberResult>("POST", "/v1/account/members", { body });
   },
 
   async changeRole(userUuid: string, role: AccountRole) {

@@ -72,8 +72,11 @@ Suspending an account (`status = suspended`):
 Two ways in:
 
 - **Add directly.** An owner/admin (or a platform admin) adds a user who **already has an
-  account** by email (`POST /v1/account/members`); no email is sent and there is no acceptance
-  step. The next time that user loads `/v1/auth/accounts` the company appears.
+  account with a verified email** by email (`POST /v1/account/members`, 201); no email is sent and
+  there is no acceptance step. The next time that user loads `/v1/auth/accounts` the company
+  appears. For an unverified user or an unknown address the route sends an email invite instead
+  (202 `{status: "invited", invite}`, needs `app.account_invites.write`): while self-registration
+  is open anyone can register a colleague's address, so only the mailbox owner may join (TEC-1104).
 - **Email invite (TEC-945).** An owner/admin invites **any** address with a role. The person gets a
   link to `/platform/invite/{token}`, valid 7 days. A registered person logs in and accepts; an
   unregistered person signs up from the link (`POST /v1/auth/register` with `invite_token`, which
@@ -86,8 +89,13 @@ Two ways in:
 | `POST /v1/account/invites` | `app.account_invites.write` + owner/admin | `email`, `role` (default `member`; `owner` only by owners). An existing member or an open invite for the address is 409. Sends the email. |
 | `POST /v1/account/invites/{uuid}/resend` | same | New token (the old link stops working), new 7-day window, email again. Works on expired invites; accepted/revoked are 409 `INVITE_CLOSED`. |
 | `DELETE /v1/account/invites/{uuid}` | same | Revokes an open invite. |
-| `GET /v1/invites/{token}` | public | Account name, email, role, status (`expired` is derived from `expires_at`), inviter, `user_exists`. |
-| `POST /v1/invites/{token}/accept` | session | Joins with the invited role (an existing member keeps theirs). 403 `INVITE_EMAIL_MISMATCH`, 410 `INVITE_EXPIRED`, 409 `INVITE_CLOSED`, 403 for a suspended account. |
+| `GET /v1/invites/{token}` | public | Account name, email, role, status (`expired` is derived from `expires_at`), inviter, `user_exists`. 60 per 15 min per client IP. |
+| `POST /v1/invites/{token}/accept` | session | Joins with the invited role (an existing member keeps theirs). 403 `INVITE_EMAIL_MISMATCH`, 410 `INVITE_EXPIRED`, 409 `INVITE_CLOSED`, 403 for a suspended account, 403 `INVITE_IMPERSONATION` while impersonating. 10 per 15 min per user, 30 per client IP. |
+
+Hardening (TEC-1104): the token is in the URL, so the invite page (and login/sign-up, which can
+carry it in `invite`/`next`) and the two API responses send `Referrer-Policy: no-referrer`; both
+routes are rate-limited (429 with `Retry-After`). Removing a member, or a member leaving, revokes
+their open invites to that account.
 
 Invites live in `account_invites` (migration 000063), carry `account_id`, and are 404 from other
 accounts. Only the SHA-256 of the 32-byte random token is stored. One open invite per address and
@@ -217,7 +225,8 @@ confirm, rollback). Columns: `name`, `surname`, `email` (required), `title`, `of
 - the linked profile is updated (name, surname, title on the primary translation, work email/phone),
   or a profile is created (company name = account name, locale `tr`) and linked. Plan quotas apply.
 
-For an email **without a user** (TEC-945) the profile is created at once in the company account,
+For an email **without a user** (TEC-945), or whose user has not verified it and is not a member
+yet (TEC-1104), the profile is created at once in the company account,
 so the card works right away, and an invite (role `member`, source `import`) is sent that carries
 the profile and the row's office/group. On acceptance the profile becomes the new member's linked
 employee profile and the member is placed in that office/group (unless already linked or placed).

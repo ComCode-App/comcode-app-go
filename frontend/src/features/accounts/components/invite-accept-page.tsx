@@ -26,6 +26,10 @@ function acceptErrorKey(error: unknown): string {
       return "accounts.invite_page.closed";
     case "INVITE_EMAIL_MISMATCH":
       return "accounts.invite_page.email_mismatch";
+    case "INVITE_IMPERSONATION":
+      return "accounts.invite_page.impersonating";
+    case "RATE_LIMITED":
+      return "accounts.invite_page.rate_limited";
     default:
       return "accounts.invite_page.accept_failed";
   }
@@ -67,7 +71,14 @@ export function InviteAcceptPage({ token }: { token: string }) {
   }
   if (preview.isError || !preview.data) {
     return (
-      <AuthCard title={t("accounts.invite_page.invalid_title")} description={t("accounts.invite_page.invalid")}>
+      <AuthCard
+        title={t("accounts.invite_page.invalid_title")}
+        description={
+          isApiError(preview.error) && preview.error.code === "RATE_LIMITED"
+            ? t("accounts.invite_page.rate_limited")
+            : t("accounts.invite_page.invalid")
+        }
+      >
         <Button asChild className="w-full">
           <Link href={routes.app.home}>{t("accounts.invite_page.go_home")}</Link>
         </Button>

@@ -98,3 +98,35 @@ func TestSmartLinkPasscodeCountsFailuresOnly(t *testing.T) {
 		t.Fatal("expected the per-link cap to stop a distributed guess")
 	}
 }
+
+func TestInviteLimits(t *testing.T) {
+	t.Parallel()
+	mr := miniredis.RunT(t)
+	lim := ratelimit.New(redis.NewClient(&redis.Options{Addr: mr.Addr()}), "test")
+	ctx := context.Background()
+	for i := 0; i < 60; i++ {
+		if ok, _ := lim.AllowInvitePreview(ctx, "1.1.1.1"); !ok {
+			t.Fatalf("preview %d should be allowed", i+1)
+		}
+	}
+	if ok, retry := lim.AllowInvitePreview(ctx, "1.1.1.1"); ok || retry <= 0 {
+		t.Fatal("expected preview limit per IP")
+	}
+	if ok, _ := lim.AllowInvitePreview(ctx, "2.2.2.2"); !ok {
+		t.Fatal("another IP has its own preview budget")
+	}
+	for i := 0; i < 10; i++ {
+		if ok, _ := lim.AllowInviteAccept(ctx, "user-a", fmt.Sprintf("10.0.0.%d", i)); !ok {
+			t.Fatalf("accept %d should be allowed", i+1)
+		}
+	}
+	if ok, _ := lim.AllowInviteAccept(ctx, "user-a", "10.0.1.1"); ok {
+		t.Fatal("expected accept limit per user across IPs")
+	}
+	for i := 0; i < 30; i++ {
+		lim.AllowInviteAccept(ctx, fmt.Sprintf("user-%d", i), "9.9.9.9")
+	}
+	if ok, _ := lim.AllowInviteAccept(ctx, "user-new", "9.9.9.9"); ok {
+		t.Fatal("expected accept limit per IP across users")
+	}
+}

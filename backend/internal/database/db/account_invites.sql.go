@@ -566,6 +566,26 @@ func (q *Queries) RevokeAccountInvite(ctx context.Context, arg RevokeAccountInvi
 	return result.RowsAffected(), nil
 }
 
+const revokeOpenAccountInvitesForUser = `-- name: RevokeOpenAccountInvitesForUser :execrows
+UPDATE account_invites SET status = 'revoked', revoked_at = now()
+WHERE account_id = $1 AND status = 'pending'
+  AND email = (SELECT lower(u.email) FROM users u WHERE u.id = $2)
+`
+
+type RevokeOpenAccountInvitesForUserParams struct {
+	AccountID int64 `json:"account_id"`
+	UserID    int64 `json:"user_id"`
+}
+
+// TEC-1104: a removed member's open invites to the account stop working too.
+func (q *Queries) RevokeOpenAccountInvitesForUser(ctx context.Context, arg RevokeOpenAccountInvitesForUserParams) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeOpenAccountInvitesForUser, arg.AccountID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const setAccountInviteProfile = `-- name: SetAccountInviteProfile :execrows
 UPDATE account_invites ai
 SET profile_id = (SELECT p.id FROM profiles p WHERE p.account_id = $1 AND p.uuid = $2::uuid AND p.deleted_at IS NULL),

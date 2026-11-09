@@ -2435,10 +2435,13 @@ paths:
     post:
       tags: [Accounts]
       operationId: addActiveAccountMember
-      summary: Add an existing user to the active company account
+      summary: Add a user to the active company account (or invite the address)
       description: >-
         Owners may add any role; admins may add admins and members. Personal accounts cannot have
-        other members (400); an existing membership returns 409.
+        other members (400); an existing membership returns 409. Only a user whose email is
+        verified is added directly (201). For an unverified user or an address without a user an
+        email invite is sent instead (202, needs `app.account_invites.write`; an open invite for
+        the address is 409), so only the mailbox owner can join (TEC-1104).
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -2457,6 +2460,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeAccountMember"
+        "202":
+          description: The address is not verified (or has no user); an invite was sent instead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAccountMemberInvited"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -2510,7 +2519,7 @@ paths:
       tags: [Accounts]
       operationId: removeActiveAccountMember
       summary: Remove a member or leave the account
-      description: Any member may leave; removing others needs owner/admin, removing an owner needs an owner. The last owner cannot leave (409).
+      description: Any member may leave; removing others needs owner/admin, removing an owner needs an owner. The last owner cannot leave (409). The person's open invites to the account are revoked.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: user_uuid
@@ -2656,7 +2665,9 @@ paths:
       tags: [Accounts]
       operationId: previewInvite
       summary: Describe an invite link
-      description: Public; the token is the credential. `user_exists` tells the page whether to offer login or sign-up.
+      description: >-
+        Public; the token is the credential. `user_exists` tells the page whether to offer login or
+        sign-up. Rate-limited per client IP (429); responses carry `Referrer-Policy: no-referrer`.
       security: []
       parameters:
         - name: token
@@ -2672,6 +2683,8 @@ paths:
                 $ref: "#/components/schemas/EnvelopeInvitePreview"
         "404":
           $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /v1/invites/{token}/accept:
     post:
@@ -2683,7 +2696,8 @@ paths:
         the account with the invited role (an existing member keeps theirs). A profile the employee
         import created for the invite becomes the member's employee profile and the member is placed
         in its office/group. Expired: 410 `INVITE_EXPIRED`; accepted or revoked: 409 `INVITE_CLOSED`;
-        suspended account: 403.
+        suspended account: 403; while impersonating: 403 `INVITE_IMPERSONATION`. Rate-limited per
+        user and client IP (429); responses carry `Referrer-Policy: no-referrer`.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: token
@@ -2711,6 +2725,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /v1/platform/accounts/meta:
     get:
@@ -12493,6 +12509,19 @@ components:
       properties:
         success: { type: boolean, const: true }
         data: { $ref: "#/components/schemas/AccountInvite" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAccountMemberInvited:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: object
+          required: [status, invite]
+          properties:
+            status: { type: string, enum: [invited] }
+            invite: { $ref: "#/components/schemas/AccountInvite" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeAccountInvitePage:

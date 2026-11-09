@@ -131,3 +131,9 @@ ON CONFLICT (member_id) DO NOTHING;
 
 -- name: GetUserForInvite :one
 SELECT id, uuid, email, name, surname, locale FROM users WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: RevokeOpenAccountInvitesForUser :execrows
+-- TEC-1104: a removed member's open invites to the account stop working too.
+UPDATE account_invites SET status = 'revoked', revoked_at = now()
+WHERE account_id = sqlc.arg(account_id) AND status = 'pending'
+  AND email = (SELECT lower(u.email) FROM users u WHERE u.id = sqlc.arg(user_id));

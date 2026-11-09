@@ -108,3 +108,9 @@ WHERE account_id = sqlc.arg(account_id)
 SELECT id FROM users
 WHERE email = LOWER(TRIM(sqlc.arg(email)::text))
   AND deleted_at IS NULL;
+
+-- name: GetUserForMembershipByEmail :one
+-- TEC-1104: only a verified address may be added to a company directly; others get an invite.
+SELECT id, (email_verified_at IS NOT NULL)::bool AS email_verified FROM users
+WHERE email = LOWER(TRIM(sqlc.arg(email)::text))
+  AND deleted_at IS NULL;

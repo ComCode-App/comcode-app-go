@@ -342,6 +342,25 @@ func (q *Queries) GetPersonalAccountMembership(ctx context.Context, personalUser
 	return i, err
 }
 
+const getUserForMembershipByEmail = `-- name: GetUserForMembershipByEmail :one
+SELECT id, (email_verified_at IS NOT NULL)::bool AS email_verified FROM users
+WHERE email = LOWER(TRIM($1::text))
+  AND deleted_at IS NULL
+`
+
+type GetUserForMembershipByEmailRow struct {
+	ID            int64 `json:"id"`
+	EmailVerified bool  `json:"email_verified"`
+}
+
+// TEC-1104: only a verified address may be added to a company directly; others get an invite.
+func (q *Queries) GetUserForMembershipByEmail(ctx context.Context, email string) (GetUserForMembershipByEmailRow, error) {
+	row := q.db.QueryRow(ctx, getUserForMembershipByEmail, email)
+	var i GetUserForMembershipByEmailRow
+	err := row.Scan(&i.ID, &i.EmailVerified)
+	return i, err
+}
+
 const listAccountMembers = `-- name: ListAccountMembers :many
 SELECT m.role, m.created_at, u.uuid AS user_uuid, u.email, u.name, u.surname
 FROM account_members m
