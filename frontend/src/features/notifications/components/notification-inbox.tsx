@@ -39,6 +39,7 @@ import { cn, relativeDatetime } from "@/lib/utils";
 import { appToast } from "@/providers/toast-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
+import { suppressApiErrorToast } from "@/lib/api";
 
 export function NotificationInbox() {
   const { t, locale } = useLocale();
@@ -84,7 +85,9 @@ export function NotificationInbox() {
       if (canMarkNotificationRead(notification)) {
         markRead.mutate(notification.uuid);
       }
-    } catch {
+    } catch (error) {
+      // The action-specific text replaces the global API error toast (TEC-1117).
+      suppressApiErrorToast(error);
       appToast.error(t("notifications.toast.action_failed"));
     }
   };

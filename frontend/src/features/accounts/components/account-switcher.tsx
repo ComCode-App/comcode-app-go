@@ -22,6 +22,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 import { authService } from "@/services/auth.service";
+import { suppressApiErrorToast } from "@/lib/api";
 
 function AccountIcon({ account }: { account?: AccountSummary }) {
   const Icon = account?.type === "company" ? Building2 : User;
@@ -52,7 +53,9 @@ export function AccountSwitcher() {
       await authService.switchAccount(account.uuid);
       await hydrateProfile();
       window.location.assign(routes.app.home);
-    } catch {
+    } catch (error) {
+      // The switch-specific text replaces the global API error toast (TEC-1117).
+      suppressApiErrorToast(error);
       appToast.error(t("accounts.switch_failed"));
       setSwitching(false);
     }

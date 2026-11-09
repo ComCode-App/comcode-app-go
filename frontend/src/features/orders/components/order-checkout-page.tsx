@@ -30,16 +30,8 @@ export function OrderCheckoutPage({ sessionUuid }: { sessionUuid: string }) {
   const { t } = useLocale();
   const result = useSearchParams().get("result");
 
-  // PayTR sends the browser back to the result URL inside its iFrame: leave the frame.
-  useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      window.top &&
-      window.top !== window.self
-    ) {
-      window.top.location.href = window.location.href;
-    }
-  }, []);
+  // PayTR returns to this page inside its iFrame; `PaymentFrameExit` in the app
+  // layout moves it to the top window before the route guard runs (TEC-1125).
 
   const sessionQuery = useQuery({
     queryKey: ["orders", "checkout", sessionUuid],

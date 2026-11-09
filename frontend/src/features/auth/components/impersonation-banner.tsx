@@ -8,6 +8,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { authService } from "@/services/auth.service";
 import { appToast } from "@/providers/toast-provider";
+import { isApiError } from "@/lib/api";
 
 export function ImpersonationBanner() {
   const { user, hydrateProfile } = useAuth();
@@ -25,8 +26,9 @@ export function ImpersonationBanner() {
       } else {
         window.location.reload();
       }
-    } catch {
-      appToast.error(t("common.error_generic"));
+    } catch (error) {
+      // API errors already get the global toast (TEC-1117).
+      if (!isApiError(error)) appToast.error(t("common.error_generic"));
     }
   };
 

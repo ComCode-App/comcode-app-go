@@ -34,7 +34,7 @@ info:
     identifier: LicenseRef-Proprietary
 
 servers:
-  - url: http://127.0.0.1:8080
+  - url: http://127.0.0.1:58080
     description: Local development
 
 tags:
@@ -1536,7 +1536,7 @@ paths:
       tags: [Auth]
       operationId: postAuthPasswordForgot
       summary: Request password reset
-      description: Always returns accepted. If the email exists, enqueues a reset OTP email via Notification Center.
+      description: Always returns accepted (only an empty email is a 400). If the email exists, enqueues a reset OTP email via Notification Center. A failure while issuing the code or enqueuing the email is logged and reported server-side and still answers accepted, so the response never reveals whether the account exists.
       security: []
       requestBody:
         required: true
@@ -1553,8 +1553,6 @@ paths:
                 $ref: "#/components/schemas/EnvelopeStatus"
         "400":
           $ref: "#/components/responses/BadRequest"
-        "500":
-          $ref: "#/components/responses/InternalError"
         "429":
           $ref: "#/components/responses/TooManyRequests"
 
@@ -1992,6 +1990,35 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/notifications/{uuid}:
+    get:
+      tags: [Platform]
+      operationId: getPlatformNotificationByUUID
+      summary: Get a platform notification
+      description: |
+        Detail of one notification of any channel (email included), with `user` when the row has an owner.
+        Without `platform.notifications.read_all` only the caller's own rows are visible; others answer 404.
+        Secrets (verification / reset codes, invitation links) stay masked as on the stored row.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotification"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/platform/notifications/meta:
     get:

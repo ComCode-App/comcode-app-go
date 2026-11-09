@@ -98,6 +98,7 @@ export function OAuthIdentityManager({ providers }: OAuthIdentityManagerProps) {
         redirect: true,
       });
     } catch {
+      // toast-guard: next-auth signIn redirects; it never throws an ApiError.
       toast.error(t("auth.oauth.connect_error"));
       setPendingProvider(null);
     }

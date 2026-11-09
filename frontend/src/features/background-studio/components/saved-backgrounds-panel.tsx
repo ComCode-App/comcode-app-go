@@ -59,6 +59,7 @@ export function SavedBackgroundsPanel({
     try {
       onLoad(parseBackgroundDocument(item.document), item);
     } catch {
+      // toast-guard: document parsing only, no API call.
       appToast.error(t("background_studio.toast.invalid_json"));
     }
   };

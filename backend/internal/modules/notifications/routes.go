@@ -72,4 +72,7 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/platform/notifications", middleware.Chain(
 		http.HandlerFunc(h.ListPlatform), authn, requirePerm(rbac.PermPlatformNotificationsRead),
 	))
+	mux.Handle("GET /v1/platform/notifications/{uuid}", middleware.Chain(
+		http.HandlerFunc(h.GetPlatform), authn, requirePerm(rbac.PermPlatformNotificationsRead),
+	))
 }

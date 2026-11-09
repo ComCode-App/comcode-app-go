@@ -9,7 +9,7 @@ ENV_FILE ?= $(firstword $(wildcard ../.env .env))
 DB_USER     ?= app
 DB_PASSWORD ?= change_me
 DB_HOST     ?= 127.0.0.1
-DB_PORT     ?= 5432
+DB_PORT     ?= 55432
 DB_NAME     ?= app
 
 define load_env
@@ -92,7 +92,8 @@ migrate-create:
 	$(MIGRATE) create -ext sql -dir migrations -seq $(NAME)
 
 health:
-	curl -sS http://127.0.0.1:8080/healthz && echo && curl -sS http://127.0.0.1:8080/readyz && echo
+	@$(load_env) addr="$${APP_HTTP_ADDR:-:58080}"; port="$${addr##*:}"; \
+	curl -sS "http://127.0.0.1:$$port/healthz" && echo && curl -sS "http://127.0.0.1:$$port/readyz" && echo
 
 SA_EMAIL    ?= admin@example.com
 SA_PASSWORD ?= Password1

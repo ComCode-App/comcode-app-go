@@ -41,6 +41,15 @@ export function useNotification(uuid: string | null, enabled = true) {
   });
 }
 
+/** Platform detail (`GET /v1/platform/notifications/{uuid}`): any channel. */
+export function usePlatformNotification(uuid: string | null, enabled = true) {
+  return useQuery({
+    queryKey: notificationsKeys.platformDetail(uuid ?? ""),
+    queryFn: () => notificationsService.getPlatform(uuid!),
+    enabled: Boolean(uuid) && enabled,
+  });
+}
+
 /** Personal inbox: actor-scoped in-app notifications. */
 export function useNotificationsInbox(enabled = true) {
   return useQuery({

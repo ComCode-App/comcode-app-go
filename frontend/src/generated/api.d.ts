@@ -929,7 +929,7 @@ export interface paths {
         put?: never;
         /**
          * Request password reset
-         * @description Always returns accepted. If the email exists, enqueues a reset OTP email via Notification Center.
+         * @description Always returns accepted (only an empty email is a 400). If the email exists, enqueues a reset OTP email via Notification Center. A failure while issuing the code or enqueuing the email is logged and reported server-side and still answers accepted, so the response never reveals whether the account exists.
          */
         post: operations["postAuthPasswordForgot"];
         delete?: never;
@@ -1212,6 +1212,28 @@ export interface paths {
          *     `platform.notifications.read_all` is required for `scope=all` or `user_uuid`.
          */
         get: operations["getPlatformNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/notifications/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a platform notification
+         * @description Detail of one notification of any channel (email included), with `user` when the row has an owner.
+         *     Without `platform.notifications.read_all` only the caller's own rows are visible; others answer 404.
+         *     Secrets (verification / reset codes, invitation links) stay masked as on the stored row.
+         */
+        get: operations["getPlatformNotificationByUUID"];
         put?: never;
         post?: never;
         delete?: never;
@@ -13790,7 +13812,6 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             429: components["responses"]["TooManyRequests"];
-            500: components["responses"]["InternalError"];
         };
     };
     postAuthPasswordReset: {
@@ -14220,6 +14241,33 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getPlatformNotificationByUUID: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notification */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeNotification"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getPlatformNotificationsMeta: {

@@ -94,6 +94,7 @@ export function useExportsColumns() {
                   variant="outline"
                   onClick={() => {
                     void exportsService.download(job).catch(() => {
+                      // toast-guard: platformDownloadFile throws a plain Error and never toasts.
                       appToast.error(t("exports.toast.download_failed"));
                     });
                   }}

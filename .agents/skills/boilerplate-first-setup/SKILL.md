@@ -13,7 +13,7 @@ Human docs: `docs/DEVELOPMENT.md`. Canonical env is the **repo-root** `.env`.
 
 ## Layout
 
-- `backend/` — Go API + worker (`:8080`, `/v1/...`)
+- `backend/` — Go API + worker (local `:58080`, `/v1/...`)
 - `frontend/` — Next.js BFF (`/platform` + CMS `/`)
 - `compose.local.yml` — infra only (Postgres, Redis, SeaweedFS, MailHog, Adminer, Centrifugo, Meilisearch)
 - `compose.prod.yml` — full stack + `dokploy-network`
@@ -28,7 +28,7 @@ cp .env.example .env
 make prod-env-init             # generates .env.server from deploy/env/schema
 ```
 
-`API_URL` **must** include `/v1` (default `http://127.0.0.1:8080/v1`).
+`API_URL` **must** include `/v1` (local default `http://127.0.0.1:58080/v1`).
 
 ## 2. Stack identity (required before sharing a host)
 
@@ -57,8 +57,8 @@ make create-super-admin
 | Helper | What |
 |--------|------|
 | `make infra` / `make infra-down` | Compose infra only |
-| `make backend-dev` | air on `:8080` |
-| `make frontend-dev` | pnpm on `:3000` |
+| `make backend-dev` | air on `:58080` |
+| `make frontend-dev` | `next dev` on `:54002` |
 | `make migrate-up` | SQL migrations |
 | `make search-reindex` | Rebuild Meilisearch indexes |
 
@@ -66,11 +66,11 @@ make create-super-admin
 
 | Service | URL |
 |---------|-----|
-| Frontend / login | http://localhost:3000/platform/login |
-| API / Scalar | http://127.0.0.1:8080 · `/docs/` |
+| Frontend / login | http://localhost:54002/platform/login |
+| API / Scalar | http://127.0.0.1:58080 · `/docs/` |
 | Health | `/healthz` · `/readyz` |
 | Adminer | http://127.0.0.1:8081 |
-| SeaweedFS S3 | http://127.0.0.1:8333 (bucket `S3_BUCKET`, keys `S3_ACCESS_KEY` / `S3_SECRET_KEY`) |
+| SeaweedFS S3 | http://127.0.0.1:58333 (bucket `S3_BUCKET`, keys `S3_ACCESS_KEY` / `S3_SECRET_KEY`) |
 | MailHog | http://127.0.0.1:8025 |
 | Meilisearch | http://127.0.0.1:7700 |
 

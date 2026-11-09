@@ -215,6 +215,22 @@ test("a plain await caller can opt out with suppressApiErrorToast", async () => 
   assert.deepEqual(toasts, []);
 });
 
+test("a caller awaiting a mutation without onError can suppress it in its catch block", async () => {
+  // e.g. `try { await mutateAsync() } catch (e) { suppressApiErrorToast(e); toast(own text) }`
+  // (TEC-1117): unwrap and the MutationCache both queue the toast, the catch still cancels it.
+  const client = createQueryClient();
+  const mutation = client
+    .getMutationCache()
+    .build(client, { mutationFn: failingRequest(409, "CARD_RETIRED") });
+  try {
+    await mutation.execute(undefined);
+  } catch (error) {
+    suppressApiErrorToast(error);
+  }
+  await flush();
+  assert.deepEqual(toasts, []);
+});
+
 test("the same error emitted twice is toasted once; step-up is never toasted", async () => {
   const error = parseApiError(409, errorBody("CONFLICT", "dup"));
   emitApiError(error);

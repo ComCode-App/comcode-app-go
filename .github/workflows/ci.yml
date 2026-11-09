@@ -242,6 +242,15 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: frontend/.nvmrc
+      - name: gofmt
+        # Every Go file, sqlc output included (sqlc emits gofmt-clean code).
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error title=gofmt::Run 'gofmt -w' on these files:"
+            echo "$unformatted"
+            exit 1
+          fi
       - uses: sqlc-dev/setup-sqlc@v5
         with:
           sqlc-version: "1.31.1"
@@ -308,6 +317,8 @@ jobs:
         run: pnpm typecheck
       - name: Lint
         run: pnpm lint
+      - name: Format
+        run: pnpm format:check
       - name: Unit tests
         run: pnpm test
       - name: i18n
