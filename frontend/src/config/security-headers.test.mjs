@@ -39,51 +39,72 @@ function headersFor(rules, pathname) {
   return out;
 }
 
-test("every (shell) route folder gets framing protection", () => {
-  const shell = path.join(here, "..", "app", "(shell)");
-  const routes = [];
-  for (const entry of fs.readdirSync(shell, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    if (entry.name.startsWith("(")) {
-      for (const sub of fs.readdirSync(path.join(shell, entry.name), {
-        withFileTypes: true,
-      })) {
-        if (sub.isDirectory()) routes.push(sub.name);
-      }
-    } else {
-      routes.push(entry.name);
+/** Every top-level route folder under app/, route groups flattened. */
+function topLevelRoutes() {
+  const out = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name.startsWith("(")) walk(path.join(dir, entry.name));
+      else out.push(entry.name);
     }
-  }
-  assert.ok(routes.length > 5);
-  for (const r of routes) {
-    assert.ok(
-      mod.APP_ROUTE_PREFIXES.includes(r),
-      `add "${r}" to APP_ROUTE_PREFIXES`,
-    );
+  };
+  walk(path.join(here, "..", "app"));
+  return out;
+}
+
+function assertDeny(h, p) {
+  assert.equal(h.get("X-Frame-Options"), "DENY", p);
+  assert.match(
+    h.get("Content-Security-Policy") ?? "",
+    /frame-ancestors 'none'/,
+    p,
+  );
+}
+
+test("public visitor pages cannot be framed (TEC-1119)", () => {
+  const rules = mod.securityHeaderRules(true);
+  for (const p of [
+    "/someuser",
+    "/c/abc123",
+    "/s/my-link",
+    "/share/some-slug",
+    "/share/s/some-token",
+    "/kvkk",
+  ]) {
+    const h = headersFor(rules, p);
+    assertDeny(h, p);
+    assert.equal(h.get("X-Content-Type-Options"), "nosniff", p);
   }
 });
 
-test("panel routes deny framing; public profiles stay frameable (TEC-1102 decision pending)", () => {
+test("panel routes and every app route folder deny framing", () => {
   const rules = mod.securityHeaderRules(true);
-  for (const p of [
+  const routes = topLevelRoutes().filter((r) => r !== "api");
+  assert.ok(routes.length > 10);
+  const paths = [
     "/",
     "/billing",
     "/company/members",
     "/platform/users",
-    "/api/v1/profiles",
     "/login",
+    "/api/v1/profiles",
+    "/api/auth/session",
+    ...routes.map((r) => `/${r.replace(/^\[.*\]$/, "someone")}`),
+  ];
+  for (const p of paths) assertDeny(headersFor(rules, p), p);
+});
+
+test("only the storage previews the app frames itself allow same-origin framing", () => {
+  const rules = mod.securityHeaderRules(true);
+  for (const p of [
+    "/api/v1/platform/storage/objects/preview",
+    "/api/v1/public/storage/some-slug",
+    "/api/v1/public/storage/s/some-token",
   ]) {
     const h = headersFor(rules, p);
     assert.equal(h.get("X-Frame-Options"), "SAMEORIGIN", p);
-    assert.match(
-      h.get("Content-Security-Policy") ?? "",
-      /frame-ancestors 'self'/,
-      p,
-    );
-  }
-  for (const p of ["/someuser", "/c/abc123", "/s/my-link"]) {
-    const h = headersFor(rules, p);
-    assert.equal(h.get("X-Frame-Options"), undefined, p);
+    assert.equal(h.get("Content-Security-Policy"), "frame-ancestors 'self'", p);
     assert.equal(h.get("X-Content-Type-Options"), "nosniff", p);
   }
 });
