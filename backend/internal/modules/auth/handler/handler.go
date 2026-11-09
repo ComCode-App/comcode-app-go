@@ -213,7 +213,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.limiter != nil {
-		ok, retry := h.limiter.AllowResetPassword(r.Context(), sessionMeta(r).IP)
+		ok, retry := h.limiter.AllowResetPassword(r.Context(), sessionMeta(r).IP, in.Email)
 		if h.writeRateLimited(w, r, ok, retry) {
 			return
 		}
@@ -250,6 +250,11 @@ func (h *Handler) VerifyEmailRequest(w http.ResponseWriter, r *http.Request) {
 		Email string `json:"email"`
 	}
 	_ = json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&in)
+	if !h.allowAuthRate(w, r, func() (bool, time.Duration) {
+		return h.limiter.AllowEmailVerificationRequest(r.Context(), p.UserID.String(), sessionMeta(r).IP)
+	}) {
+		return
+	}
 	if err := h.uc.RequestEmailVerification(r.Context(), p.UserID, in.Email); err != nil {
 		writeUsecaseError(w, r, err)
 		return
@@ -263,6 +268,11 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		Code  string `json:"code"`
 	}
 	if err := decodeJSON(w, r, &in); err != nil {
+		return
+	}
+	if !h.allowAuthRate(w, r, func() (bool, time.Duration) {
+		return h.limiter.AllowEmailVerificationSubmit(r.Context(), sessionMeta(r).IP, in.Email)
+	}) {
 		return
 	}
 	if err := h.uc.VerifyEmail(r.Context(), in.Email, in.Code); err != nil {
