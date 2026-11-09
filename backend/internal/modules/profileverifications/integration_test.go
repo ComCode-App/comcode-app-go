@@ -488,7 +488,8 @@ func TestAvatarUploadSyncsStoredCompletion(t *testing.T) {
 	u := e.d.CreateUser(t)
 	p := e.profile(u, "Avatar")
 	before := p.CompletionRate
-	up, err := e.profiles.UploadAvatar(e.ctx, owner(u), p.UUID, strings.NewReader("img"), "a.png", "image/png", 3)
+	png := "\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR" // uploads are sniffed (TEC-1097)
+	up, err := e.profiles.UploadAvatar(e.ctx, owner(u), p.UUID, strings.NewReader(png), "a.png", "image/png", int64(len(png)))
 	if err != nil {
 		t.Fatal(err)
 	}

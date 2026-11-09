@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/resourcemeta"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/apiquery"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/response"
 	"github.com/google/uuid"
@@ -145,20 +148,18 @@ func (h *Handler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseMultipartForm(5 << 20); err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
-		return
-	}
-
-	file, header, err := r.FormFile("avatar")
-	if err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "avatar file is required")
+	file, header, ok := upload.FormFile(w, r, upload.MaxImageBytes, "avatar")
+	defer upload.Cleanup(r)
+	if !ok {
 		return
 	}
 	defer func() { _ = file.Close() }()
 
 	item, err := h.svc.UploadAvatar(r.Context(), p, profileUUID, file, header.Filename, header.Header.Get("Content-Type"), header.Size)
 	if err != nil {
+		if upload.WriteError(w, r, err) {
+			return
+		}
 		if errors.Is(err, profilesusecase.ErrNotFound) {
 			response.NotFound(w, r, "profile not found")
 			return
@@ -182,20 +183,18 @@ func (h *Handler) UploadCover(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseMultipartForm(5 << 20); err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
-		return
-	}
-
-	file, header, err := r.FormFile("cover")
-	if err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "cover file is required")
+	file, header, ok := upload.FormFile(w, r, upload.MaxImageBytes, "cover")
+	defer upload.Cleanup(r)
+	if !ok {
 		return
 	}
 	defer func() { _ = file.Close() }()
 
 	item, err := h.svc.UploadCover(r.Context(), p, profileUUID, file, header.Filename, header.Header.Get("Content-Type"), header.Size)
 	if err != nil {
+		if upload.WriteError(w, r, err) {
+			return
+		}
 		if errors.Is(err, profilesusecase.ErrNotFound) {
 			response.NotFound(w, r, "profile not found")
 			return
@@ -285,6 +284,9 @@ func (h *Handler) DownloadVCard(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(vcfContent))
 }
 
+// maxVCardBytes caps a vCard import body (TEC-1097).
+const maxVCardBytes = 10 << 20
+
 func (h *Handler) ParseVCard(w http.ResponseWriter, r *http.Request) {
 	p := authctx.MustPrincipal(r.Context())
 
@@ -292,10 +294,10 @@ func (h *Handler) ParseVCard(w http.ResponseWriter, r *http.Request) {
 
 	// 1. Multipart form file upload
 	if strings.HasPrefix(contentType, "multipart/form-data") {
-		if err := r.ParseMultipartForm(10 << 20); err != nil {
-			response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
+		if !upload.ParseForm(w, r, maxVCardBytes) {
 			return
 		}
+		defer upload.Cleanup(r)
 
 		file, _, err := r.FormFile("file")
 		if err != nil {
@@ -321,7 +323,11 @@ func (h *Handler) ParseVCard(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			VCard string `json:"vcard"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxVCardBytes)).Decode(&req); err != nil {
+			if upload.IsTooLarge(err) {
+				upload.WriteTooLarge(w, r)
+				return
+			}
 			response.BadRequest(w, r, response.CodeValidationError, "invalid JSON payload")
 			return
 		}
@@ -340,7 +346,16 @@ func (h *Handler) ParseVCard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Raw body
-	res, err := h.svc.ParseVCard(r.Context(), p, r.Body)
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxVCardBytes))
+	if err != nil {
+		if upload.IsTooLarge(err) {
+			upload.WriteTooLarge(w, r)
+			return
+		}
+		response.BadRequest(w, r, response.CodeValidationError, "invalid body")
+		return
+	}
+	res, err := h.svc.ParseVCard(r.Context(), p, bytes.NewReader(raw))
 	if err != nil {
 		response.BadRequest(w, r, response.CodeValidationError, err.Error())
 		return

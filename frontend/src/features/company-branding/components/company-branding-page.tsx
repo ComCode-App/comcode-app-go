@@ -25,6 +25,7 @@ import {
 } from "@/features/entitlements/components/premium-lock";
 import { LAYOUT_MODES, THEME_IDS, isPremiumTheme } from "@/features/public-profile/lib/themes";
 import { ApiError } from "@/lib/api/errors";
+import { uploadErrorKey } from "@/lib/api/upload-errors";
 import { assertServiceMediaURL } from "@/lib/media/urls";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
@@ -43,6 +44,8 @@ import {
 
 const NONE = "__none__";
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+// Logos may also be GIF or SVG; the API rejects SVGs with active content (TEC-1097).
+const LOGO_TYPES = [...IMAGE_TYPES, "image/gif", "image/svg+xml"];
 const MAX_IMAGE_BYTES = 5 << 20;
 const MAX_DOCUMENT_BYTES = 10 << 20;
 const COLOR_RE = /^#[0-9a-f]{6}$/;
@@ -50,6 +53,8 @@ const COLOR_RE = /^#[0-9a-f]{6}$/;
 type Translate = ReturnType<typeof useLocale>["t"];
 
 function errorMessage(err: unknown, t: Translate) {
+  const uploadKey = uploadErrorKey(err);
+  if (uploadKey) return t(uploadKey);
   if (err instanceof ApiError) {
     if (err.status === 403) return t("company_branding.errors.forbidden");
     if (err.status === 409 && err.details.length) return t("company_branding.errors.in_use");
@@ -362,7 +367,8 @@ function MediaLibraryCard({ canWrite }: { canWrite: boolean }) {
       if (file.size > MAX_DOCUMENT_BYTES) return t("company_branding.library.document_too_large");
       return null;
     }
-    if (!IMAGE_TYPES.includes(file.type)) return t("company_branding.library.invalid_image");
+    const allowed = kind === "logo" ? LOGO_TYPES : IMAGE_TYPES;
+    if (!allowed.includes(file.type)) return t("company_branding.library.invalid_image");
     if (file.size > MAX_IMAGE_BYTES) return t("company_branding.library.image_too_large");
     return null;
   })();
@@ -409,7 +415,7 @@ function MediaLibraryCard({ canWrite }: { canWrite: boolean }) {
                 id="media-file"
                 ref={fileRef}
                 type="file"
-                accept={kind === "document" ? "application/pdf" : IMAGE_TYPES.join(",")}
+                accept={kind === "document" ? "application/pdf" : (kind === "logo" ? LOGO_TYPES : IMAGE_TYPES).join(",")}
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
             </div>

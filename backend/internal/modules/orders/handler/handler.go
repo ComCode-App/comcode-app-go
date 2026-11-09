@@ -1,18 +1,23 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"mime/multipart"
 	"net/http"
+	"strings"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/orders/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/orders/usecase"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/resourcemeta"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/apiquery"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/response"
+	"github.com/google/uuid"
 )
 
 type Handler struct {
@@ -609,30 +614,87 @@ func (h *Handler) GetAssetByToken(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, req)
 }
 
+// maxOrderAssetBytes caps one customer artwork file.
+const maxOrderAssetBytes = 20 << 20
+
+// UploadAsset is unauthenticated: the asset request token is the only gate.
+// The body is capped before anything reads it, and the token is checked
+// BEFORE the file is read: it comes from ?token= or, for the multipart
+// contract, from a "token" field that must precede the "file" part (TEC-1097).
+// An invalid token therefore never makes the server consume the upload.
 func (h *Handler) UploadAsset(w http.ResponseWriter, r *http.Request) {
-	token := r.FormValue("token")
+	upload.LimitBody(w, r, maxOrderAssetBytes)
+	mr, err := r.MultipartReader()
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
+		return
+	}
+	token := strings.TrimSpace(r.URL.Query().Get("token"))
+	var part *multipart.Part
 	if token == "" {
-		token = r.URL.Query().Get("token")
+		part, err = mr.NextPart()
+		if err != nil {
+			h.writeAssetFormErr(w, r, err, "token is required")
+			return
+		}
+		if part.FormName() != "token" || part.FileName() != "" {
+			response.BadRequest(w, r, response.CodeValidationError, "token is required (send the token field before the file)")
+			return
+		}
+		raw, err := io.ReadAll(io.LimitReader(part, 513))
+		if err != nil {
+			h.writeAssetFormErr(w, r, err, "token is required")
+			return
+		}
+		if len(raw) > 512 {
+			response.BadRequest(w, r, response.CodeValidationError, "invalid token")
+			return
+		}
+		token = strings.TrimSpace(string(raw))
 	}
 	if token == "" {
 		response.BadRequest(w, r, response.CodeValidationError, "token is required")
 		return
 	}
-
-	if err := r.ParseMultipartForm(20 << 20); err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
+	if _, err := h.svc.GetAssetByToken(r.Context(), token); err != nil {
+		if errors.Is(err, usecase.ErrInvalidToken) {
+			response.NotFound(w, r, "asset request not found or token expired")
+			return
+		}
+		response.InternalErr(w, r, err, "failed to upload asset")
 		return
 	}
 
-	file, header, err := r.FormFile("file")
+	// Token is valid: find the file part and read it within the cap.
+	for {
+		part, err = mr.NextPart()
+		if err != nil {
+			h.writeAssetFormErr(w, r, err, "file is required")
+			return
+		}
+		if part.FormName() == "file" && part.FileName() != "" {
+			break
+		}
+	}
+	data, err := io.ReadAll(io.LimitReader(part, maxOrderAssetBytes+1))
 	if err != nil {
+		h.writeAssetFormErr(w, r, err, "file is required")
+		return
+	}
+	if int64(len(data)) > maxOrderAssetBytes {
+		upload.WriteTooLarge(w, r)
+		return
+	}
+	if len(data) == 0 {
 		response.BadRequest(w, r, response.CodeValidationError, "file is required")
 		return
 	}
-	defer func() { _ = file.Close() }()
 
-	req, err := h.svc.UploadAsset(r.Context(), token, file, header.Filename, header.Header.Get("Content-Type"), header.Size)
+	req, err := h.svc.UploadAsset(r.Context(), token, bytes.NewReader(data), part.FileName(), part.Header.Get("Content-Type"), int64(len(data)))
 	if err != nil {
+		if upload.WriteError(w, r, err) {
+			return
+		}
 		if errors.Is(err, usecase.ErrInvalidToken) {
 			response.NotFound(w, r, "asset request not found or token expired")
 			return
@@ -642,6 +704,17 @@ func (h *Handler) UploadAsset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.JSON(w, r, http.StatusOK, req)
+}
+
+func (h *Handler) writeAssetFormErr(w http.ResponseWriter, r *http.Request, err error, missing string) {
+	switch {
+	case upload.IsTooLarge(err):
+		upload.WriteTooLarge(w, r)
+	case errors.Is(err, io.EOF):
+		response.BadRequest(w, r, response.CodeValidationError, missing)
+	default:
+		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
+	}
 }
 
 // ManifestQRCodes streams a ZIP of QR PNGs, one per provisioned card, for printing (TEC-581).

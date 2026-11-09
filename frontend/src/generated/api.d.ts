@@ -3466,7 +3466,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Upload customer logo/vector artwork using secure token */
+        /**
+         * Upload customer logo/vector artwork using secure token
+         * @description Unauthenticated; the asset request token is the only gate (TEC-1097). The token is checked
+         *     before the file is read: pass it as `?token=` or as the `token` form field, which must come
+         *     before the `file` part. Invalid token: 404. The file type is sniffed (PNG/JPEG/WebP/GIF, PDF
+         *     or AI, EPS, ZIP, static SVG); max 20 MiB (413). Unsafe SVG: 422 `SVG_UNSAFE_CONTENT`.
+         */
         post: operations["uploadOrderAssetPublic"];
         delete?: never;
         options?: never;
@@ -5155,6 +5161,10 @@ export interface paths {
         /**
          * PUT /v1/platform/settings/logo
          * @description Registered in `internal/modules/settings/routes.go`. Requires `platform.settings.write`.
+         *     Multipart `logo` file up to 2 MiB. The type is sniffed from the bytes: PNG, JPEG, WebP, GIF or a
+         *     static SVG (max 512 KiB). An SVG with script, event handlers, external references, DOCTYPE or
+         *     similar is rejected with 422 `SVG_UNSAFE_CONTENT` (TEC-1097). Stored SVGs are served as
+         *     attachments with `nosniff` and a sandbox CSP.
          */
         put: operations["putPlatformSettingsLogo"];
         post?: never;
@@ -6544,7 +6554,7 @@ export interface paths {
         put?: never;
         /**
          * Upload a file to the company media library
-         * @description TEC-946. Requires app.company_branding.write and an owner/admin role in the active company. The content type is sniffed: logo, cover and image take JPEG, PNG or WebP up to 5 MiB; document takes PDF up to 10 MiB. At most 500 files per company (409).
+         * @description TEC-946. Requires app.company_branding.write and an owner/admin role in the active company. The content type is sniffed: cover and image take JPEG, PNG or WebP up to 5 MiB; logo also takes GIF and static SVG (max 512 KiB; unsafe SVG is 422 SVG_UNSAFE_CONTENT, TEC-1097); document takes PDF up to 10 MiB. Bodies above the limit are 413 PAYLOAD_TOO_LARGE. At most 500 files per company (409).
          */
         post: operations["uploadCompanyMedia"];
         delete?: never;
@@ -7605,6 +7615,8 @@ export interface components {
             /**
              * @description Machine-readable error code
              * @example VALIDATION_ERROR
+             * @example PAYLOAD_TOO_LARGE
+             * @example SVG_UNSAFE_CONTENT
              * @example INVALID_RESET_CODE
              * @example INVALID_VERIFICATION_CODE
              * @example INVALID_CREDENTIALS
@@ -12150,6 +12162,32 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /**
+         * @description `PAYLOAD_TOO_LARGE`: the request body or file is above the upload limit. Upload bodies are
+         *     capped before they are read (`http.MaxBytesReader`; storage uploads use `STORAGE_MAX_BYTES`).
+         */
+        PayloadTooLarge: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /**
+         * @description `SVG_UNSAFE_CONTENT`: an SVG upload contains more than static vector content (script, event
+         *     handler attributes, `javascript:` / external references, foreignObject, DOCTYPE/ENTITY,
+         *     external CSS `url()` / `@import`). The file is rejected, never stripped;
+         *     `error.details[0].message` holds the reason.
+         */
+        SVGUnsafeContent: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description Unexpected server error */
         InternalError: {
             headers: {
@@ -15292,6 +15330,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeParsedVCardProfile"];
                 };
             };
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     getProfile: {
@@ -15612,6 +15651,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeSocialPlatformDetail"];
                 };
             };
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     listActiveBanks: {
@@ -15801,6 +15841,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeBankDetail"];
                 };
             };
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     getBankAccountsMeta: {
@@ -16059,6 +16100,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     uploadProfileCover: {
@@ -16092,6 +16134,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     setPrimaryProfile: {
@@ -17622,6 +17665,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeProductDetail"];
                 };
             };
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     uploadProductImage: {
@@ -17652,6 +17696,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeProductDetail"];
                 };
             };
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     listProductVariants: {
@@ -18386,7 +18431,9 @@ export interface operations {
     };
     uploadOrderAssetPublic: {
         parameters: {
-            query?: never;
+            query?: {
+                token?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -18410,6 +18457,8 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeAssetRequestSummary"];
                 };
             };
+            413: components["responses"]["PayloadTooLarge"];
+            422: components["responses"]["SVGUnsafeContent"];
         };
     };
     listMyOrders: {
@@ -21139,10 +21188,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": {
-                    [key: string]: unknown;
+                "multipart/form-data": {
+                    /** Format: binary */
+                    logo: string;
                 };
             };
         };
@@ -21158,6 +21208,8 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            413: components["responses"]["PayloadTooLarge"];
+            422: components["responses"]["SVGUnsafeContent"];
         };
     };
     deletePlatformSettingsLogo: {
@@ -21712,6 +21764,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     postPlatformStorageUploadsComplete: {
@@ -23865,6 +23918,8 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
+            422: components["responses"]["SVGUnsafeContent"];
         };
     };
     deleteCompanyMedia: {
@@ -24371,6 +24426,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     getCompanyEmployeesImportSample: {

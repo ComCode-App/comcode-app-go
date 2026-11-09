@@ -5,22 +5,21 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"mime"
-	"path/filepath"
 	"regexp"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/banks/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/banks/repository"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/storage"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
+	"github.com/google/uuid"
 )
 
 var (
-	ErrNotFound      = errors.New("bank not found")
-	ErrSlugTaken     = errors.New("bank slug already exists")
-	ErrNameRequired  = errors.New("name is required")
-	ErrCodeRequired  = errors.New("bank code is required")
+	ErrNotFound     = errors.New("bank not found")
+	ErrSlugTaken    = errors.New("bank slug already exists")
+	ErrNameRequired = errors.New("name is required")
+	ErrCodeRequired = errors.New("bank code is required")
 )
 
 type Service struct {
@@ -158,24 +157,21 @@ func (s *Service) UploadIcon(ctx context.Context, id uuid.UUID, file io.Reader, 
 		return nil, ErrNotFound
 	}
 
-	ext := strings.ToLower(filepath.Ext(filename))
-	if ext == "" {
-		exts, _ := mime.ExtensionsByType(contentType)
-		if len(exts) > 0 {
-			ext = exts[0]
-		} else {
-			ext = ".png"
-		}
+	// Type and extension come from the bytes, never from the client
+	// filename or Content-Type (TEC-1097).
+	sniffed, err := upload.SniffImage(file)
+	if err != nil {
+		return nil, err
 	}
-	ext = strings.TrimPrefix(ext, ".")
+	ext := sniffed.Ext
 
 	key := storage.BankIconObjectKey(bank.Slug, ext)
 	var iconURL string
 	if s.storage != nil {
 		err = s.storage.Upload(ctx, storage.File{
-			Body:        file,
+			Body:        sniffed.Body,
 			Size:        size,
-			ContentType: contentType,
+			ContentType: sniffed.ContentType,
 			Filename:    filename,
 		}, key)
 		if err != nil {
