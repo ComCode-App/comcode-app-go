@@ -1,16 +1,19 @@
 name: ${COMPOSE_PROJECT_NAME:-${NAME_PREFIX:-app}-prod}
 
+# App images are built and published by CI (.github/workflows/ci.yml, the images in
+# deploy/images.json). The server never builds them: it pulls
+# ${IMAGE_REPO}-<service>:${IMAGE_TAG} from GHCR (IMAGE_TAG: main, v0.N or sha-<short>).
+# migrate, backend and worker all run the backend image. IMAGE_PULL_POLICY defaults to
+# "always" so a redeploy of a moving tag such as :main fetches the current build; set it
+# to "missing" to reuse a cached image. To build on this host instead, add the override:
+# docker compose -f compose.prod.yml -f compose.build.yml … (make prod-build-local).
 x-backend-image: &backend-image
-  image: ${BACKEND_IMAGE:?BACKEND_IMAGE is required}
-  build:
-    context: ./backend
-    dockerfile: Dockerfile
+  image: ${IMAGE_REPO:?IMAGE_REPO is required (e.g. ghcr.io/comcode-app/comcode-app-go)}-backend:${IMAGE_TAG:?IMAGE_TAG is required (main, v0.N or sha-<short>)}
+  pull_policy: ${IMAGE_PULL_POLICY:-always}
 
 x-frontend-image: &frontend-image
-  image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE is required}
-  build:
-    context: ./frontend
-    dockerfile: Dockerfile
+  image: ${IMAGE_REPO:?IMAGE_REPO is required (e.g. ghcr.io/comcode-app/comcode-app-go)}-frontend:${IMAGE_TAG:?IMAGE_TAG is required (main, v0.N or sha-<short>)}
+  pull_policy: ${IMAGE_PULL_POLICY:-always}
 
 x-backend-environment: &backend-environment
   APP_NAME: ${APP_NAME:-api}
@@ -277,6 +280,9 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+    # The server drains in-flight requests for up to 10s on SIGTERM; leave headroom
+    # over Docker's 10s default so a deploy never SIGKILLs a request mid-flight.
+    stop_grace_period: 30s
     restart: unless-stopped
     networks:
       - app
@@ -300,6 +306,9 @@ services:
         condition: service_healthy
       meilisearch:
         condition: service_healthy
+    # On SIGTERM asynq stops fetching and waits for running jobs (8s default) before
+    # it exits; give it more room than the API so a deploy does not cut a job short.
+    stop_grace_period: 35s
     restart: unless-stopped
     networks:
       - app

@@ -107,9 +107,20 @@ Keep the generated file as the master copy (password manager or the server) and 
 | Task | Command |
 |---|---|
 | After pulling a schema change | `make prod-env-upgrade`: keeps every value, applies renames/removals, fills only new keys, re-stamps `ENV_SCHEMA_VERSION`, backup in `.env.server.bak` |
-| Verify a file | `make prod-env-check`: exits 1 on a schema-version gap, missing or blank keys, image names that drift from `IMAGE_REPO`/`IMAGE_TAG`, or secrets still holding `.env.example` values |
+| Verify a file | `make prod-env-check`: exits 1 on a schema-version gap, missing or blank keys, removed keys still present (schema v2 dropped `BACKEND_IMAGE` / `FRONTEND_IMAGE`), or secrets still holding `.env.example` values |
 | Rotate a secret on purpose | `scripts/prod-env.sh upgrade --rotate JWT_REFRESH_SECRET` (confirmation; restart the stack). Refuses `APP_ENCRYPTION_KEY` (encrypted data becomes unreadable) and `DB_PASSWORD` (Postgres keeps it in its volume: `ALTER USER` first, then edit the file) |
 | Older hand-made `.env.server` | `make prod-env-upgrade` (`APP_URL` defaults to the file's `AUTH_URL`), then `make prod-env-check`, then rotate every secret it reports as insecure. Rotation is never automatic |
+
+### Compose images: pulled, never built on the server
+
+`compose.prod.yml` has no `build:` sections. It runs `${IMAGE_REPO}-backend:${IMAGE_TAG}` for `migrate`, `backend` and `worker`, and `${IMAGE_REPO}-frontend:${IMAGE_TAG}` for `frontend`, and fails at `config` time when `IMAGE_REPO` or `IMAGE_TAG` is missing. CI publishes the images to GHCR.
+
+- `pull_policy` is `${IMAGE_PULL_POLICY:-always}`: every `up` / redeploy fetches the tag again, so a moving tag such as `:main` picks up the newest build. Set `IMAGE_PULL_POLICY=missing` to reuse a cached image.
+- Pin or roll back by setting `IMAGE_TAG` to `v0.N` or `sha-<short>` and redeploying. Volumes, container names (`${NAME_PREFIX}-*`), the app network and `dokploy-network` do not depend on the tag.
+- `make prod-up` runs `up -d` without `--build`.
+- Build on this machine instead (smoke test, no registry): `make prod-build-local` / `make prod-up-local`. They add [`compose.build.yml`](../compose.build.yml), which puts the `build:` contexts back (the same ones as `deploy/images.json`) and tags the images `${NAME_PREFIX}-backend:local` / `${NAME_PREFIX}-frontend:local`, so a local build never shadows a GHCR tag. Dokploy never uses this file.
+- `stop_grace_period`: `backend` 30s (the server drains requests for up to 10s on SIGTERM), `worker` 35s (asynq waits for running jobs). Docker's 10s default could SIGKILL either mid-shutdown.
+- Upgrading an existing `.env.server` from schema v1: `make prod-env-upgrade` comments out `BACKEND_IMAGE` / `FRONTEND_IMAGE` (`IMAGE_REPO` / `IMAGE_TAG` are already there); on Dokploy remove the two lines from the compose app's environment too.
 
 ### Required secrets (boot guard)
 
@@ -145,7 +156,7 @@ Dokploy → the compose app → **Domains**: pick the service and the **containe
 | — (no domain) | `backend` | `8080` | The browser only talks to the BFF; the frontend reaches Go at `http://${NAME_PREFIX}-backend:8080/v1` |
 
 - The media domain serves anonymous GETs only (public media). Do not route it to the filer or master ports; they are not listening outside the container.
-- `NEXT_PUBLIC_*` values are baked into the frontend image at build time: rebuild after changing them.
+- `NEXT_PUBLIC_*` values are inlined when CI builds the frontend image, so setting them in `.env.server` does not change a pulled image (the code defaults apply: `/api`, realtime on, `tr` / `en`). The realtime URL the browser uses comes from the backend at runtime (`CENTRIFUGO_WS_URL`, returned as `ws_url` with the Centrifugo token).
 
 ### Object storage (SeaweedFS)
 

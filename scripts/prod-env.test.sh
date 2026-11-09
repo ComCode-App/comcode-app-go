@@ -45,14 +45,14 @@ done < <(sed -nE 's/^@unmanaged[[:space:]]+([A-Z][A-Z0-9_]*).*/\1/p' "$SCHEMA")
 [[ -z $(val JWT_ACCESS_TTL "$E") ]] || fail "optional tunables stay blank"
 ok "init leaves @unmanaged keys out and optional tunables blank"
 
-[[ $(val BACKEND_IMAGE "$E") == ghcr.io/acme/demo-backend:main ]] || fail "BACKEND_IMAGE from IMAGE_REPO"
-[[ $(val FRONTEND_IMAGE "$E") == ghcr.io/acme/demo-frontend:main ]] || fail "FRONTEND_IMAGE from IMAGE_REPO"
+[[ $(val IMAGE_REPO "$E") == ghcr.io/acme/demo && $(val IMAGE_TAG "$E") == main ]] || fail "IMAGE_REPO / IMAGE_TAG"
+! grep -qE '^(BACKEND|FRONTEND)_IMAGE=' "$E" || fail "init wrote BACKEND_IMAGE / FRONTEND_IMAGE (removed in schema v2)"
 "$PE" init --file "$T/defrepo" --yes --set APP_URL=https://demo.example.com </dev/null 2>/dev/null || fail "init with the default IMAGE_REPO"
-[[ $(val BACKEND_IMAGE "$T/defrepo") == ghcr.io/comcode-app/comcode-app-go-backend:main ]] || fail "default IMAGE_REPO"
+[[ $(val IMAGE_REPO "$T/defrepo") == ghcr.io/comcode-app/comcode-app-go ]] || fail "default IMAGE_REPO"
 for bad in ghcr.io/Acme/demo ghcr.io/acme/demo:main ghcr.io; do
   if init "$T/badrepo" --set IMAGE_REPO=$bad; then fail "invalid IMAGE_REPO $bad"; fi
 done
-ok "init derives the images from IMAGE_REPO + IMAGE_TAG (repo defaulted and validated)"
+ok "init writes IMAGE_REPO (defaulted and validated) + IMAGE_TAG, no per-service image keys"
 
 [[ $(val JWT_ACCESS_SECRET "$E") =~ ^[0-9a-f]{64}$ ]] || fail "hex:32 secret"
 [[ $(val DB_PASSWORD "$E") =~ ^[A-Za-z0-9]{32}$ ]] || fail "alnum:32 secret"
@@ -78,19 +78,36 @@ fi
 if docker compose version >/dev/null 2>&1; then
   docker compose --env-file "$E" -f "$ROOT/compose.prod.yml" config -q ||
     fail "compose.prod.yml rejects the generated file"
-  ok "compose.prod.yml accepts the generated file (docker compose config)"
+  imgs=$(docker compose --env-file "$E" -f "$ROOT/compose.prod.yml" config --images | sort -u | tr '\n' ' ')
+  [[ $imgs == *"ghcr.io/acme/demo-backend:main "* && $imgs == *"ghcr.io/acme/demo-frontend:main "* ]] ||
+    fail "compose.prod.yml images do not follow IMAGE_REPO / IMAGE_TAG: $imgs"
+  sed 's#^IMAGE_TAG=.*#IMAGE_TAG=v0.7#' "$E" >"$T/pinned"
+  docker compose --env-file "$T/pinned" -f "$ROOT/compose.prod.yml" config --images | grep -qxF ghcr.io/acme/demo-frontend:v0.7 ||
+    fail "compose.prod.yml ignores IMAGE_TAG"
+  grep -vE '^IMAGE_REPO=' "$E" >"$T/norepo"
+  if docker compose --env-file "$T/norepo" -f "$ROOT/compose.prod.yml" config -q 2>"$T/norepo.err"; then
+    fail "compose.prod.yml accepted a file without IMAGE_REPO"
+  fi
+  grep -q 'IMAGE_REPO is required' "$T/norepo.err" || fail "compose: missing IMAGE_REPO message"
+  docker compose --env-file "$E" -f "$ROOT/compose.prod.yml" -f "$ROOT/compose.build.yml" config -q ||
+    fail "compose.prod.yml + compose.build.yml rejects the generated file"
+  ok "compose.prod.yml accepts the generated file, pulls <IMAGE_REPO>-<service>:<IMAGE_TAG>, requires IMAGE_REPO; the build override resolves"
 fi
 
 "$PE" check --file "$E" 2>/dev/null || fail "check fails on a fresh file"
 ok "check passes on a fresh file"
 
-sed 's#^IMAGE_TAG=.*#IMAGE_TAG=v0.7#' "$E" >"$T/tag-only"
-if "$PE" check --file "$T/tag-only" >"$T/img.out" 2>&1; then fail "check passed images that do not follow IMAGE_TAG"; fi
-grep -q 'image: BACKEND_IMAGE=ghcr.io/acme/demo-backend:main does not match' "$T/img.out" || fail "check: backend image drift not reported"
-grep -q 'expected ghcr.io/acme/demo-frontend:v0.7' "$T/img.out" || fail "check: frontend image hint"
-sed -e 's#^IMAGE_TAG=.*#IMAGE_TAG=v0.7#' -e 's#:main$#:v0.7#' "$E" >"$T/pinned-all"
-"$PE" check --file "$T/pinned-all" 2>/dev/null || fail "check fails on a consistently pinned file"
-ok "check flags BACKEND_IMAGE / FRONTEND_IMAGE that drift from IMAGE_REPO / IMAGE_TAG"
+# A v1 file (schema before TEC-1095) still carries BACKEND_IMAGE / FRONTEND_IMAGE.
+V1=$T/v1
+sed -e 's/^ENV_SCHEMA_VERSION=.*/ENV_SCHEMA_VERSION=1/' "$E" >"$V1"
+printf '%s\n' BACKEND_IMAGE=ghcr.io/acme/demo-backend:main FRONTEND_IMAGE=ghcr.io/acme/demo-frontend:main >>"$V1"
+if "$PE" check --file "$V1" >"$T/v1.out" 2>&1; then fail "check passed a v1 file with BACKEND_IMAGE"; fi
+grep -q 'removed: BACKEND_IMAGE is no longer used' "$T/v1.out" || fail "check: BACKEND_IMAGE removal not reported"
+"$PE" upgrade --file "$V1" --yes </dev/null 2>/dev/null
+[[ $(grep -cE '^# removed@2: (BACKEND|FRONTEND)_IMAGE=' "$V1") == 2 ]] ||
+  fail "upgrade: BACKEND_IMAGE / FRONTEND_IMAGE not commented out"
+"$PE" check --file "$V1" 2>/dev/null || fail "check fails on an upgraded v1 file"
+ok "upgrade from v1 comments out BACKEND_IMAGE / FRONTEND_IMAGE; check reports them until then"
 
 if "$PE" init --file "$E" --yes --set APP_URL=https://x.example.com --set IMAGE_REPO=ghcr.io/acme/demo </dev/null 2>/dev/null; then
   fail "init overwrote an existing file"
