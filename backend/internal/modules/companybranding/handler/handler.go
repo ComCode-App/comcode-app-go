@@ -11,6 +11,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companybranding/usecase"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/apiquery"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/response"
 	"github.com/google/uuid"
@@ -22,6 +23,9 @@ func New(svc *usecase.Service) *Handler { return &Handler{svc: svc} }
 
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	if entitlement.WriteError(w, r, err) { // premium company theme without design.premium (TEC-947)
+		return
+	}
+	if upload.WriteError(w, r, err) { // too large / unsafe SVG logo / unsupported type (TEC-1097)
 		return
 	}
 	var inUse *model.InUseError
@@ -64,15 +68,9 @@ func (h *Handler) ListMedia(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UploadMedia(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, model.MaxDocumentBytes+(1<<20))
-	if err := r.ParseMultipartForm(1 << 20); err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form or file too large")
-		return
-	}
-	defer func() { _ = r.MultipartForm.RemoveAll() }()
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "file is required")
+	file, header, ok := upload.FormFile(w, r, model.MaxDocumentBytes, "file")
+	defer upload.Cleanup(r)
+	if !ok {
 		return
 	}
 	defer func() { _ = file.Close() }()

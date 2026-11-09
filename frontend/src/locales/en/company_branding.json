@@ -32,7 +32,7 @@
   "library.file": "File",
   "library.name": "Name",
   "library.upload": "Upload",
-  "library.upload_hint": "Images: JPEG, PNG or WebP up to 5 MB. Documents: PDF up to 10 MB.",
+  "library.upload_hint": "Images: JPEG, PNG or WebP up to 5 MB (logos may also be GIF or a plain SVG). Documents: PDF up to 10 MB.",
   "library.invalid_image": "Use a JPEG, PNG or WebP image.",
   "library.image_too_large": "Images must be 5 MB or smaller.",
   "library.invalid_document": "Documents must be PDF files.",

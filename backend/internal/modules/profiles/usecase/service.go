@@ -1,9 +1,6 @@
 package usecase
 
 import (
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/activity"
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/routecache"
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -11,6 +8,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/activity"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/routecache"
 	"io"
 	"mime"
 	"net/http"
@@ -18,14 +18,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profiles/completion"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profiles/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profiles/repository"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/searchengine"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/storage"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/vcard"
+	"github.com/google/uuid"
 )
 
 var (
@@ -43,9 +44,9 @@ type Service struct {
 	pages       repository.PublicPageStore
 	backgrounds BackgroundCatalog
 	// features gates premium themes and backgrounds (design.premium, TEC-947).
-	features entitlement.Features
-	routeCache  *routecache.Cache
-	activity    *activity.Recorder
+	features   entitlement.Features
+	routeCache *routecache.Cache
+	activity   *activity.Recorder
 
 	// linkPresentations applies smart link presentation to public pages (TEC-556); nil = off.
 	linkPresentations LinkPresentationSource
@@ -271,26 +272,21 @@ func (s *Service) UploadAvatar(ctx context.Context, p authctx.Principal, profile
 	if _, err := s.getWritable(ctx, p, profileUUID); err != nil {
 		return nil, err
 	}
-	var err error
-
-	ext := strings.ToLower(filepath.Ext(filename))
-	if ext == "" {
-		exts, _ := mime.ExtensionsByType(contentType)
-		if len(exts) > 0 {
-			ext = exts[0]
-		} else {
-			ext = ".jpg"
-		}
+	// Type and extension come from the bytes, never from the client
+	// filename or Content-Type: avatar.html must not become text/html.
+	sniffed, err := upload.SniffImage(file)
+	if err != nil {
+		return nil, err
 	}
-	ext = strings.TrimPrefix(ext, ".")
+	ext := sniffed.Ext
 
 	key := storage.ProfileAvatarObjectKey(profileUUID.String(), ext)
 	var avatarURL string
 	if s.storage != nil {
 		err = s.storage.Upload(ctx, storage.File{
-			Body:        file,
+			Body:        sniffed.Body,
 			Size:        size,
-			ContentType: contentType,
+			ContentType: sniffed.ContentType,
 			Filename:    filename,
 		}, key)
 		if err != nil {
@@ -318,26 +314,21 @@ func (s *Service) UploadCover(ctx context.Context, p authctx.Principal, profileU
 	if _, err := s.getWritable(ctx, p, profileUUID); err != nil {
 		return nil, err
 	}
-	var err error
-
-	ext := strings.ToLower(filepath.Ext(filename))
-	if ext == "" {
-		exts, _ := mime.ExtensionsByType(contentType)
-		if len(exts) > 0 {
-			ext = exts[0]
-		} else {
-			ext = ".jpg"
-		}
+	// Type and extension come from the bytes, never from the client
+	// filename or Content-Type: avatar.html must not become text/html.
+	sniffed, err := upload.SniffImage(file)
+	if err != nil {
+		return nil, err
 	}
-	ext = strings.TrimPrefix(ext, ".")
+	ext := sniffed.Ext
 
 	key := storage.ProfileCoverObjectKey(profileUUID.String(), ext)
 	var coverURL string
 	if s.storage != nil {
 		err = s.storage.Upload(ctx, storage.File{
-			Body:        file,
+			Body:        sniffed.Body,
 			Size:        size,
-			ContentType: contentType,
+			ContentType: sniffed.ContentType,
 			Filename:    filename,
 		}, key)
 		if err != nil {
@@ -714,6 +705,11 @@ func (s *Service) validateMediaURL(field, raw string, accountUUID, profileUUID u
 		return nil
 	}
 	key := s.mediaKey(raw)
+	// Avatars and covers are raster-only; an SVG (e.g. a company logo from
+	// the media library) is not accepted here (TEC-1097).
+	if strings.HasSuffix(strings.ToLower(key), ".svg") {
+		return fmt.Errorf("%w: %s must be a PNG, JPEG, WebP or GIF image", ErrInvalidRequest, field)
+	}
 	switch {
 	case strings.HasPrefix(key, tempAvatarPrefix):
 		return nil
@@ -770,22 +766,17 @@ func (s *Service) ParseVCard(ctx context.Context, p authctx.Principal, r io.Read
 		res.Birthday = &bdayStr
 	}
 
-	if len(c.PhotoBytes) > 0 {
-		mimeType := c.PhotoMimeType
-		if mimeType == "" {
-			mimeType = "image/jpeg"
-		}
+	// The vCard's declared photo type is not trusted: only sniffed raster
+	// images are staged (TEC-1097).
+	photoMIME := http.DetectContentType(c.PhotoBytes)
+	if len(c.PhotoBytes) > 0 && upload.IsAllowedImageType(photoMIME) {
+		mimeType := strings.SplitN(photoMIME, ";", 2)[0]
 
 		// Upload photo directly to S3/MinIO tmp folder and provide S3 URL to frontend
 		if s.storage != nil {
 			hash := sha256.Sum256(c.PhotoBytes)
 			tempID := fmt.Sprintf("%s_%d", hex.EncodeToString(hash[:8]), time.Now().Unix())
-			ext := "jpg"
-			if strings.Contains(mimeType, "png") {
-				ext = "png"
-			} else if strings.Contains(mimeType, "webp") {
-				ext = "webp"
-			}
+			ext, _ := upload.ImageExt(mimeType)
 			tempKey := storage.ProfileTempAvatarObjectKey(tempID, ext)
 			err := s.storage.Upload(ctx, storage.File{
 				Body:        bytes.NewReader(c.PhotoBytes),
@@ -880,4 +871,3 @@ func (s *Service) ParseVCard(ctx context.Context, p authctx.Principal, r io.Read
 
 	return res, nil
 }
-

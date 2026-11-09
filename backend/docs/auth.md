@@ -99,6 +99,10 @@ Redis INCR, 15-minute window, fail-open if Redis is down. `429 RATE_LIMITED` + `
 - From any other peer the socket address is used, so a spoofed header cannot bypass the limits.
 - The middleware rewrites `RemoteAddr`; use `clientip.String(r)` / `clientip.IP(r)` and never read `X-Forwarded-For` in handlers.
 
+## Security emails
+
+Email verification and password reset codes (`SecurityEmail`) and account invitation links (`SecretVars: invite_url`) never sit readable on `notifications` rows (TEC-1099). The row keeps a masked rendering (`••••••` in place of the code or link, `action_url` dropped), so `GET /v1/platform/notifications`, its search, the export and backups never see it. The real subject and body are AES-GCM encrypted with `APP_ENCRYPTION_KEY` in `notifications.sealed_content`; the delivery worker decrypts them in memory, so retries and stuck-row reclaims send the real code, and a successful send sets the column to NULL. Without a usable key (none, or the built-in development key outside development/test) such notifications are refused instead of stored in plaintext. `GET /v1/notifications` and `GET /v1/notifications/{uuid}` serve `inapp` rows only, so an account cannot read its own verification code back. Migration `000072` masked older rows and cancelled unsent ones.
+
 ## `/v1/auth/me`
 
 Returns `user`, `roles[]`, `permissions[]`, `account` (active), `accounts[]`, `subscription` (plan of the active account), self-service links, and realtime hints.

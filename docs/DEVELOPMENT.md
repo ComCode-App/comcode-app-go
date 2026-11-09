@@ -92,6 +92,26 @@ Error tracking (`SENTRY_DSN`, which works with Sentry or GlitchTip) and Promethe
 2. `cp .env.example .env.server` and replace every secret (`${VAR:?…}` is required)
 3. `make prod-config` then `make prod-up`
 
+### Required secrets (boot guard)
+
+`APP_ENV` must be `development`, `test`, `staging` or `production`; any other value stops the backend at boot (`compose.prod.yml` sets `production`). In `staging` and `production` the backend and worker also refuse to start while a secret below is empty, shorter than its minimum, or still a public default (the `.env.example` / `compose.local.yml` values, the fallbacks in `config.go`, or a placeholder such as `change_me`). The error names every offending variable, never its value. Development and test keep the defaults, so `make local-dev` and `scripts/e2e.sh` are unchanged.
+
+| Variable | Minimum length | Checked when |
+|----------|----------------|--------------|
+| `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | 32 | always |
+| `AUTH_ADAPTER_SECRET` | 32 | always |
+| `APP_ENCRYPTION_KEY` | 32 (32 raw bytes or base64 of 32 bytes) | always |
+| `DB_PASSWORD`, `REDIS_PASSWORD` | 12 | always |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | 8 / 16 | always |
+| `CENTRIFUGO_API_KEY` / `CENTRIFUGO_TOKEN_HMAC_SECRET` | 16 / 32 | `CENTRIFUGO_ENABLED=true` |
+| `MEILI_MASTER_KEY` | 16 | `SEARCH_ENABLED=true` |
+
+Generate each one with `openssl rand -base64 32` (`openssl rand -hex 16` for `DB_PASSWORD` / `REDIS_PASSWORD` if a tool chokes on `/+=`). The list lives in one table, `guardedSecrets` in `backend/internal/config/guard.go`. iyzico and PayTR credentials are not env vars: they are stored in the database, encrypted with `APP_ENCRYPTION_KEY`.
+
+`compose.prod.yml` now requires `APP_ENCRYPTION_KEY` (`${APP_ENCRYPTION_KEY:?…}`). Before, an empty value made the backend fall back to the public example key.
+
+> **Warning: existing deployments without `APP_ENCRYPTION_KEY`.** If production ran without `APP_ENCRYPTION_KEY` (or with the example value), every value encrypted at rest was encrypted with the public key `app-dev-encryption-key-32bytes!!`: OAuth provider and GitHub App secrets, TOTP secrets, payment provider (iyzico / PayTR) keys, webhook and error-tracking secrets. Setting a new key alone makes those values unreadable. Before deploying this guard, either re-encrypt them with the new key or re-enter them through the admin UI after the deploy (TOTP users would have to enroll again), and treat the old values as exposed: rotate the provider-side credentials. There is no key-rotation tool in the repo yet. The same key also seeds the analytics visitor hash, so unique-visitor counts restart from the new key.
+
 Dokploy-attached services: **comcode-seaweedfs, centrifugo, backend, frontend**. Postgres, Redis, Meilisearch, and the worker stay on the private app network.
 
 ### Dokploy domains
@@ -119,7 +139,7 @@ Dokploy → the compose app → **Domains**: pick the service and the **containe
 - Driver check against a live store: `STORAGE_IT_ENDPOINT=http://127.0.0.1:8333 S3_ACCESS_KEY=… S3_SECRET_KEY=… S3_BUCKET=… go test ./internal/platform/storage -run TestS3CompatibleBackend`.
 - Moving from MinIO: there is no prod data. Locally, copy objects with any S3 client (`rclone sync minio:bucket seaweed:bucket`) or start fresh; the old `*-minio` volume can be removed.
 
-`APP_ENCRYPTION_KEY` (32-byte, raw or base64) encrypts GitHub App secrets at rest. Generate: `openssl rand -base64 32`. Replace the example key in production.
+`APP_ENCRYPTION_KEY` (32-byte, raw or base64) encrypts OAuth, GitHub App, TOTP, payment and webhook secrets at rest. Generate: `openssl rand -base64 32`. The backend refuses to start outside development with the example key (see Required secrets).
 
 ## CI
 
@@ -190,10 +210,23 @@ From the repo root (loads `.env`):
 
 ```sh
 make create-super-admin
-make create-super-admin SA_EMAIL=you@example.com SA_PASSWORD='Secret1' SA_NAME=Ada SA_SURNAME=Admin
+make create-super-admin SA_EMAIL=you@example.com SA_PASSWORD='Str0ngPassword' SA_NAME=Ada SA_SURNAME=Admin
 ```
 
-The same target exists under `backend/` (`make -C backend create-super-admin …`).
+The same target exists under `backend/` (`make -C backend create-super-admin …`). The make target keeps a local-only default (`admin@example.com` / `Password1`); the binary itself has no defaults.
+
+The binary requires an email (`-email` or `SA_EMAIL`) and a password (`-password` or `SA_PASSWORD`) that passes the platform password policy (at least 8 characters with upper case, lower case and a digit); `-name` / `-surname` are optional. Running it again for the same email resets that user's password and restores the role.
+
+Production has no source tree or `make`; the backend image ships the binary at `/app/create-super-admin`. After the first deploy, on the host:
+
+```sh
+read -rs SA_PASSWORD && export SA_PASSWORD
+docker compose --env-file .env.server -f compose.prod.yml exec -e SA_PASSWORD backend \
+  /app/create-super-admin -email you@example.com
+unset SA_PASSWORD
+```
+
+In Dokploy, open a terminal on the backend container and run `/app/create-super-admin -email you@example.com -password '…'`.
 
 ## After a backend contract change
 

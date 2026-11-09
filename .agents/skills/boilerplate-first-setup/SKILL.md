@@ -49,7 +49,7 @@ Change secrets in `.env` even for local if the machine is shared: `JWT_*`, `AUTH
 ```sh
 make local-dev
 make create-super-admin
-# optional: make create-super-admin SA_EMAIL=you@example.com SA_PASSWORD='Secret1' SA_NAME=Ada SA_SURNAME=Admin
+# optional: make create-super-admin SA_EMAIL=you@example.com SA_PASSWORD='Str0ngPassword' SA_NAME=Ada SA_SURNAME=Admin
 ```
 
 `make local-dev` starts Docker infra, migrates, then **air** + **pnpm dev** on the host. It does **not** build app images.
@@ -123,4 +123,5 @@ Dokploy-attached: **comcode-seaweedfs, centrifugo, backend, frontend**. Domains:
 - [ ] MailHog receives verify/reset mail
 - [ ] VAPID keys if push is in scope
 - [ ] `APP_ENCRYPTION_KEY` replaced if GitHub OAuth will be used
+- [ ] Production: first admin from the image, `/app/create-super-admin -email …` with `SA_PASSWORD` in the backend container (`docs/DEVELOPMENT.md` → Super admin)
 - [ ] Brand tokens swapped if this is a named product

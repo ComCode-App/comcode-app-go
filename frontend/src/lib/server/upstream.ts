@@ -29,6 +29,41 @@ export function resolveRequestId(candidate?: string | null): string {
   return crypto.randomUUID();
 }
 
+/** The Go API could not be reached (connection refused, DNS, reset, timeout). */
+export class UpstreamUnavailableError extends Error {
+  constructor(cause: unknown) {
+    super("upstream unavailable", { cause });
+    this.name = "UpstreamUnavailableError";
+  }
+}
+
+/**
+ * fetch() with a streamed request body (large uploads the BFF does not buffer)
+ * must opt into half-duplex; buffered bodies need nothing extra.
+ */
+function upstreamBody(
+  method: string,
+  body: BodyInit | null | undefined,
+): Pick<RequestInit, "body"> & { duplex?: "half" } {
+  if (!body || method === "GET" || method === "HEAD")
+    return { body: undefined };
+  if (body instanceof ReadableStream) return { body, duplex: "half" };
+  return { body };
+}
+
+async function fetchOrUnavailable(
+  url: string,
+  init: RequestInit & { duplex?: "half" },
+): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (err) {
+    // A client disconnect is not an API outage: let the caller see the abort.
+    if (init.signal?.aborted) throw err;
+    throw new UpstreamUnavailableError(err);
+  }
+}
+
 function buildUpstreamUrl(pathWithQuery: string): string {
   return `${upstreamConfig.baseUrl.replace(/\/$/, "")}/${pathWithQuery.replace(/^\//, "")}`;
 }
@@ -95,13 +130,10 @@ export async function fetchUpstream(
     body?: BodyInit | null;
   },
 ): Promise<UpstreamResult> {
-  const response = await fetch(buildUpstreamUrl(pathWithQuery), {
+  const response = await fetchOrUnavailable(buildUpstreamUrl(pathWithQuery), {
     method: init.method,
     headers: await scrubUpstreamHeaders(init.headers),
-    body:
-      init.body && init.method !== "GET" && init.method !== "HEAD"
-        ? init.body
-        : undefined,
+    ...upstreamBody(init.method, init.body),
     cache: "no-store",
     redirect: "manual",
   });
@@ -126,13 +158,10 @@ export async function fetchUpstreamStream(
     signal?: AbortSignal;
   },
 ): Promise<UpstreamStreamResult> {
-  const response = await fetch(buildUpstreamUrl(pathWithQuery), {
+  const response = await fetchOrUnavailable(buildUpstreamUrl(pathWithQuery), {
     method: init.method,
     headers: await scrubUpstreamHeaders(init.headers),
-    body:
-      init.body && init.method !== "GET" && init.method !== "HEAD"
-        ? init.body
-        : undefined,
+    ...upstreamBody(init.method, init.body),
     cache: "no-store",
     signal: init.signal,
     redirect: "manual",

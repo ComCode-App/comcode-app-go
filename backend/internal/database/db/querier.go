@@ -526,6 +526,8 @@ type Querier interface {
 	// Owners and admins of an account hear about new leads.
 	ListLeadNotifyUserIDs(ctx context.Context, accountID int64) ([]int64, error)
 	ListLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
+	// The user inbox is in-app only (TEC-1099): email rows hold security codes and links
+	// meant for the mailbox, so they are never served back to the account owner.
 	ListNotificationsForUser(ctx context.Context, arg ListNotificationsForUserParams) ([]Notification, error)
 	ListOAuthAccountsByUserID(ctx context.Context, userID int64) ([]ListOAuthAccountsByUserIDRow, error)
 	ListOAuthAccountsForUserIDs(ctx context.Context, userIds []int64) ([]ListOAuthAccountsForUserIDsRow, error)

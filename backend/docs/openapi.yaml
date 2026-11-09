@@ -1471,8 +1471,10 @@ paths:
       operationId: postRealtimeSubscriptionToken
       summary: Issue Centrifugo subscription JWT
       description: |
-        Body `{ channel }`. Allowlist `user:{own_uuid}`, member `workspace:{uuid}`,
-        and `conversation:{uuid}` (authenticated session; HTTP inbox ACL is the hard boundary).
+        Body `{ channel }`. Explicit allowlist: `user:{own_uuid}` (the caller's own
+        channel) and `system.notifications` (super admins only). Every other channel,
+        including `conversation:{uuid}`, `workspace:{uuid}` and account channels, is
+        denied with 403.
       security:
         - bearerAuth: []
       requestBody:
@@ -1666,7 +1668,11 @@ paths:
       tags: [Notifications]
       operationId: getNotifications
       summary: List own inbox
-      description: Requires `notifications.read`. Supports `limit`,`offset`,`q`,`sort`,`status`,`channel`,`unread`.
+      description: >-
+        Requires `notifications.read`. Supports `limit`,`offset`,`q`,`sort`,`status`,`channel`,`unread`.
+        The inbox holds `inapp` rows only: email and other channel rows (verification codes,
+        reset codes, invitation links) are never returned, so any other `channel` value yields
+        an empty page.
       security:
         - bearerAuth: []
       parameters:
@@ -1679,6 +1685,7 @@ paths:
           schema: { type: string }
         - name: channel
           in: query
+          description: Only `inapp` matches; the inbox never returns other channels.
           schema: { type: string }
         - name: unread
           in: query
@@ -1812,6 +1819,7 @@ paths:
       tags: [Notifications]
       operationId: getNotificationByUUID
       summary: Get own notification
+      description: Own `inapp` notification. Rows of other channels (e.g. email) answer 404.
       security:
         - bearerAuth: []
       parameters:
@@ -3053,6 +3061,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeParsedVCardProfile"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/profiles/{uuid}:
     get:
@@ -3339,6 +3348,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeSocialPlatformDetail"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/banks:
     get:
@@ -3498,6 +3508,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeBankDetail"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/bank-accounts/meta:
     get:
@@ -3743,6 +3754,7 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/profiles/{uuid}/cover:
     post:
@@ -3781,6 +3793,7 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/profiles/{uuid}/primary:
     post:
@@ -5165,6 +5178,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeProductDetail"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/platform/products/{uuid}/images:
     post:
@@ -5192,6 +5206,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeProductDetail"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/platform/products/{uuid}/variants:
     get:
@@ -5786,6 +5801,16 @@ paths:
       tags: [Commerce Orders]
       operationId: uploadOrderAssetPublic
       summary: Upload customer logo/vector artwork using secure token
+      description: |
+        Unauthenticated; the asset request token is the only gate (TEC-1097). The token is checked
+        before the file is read: pass it as `?token=` or as the `token` form field, which must come
+        before the `file` part. Invalid token: 404. The file type is sniffed (PNG/JPEG/WebP/GIF, PDF
+        or AI, EPS, ZIP, static SVG); max 20 MiB (413). Unsafe SVG: 422 `SVG_UNSAFE_CONTENT`.
+      parameters:
+        - name: token
+          in: query
+          required: false
+          schema: { type: string }
       requestBody:
         required: true
         content:
@@ -5806,6 +5831,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeAssetRequestSummary"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "422": { $ref: "#/components/responses/SVGUnsafeContent" }
 
   /v1/orders:
     get:
@@ -7943,13 +7970,22 @@ paths:
       tags: [Settings]
       operationId: putPlatformSettingsLogo
       summary: "PUT /v1/platform/settings/logo"
-      description: "Registered in `internal/modules/settings/routes.go`. Requires `platform.settings.write`."
+      description: |
+        Registered in `internal/modules/settings/routes.go`. Requires `platform.settings.write`.
+        Multipart `logo` file up to 2 MiB. The type is sniffed from the bytes: PNG, JPEG, WebP, GIF or a
+        static SVG (max 512 KiB). An SVG with script, event handlers, external references, DOCTYPE or
+        similar is rejected with 422 `SVG_UNSAFE_CONTENT` (TEC-1097). Stored SVGs are served as
+        attachments with `nosniff` and a sandbox CSP.
       security: [{ bearerAuth: [] }]
       requestBody:
-        required: false
+        required: true
         content:
-          application/json:
-            schema: { type: object, additionalProperties: true }
+          multipart/form-data:
+            schema:
+              type: object
+              required: [logo]
+              properties:
+                logo: { type: string, format: binary }
       responses:
         "200":
           description: Success envelope (see API_CONVENTIONS.md); some endpoints stream files or redirect
@@ -7958,6 +7994,8 @@ paths:
               schema: { $ref: "#/components/schemas/EnvelopeGeneric" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "422": { $ref: "#/components/responses/SVGUnsafeContent" }
 
   /v1/platform/storage/activity:
     get:
@@ -8341,6 +8379,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeGeneric" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/platform/storage/uploads/complete:
     post:
@@ -10014,7 +10053,7 @@ paths:
       tags: ["App"]
       operationId: "uploadCompanyMedia"
       summary: "Upload a file to the company media library"
-      description: "TEC-946. Requires app.company_branding.write and an owner/admin role in the active company. The content type is sniffed: logo, cover and image take JPEG, PNG or WebP up to 5 MiB; document takes PDF up to 10 MiB. At most 500 files per company (409)."
+      description: "TEC-946. Requires app.company_branding.write and an owner/admin role in the active company. The content type is sniffed: cover and image take JPEG, PNG or WebP up to 5 MiB; logo also takes GIF and static SVG (max 512 KiB; unsafe SVG is 422 SVG_UNSAFE_CONTENT, TEC-1097); document takes PDF up to 10 MiB. Bodies above the limit are 413 PAYLOAD_TOO_LARGE. At most 500 files per company (409)."
       security: [{"bearerAuth": []}]
       requestBody:
         required: true
@@ -10037,6 +10076,8 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "422": { $ref: "#/components/responses/SVGUnsafeContent" }
   /v1/company/media/{uuid}:
     delete:
       tags: ["App"]
@@ -10494,6 +10535,7 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/company/employees/import/sample:
     get:
@@ -11848,6 +11890,24 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+    PayloadTooLarge:
+      description: |
+        `PAYLOAD_TOO_LARGE`: the request body or file is above the upload limit. Upload bodies are
+        capped before they are read (`http.MaxBytesReader`; storage uploads use `STORAGE_MAX_BYTES`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    SVGUnsafeContent:
+      description: |
+        `SVG_UNSAFE_CONTENT`: an SVG upload contains more than static vector content (script, event
+        handler attributes, `javascript:` / external references, foreignObject, DOCTYPE/ENTITY,
+        external CSS `url()` / `@import`). The file is rejected, never stripped;
+        `error.details[0].message` holds the reason.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     InternalError:
       description: Unexpected server error
       content:
@@ -12050,6 +12110,8 @@ components:
           description: Machine-readable error code
           examples:
             - VALIDATION_ERROR
+            - PAYLOAD_TOO_LARGE
+            - SVG_UNSAFE_CONTENT
             - INVALID_RESET_CODE
             - INVALID_VERIFICATION_CODE
             - INVALID_CREDENTIALS

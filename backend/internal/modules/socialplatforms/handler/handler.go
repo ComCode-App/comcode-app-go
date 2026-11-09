@@ -5,12 +5,13 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/socialplatforms/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/socialplatforms/usecase"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/resourcemeta"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/apiquery"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/response"
+	"github.com/google/uuid"
 )
 
 type Handler struct {
@@ -146,20 +147,18 @@ func (h *Handler) UploadIcon(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseMultipartForm(5 << 20); err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
-		return
-	}
-
-	file, header, err := r.FormFile("icon")
-	if err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "icon file is required")
+	file, header, ok := upload.FormFile(w, r, upload.MaxImageBytes, "icon")
+	defer upload.Cleanup(r)
+	if !ok {
 		return
 	}
 	defer func() { _ = file.Close() }()
 
 	platform, err := h.svc.UploadIcon(r.Context(), id, file, header.Filename, header.Header.Get("Content-Type"), header.Size)
 	if err != nil {
+		if upload.WriteError(w, r, err) {
+			return
+		}
 		if errors.Is(err, usecase.ErrNotFound) {
 			response.NotFound(w, r, "social platform not found")
 			return

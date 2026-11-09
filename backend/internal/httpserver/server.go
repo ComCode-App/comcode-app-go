@@ -1,6 +1,12 @@
 package httpserver
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	backgroundsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/backgrounds"
+	backgroundshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/backgrounds/handler"
+	backgroundsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/backgrounds/usecase"
 	companyanalyticsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companyanalytics"
 	companyanalyticshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companyanalytics/handler"
 	companyanalyticsrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companyanalytics/repository"
@@ -9,13 +15,7 @@ import (
 	assetshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companyassets/handler"
 	assetsrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companyassets/repository"
 	assetsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companyassets/usecase"
-	backgroundsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/backgrounds"
-	backgroundshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/backgrounds/handler"
-	backgroundsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/backgrounds/usecase"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/clientip"
-	"context"
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -28,6 +28,9 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/middleware"
 	accessmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/access"
 	accesshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/access/handler"
+	accountsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/accounts"
+	accountshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/accounts/handler"
+	accountsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/accounts/usecase"
 	activitymodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/activity"
 	activityhandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/activity/handler"
 	activityusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/activity/usecase"
@@ -50,9 +53,6 @@ import (
 	banksrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/banks/repository"
 	banksusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/banks/usecase"
 	billingmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/billing"
-	webhooksmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/webhooks"
-	webhookshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/webhooks/handler"
-	webhooksusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/webhooks/usecase"
 	billinghandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/billing/handler"
 	billingrepository "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/billing/repository"
 	billingusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/billing/usecase"
@@ -77,25 +77,14 @@ import (
 	structurehandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companystructure/handler"
 	structurerepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companystructure/repository"
 	structureusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companystructure/usecase"
-	accountsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/accounts"
-	accountshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/accounts/handler"
-	accountsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/accounts/usecase"
-	eventsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/events"
-	eventshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/events/handler"
-	overviewmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/overview"
-	overviewhandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/overview/handler"
-	overviewrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/overview/repository"
-	overviewusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/overview/usecase"
-	leadsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/leads"
-	leadshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/leads/handler"
-	leadsrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/leads/repository"
-	leadsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/leads/usecase"
-	exportmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/exports"
-	exporthandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/exports/handler"
-	exportusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/exports/usecase"
 	errortrackingmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/errortracking"
 	errortrackinghandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/errortracking/handler"
 	errortrackingusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/errortracking/usecase"
+	eventsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/events"
+	eventshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/events/handler"
+	exportmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/exports"
+	exporthandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/exports/handler"
+	exportusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/exports/usecase"
 	geoipmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/geoip"
 	geoiphandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/geoip/handler"
 	importmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/imports"
@@ -107,31 +96,39 @@ import (
 	oauthprovidermodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/integrations/oauthprovider"
 	oauthproviderhandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/integrations/oauthprovider/handler"
 	oauthproviderusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/integrations/oauthprovider/usecase"
+	paymentintegrationmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/integrations/payment"
+	paymentintegrationhandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/integrations/payment/handler"
+	paymentintegrationusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/integrations/payment/usecase"
+	leadsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/leads"
+	leadshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/leads/handler"
+	leadsrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/leads/repository"
+	leadsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/leads/usecase"
 	logsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/logs"
 	logshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/logs/handler"
 	logsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/logs/usecase"
+	notifmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications"
+	notifhandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications/handler"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications/providers"
+	notifusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications/usecase"
 	ordersmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/orders"
 	ordershandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/orders/handler"
 	ordersrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/orders/repository"
 	ordersusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/orders/usecase"
-	paymentintegrationmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/integrations/payment"
-	paymentintegrationhandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/integrations/payment/handler"
-	paymentintegrationusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/integrations/payment/usecase"
+	overviewmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/overview"
+	overviewhandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/overview/handler"
+	overviewrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/overview/repository"
+	overviewusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/overview/usecase"
 	plansmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/plans"
 	planshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/plans/handler"
 	plansusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/plans/usecase"
-	productsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/products"
-	productshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/products/handler"
-	productsrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/products/repository"
-	productsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/products/usecase"
-	routesmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes"
 	platformsupportmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/platformsupport"
 	platformsupporthandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/platformsupport/handler"
 	platformsupportrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/platformsupport/repository"
 	platformsupportusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/platformsupport/usecase"
-	routeshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/handler"
-	routesrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/repository"
-	routesusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/usecase"
+	productsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/products"
+	productshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/products/handler"
+	productsrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/products/repository"
+	productsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/products/usecase"
 	profilesmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profiles"
 	profileshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profiles/handler"
 	profilesrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profiles/repository"
@@ -139,28 +136,31 @@ import (
 	profileverificationsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileverifications"
 	profileverificationshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileverifications/handler"
 	profileverificationsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileverifications/usecase"
-	socialplatformsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/socialplatforms"
-	socialplatformshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/socialplatforms/handler"
-	socialplatformsrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/socialplatforms/repository"
-	socialplatformsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/socialplatforms/usecase"
-	utilsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/utils"
-	utilshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/utils/handler"
-	subscriptionsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/subscriptions"
-	subscriptionshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/subscriptions/handler"
-	subscriptionsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/subscriptions/usecase"
-	notifmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications"
-	notifhandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications/handler"
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications/providers"
-	notifusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications/usecase"
+	routesmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes"
+	routeshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/handler"
+	routesrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/repository"
+	routesusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/usecase"
 	searchmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/search"
 	searchhandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/search/handler"
 	searchusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/search/usecase"
 	settingsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/settings"
 	settingshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/settings/handler"
 	settingsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/settings/usecase"
+	socialplatformsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/socialplatforms"
+	socialplatformshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/socialplatforms/handler"
+	socialplatformsrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/socialplatforms/repository"
+	socialplatformsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/socialplatforms/usecase"
 	storagemodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/storage"
 	storagehandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/storage/handler"
 	storageusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/storage/usecase"
+	subscriptionsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/subscriptions"
+	subscriptionshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/subscriptions/handler"
+	subscriptionsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/subscriptions/usecase"
+	utilsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/utils"
+	utilshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/utils/handler"
+	webhooksmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/webhooks"
+	webhookshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/webhooks/handler"
+	webhooksusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/webhooks/usecase"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/activity"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/analytics/aggregation"
 	analyticsapp "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/analytics/application"
@@ -230,11 +230,11 @@ type Server struct {
 	searchClient  *searchengine.Client
 	searchIndexer *searchengine.Indexer
 	// backgrounds renders missing design thumbnails at startup (TEC-599).
-	backgrounds *backgroundsusecase.Service
-	githubSvc     *githubusecase.Service
-	oauthProvSvc  *oauthproviderusecase.Service
-	authSettings  *authsettingsusecase.Service
-	http          *http.Server
+	backgrounds  *backgroundsusecase.Service
+	githubSvc    *githubusecase.Service
+	oauthProvSvc *oauthproviderusecase.Service
+	authSettings *authsettingsusecase.Service
+	http         *http.Server
 }
 
 // New wires router and middleware for the API skeleton.
@@ -281,6 +281,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	}
 	notifSvc := notifusecase.New(deps.Queries, deps.Queue, provs, log)
 	notifSvc.WithActionSigner(cfg.JWT.AccessSecret, 0)
+	notifSvc.WithEncryptionKey(cfg.App.Env, cfg.Encryption.Key)
 	notifSvc.WithVAPID(notifusecase.VAPIDConfig{
 		PublicKey:  cfg.VAPID.PublicKey,
 		PrivateKey: cfg.VAPID.PrivateKey,
@@ -358,7 +359,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	nh := notifhandler.New(notifSvc)
 	notifmodule.RegisterRoutes(mux, nh, tokens, loader)
 	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log)
- notifmodule.RegisterBillingHandlers(eventBus,notifSvc,deps.Queries)
+	notifmodule.RegisterBillingHandlers(eventBus, notifSvc, deps.Queries)
 
 	// Resolver cache (TEC-557): routes read it, route/card/profile writes invalidate it.
 	routeCache := routecache.New(deps.Redis, cfg.App.Env, routecache.DefaultTTL)
@@ -486,7 +487,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	searchmodule.RegisterRoutes(mux, searchhandler.New(searchSvc), tokens, loader)
 	storagemodule.RegisterRoutes(
 		mux,
-		storagehandler.New(storageusecase.New(deps.Storage, deps.Queries, log)),
+		storagehandler.New(storageusecase.New(deps.Storage, deps.Queries, log), cfg.Storage.MaxBytes),
 		tokens,
 		loader,
 	)
@@ -626,7 +627,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	}
 
 	s.http = &http.Server{
-		Addr:         cfg.HTTP.Addr,
+		Addr: cfg.HTTP.Addr,
 		// RequestID is outermost so 5xx logs, error reports, and panics carry the id.
 		Handler: middleware.Chain(mux,
 			middleware.RequestID,

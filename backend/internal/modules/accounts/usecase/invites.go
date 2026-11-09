@@ -516,6 +516,8 @@ func (s *Invites) send(ctx context.Context, accountID, invitedBy int64, email, r
 	_, err = s.notifier.Enqueue(ctx, notifmodel.EnqueueInput{
 		Channels: []string{notifmodel.ChannelEmail}, Recipient: &email, ActionURL: &link,
 		TemplateCode: "accounts.invite", SourceEvent: "accounts.invite", Language: lang,
+		// The link carries the invitation token: masked on the row, sealed for the mailbox.
+		SecretVars: []string{"invite_url"},
 		TemplateVars: map[string]string{
 			"account_name": account.Name, "inviter_name": inviter, "role": roleLabel(role, lang),
 			"invite_url": link, "expires_days": strconv.Itoa(int(InviteTTL.Hours() / 24)),

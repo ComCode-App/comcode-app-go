@@ -3,5 +3,7 @@
   "forbidden_body": "Bu panele erişim için uygun rolünüz yok.",
   "unauthorized_title": "Oturum gerekli",
   "unauthorized_body": "Devam etmek için giriş yapın.",
-  "role_mismatch": "Hesabınız bu panel için uygun değil."
+  "role_mismatch": "Hesabınız bu panel için uygun değil.",
+  "upload_svg_unsafe": "Bu SVG dosyası güvenli olmayan içerik (script veya dış bağlantı) içeriyor, yüklenmedi. Lütfen sade bir SVG ya da PNG yükleyin.",
+  "upload_too_large": "Dosya yüklenemeyecek kadar büyük."
 }
