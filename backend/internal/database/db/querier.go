@@ -591,6 +591,8 @@ type Querier interface {
 	// Company media library and company branding (TEC-946). Every query is scoped by account_id.
 	ListCompanyMedia(ctx context.Context, arg ListCompanyMediaParams) ([]ListCompanyMediaRow, error)
 	ListCompanyMemberProfiles(ctx context.Context, arg ListCompanyMemberProfilesParams) ([]ListCompanyMemberProfilesRow, error)
+	// account-lint: cross-account one-off deleted-profile media backfill (TEC-1177): walks soft-deleted profiles of every account by id cursor and returns only ids, uuids, media columns and locales
+	ListDeletedProfilesForMediaBackfill(ctx context.Context, arg ListDeletedProfilesForMediaBackfillParams) ([]ListDeletedProfilesForMediaBackfillRow, error)
 	// Worker-only unscoped discovery. Manual/legacy subscriptions are deliberately excluded.
 	// account-lint: cross-account renewal worker, all accounts
 	ListDuePaymentSubscriptions(ctx context.Context, nowAt pgtype.Timestamptz) ([]int64, error)

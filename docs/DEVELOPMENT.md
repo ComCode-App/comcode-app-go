@@ -341,6 +341,8 @@ unset SA_PASSWORD
 
 In Dokploy, open a terminal on the backend container and run `/app/create-super-admin -email you@example.com -password '…'`.
 
+Other one-off commands in the backend image are run the same way: `/app/search-reindex`, `/app/migrate-legacy` and `/app/profile-media-backfill` (media of profiles deleted before TEC-1176; dry run by default, `-apply` to clean up; see [PROFILES.md](./PROFILES.md#backfill-for-profiles-deleted-before-tec-1176-tec-1177)).
+
 ## After a backend contract change
 
 ```sh

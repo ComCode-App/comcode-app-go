@@ -137,31 +137,17 @@ func (c *MediaCleaner) Process(ctx context.Context, payload queue.ProfileMediaCl
 		return nil
 	}
 
-	prefix := profileMediaPrefix(profileUUID)
-	candidates := map[string]struct{}{}
-	for _, key := range payload.Keys {
-		if ownedByProfile(key, prefix) {
-			candidates[key] = struct{}{}
-		}
-	}
-	var errs []error
-	listed, err := c.listPrefix(ctx, prefix)
-	if err != nil {
-		errs = append(errs, err)
-	}
-	for _, key := range listed {
-		if ownedByProfile(key, prefix) {
-			candidates[key] = struct{}{}
-		}
-	}
+	deleted, kept, err := c.cleanup(ctx, profileUUID, payload.Keys)
+	c.log.InfoContext(ctx, "profile_media_cleanup_done",
+		"profile_uuid", payload.ProfileUUID, "deleted", deleted, "kept_shared", kept, "failed", countErrors(err))
+	return err
+}
 
-	keys := make([]string, 0, len(candidates))
-	for key := range candidates {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	deleted, kept := 0, 0
-	for _, key := range keys {
+// cleanup deletes the unreferenced objects of one deleted profile and returns how many were
+// deleted and how many were kept because a live row still references them.
+func (c *MediaCleaner) cleanup(ctx context.Context, profileUUID uuid.UUID, keys []string) (deleted, kept int, err error) {
+	candidates, errs := c.candidateKeys(ctx, profileUUID, keys)
+	for _, key := range candidates {
 		refs, err := c.refs.CountStorageKeyReferences(ctx, key)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("reference check: %w", err))
@@ -177,9 +163,47 @@ func (c *MediaCleaner) Process(ctx context.Context, payload queue.ProfileMediaCl
 		}
 		deleted++
 	}
-	c.log.InfoContext(ctx, "profile_media_cleanup_done",
-		"profile_uuid", payload.ProfileUUID, "deleted", deleted, "kept_shared", kept, "failed", len(errs))
-	return errors.Join(errs...)
+	return deleted, kept, errors.Join(errs...)
+}
+
+// candidateKeys returns, sorted, the keys the cleanup considers for a profile: the given column
+// keys it may own plus everything listed under profiles/{uuid}/. A listing error is returned
+// alongside the keys collected so far.
+func (c *MediaCleaner) candidateKeys(ctx context.Context, profileUUID uuid.UUID, keys []string) ([]string, []error) {
+	prefix := profileMediaPrefix(profileUUID)
+	candidates := map[string]struct{}{}
+	for _, key := range keys {
+		if ownedByProfile(key, prefix) {
+			candidates[key] = struct{}{}
+		}
+	}
+	var errs []error
+	listed, err := c.listPrefix(ctx, prefix)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	for _, key := range listed {
+		if ownedByProfile(key, prefix) {
+			candidates[key] = struct{}{}
+		}
+	}
+	out := make([]string, 0, len(candidates))
+	for key := range candidates {
+		out = append(out, key)
+	}
+	sort.Strings(out)
+	return out, errs
+}
+
+// countErrors counts the errors behind a (possibly joined) error.
+func countErrors(err error) int {
+	if err == nil {
+		return 0
+	}
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		return len(joined.Unwrap())
+	}
+	return 1
 }
 
 // listPrefix returns every object key under prefix (all pages).
@@ -215,6 +239,12 @@ func ownedByProfile(key, prefix string) bool {
 // avatar and cover (any extension, a staged temp avatar, a copied company logo) and the cached
 // vCards of every locale. The prefix listing in Process catches objects no column names.
 func (s *Service) profileMediaKeys(profileUUID uuid.UUID, avatarURL, coverURL string, locales []string) []string {
+	return collectProfileMediaKeys(s.mediaKey, profileUUID, avatarURL, coverURL, locales)
+}
+
+// collectProfileMediaKeys is profileMediaKeys with the URL-to-key mapping passed in, so the
+// deleted-profile backfill (TEC-1177) collects keys exactly like Delete does.
+func collectProfileMediaKeys(mediaKey func(string) string, profileUUID uuid.UUID, avatarURL, coverURL string, locales []string) []string {
 	prefix := profileMediaPrefix(profileUUID)
 	seen := map[string]struct{}{}
 	var keys []string
@@ -228,8 +258,8 @@ func (s *Service) profileMediaKeys(profileUUID uuid.UUID, avatarURL, coverURL st
 		seen[key] = struct{}{}
 		keys = append(keys, key)
 	}
-	add(s.mediaKey(avatarURL))
-	add(s.mediaKey(coverURL))
+	add(mediaKey(avatarURL))
+	add(mediaKey(coverURL))
 	for _, loc := range locales {
 		add(storage.ProfileVCardObjectKey(profileUUID.String(), loc))
 	}

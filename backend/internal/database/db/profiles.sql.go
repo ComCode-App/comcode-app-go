@@ -521,6 +521,65 @@ func (q *Queries) GetProfileByUUIDForAccount(ctx context.Context, arg GetProfile
 	return i, err
 }
 
+const listDeletedProfilesForMediaBackfill = `-- name: ListDeletedProfilesForMediaBackfill :many
+SELECT p.id,
+       p.uuid,
+       p.avatar_url,
+       p.cover_url,
+       p.primary_locale,
+       COALESCE(
+           (SELECT array_agg(DISTINCT t.locale::text) FROM profile_translations t WHERE t.profile_id = p.id),
+           '{}'
+       )::text[] AS locales
+FROM profiles p
+WHERE p.deleted_at IS NOT NULL
+  AND p.id > $1::bigint
+ORDER BY p.id
+LIMIT $2::int
+`
+
+type ListDeletedProfilesForMediaBackfillParams struct {
+	AfterID    int64 `json:"after_id"`
+	BatchLimit int32 `json:"batch_limit"`
+}
+
+type ListDeletedProfilesForMediaBackfillRow struct {
+	ID            int64     `json:"id"`
+	Uuid          uuid.UUID `json:"uuid"`
+	AvatarUrl     string    `json:"avatar_url"`
+	CoverUrl      string    `json:"cover_url"`
+	PrimaryLocale string    `json:"primary_locale"`
+	Locales       []string  `json:"locales"`
+}
+
+// account-lint: cross-account one-off deleted-profile media backfill (TEC-1177): walks soft-deleted profiles of every account by id cursor and returns only ids, uuids, media columns and locales
+func (q *Queries) ListDeletedProfilesForMediaBackfill(ctx context.Context, arg ListDeletedProfilesForMediaBackfillParams) ([]ListDeletedProfilesForMediaBackfillRow, error) {
+	rows, err := q.db.Query(ctx, listDeletedProfilesForMediaBackfill, arg.AfterID, arg.BatchLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDeletedProfilesForMediaBackfillRow{}
+	for rows.Next() {
+		var i ListDeletedProfilesForMediaBackfillRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.AvatarUrl,
+			&i.CoverUrl,
+			&i.PrimaryLocale,
+			&i.Locales,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProfileAddresses = `-- name: ListProfileAddresses :many
 SELECT id, uuid, profile_id, type, label, street, extended, city, region, postal_code, country, is_primary, display_order, created_at, updated_at
 FROM profile_addresses
