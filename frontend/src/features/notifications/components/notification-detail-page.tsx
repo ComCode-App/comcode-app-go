@@ -23,10 +23,14 @@ import {
 } from "@/features/notifications/constants";
 import { useMarkNotificationRead } from "@/features/notifications/hooks/use-notification-mutations";
 import { useNotificationRealtimeInvalidate } from "@/features/notifications/hooks/use-notification-realtime";
-import { useNotification } from "@/features/notifications/hooks/use-notifications-query";
+import {
+  useNotification,
+  usePlatformNotification,
+} from "@/features/notifications/hooks/use-notifications-query";
 import { formatNotificationText } from "@/features/notifications/lib/notification-display";
 import type { Notification } from "@/features/notifications/services/notifications.service";
 import { datetime } from "@/lib/utils";
+import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
@@ -51,14 +55,17 @@ function localized(t: (key: string) => string, prefix: string, value: string) {
 
 function NotificationDetailActions({
   notification,
+  own,
 }: {
   notification: Notification;
+  own: boolean;
 }) {
   const { t } = useLocale();
   const { can } = usePermission();
   const markRead = useMarkNotificationRead();
 
   if (
+    !own ||
     !can(permissions.notifications.read) ||
     !canMarkNotificationRead(notification)
   ) {
@@ -81,20 +88,31 @@ function NotificationDetailActions({
   );
 }
 
-/** Own inbox notification detail (`GET /v1/notifications/{uuid}`). */
+/**
+ * Notification detail. Platform operators read `GET /v1/platform/notifications/{uuid}`
+ * (any channel, email included, secrets masked); everyone else their own in-app row via
+ * `GET /v1/notifications/{uuid}`.
+ */
 export function NotificationDetailPage({ uuid }: NotificationDetailPageProps) {
   const { t, locale } = useLocale();
   const { can } = usePermission();
+  const { user } = useAuth();
   const autoMarkedIdRef = useRef<string | null>(null);
   const markReadSilent = useMarkNotificationRead({ silent: true });
   const markReadMutateRef = useRef(markReadSilent.mutate);
 
   useNotificationRealtimeInvalidate();
 
-  const notificationQuery = useNotification(uuid);
+  const canViewPlatform = can(permissions.notifications.platformRead);
+  const platformQuery = usePlatformNotification(uuid, canViewPlatform);
+  const inboxQuery = useNotification(uuid, !canViewPlatform);
+  const notificationQuery = canViewPlatform ? platformQuery : inboxQuery;
   const notification = notificationQuery.data;
   const title = notification?.title ?? t("notifications.detail_title");
-  const canViewPlatform = can(permissions.notifications.platformRead);
+  // Platform rows may belong to another user; only the owner can mark them read.
+  const own = canViewPlatform
+    ? Boolean(user && notification?.user?.uuid === user.uuid)
+    : true;
 
   useEffect(() => {
     markReadMutateRef.current = markReadSilent.mutate;
@@ -105,12 +123,12 @@ export function NotificationDetailPage({ uuid }: NotificationDetailPageProps) {
   }, [uuid]);
 
   useEffect(() => {
-    if (!notification) return;
+    if (!notification || !own) return;
     if (!canMarkNotificationRead(notification)) return;
     if (autoMarkedIdRef.current === notification.uuid) return;
     autoMarkedIdRef.current = notification.uuid;
     markReadMutateRef.current(notification.uuid);
-  }, [notification]);
+  }, [notification, own]);
 
   return (
     <EntityPage
@@ -137,7 +155,7 @@ export function NotificationDetailPage({ uuid }: NotificationDetailPageProps) {
       ]}
       actions={
         notification ? (
-          <NotificationDetailActions notification={notification} />
+          <NotificationDetailActions notification={notification} own={own} />
         ) : null
       }
     >

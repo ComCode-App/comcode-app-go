@@ -52,6 +52,15 @@ export const notificationsService = {
     );
   },
 
+  /** Platform detail: any channel (email included), secrets masked. */
+  async getPlatform(uuid: string) {
+    return unwrap<Notification>(
+      await apiClient.GET("/v1/platform/notifications/{uuid}", {
+        params: { path: { uuid } },
+      }),
+    );
+  },
+
   async platformMeta() {
     return unwrap<ResourceMeta>(
       await apiClient.GET("/v1/platform/notifications/meta"),

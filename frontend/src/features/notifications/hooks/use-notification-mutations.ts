@@ -98,6 +98,9 @@ export function useMarkNotificationRead(options?: { silent?: boolean }) {
       void queryClient.invalidateQueries({
         queryKey: notificationsKeys.detail(uuid),
       });
+      void queryClient.invalidateQueries({
+        queryKey: notificationsKeys.platformDetail(uuid),
+      });
       invalidateInbox(queryClient);
     },
   });

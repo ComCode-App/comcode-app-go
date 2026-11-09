@@ -8,5 +8,7 @@ export const notificationsKeys = {
   unreadCount: () => [...notificationsKeys.all, "unread-count"] as const,
   details: () => [...notificationsKeys.all, "detail"] as const,
   detail: (uuid: string) => [...notificationsKeys.details(), uuid] as const,
+  platformDetail: (uuid: string) =>
+    [...notificationsKeys.details(), "platform", uuid] as const,
   inboxMeta: () => [...notificationsKeys.all, "inbox-meta"] as const,
 };
