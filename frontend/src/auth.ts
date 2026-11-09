@@ -15,9 +15,14 @@ import {
   adapterGetOAuthAccountUser,
   adapterGetUserByEmail,
   adapterIssueSession,
+  loginWithEmailCode,
   loginWithPassword,
   type OAuthConfigPayload,
 } from "@/lib/auth/go-adapter-client";
+import {
+  isSignInErrorCode,
+  type SignInErrorCode,
+} from "@/features/auth/lib/sign-in-errors";
 import { createProviderCache } from "@/lib/auth/provider-cache";
 import { secureAuthCookies } from "@/lib/auth/secure-cookies";
 import {
@@ -28,16 +33,19 @@ import { fetchAppPublicConfig } from "@/services/app-config.service";
 
 const pendingGitHubLogins = new Map<string, string>();
 
-class MFARequiredError extends CredentialsSignin {
-  code = "MFA_REQUIRED";
+/** A credentials sign-in failure whose Go API code reaches the login form as `result.code`. */
+class SignInCodeError extends CredentialsSignin {
+  constructor(signInCode: SignInErrorCode) {
+    super();
+    this.code = signInCode;
+  }
 }
 
-class InvalidMFACodeError extends CredentialsSignin {
-  code = "INVALID_MFA_CODE";
-}
-
-class MFANotEnrolledError extends CredentialsSignin {
-  code = "MFA_NOT_ENROLLED";
+/** Throws the pass-through error for a Go API code; other failures stay a generic `null`. */
+function throwSignInCode(error: unknown): null {
+  const code = (error as Error & { code?: string }).code;
+  if (isSignInErrorCode(code)) throw new SignInCodeError(code);
+  return null;
 }
 
 const OAUTH_PROVIDERS = ["github", "google", "facebook", "apple"] as const;
@@ -175,24 +183,55 @@ async function buildProviders(): Promise<{
               expiresIn: tokens.expires_in,
             };
           } catch (error) {
-            const code = (error as Error & { code?: string }).code;
             // Code + status only: never the email, password or authenticator code.
             logCredentialsFailure(error);
-            if (code === "MFA_REQUIRED") {
-              throw new MFARequiredError();
-            }
-            if (code === "INVALID_MFA_CODE") {
-              throw new InvalidMFACodeError();
-            }
-            if (code === "MFA_NOT_ENROLLED") {
-              throw new MFANotEnrolledError();
-            }
-            return null;
+            return throwSignInCode(error);
           }
         },
       }),
     );
   }
+
+  // Email one-time code sign-in / sign-up (TEC-1121). Always registered: the Go API owns
+  // the policy (registration switch, 2FA, account state).
+  providers.push(
+    Credentials({
+      id: "email-code",
+      name: "Email code",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        code: { label: "Code", type: "text" },
+        totp_code: { label: "Authenticator code", type: "text" },
+      },
+      async authorize(credentials) {
+        const email = String(credentials?.email ?? "").trim();
+        const code = String(credentials?.code ?? "").trim();
+        const totpCode = String(credentials?.totp_code ?? "").trim();
+        if (!email || !code) return null;
+        try {
+          const tokens = await loginWithEmailCode(
+            email,
+            code,
+            totpCode || undefined,
+          );
+          // A code sign-up creates the user in Go, so look it up after the tokens exist.
+          const user = await adapterGetUserByEmail(email);
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            accessToken: tokens.access_token,
+            refreshToken: tokens.refresh_token,
+            expiresIn: tokens.expires_in,
+          };
+        } catch (error) {
+          // Code + status only: never the email or either code.
+          logCredentialsFailure(error);
+          return throwSignInCode(error);
+        }
+      },
+    }),
+  );
 
   if (passkeyLogin) {
     providers.push(Passkey({}));

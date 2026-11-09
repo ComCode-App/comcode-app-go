@@ -35,5 +35,6 @@
   "continue": "Continue",
   "area_requires": "This area requires {{area}} access.",
   "area_app": "App",
-  "redirecting_to_login": "Redirecting to sign in…"
+  "redirecting_to_login": "Redirecting to sign in…",
+  "codes.invalid_email_code": "The sign-in code is incorrect or has expired."
 }

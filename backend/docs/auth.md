@@ -47,6 +47,21 @@ Super admin bypasses permission checks in `HasPermission`. Most platform HTTP ro
 - **OAuth**: linked accounts can sign in when `login` is enabled. Unlinked accounts may self-register only when register is allowed for that provider.
 - Secrets for OAuth apps are encrypted with `APP_ENCRYPTION_KEY`.
 
+## Email code sign-in (TEC-1121)
+
+| Method | Path | Auth |
+|--------|------|------|
+| POST | `/v1/auth/email-code/request` | Public → `200 {status: accepted}` |
+| POST | `/v1/auth/email-code/verify` | Public → token pair (like `/auth/login`) |
+
+- 6-digit code, 10 minutes, 5 attempts, single use (`ConsumeOTP` reports a lost race), stored as SHA-256 in `otp_codes` (`type = login_code`, migration `000075`). A new request replaces the previous code.
+- The email (`auth.login_code`, tr/en, user locale) is a `SecurityEmail`: the code is only stored sealed (see Security emails) and the notification preference does not apply.
+- `request` always answers `accepted` for a well-formed email: known (any status), unknown with registration open (a sign-up code is sent) and unknown with registration closed (nothing is sent). A failure while issuing or enqueuing is logged (`login_code_request_failed`) and reported, like forgot password.
+- `verify` checks the code first: wrong / expired / used / exhausted codes and unknown emails all answer `400 INVALID_EMAIL_CODE`. A disabled account is reported (`403`) only after a valid code. A valid code marks the email verified.
+- 2FA: a user with an authenticator gets `403 MFA_REQUIRED` without `totp_code`; the email code stays valid, so the client resends the same code with `totp_code`. A wrong `totp_code` (`401 INVALID_MFA_CODE`) burns one of the code's attempts. The access policy "2FA required for sign-in without passkey/OAuth" (`password_login_totp_required`) applies to email codes too: a user without an authenticator gets `403 MFA_NOT_ENROLLED`.
+- **Sign-up by code**: for an unknown email, while the global `registration_enabled` switch is on, a valid code creates the user (email verified, no password, `name` = email local part, empty `surname`, default role, welcome notification, personal account via the users trigger) and signs in on the personal account. With registration closed no account is created. Users who never set a password set one with the password reset flow.
+- Email-code login is not gated by the password login switch; it is always offered on the login page.
+
 ## Linked identities
 
 | Method | Path | Auth |
@@ -91,6 +106,8 @@ Redis INCR, 15-minute window, fail-open if Redis is down. `429 RATE_LIMITED` + `
 | Reset password | IP, email | 10, 10 |
 | Verification email request (`/auth/email/verify-request`) | user, IP | 5, 20 |
 | Verify email (`/auth/email/verify`) | IP, email | 10, 10 |
+| Email code request (`/auth/email-code/request`) | IP, email | 10, 5 |
+| Email code verify (`/auth/email-code/verify`) | IP, email | 30, 10 |
 | Card activation | user, and client IP | 10, 30 |
 | Public analytics events (`POST /v1/events`) | client IP | 600 |
 
@@ -106,7 +123,7 @@ Login and forgot-password keep a per-email cap across IPs so a botnet cannot gue
 ## Account enumeration (TEC-1101)
 
 - Login verifies the password first. An unknown email runs an Argon2 check against a dummy hash (computed once, same parameters), so it costs as much as a wrong password, and both return the same `401 INVALID_CREDENTIALS` "Email or password is incorrect". A disabled or suspended account is reported (`403`) only after the correct password; 2FA (`MFA_REQUIRED`, `INVALID_MFA_CODE`, `MFA_NOT_ENROLLED`) also follows a correct password.
-- `POST /v1/auth/password/forgot` always answers `accepted`, also when issuing the code or enqueuing the email fails for a registered email: that failure is logged at ERROR (`password_reset_request_failed`, with `request_id`, email redacted) and sent to the error tracker instead of returning a 500 (TEC-1116); `POST /v1/auth/password/reset` and `POST /v1/auth/email/verify` answer an unknown email like a wrong code.
+- `POST /v1/auth/password/forgot` always answers `accepted`, also when issuing the code or enqueuing the email fails for a registered email: that failure is logged at ERROR (`password_reset_request_failed`, with `request_id`, email redacted) and sent to the error tracker instead of returning a 500 (TEC-1116); `POST /v1/auth/password/reset` and `POST /v1/auth/email/verify` answer an unknown email like a wrong code. Email code sign-in follows the same rules (see Email code sign-in).
 - `POST /v1/auth/email/verify-request` only mails the caller's own address. An `email` field naming another address is ignored with the same `accepted` response.
 
 ## Security emails

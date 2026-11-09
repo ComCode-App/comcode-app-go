@@ -35,5 +35,6 @@
   "continue": "Devam et",
   "area_requires": "Bu alan yalnızca {{area}} erişimi gerektirir.",
   "area_app": "Uygulama",
-  "redirecting_to_login": "Giriş sayfasına yönlendiriliyor…"
+  "redirecting_to_login": "Giriş sayfasına yönlendiriliyor…",
+  "codes.invalid_email_code": "Giriş kodu hatalı veya süresi dolmuş."
 }
