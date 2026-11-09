@@ -113,6 +113,26 @@ UI `features/profiles/components/profile-verification-card.tsx` (owner) and
   - Deleted: every object under `profiles/{uuid}/` (avatar, cover, old extensions, vCards, copied company logos, legacy media) and a staged `tmp/avatars/` object the row still pointed at.
   - Kept: company media library files (`accounts/{uuid}/media/`, owned by the company) and any key a live row still references (`CountStorageKeyReferences`: another profile's avatar/cover, `company_media`, background thumbnails). A later run deletes it once the reference is gone.
   - The job skips a profile that is still live and is idempotent (objects already gone are fine). Failures are logged with the request id and the profile uuid (no personal data), make Asynq retry, and never undo the delete.
+  - Profiles deleted before TEC-1176 (TEC-1177): run the one-off [backfill](#backfill-for-profiles-deleted-before-tec-1176-tec-1177) once.
+
+### Backfill for profiles deleted before TEC-1176 (TEC-1177)
+
+`/app/profile-media-backfill` (backend image, `backend/cmd/profile-media-backfill`) walks every soft-deleted profile (`profiles.deleted_at IS NOT NULL`) in id order, collects its keys the same way `Service.Delete` does plus the `profiles/{uuid}/` listing, and applies the same reference check. Output is counts and ids only (logs carry profile uuids), no personal data.
+
+- Default is a **dry run**: it prints the number of deleted profiles, candidate objects, deletable objects and objects skipped by the reference check, and deletes nothing.
+- `-apply` enqueues `app:profiles:media_cleanup` for each deleted profile that still has a deletable object (maintenance queue, TaskID `profile-media-cleanup:{uuid}` dedupes against a queued task); the worker deletes the objects. With `QUEUE_ENABLED=false`, or with `-inline`, it cleans up in the process instead.
+- `-batch-size N` (default 200) rows per query; `-limit N` stops after N profiles; `-after-id ID` resumes after the `last_id` a previous run printed. Safe to run twice: once the cleanup finished, a run enqueues and deletes nothing (only objects a live row still references stay as `skipped_referenced`).
+- Exit status is 1 when any profile failed (see the logs); run it again, it only retries what is left.
+
+In production (Dokploy: open a terminal on the backend container and run the same `/app/…` commands), on the host:
+
+```sh
+docker compose --env-file .env.server -f compose.prod.yml exec backend /app/profile-media-backfill          # dry run
+docker compose --env-file .env.server -f compose.prod.yml exec backend /app/profile-media-backfill -apply   # enqueue
+docker compose --env-file .env.server -f compose.prod.yml exec backend /app/profile-media-backfill          # check: deletable=0 once the worker is done
+```
+
+Locally: `cd backend && go run ./cmd/profile-media-backfill [-apply]` with the repo-root `.env` loaded.
 
 ## vCard
 

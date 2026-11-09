@@ -245,3 +245,20 @@ SELECT (
   + (SELECT COUNT(*) FROM company_media m WHERE m.object_key = sqlc.arg(object_key)::text)
   + (SELECT COUNT(*) FROM backgrounds b WHERE b.thumbnail_key = sqlc.arg(object_key)::text)
 )::bigint AS refs;
+
+-- account-lint: cross-account one-off deleted-profile media backfill (TEC-1177): walks soft-deleted profiles of every account by id cursor and returns only ids, uuids, media columns and locales
+-- name: ListDeletedProfilesForMediaBackfill :many
+SELECT p.id,
+       p.uuid,
+       p.avatar_url,
+       p.cover_url,
+       p.primary_locale,
+       COALESCE(
+           (SELECT array_agg(DISTINCT t.locale::text) FROM profile_translations t WHERE t.profile_id = p.id),
+           '{}'
+       )::text[] AS locales
+FROM profiles p
+WHERE p.deleted_at IS NOT NULL
+  AND p.id > sqlc.arg(after_id)::bigint
+ORDER BY p.id
+LIMIT sqlc.arg(batch_limit)::int;

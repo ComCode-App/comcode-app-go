@@ -678,6 +678,15 @@ func profileMediaPrefix(profileUUID uuid.UUID) string {
 // mediaKey returns the object key behind an API-owned media URL (our storage public URL, the
 // stream proxy path or a bare key), or "" when the URL was not produced by our storage.
 func (s *Service) mediaKey(raw string) string {
+	var publicURL func(string) string
+	if s.storage != nil {
+		publicURL = s.storage.PublicURL
+	}
+	return mediaObjectKey(publicURL, raw)
+}
+
+// mediaObjectKey is mediaKey with the storage's PublicURL passed in (nil = no storage).
+func mediaObjectKey(publicURL func(string) string, raw string) string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return ""
@@ -695,11 +704,11 @@ func (s *Service) mediaKey(raw string) string {
 				idx = i
 			}
 		}
-		if idx < 0 || s.storage == nil {
+		if idx < 0 || publicURL == nil {
 			return ""
 		}
 		key = raw[idx:]
-		if s.storage.PublicURL(key) != raw {
+		if publicURL(key) != raw {
 			return ""
 		}
 	}
