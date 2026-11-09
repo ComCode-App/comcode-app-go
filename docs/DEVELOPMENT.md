@@ -88,6 +88,8 @@ Error tracking (`SENTRY_DSN`, which works with Sentry or GlitchTip) and Promethe
 
 ## Production / Dokploy
 
+The server never builds app images: CI publishes them to GHCR and tags the release `v0.N` ([Releases](#releases-ghcr-images-and-v0n-tags)), and Dokploy pulls them ([Deploying a release](#deploying-a-release-dokploy)). One-time repository and Dokploy settings are on the owner's list: [OWNER_CHECKLIST.md](./OWNER_CHECKLIST.md).
+
 1. Create the external network once (plain Docker host only; Dokploy creates it): `docker network create dokploy-network`
 2. `make prod-env-init` generates `.env.server` from `deploy/env/schema` (see Environment file below). Never start from a copy of `.env.example`.
 3. `make prod-config` then `make prod-up`
@@ -100,7 +102,7 @@ The production env is generated from `deploy/env/schema`; `.env.server.example` 
 2. Fill `SMTP_*` in `.env.server`. Everything under "Optional tuning" may stay blank: a blank value keeps the default from `compose.prod.yml` / `backend/internal/config`. iyzico, PayTR, GeoIP (MaxMind), analytics and the error-tracking DSNs are configured in the admin panel, not in env.
 3. `make prod-config` then `make prod-up`. On Dokploy, paste the file into the compose app's environment and add the domains below.
 
-Images: `IMAGE_REPO` + `IMAGE_TAG` (`main`, `v0.N` or `sha-<short>`) name the backend and frontend images. `compose.prod.yml` still reads `BACKEND_IMAGE` / `FRONTEND_IMAGE`, which `init` derives from them; change all of them together (`make prod-env-check` reports a mismatch). How these tags are published: [Releases](#releases-ghcr-images-and-v0n-tags).
+Images: `IMAGE_REPO` + `IMAGE_TAG` (`main`, `v0.N` or `sha-<short>`) name the backend and frontend images; `compose.prod.yml` builds the names from them (next section). How these tags are published: [Releases](#releases-ghcr-images-and-v0n-tags).
 
 Keep the generated file as the master copy (password manager or the server) and run the commands below on it; values edited only in the Dokploy UI are invisible to `check`.
 
@@ -116,11 +118,24 @@ Keep the generated file as the master copy (password manager or the server) and 
 `compose.prod.yml` has no `build:` sections. It runs `${IMAGE_REPO}-backend:${IMAGE_TAG}` for `migrate`, `backend` and `worker`, and `${IMAGE_REPO}-frontend:${IMAGE_TAG}` for `frontend`, and fails at `config` time when `IMAGE_REPO` or `IMAGE_TAG` is missing. CI publishes the images to GHCR.
 
 - `pull_policy` is `${IMAGE_PULL_POLICY:-always}`: every `up` / redeploy fetches the tag again, so a moving tag such as `:main` picks up the newest build. Set `IMAGE_PULL_POLICY=missing` to reuse a cached image.
-- Pin or roll back by setting `IMAGE_TAG` to `v0.N` or `sha-<short>` and redeploying. Volumes, container names (`${NAME_PREFIX}-*`), the app network and `dokploy-network` do not depend on the tag.
+- Pin or roll back by setting `IMAGE_TAG` to `v0.N` or `sha-<short>` and redeploying ([Deploying a release](#deploying-a-release-dokploy)). Volumes, container names (`${NAME_PREFIX}-*`), the app network and `dokploy-network` do not depend on the tag.
 - `make prod-up` runs `up -d` without `--build`.
 - Build on this machine instead (smoke test, no registry): `make prod-build-local` / `make prod-up-local`. They add [`compose.build.yml`](../compose.build.yml), which puts the `build:` contexts back (the same ones as `deploy/images.json`) and tags the images `${NAME_PREFIX}-backend:local` / `${NAME_PREFIX}-frontend:local`, so a local build never shadows a GHCR tag. Dokploy never uses this file.
 - `stop_grace_period`: `backend` 30s (the server drains requests for up to 10s on SIGTERM), `worker` 35s (asynq waits for running jobs). Docker's 10s default could SIGKILL either mid-shutdown.
 - Upgrading an existing `.env.server` from schema v1: `make prod-env-upgrade` comments out `BACKEND_IMAGE` / `FRONTEND_IMAGE` (`IMAGE_REPO` / `IMAGE_TAG` are already there); on Dokploy remove the two lines from the compose app's environment too.
+
+### Deploying a release (Dokploy)
+
+The Dokploy compose app uses the git source `ComCode-App/comcode-app-go`, the compose file `compose.prod.yml` (never `compose.build.yml`) and a deploy trigger on git tags matching `v0.*`. The owner sets this up once ([OWNER_CHECKLIST.md](./OWNER_CHECKLIST.md)).
+
+- `release-tag` pushes `v0.N` only after every image is on GHCR, so the images exist when the tag triggers Dokploy.
+- The git tag only **triggers** the deploy (and decides which `compose.prod.yml` runs). What gets pulled is `IMAGE_TAG` from the Dokploy environment:
+  - `IMAGE_TAG=main`: every deploy pulls the newest `main` build (`pull_policy: always`). Right after a release that is the tagged build.
+  - `IMAGE_TAG=v0.N`: pinned. Change it to the new version before you deploy the next release.
+- **Roll back**: set `IMAGE_TAG` to the previous `v0.N` (or `sha-<short>`) in the Dokploy environment and redeploy. Re-deploying an old git tag while `IMAGE_TAG=main` does **not** roll back; it pulls the newest build again.
+- **Migrations are forward only.** The `migrate` service runs `migrate up` on every deploy; rolling the image back does not revert the schema. Before rolling back across a release with migrations, check that the older image works on the newer schema.
+- **Check what runs**: the backend upserts its baked version into `app_releases` on boot ([Releases](#releases-ghcr-images-and-v0n-tags) → Provenance); the image labels carry the same version (`docker inspect` → `org.opencontainers.image.version`).
+- Nobody pushes `:main`, `:sha-*`, `:v0.*` images or `v0.*` git tags by hand; CI is the only writer (there is no `:latest`). The one owner-made tag is the optional `v0.0` baseline.
 
 ### Required secrets (boot guard)
 
@@ -175,6 +190,19 @@ Dokploy → the compose app → **Domains**: pick the service and the **containe
 
 `.github/workflows/ci.yml` runs on **GitHub-hosted runners** (`ubuntu-24.04`) on pushes to `main` and `cc-collective-branch`, on every pull request (any base) and on manual runs (`workflow_dispatch`). Feature branches are tested through their pull request. A newer push to the same branch or PR cancels the running one (never on `main`).
 
+### Branch flow
+
+```
+cc/<issue>-<name> ──PR──► cc-collective-branch ──one PR (owner merges)──► main ──► release v0.N
+```
+
+- Work happens on a feature branch `cc/<issue-id>-<short-name>` (e.g. `cc/tec-1096-deploy-docs`) cut from the latest `cc-collective-branch`. Commit messages and PR titles carry the issue id.
+- Each feature branch goes into `cc-collective-branch` through a pull request. CI runs on the PR (diff against the PR base) and again on the push to `cc-collective-branch` (diff against the previous push).
+- The owner opens one pull request `cc-collective-branch` → `main` and merges it by hand. That push to `main` runs the full suite and is the only thing that publishes images and cuts a `v0.N` tag.
+- Never push to `main` directly, never force-push `main` or `cc-collective-branch`, and never create `v0.*` tags by hand.
+- `auto-pr` (from the boilerplate: auto-open and merge a PR to `main` when a feature branch is green) is disabled with `if: false`, because it would bypass this review step; the re-enable recipe is in the comment above the job.
+- Make **`ci`** the only required status check on `main` (and, if wanted, on `cc-collective-branch`). The individual jobs skip by path on purpose, so requiring them would block docs-only PRs.
+
 Job graph:
 
 ```
@@ -208,6 +236,19 @@ auto-pr (disabled)
 
 Caches (all remote, GitHub Actions cache): Go modules and build cache (`setup-go`, keyed on `backend/go.sum`), pnpm store (`setup-node` `cache: pnpm`, keyed on `frontend/pnpm-lock.yaml`), golangci-lint, Playwright browsers, and buildx layers (`type=gha`, one scope per image).
 
+There is no self-hosted runner any more: every job runs on `ubuntu-24.04`. A previously registered self-hosted runner can be removed under Settings → Actions → Runners.
+
+### Secrets and repository variables
+
+Settings → Secrets and variables → Actions. Nothing here is needed for a normal release: publishing uses the built-in `GITHUB_TOKEN`, and Dokploy pulls the images itself.
+
+| Name | Kind | Used by | Notes |
+|------|------|---------|-------|
+| `GITHUB_TOKEN` | built in | `publish-images`, `publish-test-image` (`packages: write`), `release-tag` (`contents: write`) | Nothing to add. The workflow default is `contents: read`; the repository must allow write (Settings → Actions → General → Workflow permissions → **Read and write permissions**), or the publish / tag jobs fail. |
+| `MOBILE_ENABLED` | repository **variable** | `mobile`, `mobile-release` | Unset or anything but `true` keeps both jobs skipped. Even when `true`, they skip green until `mobile/package.json` exists. |
+| `EXPO_TOKEN` | secret | `mobile-release` only | Expo access token for the EAS build. Without it (or without `expo.extra.eas.projectId` in `mobile/app.json`) the release skips green with a note. The `mobile` verification job needs no secret. |
+| `AUTO_PR_TOKEN` | secret, optional | `auto-pr` only | Not needed: the job is disabled. Only if it is ever re-enabled: a fine-grained PAT with Contents + Pull requests read/write (otherwise it falls back to `GITHUB_TOKEN`, which then needs "Allow GitHub Actions to create and approve pull requests"). |
+
 ### Releases (GHCR images and v0.N tags)
 
 Every green push to `main` is published to GHCR and tagged `v0.N`; Dokploy deploys that tag.
@@ -224,17 +265,12 @@ Dokploy (watches v0.* tags) ─► deploys
 - **Numbering**: `N` is the highest existing `v0.<int>` tag plus one. With no tag, or with only a `v0.0` baseline tag, the first release is `v0.1`. The notes start at the previous `v0.*` tag (or at the first commit when there is none).
 - **Never untested**: `publish-images` needs `backend`, `frontend`, `e2e`, `env` and `release-meta` to be `success`. A skipped job blocks it as well, and every `main` push runs the full suite, so code whose tests did not run is never published. A failed publish or tag turns the `ci` check red.
 - **Never off `main`**: pull requests, `cc-collective-branch` and `cc/*` branches build the images (`image-build`) without logging in to GHCR. The release jobs only run for `push` on `refs/heads/main`, the step that computes the tags fails on any other ref, and `packages: write` / `contents: write` exist only on the publishing jobs (the workflow default is read-only).
-- **`:main` vs `:v0.N`**: `:main` always points at the newest build. Re-deploying an old `v0.*` tag with `IMAGE_TAG=main` does not roll back. To pin or roll back, set `IMAGE_TAG` (and the derived image names) to `v0.N` or `sha-<short>`.
+- **`:main` vs `:v0.N`**: `:main` always points at the newest build. Re-deploying an old `v0.*` tag with `IMAGE_TAG=main` does not roll back. To pin or roll back, set `IMAGE_TAG` to `v0.N` or `sha-<short>` ([Deploying a release](#deploying-a-release-dokploy)).
 - **Provenance**: every image gets the OCI labels `org.opencontainers.image.source`, `.revision`, `.version` and `.created`, and the build args `APP_VERSION`, `APP_COMMIT`, `APP_BUILT_AT`. The backend bakes them in with `-ldflags` and embeds the release notes (`APP_RELEASE_JSON_B64` → `internal/platform/release/release.json`). On every boot the server upserts one `app_releases` row per version and commit (`first_seen_at`, `last_seen_at`, `boot_count`). A failure is logged as `app_release_record_failed` and never stops the boot. The frontend gets `NEXT_PUBLIC_APP_VERSION` / `NEXT_PUBLIC_APP_COMMIT` at build time and `APP_VERSION` / `APP_COMMIT` / `APP_BUILT_AT` at runtime. Local builds report `dev`. Sentry/GlitchTip events use the baked version as the release unless `SENTRY_RELEASE` is set.
 
 **Trial push of a branch** (`:test-<short-sha>`): Actions → CI → Run workflow, pick the branch, tick `push_test_image`. The run tests everything first, then pushes `ghcr.io/comcode-app/comcode-app-go-<service>:test-<short-sha>` and nothing else. On `main` the option is refused. From the CLI: `gh workflow run ci.yml --ref <branch> -f push_test_image=true`.
 
-**One-time owner setup** (nothing in the repo can do this):
-
-1. Settings → Actions → General → Workflow permissions: **Read and write permissions**. The workflow default stays read-only; only the publishing jobs ask for `packages: write` / `contents: write`, but the repository must allow them. Without it `publish-images` or `release-tag` fails.
-2. GHCR packages are created private on the first publish. Either make `comcode-app-go-backend` and `comcode-app-go-frontend` public (the organization's package settings), or give the server a pull credential: a token with `read:packages`, added in Dokploy as a registry for `ghcr.io` (or `docker login ghcr.io` on a plain host).
-3. Dokploy: point the compose app's deploy trigger at git tags matching `v0.*`.
-4. Optional: a `v0.0` baseline tag on the commit the release notes should start after (`git tag -a v0.0 -m "baseline" <sha> && git push origin v0.0`). Without it the first release, `v0.1`, lists the whole history in its notes. CI never creates this tag.
+**One-time owner setup** (nothing in the repo can do this): workflow permissions, the `ci` required check, GHCR package access, the Dokploy source / compose file / tag trigger, the production env upgrade and the optional `v0.0` baseline tag are listed, each with a way to verify it, in [OWNER_CHECKLIST.md](./OWNER_CHECKLIST.md). GHCR packages are created **private** on the first publish, so Dokploy needs them public or a `ghcr.io` registry credential with `read:packages`. Without a `v0.0` baseline the first release, `v0.1`, lists the whole history in its notes; CI never creates that tag.
 
 ### Postgres integration tests
 

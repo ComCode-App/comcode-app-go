@@ -7,6 +7,7 @@ Human and agent entry points for this boilerplate. Prefer these files over lefto
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Anyone new to the repo |
 | [DEVELOPMENT.md](./DEVELOPMENT.md) | Local setup and production |
 | [EXTENDING.md](./EXTENDING.md) | Adding a feature on top of the starter |
+| [OWNER_CHECKLIST.md](./OWNER_CHECKLIST.md) | Owner's one-time GitHub, GHCR and Dokploy settings (Turkish checklist) |
 | [design/env-core.md](./design/env-core.md) | Production env schema, `prod-env.sh`, env CI checks, boot guard |
 | [BOILERPLATE_SYNC.md](./BOILERPLATE_SYNC.md) | Boilerplate sync record and method for the next sync |
 | [../AGENTS.md](../AGENTS.md) | Agent skill index |
