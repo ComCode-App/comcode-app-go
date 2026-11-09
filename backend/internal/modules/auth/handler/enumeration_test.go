@@ -1,8 +1,12 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,6 +17,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/auth/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/auth/repository"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/auth/usecase"
+	notifmodel "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/password"
@@ -144,6 +149,73 @@ func TestAuthEndpointsRateLimited(t *testing.T) {
 			_ = json.Unmarshal(rec.Body.Bytes(), &env)
 			if env.Error.Code != "RATE_LIMITED" {
 				t.Fatalf("expected RATE_LIMITED, got %+v", env)
+			}
+		})
+	}
+}
+
+// forgotRepo knows one user and fails to store the reset OTP.
+type forgotRepo struct {
+	loginRepo
+}
+
+func (forgotRepo) InvalidateOTPs(context.Context, string, string) error { return nil }
+
+func (forgotRepo) CreateOTP(context.Context, *int64, string, string, string, time.Time) error {
+	return errors.New("otp insert failed")
+}
+
+type failingNotifier struct{}
+
+func (failingNotifier) Enqueue(context.Context, notifmodel.EnqueueInput) ([]notifmodel.Notification, error) {
+	return nil, errors.New("enqueue failed")
+}
+
+type okOTPRepo struct {
+	loginRepo
+}
+
+func (okOTPRepo) InvalidateOTPs(context.Context, string, string) error { return nil }
+
+func (okOTPRepo) CreateOTP(context.Context, *int64, string, string, string, time.Time) error {
+	return nil
+}
+
+func postForgot(t *testing.T, h *Handler, email string) *httptest.ResponseRecorder {
+	t.Helper()
+	body, _ := json.Marshal(map[string]string{"email": email})
+	rec := httptest.NewRecorder()
+	h.ForgotPassword(rec, httptest.NewRequest(http.MethodPost, "/v1/auth/password/forgot", strings.NewReader(string(body))))
+	return rec
+}
+
+// TEC-1116: when issuing the OTP or enqueuing the reset email fails for a registered email,
+// the response is byte-for-byte the "accepted" response an unknown email gets (not a 500).
+func TestForgotPasswordFailureMatchesUnknownEmail(t *testing.T) {
+	users := map[string]model.User{"known@x.io": {ID: 1, Email: "known@x.io", Status: "active"}}
+	tokens, _ := jwt.NewManager("test-secret-key-32-bytes-minimum!", time.Minute, time.Hour)
+	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	otpFails := usecase.New(forgotRepo{loginRepo{users: users}}, tokens)
+	otpFails.SetLogger(quiet)
+	enqueueFails := usecase.New(okOTPRepo{loginRepo{users: users}}, tokens)
+	enqueueFails.SetNotifier(failingNotifier{})
+	enqueueFails.SetLogger(quiet)
+
+	for name, uc := range map[string]*usecase.AuthUseCase{"otp": otpFails, "enqueue": enqueueFails} {
+		t.Run(name, func(t *testing.T) {
+			h := &Handler{uc: uc}
+			want := postForgot(t, h, "nobody@x.io")
+			if want.Code != http.StatusOK || !strings.Contains(want.Body.String(), `"accepted"`) {
+				t.Fatalf("unknown email: got %d %s", want.Code, want.Body.String())
+			}
+			got := postForgot(t, h, "known@x.io")
+			if got.Code != want.Code || !bytes.Equal(got.Body.Bytes(), want.Body.Bytes()) {
+				t.Fatalf("known email with a failing %s: %d %s differs from unknown email %d %s",
+					name, got.Code, got.Body.String(), want.Code, want.Body.String())
+			}
+			if got.Header().Get("Content-Type") != want.Header().Get("Content-Type") {
+				t.Fatalf("content type differs: %q vs %q", got.Header().Get("Content-Type"), want.Header().Get("Content-Type"))
 			}
 		})
 	}

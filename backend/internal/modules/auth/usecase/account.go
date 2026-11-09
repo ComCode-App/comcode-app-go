@@ -16,7 +16,10 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/auth/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/auth/repository"
 	notifmodel "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications/model"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/errreport"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/logredact"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/password"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/reqid"
 	"github.com/google/uuid"
 )
 
@@ -108,26 +111,37 @@ func (u *AuthUseCase) UpdateProfile(
 }
 
 // ForgotPassword always returns accepted; enqueues reset email when user exists.
+// Only an empty email is an error. A failure while looking the user up, issuing the OTP or
+// enqueuing the email is logged and reported (with the request id) and then swallowed, so the
+// response stays identical to the one for an unknown email and cannot reveal the account
+// (TEC-1116).
 func (u *AuthUseCase) ForgotPassword(ctx context.Context, email string) error {
 	email = strings.ToLower(strings.TrimSpace(email))
 	if email == "" {
 		return fmt.Errorf("%w: email is required", ErrInvalidRequest)
 	}
+	if err := u.sendPasswordReset(ctx, email); err != nil {
+		u.reportForgotPasswordFailure(ctx, err)
+	}
+	return nil
+}
+
+func (u *AuthUseCase) sendPasswordReset(ctx context.Context, email string) error {
 	user, err := u.repo.FindUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			return nil
 		}
-		return ErrPasswordResetFail
+		return fmt.Errorf("%w: find user: %w", ErrPasswordResetFail, err)
 	}
 	code, err := generateOTP()
 	if err != nil {
-		return ErrPasswordResetFail
+		return fmt.Errorf("%w: generate otp: %w", ErrPasswordResetFail, err)
 	}
 	_ = u.repo.InvalidateOTPs(ctx, email, otpTypePasswordReset)
 	uid := user.ID
 	if err := u.repo.CreateOTP(ctx, &uid, email, hashOTP(code), otpTypePasswordReset, u.now().UTC().Add(otpTTL)); err != nil {
-		return ErrPasswordResetFail
+		return fmt.Errorf("%w: create otp for user %d: %w", ErrPasswordResetFail, uid, err)
 	}
 	if u.log != nil {
 		u.log.Debug("otp_issued", "type", otpTypePasswordReset, "email", email)
@@ -143,10 +157,22 @@ func (u *AuthUseCase) ForgotPassword(ctx context.Context, email string) error {
 			},
 		})
 		if err != nil {
-			return ErrPasswordResetFail
+			return fmt.Errorf("%w: enqueue reset email for user %d: %w", ErrPasswordResetFail, uid, err)
 		}
 	}
 	return nil
+}
+
+// reportForgotPasswordFailure logs a swallowed reset-request failure at ERROR with the request
+// id and sends it to the error tracker. The email is never logged; the cause is redacted.
+func (u *AuthUseCase) reportForgotPasswordFailure(ctx context.Context, err error) {
+	log := u.log
+	if log == nil {
+		log = slog.Default()
+	}
+	log.ErrorContext(ctx, "password_reset_request_failed",
+		"request_id", reqid.From(ctx), "error", logredact.Error(err))
+	errreport.CaptureError(ctx, err, map[string]string{"auth.flow": "password_forgot"})
 }
 
 // ResetPassword validates OTP and sets a new password; revokes all refresh tokens.

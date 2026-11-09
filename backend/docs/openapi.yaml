@@ -1536,7 +1536,7 @@ paths:
       tags: [Auth]
       operationId: postAuthPasswordForgot
       summary: Request password reset
-      description: Always returns accepted. If the email exists, enqueues a reset OTP email via Notification Center.
+      description: Always returns accepted (only an empty email is a 400). If the email exists, enqueues a reset OTP email via Notification Center. A failure while issuing the code or enqueuing the email is logged and reported server-side and still answers accepted, so the response never reveals whether the account exists.
       security: []
       requestBody:
         required: true
@@ -1553,8 +1553,6 @@ paths:
                 $ref: "#/components/schemas/EnvelopeStatus"
         "400":
           $ref: "#/components/responses/BadRequest"
-        "500":
-          $ref: "#/components/responses/InternalError"
         "429":
           $ref: "#/components/responses/TooManyRequests"
 

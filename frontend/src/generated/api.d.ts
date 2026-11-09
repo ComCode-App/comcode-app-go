@@ -929,7 +929,7 @@ export interface paths {
         put?: never;
         /**
          * Request password reset
-         * @description Always returns accepted. If the email exists, enqueues a reset OTP email via Notification Center.
+         * @description Always returns accepted (only an empty email is a 400). If the email exists, enqueues a reset OTP email via Notification Center. A failure while issuing the code or enqueuing the email is logged and reported server-side and still answers accepted, so the response never reveals whether the account exists.
          */
         post: operations["postAuthPasswordForgot"];
         delete?: never;
@@ -13790,7 +13790,6 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             429: components["responses"]["TooManyRequests"];
-            500: components["responses"]["InternalError"];
         };
     };
     postAuthPasswordReset: {

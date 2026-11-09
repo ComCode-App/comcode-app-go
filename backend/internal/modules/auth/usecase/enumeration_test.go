@@ -1,8 +1,10 @@
 package usecase
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"strings"
 	"sync"
 	"testing"
@@ -12,6 +14,7 @@ import (
 	notifmodel "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/password"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/reqid"
 )
 
 func enumerationUseCase(t *testing.T, repo Repository) *AuthUseCase {
@@ -120,5 +123,70 @@ func TestForgotPasswordDoesNotRevealAccount(t *testing.T) {
 	}
 	if len(repo.otpEmails) != 1 || repo.otpEmails[0] != "known@x.io" {
 		t.Fatalf("expected one code for the known account only, got %v", repo.otpEmails)
+	}
+}
+
+type failingOTPRepo struct {
+	*memRepo
+}
+
+func (r *failingOTPRepo) CreateOTP(context.Context, *int64, string, string, string, time.Time) error {
+	return errors.New("otp insert failed: connection reset")
+}
+
+type failingNotifier struct{ calls int }
+
+func (n *failingNotifier) Enqueue(context.Context, notifmodel.EnqueueInput) ([]notifmodel.Notification, error) {
+	n.calls++
+	return nil, errors.New("redis enqueue failed")
+}
+
+// TEC-1116: a failure while issuing the reset OTP or enqueuing the email must not turn into an
+// error (500) for a registered email, since an unknown email is always accepted. The failure
+// is logged at ERROR with the request id instead, and the email never reaches the log.
+func TestForgotPasswordInternalFailureLooksAccepted(t *testing.T) {
+	cases := []struct {
+		name     string
+		repo     func() Repository
+		notifier *failingNotifier
+		cause    string
+	}{
+		{"otp insert", func() Repository {
+			r := &failingOTPRepo{memRepo: newMemRepo()}
+			_, _ = r.CreateUser(context.Background(), model.User{Email: "known@x.io", Status: "active"}, true)
+			return r
+		}, nil, "otp insert failed"},
+		{"email enqueue", func() Repository {
+			r := &otpRecordingRepo{memRepo: newMemRepo()}
+			_, _ = r.CreateUser(context.Background(), model.User{Email: "known@x.io", Status: "active"}, true)
+			return r
+		}, &failingNotifier{}, "redis enqueue failed"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			uc := enumerationUseCase(t, tc.repo())
+			if tc.notifier != nil {
+				uc.SetNotifier(tc.notifier)
+			}
+			var buf bytes.Buffer
+			uc.SetLogger(slog.New(slog.NewJSONHandler(&buf, nil)))
+			ctx := reqid.With(context.Background(), "req-tec-1116")
+
+			if err := uc.ForgotPassword(ctx, "known@x.io"); err != nil {
+				t.Fatalf("internal failure must look accepted, got %v", err)
+			}
+			if tc.notifier != nil && tc.notifier.calls != 1 {
+				t.Fatalf("expected one enqueue attempt, got %d", tc.notifier.calls)
+			}
+			logged := buf.String()
+			for _, want := range []string{`"level":"ERROR"`, `"msg":"password_reset_request_failed"`, `"request_id":"req-tec-1116"`, tc.cause} {
+				if !strings.Contains(logged, want) {
+					t.Fatalf("log missing %s: %s", want, logged)
+				}
+			}
+			if strings.Contains(logged, "known@x.io") {
+				t.Fatalf("email leaked into the log: %s", logged)
+			}
+		})
 	}
 }
