@@ -27,6 +27,7 @@ type CompleteCheckoutSessionParams struct {
 	Uuid        uuid.UUID   `json:"uuid"`
 }
 
+// account-lint: cross-account payment provider callback: session found by merchant oid / provider token
 func (q *Queries) CompleteCheckoutSession(ctx context.Context, arg CompleteCheckoutSessionParams) (PaymentCheckoutSession, error) {
 	row := q.db.QueryRow(ctx, completeCheckoutSession, arg.ProviderRef, arg.Uuid)
 	var i PaymentCheckoutSession
@@ -188,6 +189,7 @@ type FailCheckoutSessionParams struct {
 	Uuid     uuid.UUID `json:"uuid"`
 }
 
+// account-lint: cross-account payment provider callback / init failure: session id from that flow
 func (q *Queries) FailCheckoutSession(ctx context.Context, arg FailCheckoutSessionParams) (PaymentCheckoutSession, error) {
 	row := q.db.QueryRow(ctx, failCheckoutSession, arg.Metadata, arg.Uuid)
 	var i PaymentCheckoutSession
@@ -257,6 +259,7 @@ type GetCheckoutSessionByMerchantOIDRow struct {
 	UserSurname   string                `json:"user_surname"`
 }
 
+// account-lint: cross-account payment provider callback: merchant oid is the provider's reference
 func (q *Queries) GetCheckoutSessionByMerchantOID(ctx context.Context, merchantOid string) (GetCheckoutSessionByMerchantOIDRow, error) {
 	row := q.db.QueryRow(ctx, getCheckoutSessionByMerchantOID, merchantOid)
 	var i GetCheckoutSessionByMerchantOIDRow
@@ -333,6 +336,7 @@ type GetCheckoutSessionByProviderTokenRow struct {
 	UserSurname   string                `json:"user_surname"`
 }
 
+// account-lint: cross-account payment provider callback: provider token is the reference
 func (q *Queries) GetCheckoutSessionByProviderToken(ctx context.Context, providerToken pgtype.Text) (GetCheckoutSessionByProviderTokenRow, error) {
 	row := q.db.QueryRow(ctx, getCheckoutSessionByProviderToken, providerToken)
 	var i GetCheckoutSessionByProviderTokenRow
@@ -411,6 +415,7 @@ type GetCheckoutSessionByUUIDRow struct {
 	UserSurname         string                `json:"user_surname"`
 }
 
+// account-lint: cross-account usecase checks row.AccountID against the active account (404 otherwise)
 func (q *Queries) GetCheckoutSessionByUUID(ctx context.Context, argUuid uuid.UUID) (GetCheckoutSessionByUUIDRow, error) {
 	row := q.db.QueryRow(ctx, getCheckoutSessionByUUID, argUuid)
 	var i GetCheckoutSessionByUUIDRow
@@ -583,6 +588,7 @@ const lockCheckoutSession = `-- name: LockCheckoutSession :one
 SELECT id, uuid, user_id, plan_id, provider, status, merchant_oid, provider_token, provider_ref, amount_minor, currency, checkout_url, metadata, expires_at, completed_at, created_at, updated_at, account_id FROM payment_checkout_sessions WHERE merchant_oid = $1 FOR UPDATE
 `
 
+// account-lint: cross-account payment provider callback: session id from the verified callback
 func (q *Queries) LockCheckoutSession(ctx context.Context, merchantOid string) (PaymentCheckoutSession, error) {
 	row := q.db.QueryRow(ctx, lockCheckoutSession, merchantOid)
 	var i PaymentCheckoutSession
@@ -625,6 +631,7 @@ type UpdateCheckoutSessionInitParams struct {
 	Uuid          uuid.UUID   `json:"uuid"`
 }
 
+// account-lint: cross-account checkout start: session id from the row just inserted for this account
 func (q *Queries) UpdateCheckoutSessionInit(ctx context.Context, arg UpdateCheckoutSessionInitParams) (PaymentCheckoutSession, error) {
 	row := q.db.QueryRow(ctx, updateCheckoutSessionInit,
 		arg.ProviderToken,

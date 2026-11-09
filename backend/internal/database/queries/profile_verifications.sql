@@ -1,6 +1,7 @@
 -- TEC-549: verified profile badge requests. Owner-side queries take account_id; platform
 -- review queries are unscoped by design (gated by platform.profile_verifications.manage).
 
+-- account-lint: cross-account profile id resolved through GetProfileIDForAccount (account-scoped)
 -- name: GetLatestProfileVerification :one
 SELECT *
 FROM profile_verification_requests
@@ -8,6 +9,7 @@ WHERE profile_id = sqlc.arg(profile_id)
 ORDER BY id DESC
 LIMIT 1;
 
+-- account-lint: cross-account verified badge of a profile already loaded (public page / owner view)
 -- name: IsProfileVerified :one
 SELECT EXISTS (
     SELECT 1 FROM profile_verification_requests
@@ -33,6 +35,7 @@ WHERE profile_id = sqlc.arg(profile_id)
   AND status = 'pending'
 RETURNING *;
 
+-- account-lint: cross-account platform /v1/platform/profile-verifications approve/reject
 -- name: ReviewProfileVerification :one
 -- Approves or rejects a pending request; no row when it is not pending any more.
 UPDATE profile_verification_requests
@@ -44,6 +47,7 @@ WHERE uuid = sqlc.arg(uuid)
   AND status = 'pending'
 RETURNING *;
 
+-- account-lint: cross-account platform /v1/platform/profile-verifications revoke
 -- name: RevokeProfileVerificationByUUID :one
 UPDATE profile_verification_requests
 SET status = 'revoked',
@@ -54,6 +58,7 @@ WHERE uuid = sqlc.arg(uuid)
   AND status = 'approved'
 RETURNING *;
 
+-- account-lint: cross-account profile id resolved through GetProfileIDForAccount (account-scoped)
 -- name: RevokeProfileVerificationForProfile :one
 UPDATE profile_verification_requests
 SET status = 'revoked',
@@ -64,6 +69,7 @@ WHERE profile_id = sqlc.arg(profile_id)
   AND status = 'approved'
 RETURNING *;
 
+-- account-lint: cross-account platform /v1/platform/profile-verifications review queue
 -- name: GetProfileVerificationRow :one
 SELECT
     v.id, v.uuid, v.status, v.origin, v.note, v.review_reason, v.revoke_reason,
@@ -98,6 +104,7 @@ LEFT JOIN users ru ON ru.id = v.requested_by_user_id
 LEFT JOIN users rv ON rv.id = COALESCE(v.reviewed_by_user_id, v.revoked_by_user_id)
 WHERE v.uuid = sqlc.arg(uuid);
 
+-- account-lint: cross-account platform /v1/platform/profile-verifications review queue
 -- name: ListProfileVerifications :many
 SELECT
     v.id, v.uuid, v.status, v.origin, v.note, v.review_reason, v.revoke_reason,
@@ -144,6 +151,7 @@ WHERE (sqlc.arg(status)::text = '' OR v.status = sqlc.arg(status)::text)
 ORDER BY (v.status = 'pending') DESC, v.created_at ASC, v.id ASC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
+-- account-lint: cross-account platform /v1/platform/profile-verifications review queue
 -- name: CountProfileVerifications :one
 SELECT COUNT(*)
 FROM profile_verification_requests v

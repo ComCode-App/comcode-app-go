@@ -55,6 +55,7 @@ FROM backgrounds b
 WHERE b.uuid = sqlc.arg(uuid)
   AND (b.account_id = sqlc.arg(account_id)::bigint OR b.account_id IS NULL);
 
+-- account-lint: cross-account thumbnail writer: uuid comes from a design just saved through a scoped query (or the backfill worker)
 -- name: SetBackgroundThumbnail :execrows
 -- Stores the key of a freshly rendered thumbnail (TEC-599). The document must still be the one
 -- rendered, so a thumbnail never lands on a newer edit.
@@ -62,6 +63,7 @@ UPDATE backgrounds
 SET thumbnail_key = sqlc.arg(thumbnail_key)
 WHERE uuid = sqlc.arg(uuid) AND document = sqlc.arg(document)::jsonb;
 
+-- account-lint: cross-account startup backfill worker, all accounts
 -- name: ListBackgroundsWithoutThumbnail :many
 -- Designs saved before thumbnails existed (videos have none by design).
 SELECT uuid, document
@@ -70,5 +72,6 @@ WHERE thumbnail_key IS NULL AND kind <> 'video'
 ORDER BY id
 LIMIT sqlc.arg(max_rows)::int;
 
+-- account-lint: cross-account thumbnail key read before a scoped delete (DeleteAccountBackground / platform DeleteBackgroundPreset); used only when that delete hits
 -- name: GetBackgroundThumbnailKey :one
 SELECT thumbnail_key FROM backgrounds WHERE uuid = sqlc.arg(uuid);

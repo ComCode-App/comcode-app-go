@@ -19,6 +19,7 @@ WHERE id = $1 AND status IN ('pending', 'failed') AND next_attempt_at <= NOW() +
 
 // Claims a delivery for one attempt: only a pending/failed row whose retry time has come. A task
 // that fires early or twice gets no row and does nothing.
+// account-lint: cross-account webhook delivery worker
 func (q *Queries) ClaimWebhookDelivery(ctx context.Context, id int64) (int64, error) {
 	result, err := q.db.Exec(ctx, claimWebhookDelivery, id)
 	if err != nil {
@@ -31,6 +32,7 @@ const countPendingWebhookDeliveries = `-- name: CountPendingWebhookDeliveries :o
 SELECT COUNT(*) FROM webhook_deliveries WHERE endpoint_id = $1 AND status IN ('pending', 'failed')
 `
 
+// account-lint: cross-account backlog cap per endpoint: endpoint row already loaded for the event (account-scoped dispatch)
 func (q *Queries) CountPendingWebhookDeliveries(ctx context.Context, endpointID int64) (int64, error) {
 	row := q.db.QueryRow(ctx, countPendingWebhookDeliveries, endpointID)
 	var count int64
@@ -197,6 +199,7 @@ type GetWebhookDeliveryByIDRow struct {
 	EndpointUuid      uuid.UUID             `json:"endpoint_uuid"`
 }
 
+// account-lint: cross-account webhook delivery worker: delivery id from the queue
 func (q *Queries) GetWebhookDeliveryByID(ctx context.Context, id int64) (GetWebhookDeliveryByIDRow, error) {
 	row := q.db.QueryRow(ctx, getWebhookDeliveryByID, id)
 	var i GetWebhookDeliveryByIDRow
@@ -260,34 +263,6 @@ func (q *Queries) GetWebhookDeliveryByUUID(ctx context.Context, arg GetWebhookDe
 		&i.DeliveredAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getWebhookEndpointByID = `-- name: GetWebhookEndpointByID :one
-SELECT id, uuid, account_id, url, description, secret_enc, secret_hint, events, is_active, consecutive_failures, last_delivery_at, last_success_at, created_by_user_id, created_at, updated_at, deleted_at FROM webhook_endpoints WHERE id = $1
-`
-
-func (q *Queries) GetWebhookEndpointByID(ctx context.Context, id int64) (WebhookEndpoint, error) {
-	row := q.db.QueryRow(ctx, getWebhookEndpointByID, id)
-	var i WebhookEndpoint
-	err := row.Scan(
-		&i.ID,
-		&i.Uuid,
-		&i.AccountID,
-		&i.Url,
-		&i.Description,
-		&i.SecretEnc,
-		&i.SecretHint,
-		&i.Events,
-		&i.IsActive,
-		&i.ConsecutiveFailures,
-		&i.LastDeliveryAt,
-		&i.LastSuccessAt,
-		&i.CreatedByUserID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -388,6 +363,7 @@ type ListStaleWebhookDeliveriesRow struct {
 
 // Deliveries whose task was lost (Redis down at enqueue, worker crash): due for a while and
 // never attempted since.
+// account-lint: cross-account webhook delivery worker
 func (q *Queries) ListStaleWebhookDeliveries(ctx context.Context) ([]ListStaleWebhookDeliveriesRow, error) {
 	rows, err := q.db.Query(ctx, listStaleWebhookDeliveries)
 	if err != nil {
@@ -541,6 +517,7 @@ const pruneWebhookDeliveries = `-- name: PruneWebhookDeliveries :execrows
 DELETE FROM webhook_deliveries WHERE created_at < $1::timestamptz
 `
 
+// account-lint: cross-account webhook retention worker
 func (q *Queries) PruneWebhookDeliveries(ctx context.Context, before pgtype.Timestamptz) (int64, error) {
 	result, err := q.db.Exec(ctx, pruneWebhookDeliveries, before)
 	if err != nil {
@@ -567,6 +544,7 @@ type RecordWebhookDeliveryAttemptParams struct {
 	ID             int64                 `json:"id"`
 }
 
+// account-lint: cross-account webhook delivery worker
 func (q *Queries) RecordWebhookDeliveryAttempt(ctx context.Context, arg RecordWebhookDeliveryAttemptParams) (WebhookDelivery, error) {
 	row := q.db.QueryRow(ctx, recordWebhookDeliveryAttempt,
 		arg.Status,
@@ -605,6 +583,7 @@ WHERE id = $1
 RETURNING id, uuid, endpoint_id, account_id, event_name, event_id, payload, status, attempts, max_attempts, next_attempt_at, last_status_code, last_error, last_attempt_at, delivered_at, created_at, updated_at
 `
 
+// account-lint: cross-account resend: delivery id from GetWebhookDeliveryByUUID (account-scoped)
 func (q *Queries) ResetWebhookDelivery(ctx context.Context, id int64) (WebhookDelivery, error) {
 	row := q.db.QueryRow(ctx, resetWebhookDelivery, id)
 	var i WebhookDelivery
@@ -685,6 +664,7 @@ type TouchWebhookEndpointDeliveryParams struct {
 	Succeeded bool  `json:"succeeded"`
 }
 
+// account-lint: cross-account webhook delivery worker: endpoint of the delivery being sent
 func (q *Queries) TouchWebhookEndpointDelivery(ctx context.Context, arg TouchWebhookEndpointDeliveryParams) error {
 	_, err := q.db.Exec(ctx, touchWebhookEndpointDelivery, arg.ID, arg.Succeeded)
 	return err

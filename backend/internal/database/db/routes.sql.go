@@ -38,6 +38,7 @@ type CheckPathExistsParams struct {
 	ExcludeUuid pgtype.UUID `json:"exclude_uuid"`
 }
 
+// account-lint: cross-account route paths are globally unique
 // A deleted or renamed smart link keeps its old path for 30 days (TEC-559/558, architecture
 // decision #4) so nobody can take over a link that is still printed or shared. Platform staff
 // can release that hold early (TEC-950, quarantine_released_at).
@@ -195,6 +196,7 @@ WHERE card_id = $1
 LIMIT 1
 `
 
+// account-lint: cross-account card id comes from an account-scoped card (no app caller takes it from input)
 func (q *Queries) GetRouteByCardID(ctx context.Context, cardID pgtype.Int8) (Route, error) {
 	row := q.db.QueryRow(ctx, getRouteByCardID, cardID)
 	var i Route
@@ -285,6 +287,7 @@ type GetRouteByPathRow struct {
 	CardDirectUrl          pgtype.Text        `json:"card_direct_url"`
 }
 
+// account-lint: cross-account public route resolver (/{path}); paths are globally unique
 // A card route follows its card's current profile; other routes use their own.
 func (q *Queries) GetRouteByPath(ctx context.Context, path string) (GetRouteByPathRow, error) {
 	row := q.db.QueryRow(ctx, getRouteByPath, path)
@@ -369,6 +372,7 @@ type GetRouteByUUIDRow struct {
 	CardName             pgtype.Text        `json:"card_name"`
 }
 
+// account-lint: cross-account usecase checks route.AccountID against the active account (404 otherwise)
 func (q *Queries) GetRouteByUUID(ctx context.Context, argUuid uuid.UUID) (GetRouteByUUIDRow, error) {
 	row := q.db.QueryRow(ctx, getRouteByUUID, argUuid)
 	var i GetRouteByUUIDRow

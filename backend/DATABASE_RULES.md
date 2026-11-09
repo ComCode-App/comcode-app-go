@@ -57,6 +57,24 @@ make create-super-admin
 - Config: `sqlc.yaml`
 - Regenerate: `make sqlc`
 
+### Account isolation lint
+
+`internal/database/queries_test.go` (runs in `go test ./...`, no database needed) parses every query in `internal/database/queries/*.sql`. A query that touches a table listed in `internal/database/account_tables.txt` must scope **that table** by account:
+
+- `<alias>.account_id = <parameter | literal | IN (...) | (SELECT ...) | ANY(...)>` or `<alias>.account_id IS NULL` (unowned rows only),
+- or an `account_id = account_id` chain that ends in such a filter (`p.account_id = c.account_id AND c.account_id = $1`; `accounts.id` counts as an account id),
+- or a primary-key join from a scoped row (`LEFT JOIN profiles p ON p.id = c.profile_id` with `c` scoped). The reverse direction (`r.card_id = c.id`, many rows pointing at a scoped row) is not scoped,
+- or, for an `INSERT`, `account_id` in the column list.
+
+`a.id = p.account_id` on its own, an `account_id` in the `SELECT` list, or one in `UPDATE ... SET` does not count. Queries that are cross-account on purpose (token or provider-reference lookups, uuid lookups whose owner the use case checks, workers, public pages, platform routes) put a reason directly above `-- name:`:
+
+```sql
+-- account-lint: cross-account platform /v1/platform/subscriptions
+-- name: GetSubscriptionByUUID :one
+```
+
+A new account-owned table (its `account_id` means ownership) goes into `account_tables.txt` in the same migration change; the file header explains how to decide.
+
 ## Schema design principles
 
 | Concern | Rule |

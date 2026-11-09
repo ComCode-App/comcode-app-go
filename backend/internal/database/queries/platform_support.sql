@@ -1,6 +1,7 @@
 -- Platform card and route support screens (TEC-950). These are platform queries: they are not
 -- scoped to an account and are only reachable behind platform.cards.* / platform.routes.*.
 
+-- account-lint: cross-account platform support tools (platform.* permission)
 -- name: PlatformSearchCards :many
 -- Prefix match on smart code, card UID (system serial) or a migrated card's legacy serial.
 SELECT
@@ -34,6 +35,7 @@ ORDER BY (LOWER(c.smart_code) = LOWER(sqlc.arg(prefix)::text)
          c.created_at DESC
 LIMIT sqlc.arg(limit_count);
 
+-- account-lint: cross-account platform support tools (platform.* permission)
 -- name: PlatformGetCard :one
 SELECT
     c.id, c.uuid, c.name, c.smart_code, c.card_uid, c.target_type, c.direct_url,
@@ -60,6 +62,7 @@ LEFT JOIN routes r ON r.card_id = c.id AND r.route_type = 'card_route' AND r.del
 WHERE c.uuid = sqlc.arg(uuid)
   AND c.deleted_at IS NULL;
 
+-- account-lint: cross-account platform support tools (platform.* permission)
 -- name: PlatformRetireCard :many
 -- One card's version of RetireOrderCardRoutes (TEC-585): its route becomes retired ("card
 -- deactivated", the path is never handed out again) and an unused activation code is cleared.
@@ -79,6 +82,7 @@ WITH retired AS (
 )
 SELECT path FROM retired;
 
+-- account-lint: cross-account platform support tools (platform.* permission)
 -- name: PlatformGetProfileForCard :one
 -- The profile a card is reassigned to, with the user who will own the card: the profile's user,
 -- or the account owner for profiles without one (legacy/company profiles).
@@ -94,6 +98,7 @@ FROM profiles p
 WHERE p.uuid = sqlc.arg(uuid)
   AND p.deleted_at IS NULL;
 
+-- account-lint: cross-account platform support tools: moves a card between accounts on purpose
 -- name: PlatformReassignCard :one
 -- The card and its card route move to the profile, its account and owner in one statement. The
 -- printed identity (smart_code, card_uid, path) does not change.
@@ -119,6 +124,7 @@ WITH card AS (
 )
 SELECT card.id FROM card;
 
+-- account-lint: cross-account platform support tools (platform.* permission)
 -- name: PlatformSearchRoutes :many
 -- Path search over every route, deleted smart links included (they hold their path for 30 days),
 -- plus routes whose renamed-away old path matches.
@@ -135,6 +141,7 @@ ORDER BY (LOWER(r.path) = LOWER(sqlc.arg(pattern)::text)) DESC,
          r.created_at DESC
 LIMIT sqlc.arg(limit_count);
 
+-- account-lint: cross-account platform support tools (platform.* permission)
 -- name: PlatformGetRoutes :many
 SELECT
     r.id, r.uuid, r.path, r.route_type, r.status, r.is_immutable, r.target_type, r.direct_url,
@@ -160,9 +167,11 @@ LEFT JOIN nfc_cards c ON c.id = r.card_id AND c.deleted_at IS NULL
 LEFT JOIN profiles p ON p.id = COALESCE(c.profile_id, r.profile_id) AND p.deleted_at IS NULL
 WHERE r.id = ANY(sqlc.arg(ids)::bigint[]);
 
+-- account-lint: cross-account platform support tools (platform.* permission)
 -- name: PlatformGetRouteIDByUUID :one
 SELECT id FROM routes WHERE uuid = sqlc.arg(uuid);
 
+-- account-lint: cross-account platform support tools (platform.* permission)
 -- name: PlatformListRouteHistory :many
 SELECT
     h.id, h.route_id, h.old_path, h.new_path, h.reason, h.created_at, h.quarantine_released_at,
@@ -174,6 +183,7 @@ LEFT JOIN users u ON u.id = h.changed_by_user_id
 WHERE h.route_id = ANY(sqlc.arg(route_ids)::bigint[])
 ORDER BY h.created_at DESC, h.id DESC;
 
+-- account-lint: cross-account platform support tools (platform.* permission)
 -- name: PlatformReleaseDeletedRoutePath :many
 -- Ends the 30-day hold of deleted smart links on this path (TEC-559 hold, TEC-950 release).
 UPDATE routes
@@ -185,6 +195,7 @@ WHERE LOWER(TRIM(path)) = LOWER(TRIM(sqlc.arg(path)::text))
   AND quarantine_released_at IS NULL
 RETURNING uuid;
 
+-- account-lint: cross-account platform support tools (platform.* permission)
 -- name: PlatformReleaseRenamedPath :many
 -- Ends the 30-day hold a smart link rename left on its old path (TEC-558 hold, TEC-950 release).
 UPDATE route_history h

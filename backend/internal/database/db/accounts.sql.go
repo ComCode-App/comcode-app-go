@@ -139,6 +139,7 @@ type GetAccountByUUIDRow struct {
 	MemberCount    int32              `json:"member_count"`
 }
 
+// account-lint: cross-account platform /v1/platform/accounts: any account by uuid (platform.accounts.*)
 func (q *Queries) GetAccountByUUID(ctx context.Context, argUuid uuid.UUID) (GetAccountByUUIDRow, error) {
 	row := q.db.QueryRow(ctx, getAccountByUUID, argUuid)
 	var i GetAccountByUUIDRow
@@ -268,6 +269,7 @@ type GetAccountMembershipByUUIDRow struct {
 	Role   AccountRole   `json:"role"`
 }
 
+// account-lint: cross-account session: the caller's own membership (m.user_id), used to switch / verify the acc claim
 func (q *Queries) GetAccountMembershipByUUID(ctx context.Context, arg GetAccountMembershipByUUIDParams) (GetAccountMembershipByUUIDRow, error) {
 	row := q.db.QueryRow(ctx, getAccountMembershipByUUID, arg.AccountUuid, arg.UserID)
 	var i GetAccountMembershipByUUIDRow
@@ -327,6 +329,7 @@ type GetPersonalAccountMembershipRow struct {
 	Role   AccountRole   `json:"role"`
 }
 
+// account-lint: cross-account session: the user's own personal account membership
 func (q *Queries) GetPersonalAccountMembership(ctx context.Context, personalUserID pgtype.Int8) (GetPersonalAccountMembershipRow, error) {
 	row := q.db.QueryRow(ctx, getPersonalAccountMembership, personalUserID)
 	var i GetPersonalAccountMembershipRow
@@ -423,6 +426,7 @@ type ListAccountMembershipsForUserRow struct {
 	Role   AccountRole   `json:"role"`
 }
 
+// account-lint: cross-account session: every account the user belongs to (m.user_id)
 func (q *Queries) ListAccountMembershipsForUser(ctx context.Context, userID int64) ([]ListAccountMembershipsForUserRow, error) {
 	rows, err := q.db.Query(ctx, listAccountMembershipsForUser, userID)
 	if err != nil {
@@ -484,6 +488,7 @@ type ListAccountsFilteredRow struct {
 	MemberCount    int32              `json:"member_count"`
 }
 
+// account-lint: cross-account platform /v1/platform/accounts list
 func (q *Queries) ListAccountsFiltered(ctx context.Context, arg ListAccountsFilteredParams) ([]ListAccountsFilteredRow, error) {
 	rows, err := q.db.Query(ctx, listAccountsFiltered,
 		arg.Q,

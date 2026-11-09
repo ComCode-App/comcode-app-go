@@ -71,6 +71,7 @@ type FinishSubscriptionPaymentAttemptParams struct {
 	FailureCode pgtype.Text `json:"failure_code"`
 }
 
+// account-lint: cross-account renewal worker / plan change: attempt id from a claim made in that flow
 func (q *Queries) FinishSubscriptionPaymentAttempt(ctx context.Context, arg FinishSubscriptionPaymentAttemptParams) error {
 	_, err := q.db.Exec(ctx, finishSubscriptionPaymentAttempt,
 		arg.ID,
@@ -85,6 +86,7 @@ const hasUnresolvedSubscriptionCharge = `-- name: HasUnresolvedSubscriptionCharg
 SELECT EXISTS(SELECT 1 FROM subscription_payment_attempts WHERE subscription_id=$1 AND status IN ('processing','unknown'))
 `
 
+// account-lint: cross-account subscription id from the account's own subscription (LockAccountPaymentSubscription) or the renewal worker
 func (q *Queries) HasUnresolvedSubscriptionCharge(ctx context.Context, subscriptionID int64) (bool, error) {
 	row := q.db.QueryRow(ctx, hasUnresolvedSubscriptionCharge, subscriptionID)
 	var exists bool
@@ -126,6 +128,7 @@ ORDER BY next_billing_at,id LIMIT 100
 `
 
 // Worker-only unscoped discovery. Manual/legacy subscriptions are deliberately excluded.
+// account-lint: cross-account renewal worker, all accounts
 func (q *Queries) ListDuePaymentSubscriptions(ctx context.Context, nowAt pgtype.Timestamptz) ([]int64, error) {
 	rows, err := q.db.Query(ctx, listDuePaymentSubscriptions, nowAt)
 	if err != nil {
@@ -186,6 +189,7 @@ const lockRenewalSubscription = `-- name: LockRenewalSubscription :one
 SELECT id, uuid, plan_id, status, starts_at, ends_at, created_at, updated_at, source, provider, provider_subscription_ref, checkout_session_id, next_billing_at, canceled_at, saved_card_id, account_id, period_started_at, cancel_at_period_end, pending_plan_id, grace_until, dunning_started_at, retry_at, renewal_attempts FROM subscriptions WHERE id=$1 AND source='payment' FOR UPDATE
 `
 
+// account-lint: cross-account renewal worker / plan change: subscription id from a claim made in that flow
 func (q *Queries) LockRenewalSubscription(ctx context.Context, id int64) (Subscription, error) {
 	row := q.db.QueryRow(ctx, lockRenewalSubscription, id)
 	var i Subscription
@@ -227,6 +231,7 @@ type NextUpgradeAttemptParams struct {
 	PeriodAt       pgtype.Timestamptz `json:"period_at"`
 }
 
+// account-lint: cross-account subscription id from the account's own subscription (LockAccountPaymentSubscription)
 func (q *Queries) NextUpgradeAttempt(ctx context.Context, arg NextUpgradeAttemptParams) (int32, error) {
 	row := q.db.QueryRow(ctx, nextUpgradeAttempt, arg.SubscriptionID, arg.PeriodAt)
 	var column_1 int32
@@ -312,6 +317,7 @@ type SaveRenewalSubscriptionParams struct {
 	DunningStartedAt  pgtype.Timestamptz `json:"dunning_started_at"`
 }
 
+// account-lint: cross-account renewal worker
 func (q *Queries) SaveRenewalSubscription(ctx context.Context, arg SaveRenewalSubscriptionParams) error {
 	_, err := q.db.Exec(ctx, saveRenewalSubscription,
 		arg.ID,

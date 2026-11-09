@@ -4,6 +4,7 @@
 -- points at it. The role is read live from account_members, so an unknown viewer sees nothing.
 -- The viewer condition is repeated in each read because sqlc cannot share it.
 
+-- account-lint: cross-account public lead form: resolves a public route by path
 -- name: GetLeadCaptureRouteByPath :one
 -- The route a visitor submits through, with what decides whether its form is on. A card route
 -- follows its card's current profile.
@@ -36,6 +37,7 @@ INSERT INTO leads (
 )
 RETURNING uuid, created_at;
 
+-- account-lint: cross-account sender_username shows the public canonical route of the sender's profile (another account, exchange)
 -- name: ListAccountLeads :many
 -- A locked lead (TEC-941) matches q only on company: its name, email and phone are masked.
 SELECT l.uuid, l.source_type, l.route_path, l.kind, l.name, l.email, l.phone, l.message,
@@ -89,6 +91,7 @@ WHERE l.account_id = sqlc.arg(account_id)
                   WHERE ml.account_id = l.account_id AND vm.user_id = sqlc.arg(viewer_user_id)::bigint
                     AND (ml.profile_id = l.profile_id OR ml.profile_id = lc.profile_id)));
 
+-- account-lint: cross-account sender_username shows the public canonical route of the sender's profile (another account, exchange)
 -- name: GetAccountLead :one
 SELECT l.uuid, l.source_type, l.route_path, l.kind, l.name, l.email, l.phone, l.message,
        l.company, l.job_title, l.locale, l.consent_at, l.consent_version, l.read_at, l.created_at, l.locked,
@@ -117,6 +120,7 @@ WHERE uuid = sqlc.arg(uuid) AND account_id = sqlc.arg(account_id);
 -- name: DeleteAccountLead :execrows
 DELETE FROM leads WHERE uuid = sqlc.arg(uuid) AND account_id = sqlc.arg(account_id);
 
+-- account-lint: cross-account visitor "delete my data" link: the signed token is checked before
 -- name: DeleteVisitorExchange :one
 -- KVKK "delete my data" link of the visitor copy email (TEC-940). Only exchanges; the token is
 -- checked before. Deleting the row is what makes the link single use.
@@ -162,6 +166,7 @@ LEFT JOIN LATERAL (
 ) t ON true
 WHERE p.uuid = sqlc.arg(uuid) AND p.account_id = sqlc.arg(account_id) AND p.deleted_at IS NULL;
 
+-- account-lint: cross-account visitor copy email: profile id comes from the stored lead
 -- name: GetLeadProfileName :one
 -- Display name of the profile an exchange went to, for the visitor copy email (TEC-940).
 SELECT trim(COALESCE(t.first_name, '') || ' ' || COALESCE(t.last_name, ''))::text AS name
@@ -189,7 +194,7 @@ WHERE account_id = sqlc.arg(account_id) AND locked AND created_at < sqlc.arg(mon
 -- name: UnlockMonthLeads :execrows
 -- A plan upgrade unlocks the month's oldest locked leads of a kind, up to the new allowance.
 UPDATE leads SET locked = false
-WHERE locked AND id IN (
+WHERE leads.account_id = sqlc.arg(account_id) AND leads.locked AND leads.id IN (
     SELECT x.id FROM leads x
     WHERE x.account_id = sqlc.arg(account_id) AND x.kind = sqlc.arg(kind) AND x.locked
       AND x.created_at >= sqlc.arg(month_start)::timestamptz

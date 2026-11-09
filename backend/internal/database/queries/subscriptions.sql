@@ -1,3 +1,4 @@
+-- account-lint: cross-account platform /v1/platform/subscriptions
 -- name: GetSubscriptionByUUID :one
 SELECT s.*,
        p.uuid AS plan_uuid,
@@ -20,6 +21,7 @@ LEFT JOIN accounts ca ON ca.id = s.account_id AND ca.type = 'company'
 LEFT JOIN users u ON u.id = a.personal_user_id
 WHERE s.uuid = $1;
 
+-- account-lint: cross-account platform /v1/platform/subscriptions
 -- name: ListSubscriptionsFiltered :many
 SELECT s.*,
        p.uuid AS plan_uuid,
@@ -56,6 +58,7 @@ AND (
 ORDER BY s.created_at DESC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
+-- account-lint: cross-account platform /v1/platform/subscriptions
 -- name: CountSubscriptions :one
 SELECT COUNT(*)::bigint
 FROM subscriptions s
@@ -82,6 +85,7 @@ INSERT INTO subscriptions (plan_id, status, account_id, starts_at, ends_at, sour
 VALUES ($1, $2, $3, $4, $5, COALESCE(sqlc.narg(source)::subscription_source, 'manual'))
 RETURNING *;
 
+-- account-lint: cross-account platform /v1/platform/subscriptions
 -- name: UpdateSubscription :one
 UPDATE subscriptions
 SET plan_id = COALESCE(sqlc.narg(plan_id), plan_id),

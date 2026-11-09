@@ -1,0 +1,54 @@
+# Account-owned tables (TEC-1107 account isolation lint, see queries_test.go).
+#
+# A table belongs here when its account_id column means OWNERSHIP: the row is
+# data of that account and must never be served to another account (see
+# docs/TENANCY_AND_ACCESS.md). Every sqlc query touching one of these tables
+# must filter it by account_id (parameter, IN list, subquery or IS NULL), or
+# carry "-- account-lint: cross-account <reason>" directly above "-- name:".
+#
+# How to decide for a new table:
+#   - account_id NOT NULL (or NULL = platform/system/unclaimed row) and the row
+#     is an account's resource, membership or billing record   -> list it.
+#   - the column only references an account for audit/history and is never
+#     served by an app endpoint (legacy_owner_items journal)   -> do not list.
+#   - other "*account_id" names are not ownership (oauth_accounts /
+#     webauthn_credentials.provider_account_id, refresh_tokens.active_account_id,
+#     geoip_settings.account_id_encrypted)                     -> do not list.
+#   - child tables without their own account_id (profile_links, ...) are scoped
+#     through their parent; prefer adding account_id to new owned tables so the
+#     lint can see them.
+# Keep the list sorted. Adding a migration that creates an owned table means
+# adding the table here in the same change.
+account_branding
+account_invites
+account_member_scopes
+account_members
+account_monthly_usage
+backgrounds
+bulk_jobs
+company_groups
+company_media
+company_member_assignments
+company_member_profiles
+company_offices
+import_jobs
+leads
+nfc_cards
+order_notification_events
+order_payment_refunds
+order_payment_sessions
+order_status_history
+orders
+payment_card_sessions
+payment_checkout_sessions
+payment_provider_customers
+payment_saved_cards
+profile_verification_requests
+profiles
+route_history
+routes
+subscription_payment_attempts
+subscriptions
+user_bank_accounts
+webhook_deliveries
+webhook_endpoints

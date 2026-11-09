@@ -16,6 +16,7 @@ const countAllBulkJobs = `-- name: CountAllBulkJobs :one
 SELECT COUNT(*)::bigint FROM bulk_jobs
 `
 
+// account-lint: cross-account platform /v1/platform/bulk admin list
 func (q *Queries) CountAllBulkJobs(ctx context.Context) (int64, error) {
 	row := q.db.QueryRow(ctx, countAllBulkJobs)
 	var column_1 int64
@@ -47,6 +48,7 @@ const countBulkJobsForActor = `-- name: CountBulkJobsForActor :one
 SELECT COUNT(*)::bigint FROM bulk_jobs WHERE actor_id = $1
 `
 
+// account-lint: cross-account platform /v1/platform/bulk: the caller's own jobs (actor_id)
 func (q *Queries) CountBulkJobsForActor(ctx context.Context, actorID int64) (int64, error) {
 	row := q.db.QueryRow(ctx, countBulkJobsForActor, actorID)
 	var column_1 int64
@@ -109,6 +111,7 @@ const getBulkJobByID = `-- name: GetBulkJobByID :one
 SELECT id, uuid, resource, action, actor_id, locale, status, target_json, result_json, error, rollback_until, applied_at, created_at, updated_at, account_id, params_json FROM bulk_jobs WHERE id = $1
 `
 
+// account-lint: cross-account bulk worker: job id from the queue
 func (q *Queries) GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error) {
 	row := q.db.QueryRow(ctx, getBulkJobByID, id)
 	var i BulkJob
@@ -137,6 +140,7 @@ const getBulkJobByUUID = `-- name: GetBulkJobByUUID :one
 SELECT id, uuid, resource, action, actor_id, locale, status, target_json, result_json, error, rollback_until, applied_at, created_at, updated_at, account_id, params_json FROM bulk_jobs WHERE uuid = $1
 `
 
+// account-lint: cross-account usecase checks JobAccess.allows (account + actor) or platform admin/actor
 func (q *Queries) GetBulkJobByUUID(ctx context.Context, argUuid uuid.UUID) (BulkJob, error) {
 	row := q.db.QueryRow(ctx, getBulkJobByUUID, argUuid)
 	var i BulkJob
@@ -208,6 +212,7 @@ type ListAllBulkJobsParams struct {
 	LimitCount  int32 `json:"limit_count"`
 }
 
+// account-lint: cross-account platform /v1/platform/bulk admin list
 func (q *Queries) ListAllBulkJobs(ctx context.Context, arg ListAllBulkJobsParams) ([]BulkJob, error) {
 	rows, err := q.db.Query(ctx, listAllBulkJobs, arg.OffsetCount, arg.LimitCount)
 	if err != nil {
@@ -354,6 +359,7 @@ type ListBulkJobsForActorParams struct {
 	LimitCount  int32 `json:"limit_count"`
 }
 
+// account-lint: cross-account platform /v1/platform/bulk: the caller's own jobs (actor_id)
 func (q *Queries) ListBulkJobsForActor(ctx context.Context, arg ListBulkJobsForActorParams) ([]BulkJob, error) {
 	rows, err := q.db.Query(ctx, listBulkJobsForActor, arg.ActorID, arg.OffsetCount, arg.LimitCount)
 	if err != nil {
@@ -407,6 +413,7 @@ type MarkBulkJobCompletedParams struct {
 	RollbackUntil pgtype.Timestamptz `json:"rollback_until"`
 }
 
+// account-lint: cross-account bulk worker: job id from the queue
 func (q *Queries) MarkBulkJobCompleted(ctx context.Context, arg MarkBulkJobCompletedParams) (BulkJob, error) {
 	row := q.db.QueryRow(ctx, markBulkJobCompleted, arg.ID, arg.ResultJson, arg.RollbackUntil)
 	var i BulkJob
@@ -444,6 +451,7 @@ type MarkBulkJobFailedParams struct {
 	Error pgtype.Text `json:"error"`
 }
 
+// account-lint: cross-account bulk worker: job id from the queue
 func (q *Queries) MarkBulkJobFailed(ctx context.Context, arg MarkBulkJobFailedParams) (BulkJob, error) {
 	row := q.db.QueryRow(ctx, markBulkJobFailed, arg.ID, arg.Error)
 	var i BulkJob
@@ -475,6 +483,7 @@ WHERE id = $1 AND status = 'queued'
 RETURNING id, uuid, resource, action, actor_id, locale, status, target_json, result_json, error, rollback_until, applied_at, created_at, updated_at, account_id, params_json
 `
 
+// account-lint: cross-account bulk worker: job id from the queue
 func (q *Queries) MarkBulkJobProcessing(ctx context.Context, id int64) (BulkJob, error) {
 	row := q.db.QueryRow(ctx, markBulkJobProcessing, id)
 	var i BulkJob
@@ -511,6 +520,7 @@ type MarkBulkJobRolledBackParams struct {
 	Status string `json:"status"`
 }
 
+// account-lint: cross-account bulk rollback: job already checked by JobAccess.allows
 func (q *Queries) MarkBulkJobRolledBack(ctx context.Context, arg MarkBulkJobRolledBackParams) (BulkJob, error) {
 	row := q.db.QueryRow(ctx, markBulkJobRolledBack, arg.ID, arg.Status)
 	var i BulkJob

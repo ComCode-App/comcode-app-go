@@ -1,3 +1,4 @@
+-- account-lint: cross-account card-route subquery is keyed by this account's card id (display only)
 -- name: ListAccountCards :many
 SELECT 
     c.*,
@@ -53,21 +54,7 @@ WHERE c.uuid = sqlc.arg(uuid)
   AND c.account_id = sqlc.arg(account_id)
   AND c.deleted_at IS NULL;
 
--- name: GetCardByUUIDAdmin :one
-SELECT 
-    c.*,
-    p.uuid as profile_uuid,
-    p.avatar_url as profile_avatar_url,
-    p.primary_locale as profile_primary_locale,
-    u.email as owner_email,
-    u.name as owner_name,
-    u.surname as owner_surname
-FROM nfc_cards c
-JOIN users u ON u.id = c.user_id
-LEFT JOIN profiles p ON p.id = c.profile_id AND p.deleted_at IS NULL
-WHERE c.uuid = sqlc.arg(uuid)
-  AND c.deleted_at IS NULL;
-
+-- account-lint: cross-account public smart link resolver (/c/{code})
 -- name: GetCardBySmartCode :one
 SELECT 
     c.*,
@@ -79,6 +66,7 @@ LEFT JOIN profiles p ON p.id = c.profile_id AND p.deleted_at IS NULL
 WHERE c.smart_code = sqlc.arg(smart_code)
   AND c.deleted_at IS NULL;
 
+-- account-lint: cross-account card activation: the activation code is the credential
 -- name: GetCardByActivationCode :one
 SELECT *
 FROM nfc_cards
@@ -209,6 +197,7 @@ RETURNING is_locked;
 
 -- ActivateCardByCode moves an unactivated card into the activating account and activates its
 -- reserved card route in the same statement, so the card resolves as soon as it is activated.
+-- account-lint: cross-account card activation: the activation code is the credential; moves the card into the active account
 -- name: ActivateCardByCode :one
 WITH card AS (
     UPDATE nfc_cards
@@ -245,6 +234,7 @@ WHERE uuid = sqlc.arg(uuid)
   AND account_id = sqlc.arg(account_id)
   AND deleted_at IS NULL;
 
+-- account-lint: cross-account smart codes are globally unique
 -- name: CheckSmartCodeExists :one
 SELECT EXISTS(
     SELECT 1 FROM nfc_cards
