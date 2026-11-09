@@ -147,7 +147,8 @@ func main() {
 		providers.NoopProvider{Name: "sms", Log: log},
 		providers.NoopProvider{Name: "push", Log: log},
 	}
-	notifSvc := notifusecase.New(queries, nil, provs, log)
+	notifSvc := notifusecase.New(queries, nil, provs, log).
+		WithEncryptionKey(cfg.App.Env, cfg.Encryption.Key)
 	notifSvc.WithVAPID(notifusecase.VAPIDConfig{
 		PublicKey:  cfg.VAPID.PublicKey,
 		PrivateKey: cfg.VAPID.PrivateKey,

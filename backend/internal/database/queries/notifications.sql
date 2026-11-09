@@ -2,11 +2,11 @@
 INSERT INTO notifications (
     user_id, channel, status, priority,
     title, body, payload, action_url, recipient, template_code, source_event,
-    scheduled_at, max_attempts
+    scheduled_at, max_attempts, sealed_content
 ) VALUES (
     $1, $2, $3, $4,
     $5, $6, $7, $8, $9, $10, $11,
-    $12, $13
+    $12, $13, sqlc.narg(sealed_content)
 )
 ON CONFLICT DO NOTHING
 RETURNING *;
@@ -18,8 +18,11 @@ SELECT * FROM notifications WHERE uuid = $1;
 SELECT * FROM notifications WHERE id = $1;
 
 -- name: ListNotificationsForUser :many
+-- The user inbox is in-app only (TEC-1099): email rows hold security codes and links
+-- meant for the mailbox, so they are never served back to the account owner.
 SELECT * FROM notifications
 WHERE user_id = sqlc.arg(user_id)
+  AND channel = 'inapp'
   AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status))
   AND (sqlc.narg(channel)::text IS NULL OR channel = sqlc.narg(channel))
   AND (
@@ -40,6 +43,7 @@ LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 -- name: CountNotificationsForUser :one
 SELECT COUNT(*)::bigint FROM notifications
 WHERE user_id = sqlc.arg(user_id)
+  AND channel = 'inapp'
   AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status))
   AND (sqlc.narg(channel)::text IS NULL OR channel = sqlc.narg(channel))
   AND (
@@ -126,7 +130,8 @@ SET status = sqlc.arg(status)::varchar,
     END,
     provider = sqlc.arg(provider),
     provider_reference = sqlc.arg(provider_reference),
-    last_error = NULL
+    last_error = NULL,
+    sealed_content = NULL
 WHERE id = sqlc.arg(id)
 RETURNING *;
 

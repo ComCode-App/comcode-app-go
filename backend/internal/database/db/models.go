@@ -1814,6 +1814,7 @@ type Notification struct {
 	ProviderReference pgtype.Text        `json:"provider_reference"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	SealedContent     pgtype.Text        `json:"sealed_content"`
 }
 
 type NotificationHistory struct {

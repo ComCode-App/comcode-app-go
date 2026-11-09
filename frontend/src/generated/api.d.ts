@@ -1001,7 +1001,7 @@ export interface paths {
         };
         /**
          * List own inbox
-         * @description Requires `notifications.read`. Supports `limit`,`offset`,`q`,`sort`,`status`,`channel`,`unread`.
+         * @description Requires `notifications.read`. Supports `limit`,`offset`,`q`,`sort`,`status`,`channel`,`unread`. The inbox holds `inapp` rows only: email and other channel rows (verification codes, reset codes, invitation links) are never returned, so any other `channel` value yields an empty page.
          */
         get: operations["getNotifications"];
         put?: never;
@@ -1104,7 +1104,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get own notification */
+        /**
+         * Get own notification
+         * @description Own `inapp` notification. Rows of other channels (e.g. email) answer 404.
+         */
         get: operations["getNotificationByUUID"];
         put?: never;
         post?: never;
@@ -13819,6 +13822,7 @@ export interface operations {
                 /** @description Comma-separated fields; prefix `-` for descending */
                 sort?: components["parameters"]["Sort"];
                 status?: string;
+                /** @description Only `inapp` matches; the inbox never returns other channels. */
                 channel?: string;
                 unread?: boolean;
             };
