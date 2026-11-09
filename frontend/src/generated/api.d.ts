@@ -1333,7 +1333,12 @@ export interface paths {
         };
         /**
          * Public app config
-         * @description Unauthenticated bootstrap payload (auth methods, branding).
+         * @description Unauthenticated bootstrap payload (auth methods, branding, mobile app versions).
+         *
+         *     `mobile` comes from the platform settings (Settings → General → Mobile app). It is the one
+         *     `/v1` route an outdated mobile app can still call: every other request with
+         *     `X-Client: comcode-mobile` and an `X-App-Version` below `mobile.min_version` is answered
+         *     `426 APP_UPDATE_REQUIRED` (TEC-1178).
          */
         get: operations["getAppConfig"];
         put?: never;
@@ -5252,6 +5257,11 @@ export interface paths {
         /**
          * PATCH /v1/platform/settings
          * @description Registered in `internal/modules/settings/routes.go`. Requires `platform.settings.write`.
+         *     Partial update of the branding / letterhead fields and the mobile app version gate
+         *     (`mobile_*`, published in `GET /v1/app/config` as `mobile`). Versions are `""` or
+         *     `major[.minor[.patch]]` and `mobile_latest_version` may not be lower than
+         *     `mobile_min_version`; store URLs are `""` or an `https` URL. Invalid values answer
+         *     `400 VALIDATION_ERROR` with field details.
          */
         patch: operations["patchPlatformSettings"];
         trace?: never;
@@ -9161,6 +9171,40 @@ export interface components {
             data: components["schemas"]["ImpersonationResult"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        EnvelopeAppConfig: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AppConfig"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description Public bootstrap config. Fields other than `mobile` are described in `handleAppConfig` (server.go). */
+        AppConfig: {
+            mode?: string;
+            name?: string;
+            registration_enabled?: boolean;
+            mobile: components["schemas"]["MobileAppConfig"];
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description Mobile app version gate and store links (TEC-1178). Empty strings mean "not set". */
+        MobileAppConfig: {
+            /**
+             * @description Older apps get `426 APP_UPDATE_REQUIRED` on every `/v1` request except this config. "" = no gate.
+             * @example 1.2.0
+             */
+            min_version: string;
+            /**
+             * @description Newest store version; the app may suggest (not force) an update below it.
+             * @example 1.4.1
+             */
+            latest_version: string;
+            store_urls: {
+                /** @description App Store page (https) or "" */
+                ios: string;
+                /** @description Google Play page (https) or "" */
+                android: string;
+            };
+        };
         EnvelopeStatus: {
             /** @enum {boolean} */
             success: true;
@@ -12253,6 +12297,20 @@ export interface components {
         };
     };
     responses: {
+        /**
+         * @description The mobile app (`X-Client: comcode-mobile`) sent an `X-App-Version` below the configured
+         *     `mobile.min_version` (`GET /v1/app/config`). Code `APP_UPDATE_REQUIRED`; `error.details[0]`
+         *     is `{field: "min_version", message: "<min version>"}`. Applies to every `/v1` route except
+         *     `GET /v1/app/config`; web requests never carry `X-Client` and are not affected.
+         */
+        AppUpdateRequired: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description Validation or malformed request */
         BadRequest: {
             headers: {
@@ -12489,6 +12547,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            426: components["responses"]["AppUpdateRequired"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
         };
@@ -12517,6 +12576,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
+            426: components["responses"]["AppUpdateRequired"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -12566,6 +12626,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            426: components["responses"]["AppUpdateRequired"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -13938,6 +13999,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            426: components["responses"]["AppUpdateRequired"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
         };
@@ -14461,7 +14523,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EnvelopeStatus"];
+                    "application/json": components["schemas"]["EnvelopeAppConfig"];
                 };
             };
             500: components["responses"]["InternalError"];
@@ -21411,6 +21473,15 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
+                    /** @example 1.2.0 */
+                    mobile_min_version?: string;
+                    /** @example 1.4.1 */
+                    mobile_latest_version?: string;
+                    /** @example https://apps.apple.com/app/id0000000000 */
+                    mobile_ios_store_url?: string;
+                    /** @example https://play.google.com/store/apps/details?id=software.technowide.comcode */
+                    mobile_android_store_url?: string;
+                } & {
                     [key: string]: unknown;
                 };
             };
@@ -21425,6 +21496,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeGeneric"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };

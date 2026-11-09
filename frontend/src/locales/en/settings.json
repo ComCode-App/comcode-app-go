@@ -126,5 +126,16 @@
   "error_tracking.test.sent": "Test error sent (event: {{id}}).",
   "error_tracking.test.backend_off": "Backend error tracking is off.",
   "error_tracking.test.frontend_off": "Frontend error tracking is off.",
-  "error_tracking.test.failed": "Could not send the test error."
+  "error_tracking.test.failed": "Could not send the test error.",
+  "mobile.section": "Mobile app",
+  "mobile.hint": "Version gate and store links for the ComCode mobile app. Leave empty to turn off.",
+  "mobile.min_version": "Minimum version",
+  "mobile.min_version_hint": "Older app versions must update before they can use the API (426).",
+  "mobile.latest_version": "Latest version",
+  "mobile.latest_version_hint": "Newest version in the stores; the app may suggest updating.",
+  "mobile.ios_store_url": "App Store link",
+  "mobile.android_store_url": "Google Play link",
+  "mobile.validation.version": "Use a version like 1.2.3.",
+  "mobile.validation.store_url": "Enter an https link.",
+  "mobile.validation.latest_below_min": "The latest version cannot be lower than the minimum version."
 }

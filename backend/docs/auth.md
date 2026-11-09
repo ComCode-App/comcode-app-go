@@ -110,6 +110,32 @@ Each device session is a refresh-token **family**: refresh rotates the token ato
 | DELETE | `/v1/auth/sessions/{uuid}` | Bearer (own session) |
 | POST | `/v1/auth/sessions/revoke-others` | Bearer (keeps current `sid`) |
 
+## Mobile clients (TEC-1178)
+
+The mobile app does not use cookies. It reaches the private Go API through the Next.js **mobile
+gateway** `/api/mobile/v1/*` → `/v1/*` (`frontend/src/lib/server/mobile-gateway.ts`, design:
+[docs/design/mobile.md](../../docs/design/mobile.md) §2.1):
+
+- Auth is the app's own `Authorization: Bearer <access>`, forwarded as is. The gateway never reads
+  or sets a cookie: a request carrying only the web session cookie reaches Go unauthenticated, and
+  upstream `Set-Cookie` is dropped.
+- Token responses (`/v1/auth/login`, `/refresh`, `/email-code/verify`, `/accounts/switch`) keep
+  `access_token` / `refresh_token` in the JSON; the app stores them in secure storage and refreshes
+  itself (`POST /v1/auth/refresh` with the refresh token in the body). The cookie BFF
+  (`/api/v1/*`) still strips them from browser responses.
+- Refused with `404`: everything the BFF refuses (`/v1/internal/*`, traversal), the payment
+  callbacks (`/v1/public/payment/*`) and `/v1/auth/qr/exchange` (called by the web server only).
+- Forwarded: `X-Forwarded-For` / `User-Agent` (Go resolves the client IP through
+  `TRUSTED_PROXIES`, so IP rate limits see the phone, not Next.js) and the app headers
+  `X-Client: comcode-mobile`, `X-App-Version`, `X-Platform: ios|android`.
+- **Version gate**: `GET /v1/app/config` returns `mobile: {min_version, latest_version,
+  store_urls: {ios, android}}` from the platform settings (Settings → General → Mobile app,
+  `PATCH /v1/platform/settings` `mobile_*` fields, `platform.settings.write`). A `/v1` request with
+  `X-Client: comcode-mobile` and an `X-App-Version` below `min_version` is answered
+  `426 APP_UPDATE_REQUIRED` (`error.details[0].message` = the minimum); `GET /v1/app/config`
+  stays reachable so the app can open the store. The headers are never used for a security
+  decision; the gate reads the setting through a 30-second cache and fails open if it cannot.
+
 ## Rate limits
 
 Redis INCR, 15-minute window, fail-open if Redis is down. `429 RATE_LIMITED` + `Retry-After`.

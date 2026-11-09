@@ -32,6 +32,8 @@ export const API_ERROR_MESSAGE_KEYS: Readonly<Record<string, string>> = {
   LAST_SIGN_IN_METHOD: "auth.oauth.last_sign_in_method",
   INVALID_EMAIL_CODE: "errors.codes.invalid_email_code",
   REALTIME_DISABLED: "errors.codes.realtime_disabled",
+  // Mobile app older than mobile.min_version (426, TEC-1178).
+  APP_UPDATE_REQUIRED: "errors.codes.app_update_required",
   // Routes / public profile.
   INVALID_PASSCODE: "errors.codes.invalid_passcode",
   // Company invites (accounts module).

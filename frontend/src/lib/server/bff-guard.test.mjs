@@ -62,6 +62,50 @@ test("path allowlist refuses traversal, encoded separators and internal routes",
   }
 });
 
+test("mobile gateway refuses BFF-forbidden, payment callback and QR exchange paths", () => {
+  const refused = [
+    [],
+    [".."],
+    ["a/b"],
+    ["%2e%2e"],
+    ["internal", "auth", "users"],
+    ["Internal", "auth", "session"],
+    ["public", "payment"],
+    ["public", "payment", "iyzico", "callback"],
+    ["public", "payment", "paytr", "callback"],
+    ["Public", "Payment", "paytr", "callback"],
+    ["auth", "qr", "exchange"],
+    ["AUTH", "QR", "EXCHANGE"],
+  ];
+  for (const segs of refused) {
+    assert.equal(
+      guard.isMobileGatewayRefusedPath(segs),
+      true,
+      JSON.stringify(segs),
+    );
+  }
+  for (const segs of [
+    ["auth", "login"],
+    ["auth", "refresh"],
+    ["auth", "email-code", "verify"],
+    ["auth", "qr", "approve"],
+    ["app", "config"],
+    ["public", "p", "ali"],
+    ["profiles"],
+  ]) {
+    assert.equal(
+      guard.isMobileGatewayRefusedPath(segs),
+      false,
+      JSON.stringify(segs),
+    );
+  }
+  // The cookie BFF still lets the payment callbacks through (providers post to it).
+  assert.equal(
+    guard.isForbiddenProxyPath(["public", "payment", "iyzico", "callback"]),
+    false,
+  );
+});
+
 test("cross-site mutations are blocked, same-origin and safe methods pass", () => {
   assert.equal(
     guard.isCrossSiteMutation(

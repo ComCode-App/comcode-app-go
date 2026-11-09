@@ -37,6 +37,19 @@ func (h *Handler) Patch(w http.ResponseWriter, r *http.Request) {
 	if err := decodeJSON(w, r, &in); err != nil {
 		return
 	}
+	current, err := h.svc.Get(r.Context())
+	if err != nil {
+		response.InternalErr(w, r, err, "failed to load settings")
+		return
+	}
+	if errs := in.Validate(current); len(errs) > 0 {
+		details := make([]response.Detail, 0, len(errs))
+		for _, e := range errs {
+			details = append(details, response.Detail{Field: e.Field, Message: e.Message})
+		}
+		response.ValidationError(w, r, details)
+		return
+	}
 	s, err := h.svc.Patch(r.Context(), in)
 	if err != nil {
 		response.InternalErr(w, r, err, "failed to update settings")
