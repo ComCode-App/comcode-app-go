@@ -147,6 +147,10 @@ type Querier interface {
 	CountSectors(ctx context.Context, q_ string) (int64, error)
 	CountSocialPlatforms(ctx context.Context, arg CountSocialPlatformsParams) (int64, error)
 	CountStorageActivity(ctx context.Context, objectKey string) (int64, error)
+	// account-lint: cross-account media cleanup worker (TEC-1176): a storage object may be referenced from any account, so the reference check counts rows everywhere and returns only the count
+	// Live rows that still point at an object key: profile avatar/cover URLs (bare key, stream path or
+	// public URL ending in "/{key}"), company media library files and Background Studio thumbnails.
+	CountStorageKeyReferences(ctx context.Context, objectKey string) (int64, error)
 	CountStorageTrash(ctx context.Context) (int64, error)
 	CountStructureAssignments(ctx context.Context, arg CountStructureAssignmentsParams) (int64, error)
 	CountStructureGroups(ctx context.Context, arg CountStructureGroupsParams) (int64, error)
@@ -856,6 +860,8 @@ type Querier interface {
 	// Platform-wide distinct visitors (TEC-953) for today, the last 7 and the last 30 local days,
 	// from the hourly visitor rollup. Windows end at to_before.
 	PlatformUniqueVisitors(ctx context.Context, arg PlatformUniqueVisitorsParams) (PlatformUniqueVisitorsRow, error)
+	// account-lint: cross-account media cleanup worker (TEC-1176): only says whether a profile uuid is still live; returns no row data
+	ProfileIsLive(ctx context.Context, argUuid uuid.UUID) (bool, error)
 	// account-lint: cross-account webhook retention worker
 	PruneWebhookDeliveries(ctx context.Context, before pgtype.Timestamptz) (int64, error)
 	PutRouteQR(ctx context.Context, arg PutRouteQRParams) (int64, error)
