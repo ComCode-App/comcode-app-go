@@ -70,10 +70,7 @@ export function useCompaniesColumns(handlers: CompanyRowActionHandlers) {
           enableSorting: false,
           enableColumnFilter: false,
           cell: ({ row }) => (
-            <CompanyRowActionsMenu
-              company={row.original}
-              handlers={handlers}
-            />
+            <CompanyRowActionsMenu company={row.original} handlers={handlers} />
           ),
         }),
       ] as ColumnDef<CompanySummary, unknown>[],

@@ -86,7 +86,11 @@ export function CompaniesPage() {
   );
 
   const bulkQuery = useMemo(
-    () => ({ q: listParams.q, sort: listParams.sort, status: listParams.status }),
+    () => ({
+      q: listParams.q,
+      sort: listParams.sort,
+      status: listParams.status,
+    }),
     [listParams.q, listParams.sort, listParams.status],
   );
 
@@ -98,7 +102,11 @@ export function CompaniesPage() {
 
   const meta = metaQuery.data as ResourceMeta | undefined;
   const bulkActions = useMemo(
-    () => resolveBulkActionsWithIcons("platform.companies", meta?.bulk_actions ?? []),
+    () =>
+      resolveBulkActionsWithIcons(
+        "platform.companies",
+        meta?.bulk_actions ?? [],
+      ),
     [meta?.bulk_actions],
   );
 

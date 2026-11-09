@@ -6,7 +6,10 @@ import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { routes } from "@/config/routes";
-import { useEntitlements, useQuota } from "@/features/entitlements/hooks/use-entitlements";
+import {
+  useEntitlements,
+  useQuota,
+} from "@/features/entitlements/hooks/use-entitlements";
 import type { QuotaFeatureKey } from "@/features/entitlements/services/entitlements.service";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -33,7 +36,10 @@ export function QuotaNotice({ feature }: { feature: QuotaFeatureKey }) {
         feature: featureLabel.toLocaleLowerCase(),
         plan: data.plan_name,
       })
-    : t("entitlements.banner_not_included", { feature: featureLabel, plan: data.plan_name });
+    : t("entitlements.banner_not_included", {
+        feature: featureLabel,
+        plan: data.plan_name,
+      });
 
   return (
     <Alert className="mb-4">
@@ -42,7 +48,9 @@ export function QuotaNotice({ feature }: { feature: QuotaFeatureKey }) {
       <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <span>{message}</span>
         <Button asChild size="sm" className="shrink-0">
-          <Link href={routes.app.billing.root}>{t("entitlements.upgrade")}</Link>
+          <Link href={routes.app.billing.root}>
+            {t("entitlements.upgrade")}
+          </Link>
         </Button>
       </AlertDescription>
     </Alert>

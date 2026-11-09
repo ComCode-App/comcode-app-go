@@ -2,11 +2,18 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 
 import { brand } from "@/config/brand";
-import { loadExchangeForm, loadLeadForm } from "@/features/leads/lib/form-config";
+import {
+  loadExchangeForm,
+  loadLeadForm,
+} from "@/features/leads/lib/form-config";
 import { VIA_RE } from "@/features/leads/lib/via";
 import { PublicProfileView } from "@/features/public-profile";
 import { loadPublicProfile } from "@/features/public-profile/lib/load";
-import { displayName, headline, pickTranslation } from "@/features/public-profile/lib/view";
+import {
+  displayName,
+  headline,
+  pickTranslation,
+} from "@/features/public-profile/lib/view";
 
 type PageProps = {
   params: Promise<{ username: string }>;
@@ -17,8 +24,14 @@ type PageProps = {
  * Public profile at comcode.../{username} (TEC-548). Static app routes (/login, /cards, ...)
  * win over this dynamic segment; the backend refuses usernames that collide with them.
  */
-export default async function PublicProfilePage({ params, searchParams }: PageProps) {
-  const [{ username }, { lang, via, src }] = await Promise.all([params, searchParams]);
+export default async function PublicProfilePage({
+  params,
+  searchParams,
+}: PageProps) {
+  const [{ username }, { lang, via, src }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const validVia = via && VIA_RE.test(via) ? via : undefined;
   const result = await loadPublicProfile(username, src === "qr", validVia);
   if (result.kind === "legacy_redirect") redirect(result.target);
@@ -47,11 +60,22 @@ export default async function PublicProfilePage({ params, searchParams }: PagePr
   );
 }
 
-export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
-  const [{ username }, { lang, src, via }] = await Promise.all([params, searchParams]);
+export async function generateMetadata({
+  params,
+  searchParams,
+}: PageProps): Promise<Metadata> {
+  const [{ username }, { lang, src, via }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   // Same arguments as the page, so React cache shares one upstream call.
-  const result = await loadPublicProfile(username, src === "qr", via && VIA_RE.test(via) ? via : undefined);
-  if (result.kind !== "ok") return { title: brand.productName, robots: { index: false } };
+  const result = await loadPublicProfile(
+    username,
+    src === "qr",
+    via && VIA_RE.test(via) ? via : undefined,
+  );
+  if (result.kind !== "ok")
+    return { title: brand.productName, robots: { index: false } };
 
   const profile = result.profile;
   const tr = pickTranslation(profile, lang);
@@ -71,7 +95,9 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       description,
       url: `/${profile.username}`,
       siteName: brand.productName,
-      images: profile.avatar_url ? [{ url: profile.avatar_url, alt: name }] : undefined,
+      images: profile.avatar_url
+        ? [{ url: profile.avatar_url, alt: name }]
+        : undefined,
     },
     twitter: {
       card: "summary",

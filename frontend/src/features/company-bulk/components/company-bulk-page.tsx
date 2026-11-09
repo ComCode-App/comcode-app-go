@@ -103,7 +103,10 @@ function CompanyBulkContent({ access }: { access: CompanyBulkAccess }) {
     null,
   );
 
-  const listState = useServerListState({ initialPageSize: 20, initialSort: "" });
+  const listState = useServerListState({
+    initialPageSize: 20,
+    initialSort: "",
+  });
   const officesQuery = useCompanyOffices();
   const groupsQuery = useCompanyGroups();
   const metaQuery = useCompanyBulkMeta();

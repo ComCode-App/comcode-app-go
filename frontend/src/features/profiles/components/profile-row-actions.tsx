@@ -25,14 +25,14 @@ export function ProfileRowActionsMenu({
 
   return (
     <div
-      className="flex items-center gap-1 justify-end"
+      className="flex items-center justify-end gap-1"
       onClick={(e) => e.stopPropagation()}
     >
       {handlers.onView && (
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
           onClick={() => handlers.onView!(profile)}
           title={t("profiles.actions.view")}
         >
@@ -44,7 +44,7 @@ export function ProfileRowActionsMenu({
       <Button
         variant="ghost"
         size="sm"
-        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+        className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
         onClick={() => handlers.onEdit(profile)}
         title={t("profiles.actions.edit")}
       >
@@ -55,7 +55,7 @@ export function ProfileRowActionsMenu({
       <Button
         variant="ghost"
         size="sm"
-        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+        className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
         onClick={() => handlers.onDownloadVCard(profile)}
         title={t("profiles.actions.download_vcard")}
       >
@@ -67,7 +67,7 @@ export function ProfileRowActionsMenu({
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 w-8 p-0 text-muted-foreground hover:text-amber-500"
+          className="text-muted-foreground h-8 w-8 p-0 hover:text-amber-500"
           onClick={() => handlers.onSetPrimary(profile)}
           title={t("profiles.actions.set_primary")}
         >
@@ -79,7 +79,7 @@ export function ProfileRowActionsMenu({
       <Button
         variant="ghost"
         size="sm"
-        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+        className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
         onClick={() => handlers.onDelete(profile)}
         title={t("profiles.actions.delete")}
       >

@@ -20,16 +20,16 @@ func TestValidateDocument(t *testing.T) {
 		}
 	}
 	bad := map[string]string{
-		"not object":      `[1,2]`,
-		"unknown kind":    `{"kind":"html","params":{}}`,
-		"unknown shader":  `{"kind":"shader","shaderType":"evil","params":{}}`,
-		"no params":       `{"kind":"solid"}`,
-		"css breakout":    `{"kind":"solid","params":{"color":"red; background:url(https://x)"}}`,
-		"javascript url":  `{"kind":"video","params":{"src":"javascript:alert(1)"}}`,
-		"http video":      `{"kind":"video","params":{"src":"http://insecure/x.mp4"}}`,
-		"markup":          `{"kind":"solid","name":"<script>","params":{"color":"#fff"}}`,
-		"deep nesting":    `{"kind":"solid","params":{"a":{"b":{"c":{"d":1}}}}}`,
-		"quote in url":    `{"kind":"video","params":{"src":"https://x.com/a\".mp4"}}`,
+		"not object":     `[1,2]`,
+		"unknown kind":   `{"kind":"html","params":{}}`,
+		"unknown shader": `{"kind":"shader","shaderType":"evil","params":{}}`,
+		"no params":      `{"kind":"solid"}`,
+		"css breakout":   `{"kind":"solid","params":{"color":"red; background:url(https://x)"}}`,
+		"javascript url": `{"kind":"video","params":{"src":"javascript:alert(1)"}}`,
+		"http video":     `{"kind":"video","params":{"src":"http://insecure/x.mp4"}}`,
+		"markup":         `{"kind":"solid","name":"<script>","params":{"color":"#fff"}}`,
+		"deep nesting":   `{"kind":"solid","params":{"a":{"b":{"c":{"d":1}}}}}`,
+		"quote in url":   `{"kind":"video","params":{"src":"https://x.com/a\".mp4"}}`,
 	}
 	for name, doc := range bad {
 		if _, err := ValidateDocument([]byte(doc)); !errors.Is(err, ErrInvalidDocument) {

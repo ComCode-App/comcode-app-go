@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrInvalidCredentials   = errors.New("invalid credentials")
 	ErrUserDisabled         = errors.New("user is disabled")
 	ErrForbidden            = errors.New("forbidden")
 	ErrNotFound             = errors.New("not found")
@@ -464,12 +464,12 @@ func (u *AuthUseCase) Me(ctx context.Context, userUUID uuid.UUID, impersonatorUU
 		return model.Me{}, err
 	}
 	out := model.Me{
-		User:          model.ToPublicUser(user, isSuperAdmin),
-		Roles:         roles,
-		Permissions:   perms,
-		Links:         model.DefaultMeLinks(),
-		Channels:      model.MeChannels{User: "user:" + user.UUID.String()},
-		Realtime:      model.MeRealtime{Enabled: u.realtime.Enabled, WSURL: u.realtime.WSURL, UserChannel: "user:" + user.UUID.String()},
+		User:        model.ToPublicUser(user, isSuperAdmin),
+		Roles:       roles,
+		Permissions: perms,
+		Links:       model.DefaultMeLinks(),
+		Channels:    model.MeChannels{User: "user:" + user.UUID.String()},
+		Realtime:    model.MeRealtime{Enabled: u.realtime.Enabled, WSURL: u.realtime.WSURL, UserChannel: "user:" + user.UUID.String()},
 	}
 	accounts, active, err := u.listAccountsWithActive(ctx, user.ID, activeAccountID)
 	if err != nil {

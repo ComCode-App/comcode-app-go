@@ -5,7 +5,11 @@ import { type FormEvent, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
-import { EntityHeader, EntityPage, EntitySectionCard } from "@/components/entity";
+import {
+  EntityHeader,
+  EntityPage,
+  EntitySectionCard,
+} from "@/components/entity";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +55,10 @@ export function AccountPage() {
   const { confirmDelete } = useDialogs();
   const queryClient = useQueryClient();
 
-  const accountQuery = useQuery({ queryKey: accountKeys.current, queryFn: accountService.current });
+  const accountQuery = useQuery({
+    queryKey: accountKeys.current,
+    queryFn: accountService.current,
+  });
   const membersQuery = useQuery({
     queryKey: accountKeys.members,
     queryFn: accountService.members,
@@ -66,7 +73,8 @@ export function AccountPage() {
     void queryClient.invalidateQueries({ queryKey: accountKeys.current });
     void queryClient.invalidateQueries({ queryKey: accountKeys.members });
   };
-  const onError = (err: unknown) => appToast.error(errorMessage(err, t("common.error_generic")));
+  const onError = (err: unknown) =>
+    appToast.error(errorMessage(err, t("common.error_generic")));
 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<AccountRole>("member");
@@ -78,8 +86,12 @@ export function AccountPage() {
       invalidate();
       if (isInvitedResult(result)) {
         // Not a verified user: an invite went to the address instead (TEC-1104).
-        void queryClient.invalidateQueries({ queryKey: ["account", "invites"] });
-        appToast.success(t("accounts.toast.member_invited", { email: result.invite.email }));
+        void queryClient.invalidateQueries({
+          queryKey: ["account", "invites"],
+        });
+        appToast.success(
+          t("accounts.toast.member_invited", { email: result.invite.email }),
+        );
         return;
       }
       appToast.success(t("accounts.toast.member_added"));
@@ -122,13 +134,17 @@ export function AccountPage() {
       confirmLabel: self ? t("accounts.leave") : t("accounts.remove"),
       description: self
         ? t("accounts.leave_description", { name: account?.name ?? "" })
-        : t("accounts.remove_description", { name: `${member.name} ${member.surname}`.trim() }),
+        : t("accounts.remove_description", {
+            name: `${member.name} ${member.surname}`.trim(),
+          }),
     });
     if (confirmed) removeMember.mutate(member.user_uuid);
   };
 
   const canEditMember = (member: AccountMember) =>
-    canManage && member.user_uuid !== user?.uuid && (isOwner || member.role !== "owner");
+    canManage &&
+    member.user_uuid !== user?.uuid &&
+    (isOwner || member.role !== "owner");
 
   return (
     <EntityPage
@@ -155,8 +171,12 @@ export function AccountPage() {
             description={isCompany ? account.slug : t("accounts.personal_hint")}
             badges={
               <>
-                <Badge variant="outline">{t(`accounts.types.${account.type}`)}</Badge>
-                <Badge variant="secondary">{t(`accounts.roles.${account.role}`)}</Badge>
+                <Badge variant="outline">
+                  {t(`accounts.types.${account.type}`)}
+                </Badge>
+                <Badge variant="secondary">
+                  {t(`accounts.roles.${account.role}`)}
+                </Badge>
               </>
             }
           />
@@ -166,7 +186,9 @@ export function AccountPage() {
           {isCompany ? <CompanySectorCard /> : null}
 
           <EntitySectionCard title={t("accounts.members")}>
-            {membersQuery.isLoading ? <Loading label={t("common.loading")} /> : null}
+            {membersQuery.isLoading ? (
+              <Loading label={t("common.loading")} />
+            ) : null}
             {membersQuery.data ? (
               <div className="overflow-x-auto rounded-md border">
                 <table className="w-full text-sm">
@@ -185,7 +207,10 @@ export function AccountPage() {
                     {membersQuery.data.items.map((member) => {
                       const self = member.user_uuid === user?.uuid;
                       return (
-                        <tr key={member.user_uuid} className="hover:bg-muted/50 border-b last:border-0">
+                        <tr
+                          key={member.user_uuid}
+                          className="hover:bg-muted/50 border-b last:border-0"
+                        >
                           <td className="p-4">
                             <div className="font-medium">
                               {member.name} {member.surname}
@@ -195,7 +220,9 @@ export function AccountPage() {
                                 </span>
                               ) : null}
                             </div>
-                            <div className="text-muted-foreground text-xs">{member.email}</div>
+                            <div className="text-muted-foreground text-xs">
+                              {member.email}
+                            </div>
                           </td>
                           <td className="p-4">
                             {canEditMember(member) ? (
@@ -209,11 +236,16 @@ export function AccountPage() {
                                   })
                                 }
                               >
-                                <SelectTrigger className="h-8 w-44" aria-label={t("accounts.role")}>
+                                <SelectTrigger
+                                  className="h-8 w-44"
+                                  aria-label={t("accounts.role")}
+                                >
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {ROLES.filter((r) => isOwner || r !== "owner").map((r) => (
+                                  {ROLES.filter(
+                                    (r) => isOwner || r !== "owner",
+                                  ).map((r) => (
                                     <SelectItem key={r} value={r}>
                                       {t(`accounts.roles.${r}`)}
                                     </SelectItem>
@@ -232,7 +264,9 @@ export function AccountPage() {
                                 disabled={removeMember.isPending}
                                 onClick={() => void confirmRemove(member)}
                               >
-                                {self ? t("accounts.leave") : t("accounts.remove")}
+                                {self
+                                  ? t("accounts.leave")
+                                  : t("accounts.remove")}
                               </Button>
                             ) : null}
                           </td>
@@ -245,11 +279,16 @@ export function AccountPage() {
             ) : null}
           </EntitySectionCard>
 
-          {isCompany && canManage ? <AccountInvitesCard isOwner={isOwner} /> : null}
+          {isCompany && canManage ? (
+            <AccountInvitesCard isOwner={isOwner} />
+          ) : null}
 
           {isCompany && canManage ? (
             <EntitySectionCard title={t("accounts.add_member")}>
-              <form onSubmit={onAdd} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <form
+                onSubmit={onAdd}
+                className="flex flex-col gap-3 sm:flex-row sm:items-end"
+              >
                 <label className="grid flex-1 gap-1.5 text-sm">
                   <span className="font-medium">{t("accounts.email")}</span>
                   <Input
@@ -262,24 +301,34 @@ export function AccountPage() {
                 </label>
                 <label className="grid gap-1.5 text-sm">
                   <span className="font-medium">{t("accounts.role")}</span>
-                  <Select value={role} onValueChange={(value) => setRole(value as AccountRole)}>
+                  <Select
+                    value={role}
+                    onValueChange={(value) => setRole(value as AccountRole)}
+                  >
                     <SelectTrigger className="w-44">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {ROLES.filter((r) => isOwner || r !== "owner").map((r) => (
-                        <SelectItem key={r} value={r}>
-                          {t(`accounts.roles.${r}`)}
-                        </SelectItem>
-                      ))}
+                      {ROLES.filter((r) => isOwner || r !== "owner").map(
+                        (r) => (
+                          <SelectItem key={r} value={r}>
+                            {t(`accounts.roles.${r}`)}
+                          </SelectItem>
+                        ),
+                      )}
                     </SelectContent>
                   </Select>
                 </label>
-                <Button type="submit" disabled={addMember.isPending || !email.trim()}>
+                <Button
+                  type="submit"
+                  disabled={addMember.isPending || !email.trim()}
+                >
                   {t("accounts.add_member")}
                 </Button>
               </form>
-              <p className="text-muted-foreground mt-2 text-xs">{t("accounts.add_member_hint")}</p>
+              <p className="text-muted-foreground mt-2 text-xs">
+                {t("accounts.add_member_hint")}
+              </p>
             </EntitySectionCard>
           ) : null}
         </div>

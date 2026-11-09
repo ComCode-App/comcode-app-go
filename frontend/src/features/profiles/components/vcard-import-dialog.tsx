@@ -86,7 +86,10 @@ export function VCardImportDialog({
   }, []);
 
   const handleFile = async (file: File) => {
-    if (!file.name.toLowerCase().endsWith(".vcf") && !file.name.toLowerCase().endsWith(".vcard")) {
+    if (
+      !file.name.toLowerCase().endsWith(".vcf") &&
+      !file.name.toLowerCase().endsWith(".vcard")
+    ) {
       appToast.error(t("profiles.vcard.invalid_extension"));
       return;
     }
@@ -169,33 +172,33 @@ export function VCardImportDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 border-border shadow-2xl rounded-2xl">
+      <DialogContent className="border-border max-h-[90vh] gap-0 overflow-y-auto rounded-2xl p-0 shadow-2xl sm:max-w-2xl">
         {/* Header with decorative gradient banner */}
-        <div className="relative p-6 bg-gradient-to-br from-primary/15 via-primary/5 to-background border-b border-border/60">
+        <div className="from-primary/15 via-primary/5 to-background border-border/60 relative border-b bg-gradient-to-br p-6">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0 shadow-xs">
-              <FileCode2 className="w-6 h-6" />
+            <div className="bg-primary/10 border-primary/20 text-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border shadow-xs">
+              <FileCode2 className="h-6 w-6" />
             </div>
-            <div className="space-y-1 flex-1">
+            <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
                 <DialogTitle className="text-lg font-bold">
                   {t("profiles.vcard.dialog_title")}
                 </DialogTitle>
                 <Badge
                   variant="outline"
-                  className="bg-primary/10 text-primary border-primary/30 text-[10px] font-mono px-2 py-0.5"
+                  className="bg-primary/10 text-primary border-primary/30 px-2 py-0.5 font-mono text-[10px]"
                 >
                   vCard 3.0 / 4.0
                 </Badge>
               </div>
-              <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
+              <DialogDescription className="text-muted-foreground text-xs leading-relaxed">
                 {t("profiles.vcard.dialog_desc")}
               </DialogDescription>
             </div>
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="space-y-6 p-6">
           {!parsedData ? (
             /* Upload & Dropzone Step */
             <div className="space-y-4">
@@ -205,7 +208,7 @@ export function VCardImportDialog({
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
                 className={cn(
-                  "border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-3",
+                  "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-200",
                   isDragging
                     ? "border-primary bg-primary/10 scale-[0.99]"
                     : "border-border/80 hover:border-primary/60 hover:bg-muted/30 bg-muted/10",
@@ -221,38 +224,38 @@ export function VCardImportDialog({
                 />
 
                 {isLoading ? (
-                  <div className="space-y-3 py-4 flex flex-col items-center">
-                    <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                  <div className="flex flex-col items-center space-y-3 py-4">
+                    <Loader2 className="text-primary h-10 w-10 animate-spin" />
                     <div className="space-y-1 text-center">
                       <p className="text-sm font-semibold">
                         {t("profiles.vcard.parsing_in_progress")}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         {fileName}
                       </p>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center shadow-inner">
-                      <UploadCloud className="w-7 h-7" />
+                    <div className="bg-primary/10 text-primary flex h-14 w-14 items-center justify-center rounded-full shadow-inner">
+                      <UploadCloud className="h-7 w-7" />
                     </div>
                     <div className="space-y-1">
-                      <p className="text-sm font-bold text-foreground">
+                      <p className="text-foreground text-sm font-bold">
                         {t("profiles.vcard.dropzone_cta")}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         {t("profiles.vcard.dropzone_subtext")}
                       </p>
                     </div>
-                    <div className="pt-2 flex items-center gap-2">
+                    <div className="flex items-center gap-2 pt-2">
                       <Button
                         type="button"
                         variant="secondary"
                         size="sm"
-                        className="text-xs font-semibold rounded-lg shadow-xs pointer-events-none"
+                        className="pointer-events-none rounded-lg text-xs font-semibold shadow-xs"
                       >
-                        <FileText className="w-3.5 h-3.5 mr-1.5" />
+                        <FileText className="mr-1.5 h-3.5 w-3.5" />
                         {t("profiles.vcard.browse_file")}
                       </Button>
                     </div>
@@ -261,22 +264,22 @@ export function VCardImportDialog({
               </div>
 
               {/* Tips & Supported formats */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="p-3 rounded-xl bg-muted/30 border border-border/50 space-y-1">
-                  <div className="font-semibold flex items-center gap-1.5 text-foreground">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
+                <div className="bg-muted/30 border-border/50 space-y-1 rounded-xl border p-3">
+                  <div className="text-foreground flex items-center gap-1.5 font-semibold">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                     <span>{t("profiles.vcard.tip_apple_title")}</span>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-muted-foreground text-[11px]">
                     {t("profiles.vcard.tip_apple_desc")}
                   </p>
                 </div>
-                <div className="p-3 rounded-xl bg-muted/30 border border-border/50 space-y-1">
-                  <div className="font-semibold flex items-center gap-1.5 text-foreground">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                <div className="bg-muted/30 border-border/50 space-y-1 rounded-xl border p-3">
+                  <div className="text-foreground flex items-center gap-1.5 font-semibold">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                     <span>{t("profiles.vcard.tip_google_title")}</span>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-muted-foreground text-[11px]">
                     {t("profiles.vcard.tip_google_desc")}
                   </p>
                 </div>
@@ -284,36 +287,43 @@ export function VCardImportDialog({
             </div>
           ) : (
             /* Parsed Result & Field Selection Step */
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="animate-in fade-in slide-in-from-bottom-2 space-y-6 duration-300">
               {/* Profile Card Header Preview */}
-              <div className="p-4 rounded-2xl border border-primary/20 bg-primary/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="border-primary/20 bg-primary/5 flex flex-col items-start justify-between gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center">
                 <div className="flex items-center gap-3.5">
-                  <Avatar className="w-14 h-14 rounded-xl border-2 border-primary/20 bg-background shadow-sm">
+                  <Avatar className="border-primary/20 bg-background h-14 w-14 rounded-xl border-2 shadow-sm">
                     {parsedData.avatar_url || parsedData.avatar_data_url ? (
                       <AvatarImage
-                        src={parsedData.avatar_url || parsedData.avatar_data_url}
+                        src={
+                          parsedData.avatar_url || parsedData.avatar_data_url
+                        }
                         alt="Avatar"
                         className="object-cover"
                       />
                     ) : null}
-                    <AvatarFallback className="rounded-xl font-bold text-primary">
-                      {parsedData.first_name?.[0] || parsedData.display_name?.[0] || "U"}
+                    <AvatarFallback className="text-primary rounded-xl font-bold">
+                      {parsedData.first_name?.[0] ||
+                        parsedData.display_name?.[0] ||
+                        "U"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="space-y-0.5">
-                    <div className="font-bold text-base text-foreground flex items-center gap-2">
+                    <div className="text-foreground flex items-center gap-2 text-base font-bold">
                       <span>
                         {parsedData.display_name ||
                           `${parsedData.first_name || ""} ${parsedData.last_name || ""}`.trim() ||
                           t("profiles.preview.untitled")}
                       </span>
                       {parsedData.nickname && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        <Badge
+                          variant="secondary"
+                          className="px-1.5 py-0 text-[10px]"
+                        >
                           {parsedData.nickname}
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       {[parsedData.title, parsedData.company_name]
                         .filter(Boolean)
                         .join(" • ") || t("profiles.preview.no_title")}
@@ -326,9 +336,9 @@ export function VCardImportDialog({
                   variant="outline"
                   size="sm"
                   onClick={resetState}
-                  className="text-xs gap-1.5 h-8 shrink-0"
+                  className="h-8 shrink-0 gap-1.5 text-xs"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
+                  <RefreshCw className="h-3.5 w-3.5" />
                   <span>{t("profiles.vcard.change_file")}</span>
                 </Button>
               </div>
@@ -336,32 +346,40 @@ export function VCardImportDialog({
               {/* Detected fields overview chips */}
               <div className="flex flex-wrap gap-2 text-xs">
                 {phoneCount > 0 && (
-                  <Badge variant="secondary" className="gap-1.5 py-1 px-2.5">
-                    <Phone className="w-3 h-3 text-emerald-500" />
-                    <span>{phoneCount} {t("profiles.vcard.badge_phones")}</span>
+                  <Badge variant="secondary" className="gap-1.5 px-2.5 py-1">
+                    <Phone className="h-3 w-3 text-emerald-500" />
+                    <span>
+                      {phoneCount} {t("profiles.vcard.badge_phones")}
+                    </span>
                   </Badge>
                 )}
                 {emailCount > 0 && (
-                  <Badge variant="secondary" className="gap-1.5 py-1 px-2.5">
-                    <Mail className="w-3 h-3 text-blue-500" />
-                    <span>{emailCount} {t("profiles.vcard.badge_emails")}</span>
+                  <Badge variant="secondary" className="gap-1.5 px-2.5 py-1">
+                    <Mail className="h-3 w-3 text-blue-500" />
+                    <span>
+                      {emailCount} {t("profiles.vcard.badge_emails")}
+                    </span>
                   </Badge>
                 )}
                 {addressCount > 0 && (
-                  <Badge variant="secondary" className="gap-1.5 py-1 px-2.5">
-                    <MapPin className="w-3 h-3 text-rose-500" />
-                    <span>{addressCount} {t("profiles.vcard.badge_addresses")}</span>
+                  <Badge variant="secondary" className="gap-1.5 px-2.5 py-1">
+                    <MapPin className="h-3 w-3 text-rose-500" />
+                    <span>
+                      {addressCount} {t("profiles.vcard.badge_addresses")}
+                    </span>
                   </Badge>
                 )}
                 {socialCount > 0 && (
-                  <Badge variant="secondary" className="gap-1.5 py-1 px-2.5">
-                    <Share2 className="w-3 h-3 text-indigo-500" />
-                    <span>{socialCount} {t("profiles.vcard.badge_socials")}</span>
+                  <Badge variant="secondary" className="gap-1.5 px-2.5 py-1">
+                    <Share2 className="h-3 w-3 text-indigo-500" />
+                    <span>
+                      {socialCount} {t("profiles.vcard.badge_socials")}
+                    </span>
                   </Badge>
                 )}
                 {parsedData.birthday && (
-                  <Badge variant="secondary" className="gap-1.5 py-1 px-2.5">
-                    <Calendar className="w-3 h-3 text-amber-500" />
+                  <Badge variant="secondary" className="gap-1.5 px-2.5 py-1">
+                    <Calendar className="h-3 w-3 text-amber-500" />
                     <span>{parsedData.birthday}</span>
                   </Badge>
                 )}
@@ -369,24 +387,26 @@ export function VCardImportDialog({
 
               {/* Field Selectors & Controls */}
               <div className="space-y-3">
-                <div className="font-semibold text-xs uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                <div className="text-muted-foreground flex items-center justify-between text-xs font-semibold tracking-wider uppercase">
                   <span className="flex items-center gap-1.5">
-                    <Sliders className="w-3.5 h-3.5" />
+                    <Sliders className="h-3.5 w-3.5" />
                     {t("profiles.vcard.select_fields_title")}
                   </span>
-                  <span className="text-[11px] lowercase text-muted-foreground">
+                  <span className="text-muted-foreground text-[11px] lowercase">
                     {t("profiles.vcard.toggle_hint")}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                   {/* Identity */}
-                  <label className="flex items-center justify-between p-3 rounded-xl border border-border/70 bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer text-xs">
+                  <label className="border-border/70 bg-muted/20 hover:bg-muted/40 flex cursor-pointer items-center justify-between rounded-xl border p-3 text-xs transition-colors">
                     <div className="flex items-center gap-2.5">
-                      <User className="w-4 h-4 text-primary" />
+                      <User className="text-primary h-4 w-4" />
                       <div>
-                        <div className="font-semibold">{t("profiles.tabs.identity")}</div>
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="font-semibold">
+                          {t("profiles.tabs.identity")}
+                        </div>
+                        <div className="text-muted-foreground text-[11px]">
                           {parsedData.first_name} {parsedData.last_name}
                         </div>
                       </div>
@@ -398,12 +418,14 @@ export function VCardImportDialog({
                   </label>
 
                   {/* Work */}
-                  <label className="flex items-center justify-between p-3 rounded-xl border border-border/70 bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer text-xs">
+                  <label className="border-border/70 bg-muted/20 hover:bg-muted/40 flex cursor-pointer items-center justify-between rounded-xl border p-3 text-xs transition-colors">
                     <div className="flex items-center gap-2.5">
-                      <Briefcase className="w-4 h-4 text-amber-500" />
+                      <Briefcase className="h-4 w-4 text-amber-500" />
                       <div>
-                        <div className="font-semibold">{t("profiles.sections.work")}</div>
-                        <div className="text-[11px] text-muted-foreground truncate max-w-[140px]">
+                        <div className="font-semibold">
+                          {t("profiles.sections.work")}
+                        </div>
+                        <div className="text-muted-foreground max-w-[140px] truncate text-[11px]">
                           {parsedData.company_name || parsedData.title || "-"}
                         </div>
                       </div>
@@ -415,13 +437,16 @@ export function VCardImportDialog({
                   </label>
 
                   {/* Contacts */}
-                  <label className="flex items-center justify-between p-3 rounded-xl border border-border/70 bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer text-xs">
+                  <label className="border-border/70 bg-muted/20 hover:bg-muted/40 flex cursor-pointer items-center justify-between rounded-xl border p-3 text-xs transition-colors">
                     <div className="flex items-center gap-2.5">
-                      <Phone className="w-4 h-4 text-emerald-500" />
+                      <Phone className="h-4 w-4 text-emerald-500" />
                       <div>
-                        <div className="font-semibold">{t("profiles.tabs.contacts")}</div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {phoneCount + emailCount} {t("profiles.vcard.items_found")}
+                        <div className="font-semibold">
+                          {t("profiles.tabs.contacts")}
+                        </div>
+                        <div className="text-muted-foreground text-[11px]">
+                          {phoneCount + emailCount}{" "}
+                          {t("profiles.vcard.items_found")}
                         </div>
                       </div>
                     </div>
@@ -432,12 +457,14 @@ export function VCardImportDialog({
                   </label>
 
                   {/* Addresses */}
-                  <label className="flex items-center justify-between p-3 rounded-xl border border-border/70 bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer text-xs">
+                  <label className="border-border/70 bg-muted/20 hover:bg-muted/40 flex cursor-pointer items-center justify-between rounded-xl border p-3 text-xs transition-colors">
                     <div className="flex items-center gap-2.5">
-                      <MapPin className="w-4 h-4 text-rose-500" />
+                      <MapPin className="h-4 w-4 text-rose-500" />
                       <div>
-                        <div className="font-semibold">{t("profiles.tabs.addresses")}</div>
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="font-semibold">
+                          {t("profiles.tabs.addresses")}
+                        </div>
+                        <div className="text-muted-foreground text-[11px]">
                           {addressCount} {t("profiles.vcard.items_found")}
                         </div>
                       </div>
@@ -449,12 +476,14 @@ export function VCardImportDialog({
                   </label>
 
                   {/* Socials */}
-                  <label className="flex items-center justify-between p-3 rounded-xl border border-border/70 bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer text-xs">
+                  <label className="border-border/70 bg-muted/20 hover:bg-muted/40 flex cursor-pointer items-center justify-between rounded-xl border p-3 text-xs transition-colors">
                     <div className="flex items-center gap-2.5">
-                      <Share2 className="w-4 h-4 text-indigo-500" />
+                      <Share2 className="h-4 w-4 text-indigo-500" />
                       <div>
-                        <div className="font-semibold">{t("profiles.tabs.social")}</div>
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="font-semibold">
+                          {t("profiles.tabs.social")}
+                        </div>
+                        <div className="text-muted-foreground text-[11px]">
                           {socialCount} {t("profiles.vcard.items_found")}
                         </div>
                       </div>
@@ -467,12 +496,14 @@ export function VCardImportDialog({
 
                   {/* Avatar / Photo */}
                   {(parsedData.avatar_url || parsedData.avatar_data_url) && (
-                    <label className="flex items-center justify-between p-3 rounded-xl border border-border/70 bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer text-xs">
+                    <label className="border-border/70 bg-muted/20 hover:bg-muted/40 flex cursor-pointer items-center justify-between rounded-xl border p-3 text-xs transition-colors">
                       <div className="flex items-center gap-2.5">
-                        <Sparkles className="w-4 h-4 text-primary" />
+                        <Sparkles className="text-primary h-4 w-4" />
                         <div>
-                          <div className="font-semibold">{t("profiles.fields.avatar")}</div>
-                          <div className="text-[11px] text-muted-foreground">
+                          <div className="font-semibold">
+                            {t("profiles.fields.avatar")}
+                          </div>
+                          <div className="text-muted-foreground text-[11px]">
                             {t("profiles.vcard.embedded_photo")}
                           </div>
                         </div>
@@ -487,24 +518,24 @@ export function VCardImportDialog({
               </div>
 
               {/* Merge vs Replace Mode Option */}
-              <div className="p-3.5 rounded-xl bg-muted/30 border border-border flex items-center justify-between gap-4 text-xs">
+              <div className="bg-muted/30 border-border flex items-center justify-between gap-4 rounded-xl border p-3.5 text-xs">
                 <div className="space-y-0.5">
-                  <div className="font-bold text-foreground">
+                  <div className="text-foreground font-bold">
                     {t("profiles.vcard.merge_mode_title")}
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-muted-foreground text-[11px]">
                     {mergeMode === "merge"
                       ? t("profiles.vcard.merge_mode_merge_desc")
                       : t("profiles.vcard.merge_mode_replace_desc")}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-1 bg-background p-1 rounded-lg border border-border shrink-0">
+                <div className="bg-background border-border flex shrink-0 items-center gap-1 rounded-lg border p-1">
                   <button
                     type="button"
                     onClick={() => setMergeMode("replace")}
                     className={cn(
-                      "px-2.5 py-1 rounded-md font-semibold text-[11px] transition-colors",
+                      "rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors",
                       mergeMode === "replace"
                         ? "bg-primary text-primary-foreground shadow-xs"
                         : "text-muted-foreground hover:text-foreground",
@@ -516,7 +547,7 @@ export function VCardImportDialog({
                     type="button"
                     onClick={() => setMergeMode("merge")}
                     className={cn(
-                      "px-2.5 py-1 rounded-md font-semibold text-[11px] transition-colors",
+                      "rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors",
                       mergeMode === "merge"
                         ? "bg-primary text-primary-foreground shadow-xs"
                         : "text-muted-foreground hover:text-foreground",
@@ -531,7 +562,7 @@ export function VCardImportDialog({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-border bg-muted/20 flex items-center justify-between">
+        <div className="border-border bg-muted/20 flex items-center justify-between border-t p-4">
           <Button
             type="button"
             variant="ghost"
@@ -550,11 +581,11 @@ export function VCardImportDialog({
               type="button"
               size="sm"
               onClick={handleConfirm}
-              className="gap-2 text-xs font-semibold px-4"
+              className="gap-2 px-4 text-xs font-semibold"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="h-3.5 w-3.5" />
               <span>{t("profiles.vcard.apply_autofill")}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           )}
         </div>

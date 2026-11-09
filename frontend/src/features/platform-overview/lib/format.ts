@@ -5,7 +5,11 @@ export function numberFormatter(locale: AppLocale) {
 }
 
 /** Amounts arrive in minor units (kuruş); every supported currency has 2 decimals. */
-export function formatMoneyMinor(amountMinor: number, currency: string, locale: AppLocale) {
+export function formatMoneyMinor(
+  amountMinor: number,
+  currency: string,
+  locale: AppLocale,
+) {
   try {
     return new Intl.NumberFormat(locale === "tr" ? "tr-TR" : "en-US", {
       style: "currency",
@@ -25,7 +29,11 @@ export function formatPercent(ratio: number, locale: AppLocale) {
 }
 
 /** Translated label for a key, or the fallback when the catalog has no entry. */
-export function labelOr(t: (key: string) => string, key: string, fallback: string) {
+export function labelOr(
+  t: (key: string) => string,
+  key: string,
+  fallback: string,
+) {
   const label = t(key);
   return label === key ? fallback : label;
 }

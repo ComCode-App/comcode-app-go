@@ -3,17 +3,16 @@ import type { ResourceMeta } from "@/features/io/types";
 import type { components } from "@/generated/api";
 import { platformRequest } from "@/lib/api/platform-request";
 
-export type CompanyMemberProfile = components["schemas"]["CompanyMemberProfile"];
-export type CompanyBulkAction = components["schemas"]["CompanyBulkRequest"]["action"];
+export type CompanyMemberProfile =
+  components["schemas"]["CompanyMemberProfile"];
+export type CompanyBulkAction =
+  components["schemas"]["CompanyBulkRequest"]["action"];
 export type ContactParams = components["schemas"]["CompanyBulkContactParams"];
 export type LogoParams = components["schemas"]["CompanyBulkLogoParams"];
 export type ThemeParams = components["schemas"]["CompanyBulkThemeParams"];
 export type LinksParams = components["schemas"]["CompanyBulkLinksParams"];
 export type CompanyBulkParams =
-  | ContactParams
-  | LogoParams
-  | ThemeParams
-  | LinksParams;
+  ContactParams | LogoParams | ThemeParams | LinksParams;
 
 export type MemberProfileQuery = {
   limit: number;
@@ -28,8 +27,7 @@ type Page<T> = { items: T[]; total: number; limit: number; offset: number };
 
 /** Inline runs answer with the finished job; larger runs return the queued job (202). */
 export type CompanyBulkResult =
-  | { sync: true; summary: BulkSummary; job: BulkJob }
-  | BulkJob;
+  { sync: true; summary: BulkSummary; job: BulkJob } | BulkJob;
 
 export function resultJob(result: CompanyBulkResult): BulkJob {
   return "sync" in result ? result.job : result;

@@ -28,7 +28,10 @@ export function SmartLinkPasscodeScreen({ slug }: { slug: string }) {
     try {
       const res = await fetch(`/api/v1/s/${encodeURIComponent(slug)}/unlock`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
         body: JSON.stringify({ passcode }),
         cache: "no-store",
       });
@@ -63,11 +66,17 @@ export function SmartLinkPasscodeScreen({ slug }: { slug: string }) {
           <KeyRound className="text-muted-foreground size-6" />
         </span>
         <div>
-          <h1 className="text-xl font-semibold">{t("public_profile.link_passcode.title")}</h1>
-          <p className="text-muted-foreground mt-1 text-sm">{t("public_profile.link_passcode.body")}</p>
+          <h1 className="text-xl font-semibold">
+            {t("public_profile.link_passcode.title")}
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {t("public_profile.link_passcode.body")}
+          </p>
         </div>
         <div className="grid gap-1.5 text-left">
-          <Label htmlFor="smart-link-passcode">{t("public_profile.link_passcode.label")}</Label>
+          <Label htmlFor="smart-link-passcode">
+            {t("public_profile.link_passcode.label")}
+          </Label>
           <Input
             id="smart-link-passcode"
             type="password"
@@ -84,7 +93,11 @@ export function SmartLinkPasscodeScreen({ slug }: { slug: string }) {
             {error}
           </p>
         ) : null}
-        <Button type="submit" className="w-full" disabled={pending || !passcode}>
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={pending || !passcode}
+        >
           {t("public_profile.link_passcode.submit")}
         </Button>
       </form>

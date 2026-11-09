@@ -109,11 +109,14 @@ export function InteractiveNFCCard({
   const style = MATERIAL_STYLES[card.material] || MATERIAL_STYLES.matte_black;
   const matKey = `cards.materials.${card.material}`;
   const matTranslated = t(matKey);
-  const materialLabel = matTranslated.startsWith("cards.") ? style.label : matTranslated;
+  const materialLabel = matTranslated.startsWith("cards.")
+    ? style.label
+    : matTranslated;
 
-  const targetUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/c/${card.smart_code}`
-    : `https://app.comcode.io/c/${card.smart_code}`;
+  const targetUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/c/${card.smart_code}`
+      : `https://app.comcode.io/c/${card.smart_code}`;
 
   useEffect(() => {
     QRCode.toDataURL(targetUrl, {
@@ -129,33 +132,33 @@ export function InteractiveNFCCard({
   }, [targetUrl]);
 
   return (
-    <div className={cn("flex flex-col gap-3 group/card relative", className)}>
+    <div className={cn("group/card relative flex flex-col gap-3", className)}>
       {/* 3D Card Container */}
       <div
-        className="relative w-full aspect-[1.586/1] rounded-2xl cursor-pointer perspective-1000 select-none transition-transform duration-300 hover:scale-[1.01]"
+        className="perspective-1000 relative aspect-[1.586/1] w-full cursor-pointer rounded-2xl transition-transform duration-300 select-none hover:scale-[1.01]"
         onClick={() => setIsFlipped((prev) => !prev)}
       >
         <div
           className={cn(
-            "relative w-full h-full duration-700 transform-style-3d transition-transform rounded-2xl border backdrop-blur-md",
+            "transform-style-3d relative h-full w-full rounded-2xl border backdrop-blur-md transition-transform duration-700",
             style.bg,
             style.border,
-            isFlipped ? "rotate-y-180" : ""
+            isFlipped ? "rotate-y-180" : "",
           )}
         >
           {/* Card Front */}
-          <div className="absolute inset-0 w-full h-full p-6 flex flex-col justify-between backface-hidden rounded-2xl overflow-hidden">
+          <div className="absolute inset-0 flex h-full w-full flex-col justify-between overflow-hidden rounded-2xl p-6 backface-hidden">
             {/* Subtle Texture Highlights */}
-            <div className="absolute -top-24 -left-24 w-60 h-60 bg-white/5 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-24 -right-24 w-60 h-60 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="pointer-events-none absolute -top-24 -left-24 h-60 w-60 rounded-full bg-white/5 blur-3xl" />
+            <div className="pointer-events-none absolute -right-24 -bottom-24 h-60 w-60 rounded-full bg-white/5 blur-3xl" />
 
             {/* Top Bar: Brand, Chip, Contactless Symbol */}
-            <div className="flex items-center justify-between relative z-10">
+            <div className="relative z-10 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center border border-white/20">
-                  <Sparkles className="w-4 h-4 text-white" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/20 bg-white/10">
+                  <Sparkles className="h-4 w-4 text-white" />
                 </div>
-                <span className="font-bold tracking-wider text-sm text-white font-mono uppercase">
+                <span className="font-mono text-sm font-bold tracking-wider text-white uppercase">
                   ComCode
                 </span>
               </div>
@@ -163,27 +166,27 @@ export function InteractiveNFCCard({
               <div className="flex items-center gap-3">
                 {card.is_locked && (
                   <Badge variant="danger" className="gap-1 px-2 py-0.5 shadow">
-                    <Lock className="w-3 h-3" />
+                    <Lock className="h-3 w-3" />
                     {t("cards.fields.is_locked")}
                   </Badge>
                 )}
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 text-white/80">
-                  <Wifi className="w-4 h-4 rotate-90" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-white/80">
+                  <Wifi className="h-4 w-4 rotate-90" />
                 </div>
               </div>
             </div>
 
             {/* Middle: Smart Chip & Code */}
-            <div className="flex items-center justify-between relative z-10 my-auto">
+            <div className="relative z-10 my-auto flex items-center justify-between">
               <div
                 className={cn(
-                  "w-11 h-8 rounded-md bg-gradient-to-tr border flex flex-col justify-between p-1 shadow-inner relative overflow-hidden",
-                  style.chip
+                  "relative flex h-8 w-11 flex-col justify-between overflow-hidden rounded-md border bg-gradient-to-tr p-1 shadow-inner",
+                  style.chip,
                 )}
               >
-                <div className="w-full h-0.5 bg-black/20" />
-                <div className="w-full h-0.5 bg-black/20" />
-                <div className="w-full h-0.5 bg-black/20" />
+                <div className="h-0.5 w-full bg-black/20" />
+                <div className="h-0.5 w-full bg-black/20" />
+                <div className="h-0.5 w-full bg-black/20" />
                 <div className="absolute inset-y-0 left-1/3 w-0.5 bg-black/20" />
                 <div className="absolute inset-y-0 right-1/3 w-0.5 bg-black/20" />
               </div>
@@ -193,20 +196,41 @@ export function InteractiveNFCCard({
             </div>
 
             {/* Bottom: Cardholder Name & Smart Target */}
-            <div className="flex items-end justify-between relative z-10">
+            <div className="relative z-10 flex items-end justify-between">
               <div className="space-y-0.5">
-                <h3 className={cn("font-bold text-base tracking-wide truncate max-w-[200px]", style.text)}>
+                <h3
+                  className={cn(
+                    "max-w-[200px] truncate text-base font-bold tracking-wide",
+                    style.text,
+                  )}
+                >
                   {card.name}
                 </h3>
-                <p className={cn("text-xs flex items-center gap-1.5", style.subtext)}>
-                  {card.target_type === "profile" && <User className="w-3 h-3" />}
-                  {card.target_type === "direct_url" && <ExternalLink className="w-3 h-3" />}
-                  {card.target_type === "vcard_download" && <Share2 className="w-3 h-3" />}
-                  <span className="truncate max-w-[180px]">
-                    {card.target_type === "profile" && t("cards.settings.target_profile")}
-                    {card.target_type === "direct_url" && (card.direct_url || t("cards.target_direct_url_fallback"))}
-                    {card.target_type === "vcard_download" && t("cards.target_vcard_label")}
-                    {card.target_type === "social_hub" && t("cards.target_social_label")}
+                <p
+                  className={cn(
+                    "flex items-center gap-1.5 text-xs",
+                    style.subtext,
+                  )}
+                >
+                  {card.target_type === "profile" && (
+                    <User className="h-3 w-3" />
+                  )}
+                  {card.target_type === "direct_url" && (
+                    <ExternalLink className="h-3 w-3" />
+                  )}
+                  {card.target_type === "vcard_download" && (
+                    <Share2 className="h-3 w-3" />
+                  )}
+                  <span className="max-w-[180px] truncate">
+                    {card.target_type === "profile" &&
+                      t("cards.settings.target_profile")}
+                    {card.target_type === "direct_url" &&
+                      (card.direct_url ||
+                        t("cards.target_direct_url_fallback"))}
+                    {card.target_type === "vcard_download" &&
+                      t("cards.target_vcard_label")}
+                    {card.target_type === "social_hub" &&
+                      t("cards.target_social_label")}
                   </span>
                 </p>
               </div>
@@ -222,30 +246,30 @@ export function InteractiveNFCCard({
                   }}
                   title={t("cards.flip_card")}
                 >
-                  <RotateCw className="w-3.5 h-3.5" />
+                  <RotateCw className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
           </div>
 
           {/* Card Back */}
-          <div className="absolute inset-0 w-full h-full p-5 flex flex-col justify-between backface-hidden rotate-y-180 rounded-2xl overflow-hidden">
+          <div className="absolute inset-0 flex h-full w-full rotate-y-180 flex-col justify-between overflow-hidden rounded-2xl p-5 backface-hidden">
             {/* Magnetic Stripe Effect */}
-            <div className="absolute top-4 inset-x-0 h-10 bg-black/60 shadow-inner" />
+            <div className="absolute inset-x-0 top-4 h-10 bg-black/60 shadow-inner" />
 
-            <div className="mt-12 flex items-center justify-between relative z-10">
+            <div className="relative z-10 mt-12 flex items-center justify-between">
               {/* QR Code Container */}
-              <div className="p-1.5 bg-white rounded-xl shadow-lg border border-black/10">
+              <div className="rounded-xl border border-black/10 bg-white p-1.5 shadow-lg">
                 {qrDataUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={qrDataUrl}
                     alt="NFC Card QR Code"
-                    className="w-20 h-20 rounded-lg object-contain"
+                    className="h-20 w-20 rounded-lg object-contain"
                   />
                 ) : (
-                  <div className="w-20 h-20 bg-zinc-100 flex items-center justify-center rounded-lg">
-                    <QrCodeIcon className="w-8 h-8 text-zinc-400 animate-pulse" />
+                  <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-zinc-100">
+                    <QrCodeIcon className="h-8 w-8 animate-pulse text-zinc-400" />
                   </div>
                 )}
               </div>
@@ -253,26 +277,28 @@ export function InteractiveNFCCard({
               {/* Back Information */}
               <div className="flex flex-col items-end gap-1.5 text-right font-mono text-xs text-white/80">
                 <div className="flex items-center gap-1 text-white">
-                  <Wifi className="w-3.5 h-3.5" />
-                  <span className="font-semibold text-xs">NFC ENABLED</span>
+                  <Wifi className="h-3.5 w-3.5" />
+                  <span className="text-xs font-semibold">NFC ENABLED</span>
                 </div>
-                <span className="text-[10px] text-white/50">{card.card_uid || "TAP TO CONNECT"}</span>
-                <span className="text-[10px] text-amber-300/80 font-bold tracking-wider">
+                <span className="text-[10px] text-white/50">
+                  {card.card_uid || "TAP TO CONNECT"}
+                </span>
+                <span className="text-[10px] font-bold tracking-wider text-amber-300/80">
                   {card.smart_code}
                 </span>
-                <span className="text-[10px] text-emerald-400/80 font-medium uppercase">
+                <span className="text-[10px] font-medium text-emerald-400/80 uppercase">
                   {card.target_type.replace("_", " ")}
                 </span>
               </div>
             </div>
 
             {/* Back Footer */}
-            <div className="flex items-center justify-between pt-2 border-t border-white/10 relative z-10 text-[10px] text-white/60">
+            <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-2 text-[10px] text-white/60">
               <span>Powered by ComCode ID</span>
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-6 text-[10px] px-2 text-white/90 hover:text-white hover:bg-white/10"
+                className="h-6 px-2 text-[10px] text-white/90 hover:bg-white/10 hover:text-white"
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsFlipped(false);
@@ -288,12 +314,13 @@ export function InteractiveNFCCard({
       {/* Action Toolbar Below Card */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-1.5">
-          <Badge variant={card.is_active ? "success" : "secondary"} className="text-xs">
+          <Badge
+            variant={card.is_active ? "success" : "secondary"}
+            className="text-xs"
+          >
             {card.is_active ? t("common.active") : t("common.inactive")}
           </Badge>
-          <span className="text-xs text-muted-foreground">
-            {materialLabel}
-          </span>
+          <span className="text-muted-foreground text-xs">{materialLabel}</span>
         </div>
 
         <div className="flex items-center gap-1">
@@ -303,7 +330,7 @@ export function InteractiveNFCCard({
             className="h-8 gap-1.5 text-xs"
             onClick={onQRClick}
           >
-            <QrCodeIcon className="w-3.5 h-3.5" />
+            <QrCodeIcon className="h-3.5 w-3.5" />
             QR
           </Button>
           <Button
@@ -311,11 +338,13 @@ export function InteractiveNFCCard({
             variant="outline"
             className={cn(
               "h-8 gap-1.5 text-xs",
-              card.is_locked ? "text-amber-500 border-amber-500/40 hover:bg-amber-500/10" : ""
+              card.is_locked
+                ? "border-amber-500/40 text-amber-500 hover:bg-amber-500/10"
+                : "",
             )}
             onClick={onToggleLock}
           >
-            <Lock className="w-3.5 h-3.5" />
+            <Lock className="h-3.5 w-3.5" />
             {card.is_locked ? t("cards.unlock") : t("cards.lock")}
           </Button>
           <Button
@@ -324,7 +353,7 @@ export function InteractiveNFCCard({
             className="h-8 gap-1.5 text-xs"
             onClick={onSettingsClick}
           >
-            <Settings className="w-3.5 h-3.5" />
+            <Settings className="h-3.5 w-3.5" />
             {t("common.edit")}
           </Button>
         </div>

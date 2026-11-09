@@ -17,10 +17,7 @@ import { routes } from "@/config/routes";
 import { useLocale } from "@/providers/locale-provider";
 import { useDialogs } from "@/providers/dialog-provider";
 
-import {
-  banksService,
-  type BankSummary,
-} from "../services/banks.service";
+import { banksService, type BankSummary } from "../services/banks.service";
 import { banksQueryKeys } from "../hooks/query-keys";
 import { useBankMutations } from "../hooks/use-banks";
 import { getBanksColumns } from "./banks-columns";
@@ -29,10 +26,7 @@ import { BankDialog } from "./bank-dialog";
 export function BanksPage() {
   const { t } = useLocale();
   const { confirmDelete } = useDialogs();
-  const {
-    deleteMutation,
-    toggleActiveMutation,
-  } = useBankMutations();
+  const { deleteMutation, toggleActiveMutation } = useBankMutations();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBank, setEditingBank] = useState<BankSummary | null>(null);

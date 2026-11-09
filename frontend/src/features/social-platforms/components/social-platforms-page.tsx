@@ -145,15 +145,15 @@ export function SocialPlatformsPage() {
             className="gap-2"
           >
             {bulkFetchIconsMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Sparkles className="w-4 h-4 text-primary" />
+              <Sparkles className="text-primary h-4 w-4" />
             )}
             <span>{t("social_platforms.actions.bulk_fetch_og")}</span>
           </Button>
 
           <Button onClick={handleCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             <span>{t("social_platforms.actions.add")}</span>
           </Button>
         </div>

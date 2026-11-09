@@ -12,7 +12,9 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
 )
 
-func intLimit(v int32) *LimitValue { return &LimitValue{Key: FeatureCardsMax, ValueType: "int", IntValue: &v} }
+func intLimit(v int32) *LimitValue {
+	return &LimitValue{Key: FeatureCardsMax, ValueType: "int", IntValue: &v}
+}
 
 func TestCheckIntLimitIsFailClosed(t *testing.T) {
 	cases := []struct {

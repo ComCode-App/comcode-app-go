@@ -17,7 +17,9 @@ export function useCreateCompany() {
     onSuccess: (company) => {
       queryClient.setQueryData(companiesKeys.detail(company.uuid), company);
       void queryClient.invalidateQueries({ queryKey: companiesKeys.lists() });
-      void queryClient.invalidateQueries({ queryKey: companiesKeys.navStats() });
+      void queryClient.invalidateQueries({
+        queryKey: companiesKeys.navStats(),
+      });
       appToast.success(t("companies.toast.created"));
     },
   });
@@ -62,7 +64,9 @@ export function useChangeCompanyMemberRole(companyUuid: string) {
     mutationFn: ({ userUuid, role }: { userUuid: string; role: string }) =>
       companiesService.changeMemberRole(companyUuid, userUuid, role),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: companiesKeys.detail(companyUuid) });
+      void queryClient.invalidateQueries({
+        queryKey: companiesKeys.detail(companyUuid),
+      });
       appToast.success(t("companies.toast.member_updated"));
     },
   });
@@ -73,9 +77,12 @@ export function useRemoveCompanyMember(companyUuid: string) {
   const { t } = useLocale();
 
   return useAppMutation({
-    mutationFn: (userUuid: string) => companiesService.removeMember(companyUuid, userUuid),
+    mutationFn: (userUuid: string) =>
+      companiesService.removeMember(companyUuid, userUuid),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: companiesKeys.detail(companyUuid) });
+      void queryClient.invalidateQueries({
+        queryKey: companiesKeys.detail(companyUuid),
+      });
       void queryClient.invalidateQueries({ queryKey: companiesKeys.lists() });
       appToast.success(t("companies.toast.member_removed"));
     },

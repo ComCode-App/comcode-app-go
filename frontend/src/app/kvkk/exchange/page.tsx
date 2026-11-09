@@ -13,5 +13,9 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
  */
 export default async function ExchangeDeletePage({ searchParams }: PageProps) {
   const { token } = await searchParams;
-  return <ExchangeDelete token={typeof token === "string" ? token.slice(0, 200) : ""} />;
+  return (
+    <ExchangeDelete
+      token={typeof token === "string" ? token.slice(0, 200) : ""}
+    />
+  );
 }

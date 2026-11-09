@@ -82,7 +82,9 @@ async function scrubUpstreamHeaders(init?: HeadersInit): Promise<Headers> {
   // Callers (the BFF proxy) may pin one id for the whole browser request, retries included.
   headers.set(
     REQUEST_ID_HEADER,
-    resolveRequestId(headers.get(REQUEST_ID_HEADER) ?? (await incomingRequestId())),
+    resolveRequestId(
+      headers.get(REQUEST_ID_HEADER) ?? (await incomingRequestId()),
+    ),
   );
   await forwardClientHeaders(headers);
   return headers;
@@ -115,7 +117,8 @@ async function forwardClientHeaders(headers: Headers): Promise<void> {
   const forwardedFor = incoming.get("x-forwarded-for");
   if (forwardedFor) headers.set("X-Forwarded-For", forwardedFor);
   const userAgent = incoming.get("user-agent");
-  if (userAgent && !headers.has("user-agent")) headers.set("User-Agent", userAgent);
+  if (userAgent && !headers.has("user-agent"))
+    headers.set("User-Agent", userAgent);
 }
 
 /**

@@ -29,13 +29,11 @@ import { CategoryDialog } from "./category-dialog";
 export function CategoriesPage() {
   const { t } = useLocale();
   const { confirmDelete } = useDialogs();
-  const {
-    deleteMutation,
-    toggleActiveMutation,
-  } = useCategoryMutations();
+  const { deleteMutation, toggleActiveMutation } = useCategoryMutations();
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<CategorySummary | null>(null);
+  const [editingCategory, setEditingCategory] =
+    useState<CategorySummary | null>(null);
 
   const listState = useServerListState({ initialPageSize: 20 });
   const listParams = useMemo(

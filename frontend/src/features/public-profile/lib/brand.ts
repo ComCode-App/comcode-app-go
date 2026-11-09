@@ -13,16 +13,22 @@ function luminance(hex: string): number {
     const c = v / 255;
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
   };
-  return 0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255);
+  return (
+    0.2126 * channel((n >> 16) & 255) +
+    0.7152 * channel((n >> 8) & 255) +
+    0.0722 * channel(n & 255)
+  );
 }
 
-const contrast = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+const contrast = (a: number, b: number) =>
+  (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 
 /** CSS variables for a #rrggbb brand color; empty for "" or a malformed value. */
 export function brandStyle(color: string | null | undefined): CSSProperties {
   if (!color || !HEX_RE.test(color)) return {};
   const l = luminance(color);
-  const foreground = contrast(l, 1) >= contrast(l, luminance("#111827")) ? "#ffffff" : "#111827";
+  const foreground =
+    contrast(l, 1) >= contrast(l, luminance("#111827")) ? "#ffffff" : "#111827";
   return {
     "--primary": color,
     "--primary-foreground": foreground,

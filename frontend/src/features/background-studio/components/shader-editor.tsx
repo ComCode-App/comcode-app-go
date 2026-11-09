@@ -15,7 +15,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { PremiumLockIcon, useDesignPremium } from "@/features/entitlements/components/premium-lock";
+import {
+  PremiumLockIcon,
+  useDesignPremium,
+} from "@/features/entitlements/components/premium-lock";
 import { useLocale } from "@/providers/locale-provider";
 import { cn } from "@/lib/utils";
 
@@ -60,13 +63,20 @@ function ParamControl({
   label: string;
   onChange: (value: unknown) => void;
 }) {
-  if (param.type === "number" && param.min !== undefined && param.max !== undefined) {
-    const num = typeof value === "number" ? value : Number(param.defaultValue ?? param.min);
+  if (
+    param.type === "number" &&
+    param.min !== undefined &&
+    param.max !== undefined
+  ) {
+    const num =
+      typeof value === "number"
+        ? value
+        : Number(param.defaultValue ?? param.min);
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           <Label className="text-xs">{label}</Label>
-          <span className="font-mono text-[11px] text-muted-foreground">
+          <span className="text-muted-foreground font-mono text-[11px]">
             {Number.isFinite(num) ? num : "—"}
           </span>
         </div>
@@ -200,7 +210,8 @@ export function ShaderEditor({ doc, onChange }: ShaderEditorProps) {
   // Animated shaders can be tried out on any plan; saving them needs design.premium (TEC-947).
   const allowPremium = useDesignPremium();
 
-  const entry = SHADER_REGISTRY[doc.shaderType] ?? SHADER_REGISTRY["mesh-gradient"];
+  const entry =
+    SHADER_REGISTRY[doc.shaderType] ?? SHADER_REGISTRY["mesh-gradient"];
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -235,7 +246,9 @@ export function ShaderEditor({ doc, onChange }: ShaderEditorProps) {
     });
   };
 
-  const customParams = entry.params.filter((p) => p.category === "custom" || p.category === "color" || !p.category);
+  const customParams = entry.params.filter(
+    (p) => p.category === "custom" || p.category === "color" || !p.category,
+  );
   const motionParams = entry.params.filter((p) => p.category === "motion");
   const sizingParams = entry.params.filter((p) => p.category === "sizing");
 
@@ -281,7 +294,11 @@ export function ShaderEditor({ doc, onChange }: ShaderEditorProps) {
               <div className="flex items-center justify-between gap-1 font-medium">
                 <span className="truncate">{getShaderLabel(s.id, locale)}</span>
                 {!allowPremium && isPremiumShader(s.id) ? (
-                  <PremiumLockIcon className={cn(s.id === doc.shaderType && "text-primary-foreground/80")} />
+                  <PremiumLockIcon
+                    className={cn(
+                      s.id === doc.shaderType && "text-primary-foreground/80",
+                    )}
+                  />
                 ) : null}
               </div>
               <div
@@ -299,7 +316,7 @@ export function ShaderEditor({ doc, onChange }: ShaderEditorProps) {
         </div>
       </ScrollArea>
 
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         {getShaderDescription(doc.shaderType, locale)}
       </p>
 

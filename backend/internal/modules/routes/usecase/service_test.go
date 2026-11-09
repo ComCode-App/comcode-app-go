@@ -1,15 +1,15 @@
 package usecase_test
 
 import (
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
 	"context"
 	"errors"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/usecase"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
+	"github.com/google/uuid"
 )
 
 // ownerAccount is the personal account of user id (account id == user id in these tests).

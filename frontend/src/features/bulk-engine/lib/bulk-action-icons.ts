@@ -9,7 +9,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import type { BulkActionDef, BulkActionMeta, BulkResource } from "@/features/bulk-engine/types";
+import type {
+  BulkActionDef,
+  BulkActionMeta,
+  BulkResource,
+} from "@/features/bulk-engine/types";
 
 const bulkActionIconCatalog: Record<
   BulkResource,

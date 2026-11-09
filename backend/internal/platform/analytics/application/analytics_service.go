@@ -18,16 +18,16 @@ import (
 
 // AnalyticsSettings holds runtime configuration for the analytics subsystem.
 type AnalyticsSettings struct {
-	Enabled                 bool   `json:"enabled"`
-	EventDeliveryMode       string `json:"event_delivery_mode"`
-	RawEventRetentionDays   int    `json:"raw_event_retention_days"`
-	AggregateRetentionDays  int    `json:"aggregate_retention_days"`
-	QueueName               string `json:"queue_name"`
-	RealtimeEnabled         bool   `json:"realtime_enabled"`
-	BatchSize               int    `json:"batch_size"`
-	BatchFlushIntervalMs    int    `json:"batch_flush_interval_ms"`
-	IPHashSaltRotationDays  int    `json:"ip_hash_salt_rotation_days"`
-	AnonymizeIP             bool   `json:"anonymize_ip"`
+	Enabled                bool   `json:"enabled"`
+	EventDeliveryMode      string `json:"event_delivery_mode"`
+	RawEventRetentionDays  int    `json:"raw_event_retention_days"`
+	AggregateRetentionDays int    `json:"aggregate_retention_days"`
+	QueueName              string `json:"queue_name"`
+	RealtimeEnabled        bool   `json:"realtime_enabled"`
+	BatchSize              int    `json:"batch_size"`
+	BatchFlushIntervalMs   int    `json:"batch_flush_interval_ms"`
+	IPHashSaltRotationDays int    `json:"ip_hash_salt_rotation_days"`
+	AnonymizeIP            bool   `json:"anonymize_ip"`
 	// Read-only (TEC-936): a changed rotation period applies from the UTC day after
 	// IPHashSaltRotationChangedOn (yyyy-MM-dd); until then IPHashSaltRotationPreviousDays is used.
 	IPHashSaltRotationPreviousDays int    `json:"ip_hash_salt_rotation_previous_days,omitempty"`
@@ -119,17 +119,17 @@ func (s *AnalyticsService) UpdateSettings(ctx context.Context, newSettings Analy
 
 	now := time.Now().UTC()
 	row, err := s.q.UpdateAnalyticsSettings(ctx, db.UpdateAnalyticsSettingsParams{
-		Enabled:                 pgtype.Bool{Bool: newSettings.Enabled, Valid: true},
-		EventDeliveryMode:       pgtype.Text{String: newSettings.EventDeliveryMode, Valid: newSettings.EventDeliveryMode != ""},
-		RawEventRetentionDays:   pgtype.Int4{Int32: int32(newSettings.RawEventRetentionDays), Valid: newSettings.RawEventRetentionDays > 0},
-		AggregateRetentionDays:  pgtype.Int4{Int32: int32(newSettings.AggregateRetentionDays), Valid: newSettings.AggregateRetentionDays > 0},
-		QueueName:               pgtype.Text{String: newSettings.QueueName, Valid: newSettings.QueueName != ""},
-		RealtimeEnabled:         pgtype.Bool{Bool: newSettings.RealtimeEnabled, Valid: true},
-		BatchSize:               pgtype.Int4{Int32: int32(newSettings.BatchSize), Valid: newSettings.BatchSize > 0},
-		BatchFlushIntervalMs:    pgtype.Int4{Int32: int32(newSettings.BatchFlushIntervalMs), Valid: newSettings.BatchFlushIntervalMs > 0},
-		IpHashSaltRotationDays:  pgtype.Int4{Int32: int32(newSettings.IPHashSaltRotationDays), Valid: newSettings.IPHashSaltRotationDays > 0},
-		Today:                   pgtype.Date{Time: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC), Valid: true},
-		AnonymizeIp:             pgtype.Bool{Bool: newSettings.AnonymizeIP, Valid: true},
+		Enabled:                pgtype.Bool{Bool: newSettings.Enabled, Valid: true},
+		EventDeliveryMode:      pgtype.Text{String: newSettings.EventDeliveryMode, Valid: newSettings.EventDeliveryMode != ""},
+		RawEventRetentionDays:  pgtype.Int4{Int32: int32(newSettings.RawEventRetentionDays), Valid: newSettings.RawEventRetentionDays > 0},
+		AggregateRetentionDays: pgtype.Int4{Int32: int32(newSettings.AggregateRetentionDays), Valid: newSettings.AggregateRetentionDays > 0},
+		QueueName:              pgtype.Text{String: newSettings.QueueName, Valid: newSettings.QueueName != ""},
+		RealtimeEnabled:        pgtype.Bool{Bool: newSettings.RealtimeEnabled, Valid: true},
+		BatchSize:              pgtype.Int4{Int32: int32(newSettings.BatchSize), Valid: newSettings.BatchSize > 0},
+		BatchFlushIntervalMs:   pgtype.Int4{Int32: int32(newSettings.BatchFlushIntervalMs), Valid: newSettings.BatchFlushIntervalMs > 0},
+		IpHashSaltRotationDays: pgtype.Int4{Int32: int32(newSettings.IPHashSaltRotationDays), Valid: newSettings.IPHashSaltRotationDays > 0},
+		Today:                  pgtype.Date{Time: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC), Valid: true},
+		AnonymizeIp:            pgtype.Bool{Bool: newSettings.AnonymizeIP, Valid: true},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("update analytics settings: %w", err)

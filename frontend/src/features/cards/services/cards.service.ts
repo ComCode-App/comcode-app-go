@@ -9,13 +9,20 @@ export type CardSummary = {
   name: string;
   card_uid?: string;
   smart_code: string;
-  target_type: "profile" | "direct_url" | "vcard_download" | "social_hub" | string;
+  target_type:
+    "profile" | "direct_url" | "vcard_download" | "social_hub" | string;
   profile_uuid?: string;
   profile_avatar_url?: string;
   profile_locale?: string;
   direct_url?: string;
   custom_data?: Record<string, unknown>;
-  card_type: "physical_nfc" | "metal_card" | "wood_card" | "pvc_card" | "digital_only" | string;
+  card_type:
+    | "physical_nfc"
+    | "metal_card"
+    | "wood_card"
+    | "pvc_card"
+    | "digital_only"
+    | string;
   material: string;
   color_hex: string;
   is_active: boolean;
@@ -32,13 +39,20 @@ export type CardDetail = {
   card_uid?: string;
   activation_code?: string;
   smart_code: string;
-  target_type: "profile" | "direct_url" | "vcard_download" | "social_hub" | string;
+  target_type:
+    "profile" | "direct_url" | "vcard_download" | "social_hub" | string;
   profile_uuid?: string;
   profile_avatar_url?: string;
   profile_locale?: string;
   direct_url?: string;
   custom_data?: Record<string, unknown>;
-  card_type: "physical_nfc" | "metal_card" | "wood_card" | "pvc_card" | "digital_only" | string;
+  card_type:
+    | "physical_nfc"
+    | "metal_card"
+    | "wood_card"
+    | "pvc_card"
+    | "digital_only"
+    | string;
   material: string;
   color_hex: string;
   is_active: boolean;
@@ -92,10 +106,12 @@ export type ListCardsParams = {
 export const cardsService = {
   async list(params?: ListCardsParams): Promise<CardListResult> {
     const query = new URLSearchParams();
-    if (params?.page) query.set("offset", String((params.page - 1) * (params.pageSize || 20)));
+    if (params?.page)
+      query.set("offset", String((params.page - 1) * (params.pageSize || 20)));
     if (params?.pageSize) query.set("limit", String(params.pageSize));
     if (params?.search) query.set("q", params.search);
-    if (params?.is_active !== undefined) query.set("is_active", String(params.is_active));
+    if (params?.is_active !== undefined)
+      query.set("is_active", String(params.is_active));
 
     return platformRequest<CardListResult>(
       "GET",
@@ -104,17 +120,28 @@ export const cardsService = {
   },
 
   async get(uuid: string): Promise<CardDetail> {
-    const res = await platformRequest<{ data: CardDetail }>("GET", `/v1/cards/${uuid}`);
+    const res = await platformRequest<{ data: CardDetail }>(
+      "GET",
+      `/v1/cards/${uuid}`,
+    );
     return res.data;
   },
 
   async create(body: UpsertCardPayload): Promise<CardDetail> {
-    const res = await platformRequest<{ data: CardDetail }>("POST", "/v1/cards", { body });
+    const res = await platformRequest<{ data: CardDetail }>(
+      "POST",
+      "/v1/cards",
+      { body },
+    );
     return res.data;
   },
 
   async update(uuid: string, body: UpsertCardPayload): Promise<CardDetail> {
-    const res = await platformRequest<{ data: CardDetail }>("PUT", `/v1/cards/${uuid}`, { body });
+    const res = await platformRequest<{ data: CardDetail }>(
+      "PUT",
+      `/v1/cards/${uuid}`,
+      { body },
+    );
     return res.data;
   },
 
@@ -127,7 +154,11 @@ export const cardsService = {
   },
 
   async activate(body: ActivateCardPayload): Promise<CardDetail> {
-    const res = await platformRequest<{ data: CardDetail }>("POST", "/v1/cards/activate", { body });
+    const res = await platformRequest<{ data: CardDetail }>(
+      "POST",
+      "/v1/cards/activate",
+      { body },
+    );
     return res.data;
   },
 
@@ -141,6 +172,9 @@ export const cardsService = {
 
   async resolveSmartLink(code: string): Promise<SmartLinkResolution> {
     // platformRequest already unwraps the {success, data} envelope.
-    return platformRequest<SmartLinkResolution>("GET", `/v1/c/${encodeURIComponent(code)}`);
+    return platformRequest<SmartLinkResolution>(
+      "GET",
+      `/v1/c/${encodeURIComponent(code)}`,
+    );
   },
 };

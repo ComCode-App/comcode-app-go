@@ -26,7 +26,10 @@ import { Separator } from "@/components/ui/separator";
 import { useLocale } from "@/providers/locale-provider";
 import { productsService } from "@/features/products";
 import { Bounded3DStage } from "@/features/products/components/Bounded3DStage";
-import { ordersService, type CreateOrderPayload } from "../services/orders.service";
+import {
+  ordersService,
+  type CreateOrderPayload,
+} from "../services/orders.service";
 import { ordersQueryKeys } from "../hooks/query-keys";
 import { cn } from "@/lib/utils";
 
@@ -44,9 +47,13 @@ export function SubscriberOrderDialog({
   const { t, locale } = useLocale();
   const queryClient = useQueryClient();
 
-  const [step, setStep] = useState<"product" | "customize" | "shipping">("product");
+  const [step, setStep] = useState<"product" | "customize" | "shipping">(
+    "product",
+  );
   const [selectedProductUuid, setSelectedProductUuid] = useState<string>("");
-  const [selectedVariantUuid, setSelectedVariantUuid] = useState<string | undefined>(undefined);
+  const [selectedVariantUuid, setSelectedVariantUuid] = useState<
+    string | undefined
+  >(undefined);
   const [quantity, setQuantity] = useState<number>(1);
 
   // Customization fields
@@ -70,7 +77,8 @@ export function SubscriberOrderDialog({
   });
 
   const products = productsData?.items || [];
-  const activeProductUuid = selectedProductUuid || (products.length > 0 ? products[0].uuid : "");
+  const activeProductUuid =
+    selectedProductUuid || (products.length > 0 ? products[0].uuid : "");
 
   // Fetch Full Product Detail with Variants
   const { data: currentProduct } = useQuery({
@@ -79,11 +87,15 @@ export function SubscriberOrderDialog({
     enabled: Boolean(activeProductUuid),
   });
 
-  const activeVariants = currentProduct?.variants?.filter((v) => v.is_active) || [];
-  const selectedVariant = activeVariants.find((v) => v.uuid === selectedVariantUuid) || activeVariants[0];
+  const activeVariants =
+    currentProduct?.variants?.filter((v) => v.is_active) || [];
+  const selectedVariant =
+    activeVariants.find((v) => v.uuid === selectedVariantUuid) ||
+    activeVariants[0];
 
   // Calculations
-  const unitPrice = (currentProduct?.base_price || 0) + (selectedVariant?.price_delta || 0);
+  const unitPrice =
+    (currentProduct?.base_price || 0) + (selectedVariant?.price_delta || 0);
   const subtotal = unitPrice * quantity;
   const taxRate = currentProduct?.tax_rate || 20;
   const taxAmount = (subtotal * taxRate) / 100;
@@ -92,7 +104,8 @@ export function SubscriberOrderDialog({
 
   // Create Order Mutation
   const createOrderMutation = useMutation({
-    mutationFn: (payload: CreateOrderPayload) => ordersService.createMyOrder(payload),
+    mutationFn: (payload: CreateOrderPayload) =>
+      ordersService.createMyOrder(payload),
     onSuccess: () => {
       toast.success(t("orders.created_success"));
       queryClient.invalidateQueries({ queryKey: ordersQueryKeys.all });
@@ -113,7 +126,12 @@ export function SubscriberOrderDialog({
       return;
     }
 
-    if (!shippingFullName || !shippingAddress || !shippingCity || !shippingPhone) {
+    if (
+      !shippingFullName ||
+      !shippingAddress ||
+      !shippingCity ||
+      !shippingPhone
+    ) {
       toast.error(t("orders.fill_shipping_required"));
       setStep("shipping");
       return;
@@ -158,11 +176,11 @@ export function SubscriberOrderDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[760px] max-h-[92vh] overflow-y-auto p-6">
+      <DialogContent className="max-h-[92vh] overflow-y-auto p-6 sm:max-w-[760px]">
         <DialogHeader>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-              <ShoppingBag className="w-5 h-5" />
+          <div className="mb-1 flex items-center gap-2">
+            <div className="bg-primary/10 text-primary flex h-9 w-9 items-center justify-center rounded-xl">
+              <ShoppingBag className="h-5 w-5" />
             </div>
             <div>
               <DialogTitle className="text-xl font-bold">
@@ -176,40 +194,52 @@ export function SubscriberOrderDialog({
         </DialogHeader>
 
         {/* Steps Breadcrumb */}
-        <div className="flex items-center justify-between border-y py-2.5 my-1 text-xs">
+        <div className="my-1 flex items-center justify-between border-y py-2.5 text-xs">
           <button
             type="button"
             onClick={() => setStep("product")}
             className={cn(
               "flex items-center gap-1.5 font-medium transition-colors",
-              step === "product" ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
+              step === "product"
+                ? "text-primary font-bold"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <span className="w-5 h-5 rounded-full border flex items-center justify-center text-[10px]">1</span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full border text-[10px]">
+              1
+            </span>
             {t("orders.subscriber.step_product")}
           </button>
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          <ChevronRight className="text-muted-foreground h-4 w-4" />
           <button
             type="button"
             onClick={() => setStep("customize")}
             className={cn(
               "flex items-center gap-1.5 font-medium transition-colors",
-              step === "customize" ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
+              step === "customize"
+                ? "text-primary font-bold"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <span className="w-5 h-5 rounded-full border flex items-center justify-center text-[10px]">2</span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full border text-[10px]">
+              2
+            </span>
             {t("orders.subscriber.step_customize")}
           </button>
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          <ChevronRight className="text-muted-foreground h-4 w-4" />
           <button
             type="button"
             onClick={() => setStep("shipping")}
             className={cn(
               "flex items-center gap-1.5 font-medium transition-colors",
-              step === "shipping" ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
+              step === "shipping"
+                ? "text-primary font-bold"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <span className="w-5 h-5 rounded-full border flex items-center justify-center text-[10px]">3</span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full border text-[10px]">
+              3
+            </span>
             {t("orders.subscriber.step_shipping")}
           </button>
         </div>
@@ -218,27 +248,36 @@ export function SubscriberOrderDialog({
         {step === "product" && (
           <div className="space-y-4 py-2">
             {/* 3D Interactive Stage Preview */}
-            <div className="relative w-full h-64 rounded-2xl overflow-hidden border bg-zinc-950/90 shadow-inner">
+            <div className="relative h-64 w-full overflow-hidden rounded-2xl border bg-zinc-950/90 shadow-inner">
               <Bounded3DStage
-                modelUrl={selectedVariant?.model_3d_file_url || currentProduct?.model_3d_file_url}
-                usdzUrl={selectedVariant?.model_3d_usdz_url || currentProduct?.model_3d_usdz_url}
-                viewbox={selectedVariant?.model_3d_viewbox || currentProduct?.model_3d_viewbox}
+                modelUrl={
+                  selectedVariant?.model_3d_file_url ||
+                  currentProduct?.model_3d_file_url
+                }
+                usdzUrl={
+                  selectedVariant?.model_3d_usdz_url ||
+                  currentProduct?.model_3d_usdz_url
+                }
+                viewbox={
+                  selectedVariant?.model_3d_viewbox ||
+                  currentProduct?.model_3d_viewbox
+                }
                 cardColor={selectedVariant?.color_code || "#18181b"}
                 interactive={true}
-                className="w-full h-full"
+                className="h-full w-full"
               />
-              <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 text-[11px] text-white flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/60 px-2.5 py-1 text-[11px] text-white backdrop-blur-md">
+                <Sparkles className="h-3.5 w-3.5 text-amber-400" />
                 <span>{t("orders.subscriber.live_3d_preview")}</span>
               </div>
             </div>
 
             {/* Product Selector */}
             <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                 {t("orders.subscriber.select_product")}
               </Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 {products.map((p) => (
                   <div
                     key={p.uuid}
@@ -247,19 +286,27 @@ export function SubscriberOrderDialog({
                       setSelectedVariantUuid(undefined);
                     }}
                     className={cn(
-                      "p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between",
+                      "flex cursor-pointer items-center justify-between rounded-xl border p-3 transition-all",
                       activeProductUuid === p.uuid
-                        ? "border-primary bg-primary/5 ring-1 ring-primary"
-                        : "border-border hover:border-border/80 bg-card"
+                        ? "border-primary bg-primary/5 ring-primary ring-1"
+                        : "border-border hover:border-border/80 bg-card",
                     )}
                   >
                     <div className="space-y-0.5">
-                      <p className="font-semibold text-sm text-foreground">{p.name}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-1">{p.short_description}</p>
+                      <p className="text-foreground text-sm font-semibold">
+                        {p.name}
+                      </p>
+                      <p className="text-muted-foreground line-clamp-1 text-xs">
+                        {p.short_description}
+                      </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-sm text-primary">
-                        {p.base_price.toLocaleString(locale === "tr" ? "tr-TR" : "en-US", { minimumFractionDigits: 2 })} {p.currency}
+                      <p className="text-primary text-sm font-bold">
+                        {p.base_price.toLocaleString(
+                          locale === "tr" ? "tr-TR" : "en-US",
+                          { minimumFractionDigits: 2 },
+                        )}{" "}
+                        {p.currency}
                       </p>
                     </div>
                   </div>
@@ -270,10 +317,10 @@ export function SubscriberOrderDialog({
             {/* Variant / Material Selector */}
             {currentProduct?.variants && currentProduct.variants.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                   {t("orders.subscriber.select_material")}
                 </Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {currentProduct.variants
                     .filter((v) => v.is_active)
                     .map((v) => (
@@ -281,21 +328,24 @@ export function SubscriberOrderDialog({
                         key={v.uuid || v.id}
                         onClick={() => setSelectedVariantUuid(v.uuid)}
                         className={cn(
-                          "p-2.5 rounded-xl border cursor-pointer transition-all flex items-center gap-2.5",
+                          "flex cursor-pointer items-center gap-2.5 rounded-xl border p-2.5 transition-all",
                           selectedVariant?.uuid === v.uuid
-                            ? "border-primary bg-primary/5 ring-1 ring-primary"
-                            : "border-border hover:border-border/80 bg-card"
+                            ? "border-primary bg-primary/5 ring-primary ring-1"
+                            : "border-border hover:border-border/80 bg-card",
                         )}
                       >
                         <div
-                          className="w-4 h-4 rounded-full border shadow-sm shrink-0"
+                          className="h-4 w-4 shrink-0 rounded-full border shadow-sm"
                           style={{ backgroundColor: v.color_code || "#18181b" }}
                         />
                         <div className="truncate">
-                          <p className="font-medium text-xs text-foreground truncate">{v.name}</p>
+                          <p className="text-foreground truncate text-xs font-medium">
+                            {v.name}
+                          </p>
                           {v.price_delta > 0 && (
-                            <p className="text-[10px] text-muted-foreground">
-                              +{v.price_delta.toFixed(2)} {currentProduct.currency}
+                            <p className="text-muted-foreground text-[10px]">
+                              +{v.price_delta.toFixed(2)}{" "}
+                              {currentProduct.currency}
                             </p>
                           )}
                         </div>
@@ -310,42 +360,58 @@ export function SubscriberOrderDialog({
         {/* STEP 2: CUSTOMIZE & QUANTITY */}
         {step === "customize" && (
           <div className="space-y-4 py-2">
-            <div className="p-3 rounded-xl bg-muted/40 border space-y-1">
-              <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-primary" />
+            <div className="bg-muted/40 space-y-1 rounded-xl border p-3">
+              <p className="text-foreground flex items-center gap-1.5 text-xs font-semibold">
+                <Sparkles className="text-primary h-4 w-4" />
                 {t("orders.subscriber.custom_print_heading")}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {t("orders.subscriber.custom_print_subtext")}
               </p>
             </div>
 
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="printName">{t("orders.subscriber.print_name_label")}</Label>
+                <Label htmlFor="printName">
+                  {t("orders.subscriber.print_name_label")}
+                </Label>
                 <Input
                   id="printName"
-                  placeholder={locale === "tr" ? "Örn: Furkan Meclis" : "e.g. John Doe"}
+                  placeholder={
+                    locale === "tr" ? "Örn: Furkan Meclis" : "e.g. John Doe"
+                  }
                   value={printName}
                   onChange={(e) => setPrintName(e.target.value)}
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="printTitle">{t("orders.subscriber.print_title_label")}</Label>
+                  <Label htmlFor="printTitle">
+                    {t("orders.subscriber.print_title_label")}
+                  </Label>
                   <Input
                     id="printTitle"
-                    placeholder={locale === "tr" ? "Örn: CEO & Kurucu" : "e.g. Founder & CEO"}
+                    placeholder={
+                      locale === "tr"
+                        ? "Örn: CEO & Kurucu"
+                        : "e.g. Founder & CEO"
+                    }
                     value={printTitle}
                     onChange={(e) => setPrintTitle(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="printCompany">{t("orders.subscriber.print_company_label")}</Label>
+                  <Label htmlFor="printCompany">
+                    {t("orders.subscriber.print_company_label")}
+                  </Label>
                   <Input
                     id="printCompany"
-                    placeholder={locale === "tr" ? "Örn: ComCode Yazılım A.Ş." : "e.g. Acme Inc."}
+                    placeholder={
+                      locale === "tr"
+                        ? "Örn: ComCode Yazılım A.Ş."
+                        : "e.g. Acme Inc."
+                    }
                     value={printCompany}
                     onChange={(e) => setPrintCompany(e.target.value)}
                   />
@@ -355,10 +421,12 @@ export function SubscriberOrderDialog({
 
             {/* Quantity Selector */}
             <div className="pt-2">
-              <div className="flex items-center justify-between p-3.5 rounded-xl border bg-card">
+              <div className="bg-card flex items-center justify-between rounded-xl border p-3.5">
                 <div className="space-y-0.5">
-                  <Label className="text-sm font-semibold">{t("orders.subscriber.quantity_label")}</Label>
-                  <p className="text-xs text-muted-foreground">
+                  <Label className="text-sm font-semibold">
+                    {t("orders.subscriber.quantity_label")}
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
                     {t("orders.subscriber.quantity_subtext")}
                   </p>
                 </div>
@@ -370,9 +438,11 @@ export function SubscriberOrderDialog({
                     className="h-8 w-8 rounded-lg"
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   >
-                    <Minus className="w-3.5 h-3.5" />
+                    <Minus className="h-3.5 w-3.5" />
                   </Button>
-                  <span className="font-bold text-base w-6 text-center">{quantity}</span>
+                  <span className="w-6 text-center text-base font-bold">
+                    {quantity}
+                  </span>
                   <Button
                     type="button"
                     size="icon"
@@ -380,14 +450,16 @@ export function SubscriberOrderDialog({
                     className="h-8 w-8 rounded-lg"
                     onClick={() => setQuantity((q) => q + 1)}
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="orderNotes">{t("orders.subscriber.notes_label")}</Label>
+              <Label htmlFor="orderNotes">
+                {t("orders.subscriber.notes_label")}
+              </Label>
               <Input
                 id="orderNotes"
                 placeholder={t("orders.subscriber.notes_placeholder")}
@@ -402,9 +474,11 @@ export function SubscriberOrderDialog({
         {step === "shipping" && (
           <div className="space-y-4 py-2">
             <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="shipFullName">{t("orders.subscriber.shipping_name")}</Label>
+                  <Label htmlFor="shipFullName">
+                    {t("orders.subscriber.shipping_name")}
+                  </Label>
                   <Input
                     id="shipFullName"
                     placeholder={locale === "tr" ? "Ad Soyad" : "Full Name"}
@@ -413,10 +487,14 @@ export function SubscriberOrderDialog({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="shipPhone">{t("orders.subscriber.shipping_phone")}</Label>
+                  <Label htmlFor="shipPhone">
+                    {t("orders.subscriber.shipping_phone")}
+                  </Label>
                   <Input
                     id="shipPhone"
-                    placeholder={locale === "tr" ? "05XX XXX XX XX" : "+1 (555) 000-0000"}
+                    placeholder={
+                      locale === "tr" ? "05XX XXX XX XX" : "+1 (555) 000-0000"
+                    }
                     value={shippingPhone}
                     onChange={(e) => setShippingPhone(e.target.value)}
                   />
@@ -424,18 +502,26 @@ export function SubscriberOrderDialog({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="shipAddress">{t("orders.subscriber.shipping_address")}</Label>
+                <Label htmlFor="shipAddress">
+                  {t("orders.subscriber.shipping_address")}
+                </Label>
                 <Input
                   id="shipAddress"
-                  placeholder={locale === "tr" ? "Mahalle, Cadde, Sokak, Kapı No / Daire" : "Street address, Apt, Suite, Unit"}
+                  placeholder={
+                    locale === "tr"
+                      ? "Mahalle, Cadde, Sokak, Kapı No / Daire"
+                      : "Street address, Apt, Suite, Unit"
+                  }
                   value={shippingAddress}
                   onChange={(e) => setShippingAddress(e.target.value)}
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="shipCity">{t("orders.subscriber.shipping_city")}</Label>
+                  <Label htmlFor="shipCity">
+                    {t("orders.subscriber.shipping_city")}
+                  </Label>
                   <Input
                     id="shipCity"
                     placeholder={locale === "tr" ? "İstanbul" : "New York"}
@@ -444,7 +530,9 @@ export function SubscriberOrderDialog({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="shipPostal">{t("orders.subscriber.shipping_postal")}</Label>
+                  <Label htmlFor="shipPostal">
+                    {t("orders.subscriber.shipping_postal")}
+                  </Label>
                   <Input
                     id="shipPostal"
                     placeholder={locale === "tr" ? "34000" : "10001"}
@@ -456,27 +544,50 @@ export function SubscriberOrderDialog({
             </div>
 
             {/* Order Cost Breakdown */}
-            <div className="p-4 rounded-xl bg-muted/40 border space-y-2 mt-2">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{currentProduct?.name} ({selectedVariant?.name || t("orders.subscriber.default_variant")}) x {quantity}</span>
-                <span>{subtotal.toLocaleString(locale === "tr" ? "tr-TR" : "en-US", { minimumFractionDigits: 2 })} {currency}</span>
+            <div className="bg-muted/40 mt-2 space-y-2 rounded-xl border p-4">
+              <div className="text-muted-foreground flex items-center justify-between text-xs">
+                <span>
+                  {currentProduct?.name} (
+                  {selectedVariant?.name ||
+                    t("orders.subscriber.default_variant")}
+                  ) x {quantity}
+                </span>
+                <span>
+                  {subtotal.toLocaleString(
+                    locale === "tr" ? "tr-TR" : "en-US",
+                    { minimumFractionDigits: 2 },
+                  )}{" "}
+                  {currency}
+                </span>
               </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{t("orders.subscriber.vat_label")} (%{taxRate})</span>
-                <span>{taxAmount.toLocaleString(locale === "tr" ? "tr-TR" : "en-US", { minimumFractionDigits: 2 })} {currency}</span>
+              <div className="text-muted-foreground flex items-center justify-between text-xs">
+                <span>
+                  {t("orders.subscriber.vat_label")} (%{taxRate})
+                </span>
+                <span>
+                  {taxAmount.toLocaleString(
+                    locale === "tr" ? "tr-TR" : "en-US",
+                    { minimumFractionDigits: 2 },
+                  )}{" "}
+                  {currency}
+                </span>
               </div>
               <Separator />
-              <div className="flex items-center justify-between text-sm font-bold text-foreground">
+              <div className="text-foreground flex items-center justify-between text-sm font-bold">
                 <span>{t("orders.fields.grand_total")}</span>
                 <span className="text-primary text-base">
-                  {grandTotal.toLocaleString(locale === "tr" ? "tr-TR" : "en-US", { minimumFractionDigits: 2 })} {currency}
+                  {grandTotal.toLocaleString(
+                    locale === "tr" ? "tr-TR" : "en-US",
+                    { minimumFractionDigits: 2 },
+                  )}{" "}
+                  {currency}
                 </span>
               </div>
             </div>
           </div>
         )}
 
-        <DialogFooter className="flex items-center justify-between sm:justify-between pt-4 border-t">
+        <DialogFooter className="flex items-center justify-between border-t pt-4 sm:justify-between">
           {step !== "product" ? (
             <Button
               type="button"
@@ -503,7 +614,7 @@ export function SubscriberOrderDialog({
                 className="gap-1.5"
               >
                 <span>{t("orders.subscriber.next_step")}</span>
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="h-4 w-4" />
               </Button>
             ) : (
               <Button
@@ -512,7 +623,7 @@ export function SubscriberOrderDialog({
                 onClick={handlePlaceOrder}
                 className="gap-2 shadow-md"
               >
-                <CheckCircle2 className="w-4 h-4" />
+                <CheckCircle2 className="h-4 w-4" />
                 {createOrderMutation.isPending
                   ? t("orders.subscriber.placing_order")
                   : t("orders.subscriber.confirm_order_btn")}

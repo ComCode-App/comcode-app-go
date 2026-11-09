@@ -50,14 +50,13 @@ export function BillingPricing({
     [plans],
   );
 
-  const [selectedFrequency, setSelectedFrequency] = useState(
-    () =>
-      subscription?.billing_interval &&
-      availableFrequencies.includes(
-        subscription.billing_interval as (typeof BILLING_FREQUENCIES)[number],
-      )
-        ? subscription.billing_interval
-        : (availableFrequencies[0] ?? "month"),
+  const [selectedFrequency, setSelectedFrequency] = useState(() =>
+    subscription?.billing_interval &&
+    availableFrequencies.includes(
+      subscription.billing_interval as (typeof BILLING_FREQUENCIES)[number],
+    )
+      ? subscription.billing_interval
+      : (availableFrequencies[0] ?? "month"),
   );
 
   const visiblePlans = useMemo(() => {

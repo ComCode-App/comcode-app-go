@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	ErrInvalidRequest = errors.New("invalid request")
+	ErrInvalidRequest  = errors.New("invalid request")
 	ErrUnknownProvider = errors.New("unknown oauth provider")
 )
 

@@ -38,7 +38,10 @@ export function SmartLinksPage() {
   const queryClient = useQueryClient();
   const quotaReached = useQuotaReached("smart_links.max");
 
-  const linksQuery = useQuery({ queryKey: smartLinkKeys.list, queryFn: smartLinksService.list });
+  const linksQuery = useQuery({
+    queryKey: smartLinkKeys.list,
+    queryFn: smartLinksService.list,
+  });
   const profilesQuery = useQuery({
     queryKey: profilesKeys.list({ picker: true }),
     queryFn: () => profilesService.list({ limit: 100, offset: 0 }),
@@ -56,7 +59,10 @@ export function SmartLinksPage() {
     void queryClient.invalidateQueries({ queryKey: smartLinkKeys.list });
     void queryClient.invalidateQueries({ queryKey: entitlementKeys.overview });
   };
-  const toggle = useMutation({ mutationFn: smartLinksService.toggleLock, onSuccess: refresh });
+  const toggle = useMutation({
+    mutationFn: smartLinksService.toggleLock,
+    onSuccess: refresh,
+  });
   const remove = useMutation({
     mutationFn: smartLinksService.remove,
     onSuccess: () => {
@@ -92,7 +98,10 @@ export function SmartLinksPage() {
 
       {linksQuery.isLoading ? <Loading label={t("common.loading")} /> : null}
       {!linksQuery.isLoading && links.length === 0 ? (
-        <EmptyState title={t("smart_links.empty_title")} description={t("smart_links.empty_body")} />
+        <EmptyState
+          title={t("smart_links.empty_title")}
+          description={t("smart_links.empty_body")}
+        />
       ) : null}
 
       <ul className="grid gap-3 md:grid-cols-2">
@@ -100,12 +109,22 @@ export function SmartLinksPage() {
           const url = smartLinkUrl(link.path);
           const locked = link.status === "locked";
           const targetLabel =
-            link.target_type === "direct_url" ? link.direct_url : profileName(link.profile_uuid ?? undefined);
+            link.target_type === "direct_url"
+              ? link.direct_url
+              : profileName(link.profile_uuid ?? undefined);
           return (
-            <li key={link.uuid} className="bg-card rounded-xl border p-4 shadow-sm">
+            <li
+              key={link.uuid}
+              className="bg-card rounded-xl border p-4 shadow-sm"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <a href={url} target="_blank" rel="noopener noreferrer" className="block truncate font-medium hover:underline">
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate font-medium hover:underline"
+                  >
                     /{link.path}
                   </a>
                   <p className="text-muted-foreground mt-1 truncate text-sm">
@@ -114,7 +133,11 @@ export function SmartLinksPage() {
                   </p>
                 </div>
                 <Badge variant={locked ? "secondary" : "outline"}>
-                  {t(locked ? "smart_links.status.locked" : "smart_links.status.active")}
+                  {t(
+                    locked
+                      ? "smart_links.status.locked"
+                      : "smart_links.status.active",
+                  )}
                 </Badge>
               </div>
               <div className="mt-3 flex flex-wrap gap-1">
@@ -122,13 +145,19 @@ export function SmartLinksPage() {
                   size="sm"
                   variant="ghost"
                   onClick={() =>
-                    void navigator.clipboard.writeText(url).then(() => appToast.success(t("smart_links.copied")))
+                    void navigator.clipboard
+                      .writeText(url)
+                      .then(() => appToast.success(t("smart_links.copied")))
                   }
                 >
                   <Copy className="size-4" />
                   {t("smart_links.copy")}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setQrLink(link)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setQrLink(link)}
+                >
                   <QrCode className="size-4" />
                   {t("smart_links.qr")}
                 </Button>
@@ -145,8 +174,17 @@ export function SmartLinksPage() {
                       <Pencil className="size-4" />
                       {t("smart_links.edit")}
                     </Button>
-                    <Button size="sm" variant="ghost" disabled={toggle.isPending} onClick={() => toggle.mutate(link.uuid)}>
-                      {locked ? <LockOpen className="size-4" /> : <Lock className="size-4" />}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={toggle.isPending}
+                      onClick={() => toggle.mutate(link.uuid)}
+                    >
+                      {locked ? (
+                        <LockOpen className="size-4" />
+                      ) : (
+                        <Lock className="size-4" />
+                      )}
                       {t(locked ? "smart_links.unlock" : "smart_links.lock")}
                     </Button>
                     <Button
@@ -157,7 +195,9 @@ export function SmartLinksPage() {
                       onClick={() =>
                         void confirmDelete({
                           title: t("smart_links.delete_title"),
-                          description: t("smart_links.delete_body", { path: `/${link.path}` }),
+                          description: t("smart_links.delete_body", {
+                            path: `/${link.path}`,
+                          }),
                           confirmLabel: t("smart_links.delete"),
                         }).then((ok) => ok && remove.mutate(link.uuid))
                       }
@@ -173,7 +213,11 @@ export function SmartLinksPage() {
         })}
       </ul>
 
-      <SmartLinkDialog open={dialogOpen} onOpenChange={setDialogOpen} link={editing} />
+      <SmartLinkDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        link={editing}
+      />
 
       <RouteQrDialog
         routeUuid={qrLink?.uuid}

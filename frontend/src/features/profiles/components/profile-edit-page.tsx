@@ -58,7 +58,9 @@ export function ProfileEditPage() {
   const primaryTrans =
     profile.translations?.find((t) => t.locale === profile.primary_locale) ||
     profile.translations?.[0];
-  const displayName = `${primaryTrans?.first_name || ""} ${primaryTrans?.last_name || ""}`.trim() || "Profile Studio";
+  const displayName =
+    `${primaryTrans?.first_name || ""} ${primaryTrans?.last_name || ""}`.trim() ||
+    "Profile Studio";
 
   const handleSubmit = async (values: ProfileFormValues) => {
     const media = splitProfileMedia(values);
@@ -81,8 +83,13 @@ export function ProfileEditPage() {
   };
 
   const handleDownloadVCard = async () => {
-    const filename = `${primaryTrans?.first_name || "contact"}_${primaryTrans?.last_name || ""}`.trim();
-    await profilesService.downloadVCard(profile.uuid, filename, profile.primary_locale);
+    const filename =
+      `${primaryTrans?.first_name || "contact"}_${primaryTrans?.last_name || ""}`.trim();
+    await profilesService.downloadVCard(
+      profile.uuid,
+      filename,
+      profile.primary_locale,
+    );
   };
 
   const handleSetPrimary = async () => {
@@ -108,9 +115,11 @@ export function ProfileEditPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => router.push(routes.app.profiles.detail(profile.uuid))}
+            onClick={() =>
+              router.push(routes.app.profiles.detail(profile.uuid))
+            }
           >
-            <Eye className="h-4 w-4 mr-1.5" />
+            <Eye className="mr-1.5 h-4 w-4" />
             View Card
           </Button>
           {!profile.is_primary && (
@@ -120,16 +129,12 @@ export function ProfileEditPage() {
               onClick={handleSetPrimary}
               disabled={setPrimary.isPending}
             >
-              <Star className="h-4 w-4 mr-1.5" />
+              <Star className="mr-1.5 h-4 w-4" />
               {t("profiles.actions.set_primary")}
             </Button>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownloadVCard}
-          >
-            <Download className="h-4 w-4 mr-1.5" />
+          <Button variant="outline" size="sm" onClick={handleDownloadVCard}>
+            <Download className="mr-1.5 h-4 w-4" />
             {t("profiles.actions.download_vcard")}
           </Button>
         </div>

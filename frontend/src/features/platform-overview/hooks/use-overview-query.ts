@@ -4,7 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 
 import { OVERVIEW_STALE_MS } from "@/features/platform-overview/constants";
 import { overviewKeys } from "@/features/platform-overview/hooks/query-keys";
-import { type FunnelPeriod, overviewService } from "@/features/platform-overview/services/overview.service";
+import {
+  type FunnelPeriod,
+  overviewService,
+} from "@/features/platform-overview/services/overview.service";
 
 export function useOverview(enabled = true) {
   return useQuery({

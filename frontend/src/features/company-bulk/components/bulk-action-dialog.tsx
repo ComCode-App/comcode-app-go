@@ -14,7 +14,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { BulkActionDef, BulkJob, BulkTarget } from "@/features/bulk-engine";
+import type {
+  BulkActionDef,
+  BulkJob,
+  BulkTarget,
+} from "@/features/bulk-engine";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
@@ -30,11 +34,7 @@ import {
   companyBulkService,
   resultJob,
 } from "../services/company-bulk.service";
-import {
-  ActionForm,
-  buildAction,
-  initialActionForm,
-} from "./action-form";
+import { ActionForm, buildAction, initialActionForm } from "./action-form";
 
 type Step = "configure" | "preview" | "result";
 
@@ -272,9 +272,7 @@ export function JobStatusBadge({ status }: { status: string }) {
         : status === "rolled_back_partial"
           ? "warning"
           : "secondary";
-  return (
-    <Badge variant={variant}>{t(`company_bulk.status.${status}`)}</Badge>
-  );
+  return <Badge variant={variant}>{t(`company_bulk.status.${status}`)}</Badge>;
 }
 
 function JobResult({
@@ -323,7 +321,9 @@ function JobResult({
           ))}
         </ul>
       ) : null}
-      {job.error ? <p className="text-destructive text-xs">{job.error}</p> : null}
+      {job.error ? (
+        <p className="text-destructive text-xs">{job.error}</p>
+      ) : null}
       {canRollback(job) ? (
         <p className="text-muted-foreground text-xs">
           {t("bulk.rollback_until", {

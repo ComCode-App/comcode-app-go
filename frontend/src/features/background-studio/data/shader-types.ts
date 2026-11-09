@@ -10,52 +10,47 @@
 // ---------------------------------------------------------------------------
 export type ShaderType =
   // Effects & Gradients
-  | 'mesh-gradient'
-  | 'static-mesh-gradient'
-  | 'static-radial-gradient'
-  | 'grain-gradient'
-  | 'warp'
-  | 'swirl'
-  | 'spiral'
-  | 'god-rays'
-  | 'pulsing-border'
-  | 'color-panels'
-  | 'smoke-ring'
+  | "mesh-gradient"
+  | "static-mesh-gradient"
+  | "static-radial-gradient"
+  | "grain-gradient"
+  | "warp"
+  | "swirl"
+  | "spiral"
+  | "god-rays"
+  | "pulsing-border"
+  | "color-panels"
+  | "smoke-ring"
   // Patterns & Particles
-  | 'dithering'
-  | 'dot-grid'
-  | 'dot-orbit'
-  | 'metaballs'
+  | "dithering"
+  | "dot-grid"
+  | "dot-orbit"
+  | "metaballs"
   // Noise & Waves
-  | 'neuro-noise'
-  | 'simplex-noise'
-  | 'perlin-noise'
-  | 'voronoi'
-  | 'waves'
+  | "neuro-noise"
+  | "simplex-noise"
+  | "perlin-noise"
+  | "voronoi"
+  | "waves"
   // Image Filters
-  | 'paper-texture'
-  | 'fluted-glass'
-  | 'water'
-  | 'image-dithering'
-  | 'halftone-dots'
-  | 'halftone-cmyk'
-  | 'lens-distortion'
+  | "paper-texture"
+  | "fluted-glass"
+  | "water"
+  | "image-dithering"
+  | "halftone-dots"
+  | "halftone-cmyk"
+  | "lens-distortion"
   // Logo & Material Effects
-  | 'liquid-metal'
-  | 'heatmap'
-  | 'gem-smoke';
+  | "liquid-metal"
+  | "heatmap"
+  | "gem-smoke";
 
 export type ShaderCategory =
-  | 'all'
-  | 'effects'
-  | 'patterns'
-  | 'noise'
-  | 'imageFilters'
-  | 'logo';
+  "all" | "effects" | "patterns" | "noise" | "imageFilters" | "logo";
 
-export type ShaderFit = 'contain' | 'cover';
+export type ShaderFit = "contain" | "cover";
 
-export type AspectRatioType = 'responsive' | '16:9' | '9:16' | '1:1' | '4:3';
+export type AspectRatioType = "responsive" | "16:9" | "9:16" | "1:1" | "4:3";
 
 // ---------------------------------------------------------------------------
 // 2. COMMON SHADER PARAMETERS & SIZING
@@ -79,7 +74,8 @@ export interface CommonMotionParams {
   frame?: number;
 }
 
-export interface BaseShaderParams extends CommonSizingParams, CommonMotionParams {}
+export interface BaseShaderParams
+  extends CommonSizingParams, CommonMotionParams {}
 
 // ---------------------------------------------------------------------------
 // 3. INDIVIDUAL SHADER PARAMETER SCHEMAS
@@ -112,14 +108,14 @@ export interface StaticRadialGradientParams extends CommonSizingParams {
 export interface GrainGradientParams extends BaseShaderParams {
   colors: string[];
   colorBack?: string;
-  shape?: 'circle' | 'wave' | 'spiral' | 'square' | 'star' | 'flower' | string;
+  shape?: "circle" | "wave" | "spiral" | "square" | "star" | "flower" | string;
   grain?: number;
   softness?: number;
 }
 
 export interface WarpParams extends BaseShaderParams {
   colors: string[];
-  shape?: 'checks' | 'stripes' | 'edge' | string;
+  shape?: "checks" | "stripes" | "edge" | string;
   shapeScale?: number;
   proportion?: number;
   softness?: number;
@@ -173,14 +169,22 @@ export interface SmokeRingParams extends BaseShaderParams {
 export interface DitheringParams extends BaseShaderParams {
   colorFront: string;
   colorBack: string;
-  shape?: 'noise' | 'warp' | 'dots' | 'waves' | 'ripple' | 'swirl' | 'sphere' | string;
-  type?: 'ordered' | 'random' | 'bayer' | string;
+  shape?:
+    | "noise"
+    | "warp"
+    | "dots"
+    | "waves"
+    | "ripple"
+    | "swirl"
+    | "sphere"
+    | string;
+  type?: "ordered" | "random" | "bayer" | string;
 }
 
 export interface DotGridParams extends BaseShaderParams {
   colorFront: string;
   colorBack: string;
-  shape?: 'circle' | 'diamond' | 'square' | 'triangle' | string;
+  shape?: "circle" | "diamond" | "square" | "triangle" | string;
   size?: number;
   gapX?: number;
   gapY?: number;
@@ -240,7 +244,7 @@ export interface PaperTextureParams extends CommonSizingParams {
 
 export interface FlutedGlassParams extends BaseShaderParams {
   distortion?: number;
-  gridShape?: 'stripes' | 'checks' | 'honeycomb' | string;
+  gridShape?: "stripes" | "checks" | "honeycomb" | string;
   image?: string;
 }
 
@@ -253,14 +257,14 @@ export interface WaterParams extends BaseShaderParams {
 export interface ImageDitheringParams extends CommonSizingParams {
   colorFront: string;
   colorBack: string;
-  type?: 'ordered' | 'random' | 'bayer' | 'noise' | string;
+  type?: "ordered" | "random" | "bayer" | "noise" | string;
   image?: string;
 }
 
 export interface HalftoneDotsParams extends BaseShaderParams {
   colorFront: string;
   colorBack: string;
-  grid?: 'square' | 'hexagonal' | string;
+  grid?: "square" | "hexagonal" | string;
   image?: string;
 }
 
@@ -279,7 +283,7 @@ export interface LensDistortionParams extends BaseShaderParams {
 export interface LiquidMetalParams extends BaseShaderParams {
   colorBack: string;
   colorTint: string;
-  shape?: 'none' | 'circle' | 'daisy' | 'diamond' | 'metaballs' | string;
+  shape?: "none" | "circle" | "daisy" | "diamond" | "metaballs" | string;
   repetition?: number;
   softness?: number;
   distortion?: number;
@@ -291,7 +295,7 @@ export interface LiquidMetalParams extends BaseShaderParams {
 export interface HeatmapParams extends BaseShaderParams {
   colors: string[];
   colorBack?: string;
-  shape?: 'none' | 'circle' | 'diamond' | 'star' | string;
+  shape?: "none" | "circle" | "diamond" | "star" | string;
   image?: string;
 }
 
@@ -299,7 +303,7 @@ export interface GemSmokeParams extends BaseShaderParams {
   colors: string[];
   colorBack?: string;
   colorInner?: string;
-  shape?: 'diamond' | 'circle' | 'star' | string;
+  shape?: "diamond" | "circle" | "star" | string;
   outerGlow?: number;
   innerGlow?: number;
   innerDistortion?: number;
@@ -346,7 +350,7 @@ export type AnyShaderParams =
 // 4. JSON-BASED BACKGROUND CONFIG SCHEMA
 // ---------------------------------------------------------------------------
 export interface BackgroundConfig<TParams = Record<string, unknown>> {
-  version: '1.0';
+  version: "1.0";
   id: string;
   name: string;
   shaderType: ShaderType;
@@ -371,14 +375,14 @@ export interface ShaderPresetDef<TParams = Record<string, unknown>> {
 
 export interface ParamDescriptor {
   name: string;
-  type: 'number' | 'string' | 'string[]' | 'enum' | 'boolean';
+  type: "number" | "string" | "string[]" | "enum" | "boolean";
   min?: number;
   max?: number;
   step?: number;
   options?: string[];
   isColor?: boolean;
   defaultValue?: unknown;
-  category?: 'custom' | 'sizing' | 'motion' | 'color';
+  category?: "custom" | "sizing" | "motion" | "color";
 }
 
 export interface ShaderRegistryMeta {

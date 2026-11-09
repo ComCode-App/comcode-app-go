@@ -6,17 +6,17 @@ import (
 )
 
 var (
-	ErrInvalidEventType     = errors.New("invalid event type")
-	ErrInvalidSubject       = errors.New("invalid subject: type and id are required")
-	ErrEventDisabled        = errors.New("event type is disabled")
-	ErrEventInternalOnly    = errors.New("event type is not allowed for public ingestion")
-	ErrMissingProperty      = errors.New("missing required property")
-	ErrPayloadTooLarge      = errors.New("event payload exceeds maximum allowed size")
-	ErrPayloadTooDeep       = errors.New("event properties exceed maximum allowed depth")
-	ErrFutureTimestamp      = errors.New("occurred_at timestamp cannot be in the future")
-	ErrEventNotFound        = errors.New("event not found")
-	ErrDefinitionNotFound   = errors.New("event definition not found")
-	ErrDefinitionExists     = errors.New("event definition already exists")
+	ErrInvalidEventType   = errors.New("invalid event type")
+	ErrInvalidSubject     = errors.New("invalid subject: type and id are required")
+	ErrEventDisabled      = errors.New("event type is disabled")
+	ErrEventInternalOnly  = errors.New("event type is not allowed for public ingestion")
+	ErrMissingProperty    = errors.New("missing required property")
+	ErrPayloadTooLarge    = errors.New("event payload exceeds maximum allowed size")
+	ErrPayloadTooDeep     = errors.New("event properties exceed maximum allowed depth")
+	ErrFutureTimestamp    = errors.New("occurred_at timestamp cannot be in the future")
+	ErrEventNotFound      = errors.New("event not found")
+	ErrDefinitionNotFound = errors.New("event definition not found")
+	ErrDefinitionExists   = errors.New("event definition already exists")
 )
 
 // EntityReference uniquely identifies a subject or actor in a polymorphic manner.
@@ -56,19 +56,19 @@ type EventMetadata struct {
 
 // Event is the canonical polymorphic event envelope.
 type Event struct {
-	ID            int64                  `json:"id,omitempty"`
-	UUID          string                 `json:"uuid"`
-	Type          string                 `json:"type"`
-	SchemaVersion int                    `json:"schema_version"`
-	Subject       EntityReference        `json:"subject"`
-	Actor         *EntityReference       `json:"actor,omitempty"`
-	SessionID     string                 `json:"session_id,omitempty"`
-	RequestID     string                 `json:"request_id,omitempty"`
-	OccurredAt    time.Time              `json:"occurred_at"`
-	CreatedAt     time.Time              `json:"created_at"`
-	Properties    map[string]any         `json:"properties"`
-	Context       EventContext           `json:"context"`
-	Metadata      EventMetadata          `json:"metadata"`
+	ID            int64            `json:"id,omitempty"`
+	UUID          string           `json:"uuid"`
+	Type          string           `json:"type"`
+	SchemaVersion int              `json:"schema_version"`
+	Subject       EntityReference  `json:"subject"`
+	Actor         *EntityReference `json:"actor,omitempty"`
+	SessionID     string           `json:"session_id,omitempty"`
+	RequestID     string           `json:"request_id,omitempty"`
+	OccurredAt    time.Time        `json:"occurred_at"`
+	CreatedAt     time.Time        `json:"created_at"`
+	Properties    map[string]any   `json:"properties"`
+	Context       EventContext     `json:"context"`
+	Metadata      EventMetadata    `json:"metadata"`
 }
 
 // EventDefinition configures an event type's validation and processing rules.

@@ -1,7 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, Clock, Loader2, Monitor, Shield, Trash2 } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Loader2,
+  Monitor,
+  Shield,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 

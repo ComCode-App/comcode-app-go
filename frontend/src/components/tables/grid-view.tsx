@@ -118,9 +118,7 @@ function DefaultCard<TData>({
           : undefined
       }
     >
-      <div
-        className={cn("space-y-3", canSelect && "pe-8")}
-      >
+      <div className={cn("space-y-3", canSelect && "pe-8")}>
         <header className="space-y-1">
           {primary ? (
             <h3 className="font-display text-base leading-snug font-semibold tracking-tight">

@@ -47,17 +47,13 @@ export type UpsertBankPayload = {
 
 export const banksService = {
   async list(params: ServerListParams) {
-    return platformRequest<BankListResult>(
-      "GET",
-      "/v1/platform/banks",
-      {
-        query: {
-          limit: params.limit,
-          offset: params.offset,
-          q: params.q,
-        },
+    return platformRequest<BankListResult>("GET", "/v1/platform/banks", {
+      query: {
+        limit: params.limit,
+        offset: params.offset,
+        q: params.q,
       },
-    );
+    });
   },
 
   async listActive() {
@@ -69,33 +65,21 @@ export const banksService = {
   },
 
   async meta() {
-    return platformRequest<ResourceMeta>(
-      "GET",
-      "/v1/platform/banks/meta",
-    );
+    return platformRequest<ResourceMeta>("GET", "/v1/platform/banks/meta");
   },
 
   async get(uuid: string) {
-    return platformRequest<BankDetail>(
-      "GET",
-      `/v1/platform/banks/${uuid}`,
-    );
+    return platformRequest<BankDetail>("GET", `/v1/platform/banks/${uuid}`);
   },
 
   async create(body: UpsertBankPayload) {
-    return platformRequest<BankDetail>(
-      "POST",
-      "/v1/platform/banks",
-      { body },
-    );
+    return platformRequest<BankDetail>("POST", "/v1/platform/banks", { body });
   },
 
   async update(uuid: string, body: UpsertBankPayload) {
-    return platformRequest<BankDetail>(
-      "PUT",
-      `/v1/platform/banks/${uuid}`,
-      { body },
-    );
+    return platformRequest<BankDetail>("PUT", `/v1/platform/banks/${uuid}`, {
+      body,
+    });
   },
 
   async uploadIcon(uuid: string, file: File) {
@@ -109,9 +93,6 @@ export const banksService = {
   },
 
   async remove(uuid: string) {
-    return platformRequest<void>(
-      "DELETE",
-      `/v1/platform/banks/${uuid}`,
-    );
+    return platformRequest<void>("DELETE", `/v1/platform/banks/${uuid}`);
   },
 };

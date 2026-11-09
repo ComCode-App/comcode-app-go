@@ -130,21 +130,21 @@ type UpdateRouteInput struct {
 }
 
 type RouteResolution struct {
-	RouteUUID          uuid.UUID      `json:"route_uuid"`
-	Path               string         `json:"path"`
-	RouteType          string         `json:"route_type"`
-	Status             string         `json:"status"`
-	TargetType         string         `json:"target_type"`
-	TargetURL          string         `json:"target_url,omitempty"`
-	DirectURL          string         `json:"direct_url,omitempty"`
-	ProfileUUID        *uuid.UUID     `json:"profile_uuid,omitempty"`
-	ProfileAvatarURL   string         `json:"profile_avatar_url,omitempty"`
-	ProfileUsername    string         `json:"profile_username,omitempty"`
-	CardUUID           *uuid.UUID     `json:"card_uuid,omitempty"`
-	CardName           string         `json:"card_name,omitempty"`
-	IsLocked           bool           `json:"is_locked"`
-	IsActive           bool           `json:"is_active"`
-	RequiresPasscode   bool           `json:"requires_passcode"`
+	RouteUUID        uuid.UUID  `json:"route_uuid"`
+	Path             string     `json:"path"`
+	RouteType        string     `json:"route_type"`
+	Status           string     `json:"status"`
+	TargetType       string     `json:"target_type"`
+	TargetURL        string     `json:"target_url,omitempty"`
+	DirectURL        string     `json:"direct_url,omitempty"`
+	ProfileUUID      *uuid.UUID `json:"profile_uuid,omitempty"`
+	ProfileAvatarURL string     `json:"profile_avatar_url,omitempty"`
+	ProfileUsername  string     `json:"profile_username,omitempty"`
+	CardUUID         *uuid.UUID `json:"card_uuid,omitempty"`
+	CardName         string     `json:"card_name,omitempty"`
+	IsLocked         bool       `json:"is_locked"`
+	IsActive         bool       `json:"is_active"`
+	RequiresPasscode bool       `json:"requires_passcode"`
 	// LeadCaptureEnabled: the visitor lands on the profile page with the lead form (TEC-552).
 	LeadCaptureEnabled bool           `json:"lead_capture_enabled"`
 	PresentationConfig map[string]any `json:"presentation_config"`

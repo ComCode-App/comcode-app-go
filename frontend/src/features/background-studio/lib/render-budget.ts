@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, type RefObject } from "react";
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type RefObject,
+} from "react";
 
 /**
  * Device / preference gates for shader backgrounds (TEC-600). Public profiles are mostly opened via
@@ -17,10 +22,15 @@ export function isConstrainedDevice(): boolean {
   if (typeof navigator === "undefined") return true;
   const nav = navigator as NavigatorWithHints;
   if (nav.connection?.saveData) return true;
-  if (typeof nav.hardwareConcurrency === "number" && nav.hardwareConcurrency > 0 && nav.hardwareConcurrency <= 2) {
+  if (
+    typeof nav.hardwareConcurrency === "number" &&
+    nav.hardwareConcurrency > 0 &&
+    nav.hardwareConcurrency <= 2
+  ) {
     return true;
   }
-  if (typeof nav.deviceMemory === "number" && nav.deviceMemory <= 2) return true;
+  if (typeof nav.deviceMemory === "number" && nav.deviceMemory <= 2)
+    return true;
   return false;
 }
 
@@ -35,7 +45,9 @@ export function supportsFastWebGL2(): boolean {
   if (webglProbe !== undefined) return webglProbe;
   try {
     const canvas = document.createElement("canvas");
-    const gl = canvas.getContext("webgl2", { failIfMajorPerformanceCaveat: true });
+    const gl = canvas.getContext("webgl2", {
+      failIfMajorPerformanceCaveat: true,
+    });
     webglProbe = !!gl;
     gl?.getExtension("WEBGL_lose_context")?.loseContext();
   } catch {
@@ -65,7 +77,10 @@ export function usePrefersReducedMotion(): boolean {
  * Evaluates `compute` once the browser is idle after the first paint (setTimeout fallback for
  * Safari) and returns its result; `null` until then, and on the server.
  */
-export function useIdleValue(compute: () => boolean, timeoutMs = 2000): boolean | null {
+export function useIdleValue(
+  compute: () => boolean,
+  timeoutMs = 2000,
+): boolean | null {
   const [result, setResult] = useState<boolean | null>(null);
   useEffect(() => {
     const run = () => setResult(compute());
@@ -111,7 +126,9 @@ export function useOnScreen(ref: RefObject<Element | null>): boolean {
   useEffect(() => {
     const el = ref.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver(([entry]) => setIntersecting(entry?.isIntersecting ?? true));
+    const observer = new IntersectionObserver(([entry]) =>
+      setIntersecting(entry?.isIntersecting ?? true),
+    );
     observer.observe(el);
     return () => observer.disconnect();
   }, [ref]);

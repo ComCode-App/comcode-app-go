@@ -51,7 +51,8 @@ export type InvitePreview = {
  * POST /v1/account/members: a verified user is added (201, the member); any other address gets
  * an email invite instead (202, TEC-1104).
  */
-export type AddMemberResult = AccountMember | { status: "invited"; invite: AccountInvite };
+export type AddMemberResult =
+  AccountMember | { status: "invited"; invite: AccountInvite };
 
 export function isInvitedResult(
   result: AddMemberResult,
@@ -73,51 +74,81 @@ export const accountService = {
   },
 
   async rename(name: string) {
-    return platformRequest<ActiveAccount>("PATCH", "/v1/account", { body: { name } });
-  },
-
-  async members() {
-    return platformRequest<{ items: AccountMember[] }>("GET", "/v1/account/members");
-  },
-
-  async addMember(body: { email: string; role: AccountRole }) {
-    return platformRequest<AddMemberResult>("POST", "/v1/account/members", { body });
-  },
-
-  async changeRole(userUuid: string, role: AccountRole) {
-    return platformRequest<AccountMember>("PATCH", `/v1/account/members/${userUuid}`, {
-      body: { role },
+    return platformRequest<ActiveAccount>("PATCH", "/v1/account", {
+      body: { name },
     });
   },
 
+  async members() {
+    return platformRequest<{ items: AccountMember[] }>(
+      "GET",
+      "/v1/account/members",
+    );
+  },
+
+  async addMember(body: { email: string; role: AccountRole }) {
+    return platformRequest<AddMemberResult>("POST", "/v1/account/members", {
+      body,
+    });
+  },
+
+  async changeRole(userUuid: string, role: AccountRole) {
+    return platformRequest<AccountMember>(
+      "PATCH",
+      `/v1/account/members/${userUuid}`,
+      {
+        body: { role },
+      },
+    );
+  },
+
   async removeMember(userUuid: string) {
-    return platformRequest<{ status: string }>("DELETE", `/v1/account/members/${userUuid}`);
+    return platformRequest<{ status: string }>(
+      "DELETE",
+      `/v1/account/members/${userUuid}`,
+    );
   },
 
   /** Open (pending and expired) email invites of the active company account (TEC-945). */
   async invites() {
-    return platformRequest<{ items: AccountInvite[]; total: number }>("GET", "/v1/account/invites", {
-      query: { limit: 100 },
-    });
+    return platformRequest<{ items: AccountInvite[]; total: number }>(
+      "GET",
+      "/v1/account/invites",
+      {
+        query: { limit: 100 },
+      },
+    );
   },
 
   async createInvite(body: { email: string; role: AccountRole }) {
-    return platformRequest<AccountInvite>("POST", "/v1/account/invites", { body });
+    return platformRequest<AccountInvite>("POST", "/v1/account/invites", {
+      body,
+    });
   },
 
   async resendInvite(uuid: string) {
-    return platformRequest<AccountInvite>("POST", `/v1/account/invites/${uuid}/resend`);
+    return platformRequest<AccountInvite>(
+      "POST",
+      `/v1/account/invites/${uuid}/resend`,
+    );
   },
 
   async revokeInvite(uuid: string) {
-    return platformRequest<{ status: string }>("DELETE", `/v1/account/invites/${uuid}`);
+    return platformRequest<{ status: string }>(
+      "DELETE",
+      `/v1/account/invites/${uuid}`,
+    );
   },
 
   /** Public: what the invite link holder sees. */
   async previewInvite(token: string) {
-    return platformRequest<InvitePreview>("GET", `/v1/invites/${encodeURIComponent(token)}`, {
-      silent: true,
-    });
+    return platformRequest<InvitePreview>(
+      "GET",
+      `/v1/invites/${encodeURIComponent(token)}`,
+      {
+        silent: true,
+      },
+    );
   },
 
   async acceptInvite(token: string) {

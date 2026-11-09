@@ -23,7 +23,9 @@ export function PlanUsageCard() {
     <EntitySectionCard title={t("entitlements.title")}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-sm">{t("entitlements.plan")}</span>
+          <span className="text-muted-foreground text-sm">
+            {t("entitlements.plan")}
+          </span>
           <span className="font-medium">{data.plan_name}</span>
           <Badge variant="outline">
             {data.source === "free"
@@ -33,13 +35,18 @@ export function PlanUsageCard() {
         </div>
         {data.source === "free" || anyReached ? (
           <Button asChild size="sm">
-            <Link href={routes.app.billing.root}>{t("entitlements.upgrade")}</Link>
+            <Link href={routes.app.billing.root}>
+              {t("entitlements.upgrade")}
+            </Link>
           </Button>
         ) : null}
       </div>
       <ul className="divide-y rounded-md border">
         {data.features.map((feature) => (
-          <li key={feature.key} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
+          <li
+            key={feature.key}
+            className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center"
+          >
             <span className="flex-1 text-sm font-medium">
               {t(`entitlements.features.${feature.key}`)}
             </span>
@@ -47,7 +54,9 @@ export function PlanUsageCard() {
           </li>
         ))}
       </ul>
-      <p className="text-muted-foreground mt-2 text-xs">{t("entitlements.subtitle")}</p>
+      <p className="text-muted-foreground mt-2 text-xs">
+        {t("entitlements.subtitle")}
+      </p>
     </EntitySectionCard>
   );
 }
@@ -55,16 +64,31 @@ export function PlanUsageCard() {
 function FeatureValue({ feature }: { feature: EntitlementFeature }) {
   const { t, locale } = useLocale();
 
-  if (feature.monthly && feature.included && !feature.unlimited && (feature.int_value ?? 0) <= 0) {
-    return <span className="text-muted-foreground text-sm">{t("entitlements.off")}</span>;
+  if (
+    feature.monthly &&
+    feature.included &&
+    !feature.unlimited &&
+    (feature.int_value ?? 0) <= 0
+  ) {
+    return (
+      <span className="text-muted-foreground text-sm">
+        {t("entitlements.off")}
+      </span>
+    );
   }
   if (!feature.included) {
-    return <span className="text-muted-foreground text-sm">{t("entitlements.not_included")}</span>;
+    return (
+      <span className="text-muted-foreground text-sm">
+        {t("entitlements.not_included")}
+      </span>
+    );
   }
   if (feature.value_type === "bool") {
     return (
       <span className="text-sm">
-        {feature.bool_value ? t("entitlements.included") : t("entitlements.not_included")}
+        {feature.bool_value
+          ? t("entitlements.included")
+          : t("entitlements.not_included")}
       </span>
     );
   }
@@ -77,10 +101,15 @@ function FeatureValue({ feature }: { feature: EntitlementFeature }) {
       );
     }
     const limit = feature.int_value ?? 0;
-    const percent = limit > 0 ? Math.min(100, Math.round((feature.used / limit) * 100)) : 100;
+    const percent =
+      limit > 0 ? Math.min(100, Math.round((feature.used / limit) * 100)) : 100;
     return (
       <div className="flex w-full items-center gap-3 sm:w-64">
-        <Progress value={percent} className="h-2" aria-label={t(`entitlements.features.${feature.key}`)} />
+        <Progress
+          value={percent}
+          className="h-2"
+          aria-label={t(`entitlements.features.${feature.key}`)}
+        />
         <span className="shrink-0 text-sm tabular-nums">
           {t("entitlements.usage", { used: feature.used, limit })}
         </span>
@@ -92,7 +121,9 @@ function FeatureValue({ feature }: { feature: EntitlementFeature }) {
         {feature.monthly && feature.resets_at ? (
           <span className="text-muted-foreground hidden shrink-0 text-xs sm:inline">
             {t("entitlements.per_month", {
-              date: new Date(feature.resets_at).toLocaleDateString(locale === "tr" ? "tr-TR" : "en-GB"),
+              date: new Date(feature.resets_at).toLocaleDateString(
+                locale === "tr" ? "tr-TR" : "en-GB",
+              ),
             })}
           </span>
         ) : null}

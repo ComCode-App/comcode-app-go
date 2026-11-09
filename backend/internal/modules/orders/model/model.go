@@ -21,45 +21,45 @@ type Address struct {
 }
 
 type OrderItemSummary struct {
-	ID                  int64          `json:"-"`
-	UUID                string         `json:"uuid"`
-	ProductID           *int64         `json:"-"`
-	ProductUUID         string         `json:"product_uuid,omitempty"`
-	ProductSlug         string         `json:"product_slug,omitempty"`
-	ProductName         string         `json:"product_name"`
-	VariantName         string         `json:"variant_name,omitempty"`
-	SKU                 string         `json:"sku"`
-	Quantity            int            `json:"quantity"`
-	UnitPrice           float64        `json:"unit_price"`
-	TotalPrice          float64        `json:"total_price"`
-	CustomPrintData     map[string]any `json:"custom_print_data,omitempty"`
-	ProductImages       []string       `json:"product_images,omitempty"`
-	
+	ID              int64          `json:"-"`
+	UUID            string         `json:"uuid"`
+	ProductID       *int64         `json:"-"`
+	ProductUUID     string         `json:"product_uuid,omitempty"`
+	ProductSlug     string         `json:"product_slug,omitempty"`
+	ProductName     string         `json:"product_name"`
+	VariantName     string         `json:"variant_name,omitempty"`
+	SKU             string         `json:"sku"`
+	Quantity        int            `json:"quantity"`
+	UnitPrice       float64        `json:"unit_price"`
+	TotalPrice      float64        `json:"total_price"`
+	CustomPrintData map[string]any `json:"custom_print_data,omitempty"`
+	ProductImages   []string       `json:"product_images,omitempty"`
+
 	// Recipient Details
-	RecipientName       string         `json:"recipient_name"`
-	RecipientEmail      string         `json:"recipient_email"`
-	RecipientPhone      string         `json:"recipient_phone"`
-	RecipientTitle      string         `json:"recipient_title"`
-	RecipientDepartment string         `json:"recipient_department"`
-	
+	RecipientName       string `json:"recipient_name"`
+	RecipientEmail      string `json:"recipient_email"`
+	RecipientPhone      string `json:"recipient_phone"`
+	RecipientTitle      string `json:"recipient_title"`
+	RecipientDepartment string `json:"recipient_department"`
+
 	// Profile Link
-	ProfileUUID         *string        `json:"profile_uuid,omitempty"`
-	ProfileAvatarURL    string         `json:"profile_avatar_url,omitempty"`
-	
+	ProfileUUID      *string `json:"profile_uuid,omitempty"`
+	ProfileAvatarURL string  `json:"profile_avatar_url,omitempty"`
+
 	// Card Link & Route (TEC-77)
-	CardUUID            *string        `json:"card_uuid,omitempty"`
-	CardSmartCode       string         `json:"card_smart_code,omitempty"`
-	CardUID             string         `json:"card_uid,omitempty"`
-	CardStatus          string         `json:"card_status,omitempty"`
-	CardIsActive        bool           `json:"card_is_active"`
-	CardIsLocked        bool           `json:"card_is_locked"`
-	RoutePath           string         `json:"route_path,omitempty"`
-	RouteStatus         string         `json:"route_status,omitempty"`
-	
+	CardUUID      *string `json:"card_uuid,omitempty"`
+	CardSmartCode string  `json:"card_smart_code,omitempty"`
+	CardUID       string  `json:"card_uid,omitempty"`
+	CardStatus    string  `json:"card_status,omitempty"`
+	CardIsActive  bool    `json:"card_is_active"`
+	CardIsLocked  bool    `json:"card_is_locked"`
+	RoutePath     string  `json:"route_path,omitempty"`
+	RouteStatus   string  `json:"route_status,omitempty"`
+
 	// Statuses & Error handling
-	FulfillmentStatus   string         `json:"fulfillment_status"`
-	ProvisioningStatus  string         `json:"provisioning_status"`
-	ProvisioningError   string         `json:"provisioning_error,omitempty"`
+	FulfillmentStatus  string `json:"fulfillment_status"`
+	ProvisioningStatus string `json:"provisioning_status"`
+	ProvisioningError  string `json:"provisioning_error,omitempty"`
 }
 
 type AssetRequestSummary struct {

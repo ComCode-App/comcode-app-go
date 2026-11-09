@@ -12,7 +12,7 @@ import { useLocale } from "@/providers/locale-provider";
 
 export interface CameraOrbitConfig {
   pitch?: number; // deg (polar angle)
-  yaw?: number;   // deg (azimuth angle)
+  yaw?: number; // deg (azimuth angle)
   distance?: number;
 }
 
@@ -51,7 +51,10 @@ interface Bounded3DStageProps {
   cardColor?: string;
   cardMaterial?: string;
   className?: string;
-  onCameraChange?: (orbit: { pitch: number; yaw: number; distance: number }, fov: number) => void;
+  onCameraChange?: (
+    orbit: { pitch: number; yaw: number; distance: number },
+    fov: number,
+  ) => void;
 }
 
 export function Bounded3DStage({
@@ -71,7 +74,7 @@ export function Bounded3DStage({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [isRotating, setIsRotating] = useState(
-    autoRotateDefault ?? viewbox?.auto_rotate ?? true
+    autoRotateDefault ?? viewbox?.auto_rotate ?? true,
   );
   const [isLoading, setIsLoading] = useState(false);
   const [supportsAR] = useState(() => {
@@ -106,7 +109,9 @@ export function Bounded3DStage({
     const camera = new THREE.PerspectiveCamera(fov, width / height, 0.1, 100);
     cameraRef.current = camera;
 
-    const pitchRad = THREE.MathUtils.degToRad(viewbox?.camera_orbit?.pitch ?? 20);
+    const pitchRad = THREE.MathUtils.degToRad(
+      viewbox?.camera_orbit?.pitch ?? 20,
+    );
     const yawRad = THREE.MathUtils.degToRad(viewbox?.camera_orbit?.yaw ?? 30);
     const distance = viewbox?.camera_orbit?.distance ?? 3.2;
 
@@ -116,7 +121,11 @@ export function Bounded3DStage({
     camera.lookAt(0, 0, 0);
 
     // 3. Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: "high-performance",
+    });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
@@ -133,15 +142,21 @@ export function Bounded3DStage({
     controls.dampingFactor = 0.05;
     controls.enabled = interactive;
     controls.autoRotate = isRotating;
-    controls.autoRotateSpeed = viewbox?.rotation_speed ? viewbox.rotation_speed * 1.5 : 1.5;
+    controls.autoRotateSpeed = viewbox?.rotation_speed
+      ? viewbox.rotation_speed * 1.5
+      : 1.5;
 
     // Apply Orbit Limits
     if (viewbox?.orbit_limits) {
       if (viewbox.orbit_limits.max_pitch !== undefined) {
-        controls.minPolarAngle = THREE.MathUtils.degToRad(90 - viewbox.orbit_limits.max_pitch);
+        controls.minPolarAngle = THREE.MathUtils.degToRad(
+          90 - viewbox.orbit_limits.max_pitch,
+        );
       }
       if (viewbox.orbit_limits.min_pitch !== undefined) {
-        controls.maxPolarAngle = THREE.MathUtils.degToRad(90 - viewbox.orbit_limits.min_pitch);
+        controls.maxPolarAngle = THREE.MathUtils.degToRad(
+          90 - viewbox.orbit_limits.min_pitch,
+        );
       }
       if (viewbox.orbit_limits.min_zoom !== undefined) {
         controls.minDistance = viewbox.orbit_limits.min_zoom;
@@ -174,7 +189,10 @@ export function Bounded3DStage({
     scene.add(dirLight);
 
     const rimLightColor = isDark ? 0x60a5fa : 0x3b82f6;
-    const rimLight = new THREE.DirectionalLight(rimLightColor, isDark ? 1.2 : 0.7);
+    const rimLight = new THREE.DirectionalLight(
+      rimLightColor,
+      isDark ? 1.2 : 0.7,
+    );
     rimLight.position.set(-4, 3, -4);
     scene.add(rimLight);
 
@@ -184,10 +202,16 @@ export function Bounded3DStage({
 
     // 6. Bounded Stage Platform & Contact Shadow
     const stageRadius = viewbox?.stage_bounds?.radius ?? 2.8;
-    const shadowIntensity = viewbox?.stage_bounds?.shadow_intensity ?? (isDark ? 0.45 : 0.25);
+    const shadowIntensity =
+      viewbox?.stage_bounds?.shadow_intensity ?? (isDark ? 0.45 : 0.25);
 
     // Bounded Stage Disc
-    const stageGeo = new THREE.CylinderGeometry(stageRadius, stageRadius + 0.1, 0.04, 64);
+    const stageGeo = new THREE.CylinderGeometry(
+      stageRadius,
+      stageRadius + 0.1,
+      0.04,
+      64,
+    );
     const stageMat = new THREE.MeshStandardMaterial({
       color: isDark ? 0x18181b : 0xe2e8f0,
       roughness: isDark ? 0.8 : 0.7,
@@ -210,7 +234,10 @@ export function Bounded3DStage({
     scene.add(ring);
 
     // Soft Contact Shadow Plane
-    const shadowGeo = new THREE.PlaneGeometry(stageRadius * 1.8, stageRadius * 1.8);
+    const shadowGeo = new THREE.PlaneGeometry(
+      stageRadius * 1.8,
+      stageRadius * 1.8,
+    );
     // Radial shadow gradient canvas texture
     const canvas = document.createElement("canvas");
     canvas.width = 256;
@@ -271,9 +298,12 @@ export function Bounded3DStage({
         undefined,
         (err) => {
           setIsLoading(false);
-          console.warn("Could not load 3D GLB model, falling back to card mesh", err);
+          console.warn(
+            "Could not load 3D GLB model, falling back to card mesh",
+            err,
+          );
           createProceduralCard(modelGroup, cardColor, cardMaterial);
-        }
+        },
       );
     } else {
       createProceduralCard(modelGroup, cardColor, cardMaterial);
@@ -286,7 +316,14 @@ export function Bounded3DStage({
         const dist = camPos.length();
         const pitch = THREE.MathUtils.radToDeg(Math.asin(camPos.y / dist));
         const yaw = THREE.MathUtils.radToDeg(Math.atan2(camPos.x, camPos.z));
-        onCameraChangeRef.current({ pitch: Math.round(pitch), yaw: Math.round(yaw), distance: parseFloat(dist.toFixed(2)) }, camera.fov);
+        onCameraChangeRef.current(
+          {
+            pitch: Math.round(pitch),
+            yaw: Math.round(yaw),
+            distance: parseFloat(dist.toFixed(2)),
+          },
+          camera.fov,
+        );
       }
     });
 
@@ -325,7 +362,15 @@ export function Bounded3DStage({
       shadowMat.dispose();
       shadowTex.dispose();
     };
-  }, [modelUrl, viewbox, interactive, cardColor, cardMaterial, isRotating, isDark]);
+  }, [
+    modelUrl,
+    viewbox,
+    interactive,
+    cardColor,
+    cardMaterial,
+    isRotating,
+    isDark,
+  ]);
 
   // Update rotation dynamically
   useEffect(() => {
@@ -336,61 +381,85 @@ export function Bounded3DStage({
 
   const resetView = () => {
     if (!controlsRef.current || !cameraRef.current) return;
-    const pitchRad = THREE.MathUtils.degToRad(viewbox?.camera_orbit?.pitch ?? 20);
+    const pitchRad = THREE.MathUtils.degToRad(
+      viewbox?.camera_orbit?.pitch ?? 20,
+    );
     const yawRad = THREE.MathUtils.degToRad(viewbox?.camera_orbit?.yaw ?? 30);
     const distance = viewbox?.camera_orbit?.distance ?? 3.2;
 
-    cameraRef.current.position.x = distance * Math.sin(yawRad) * Math.cos(pitchRad);
+    cameraRef.current.position.x =
+      distance * Math.sin(yawRad) * Math.cos(pitchRad);
     cameraRef.current.position.y = distance * Math.sin(pitchRad);
-    cameraRef.current.position.z = distance * Math.cos(yawRad) * Math.cos(pitchRad);
+    cameraRef.current.position.z =
+      distance * Math.cos(yawRad) * Math.cos(pitchRad);
     cameraRef.current.lookAt(0, 0, 0);
     controlsRef.current.reset();
   };
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-border/80 bg-muted/30 dark:bg-zinc-950/90 shadow-sm ${className}`}>
+    <div
+      className={`border-border/80 bg-muted/30 relative overflow-hidden rounded-2xl border shadow-sm dark:bg-zinc-950/90 ${className}`}
+    >
       {/* 3D Canvas Container */}
-      <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+      <div
+        ref={containerRef}
+        className="h-full w-full cursor-grab active:cursor-grabbing"
+      />
 
       {/* Loading Overlay */}
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-xs z-10">
+        <div className="bg-background/70 absolute inset-0 z-10 flex items-center justify-center backdrop-blur-xs">
           <div className="flex flex-col items-center gap-2">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <span className="text-xs text-muted-foreground font-medium">{t("products.stage.loading")}</span>
+            <div className="border-primary h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
+            <span className="text-muted-foreground text-xs font-medium">
+              {t("products.stage.loading")}
+            </span>
           </div>
         </div>
       )}
 
       {/* Controls Overlay Header */}
-      <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-10">
-        <div className="flex items-center gap-1.5 pointer-events-auto">
-          <Badge variant="outline" className="bg-background/85 dark:bg-zinc-900/80 backdrop-blur-md text-xs font-mono border-border/80 px-2 py-0.5 shadow-xs text-foreground">
-            <Sparkles className="h-3 w-3 mr-1 text-amber-500 dark:text-amber-400" />
+      <div className="pointer-events-none absolute top-3 right-3 left-3 z-10 flex items-center justify-between">
+        <div className="pointer-events-auto flex items-center gap-1.5">
+          <Badge
+            variant="outline"
+            className="bg-background/85 border-border/80 text-foreground px-2 py-0.5 font-mono text-xs shadow-xs backdrop-blur-md dark:bg-zinc-900/80"
+          >
+            <Sparkles className="mr-1 h-3 w-3 text-amber-500 dark:text-amber-400" />
             3D Studio
           </Badge>
           {usdzUrl && (
-            <Badge variant="outline" className="bg-background/85 dark:bg-zinc-900/80 backdrop-blur-md text-[11px] border-border/80 text-emerald-600 dark:text-emerald-400 shadow-xs">
+            <Badge
+              variant="outline"
+              className="bg-background/85 border-border/80 text-[11px] text-emerald-600 shadow-xs backdrop-blur-md dark:bg-zinc-900/80 dark:text-emerald-400"
+            >
               USDZ / AR
             </Badge>
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 pointer-events-auto">
+        <div className="pointer-events-auto flex items-center gap-1.5">
           <Button
             size="icon"
             variant="ghost"
-            className="h-8 w-8 rounded-lg bg-background/85 dark:bg-zinc-900/80 backdrop-blur-md border border-border/80 hover:bg-muted text-foreground shadow-xs"
+            className="bg-background/85 border-border/80 hover:bg-muted text-foreground h-8 w-8 rounded-lg border shadow-xs backdrop-blur-md dark:bg-zinc-900/80"
             onClick={() => setIsRotating(!isRotating)}
-            title={isRotating ? t("products.stage.stop_rotation") : t("products.stage.start_rotation")}
+            title={
+              isRotating
+                ? t("products.stage.stop_rotation")
+                : t("products.stage.start_rotation")
+            }
           >
-            <RotateCw className={`h-4 w-4 ${isRotating ? "text-primary animate-spin" : ""}`} style={{ animationDuration: "6s" }} />
+            <RotateCw
+              className={`h-4 w-4 ${isRotating ? "text-primary animate-spin" : ""}`}
+              style={{ animationDuration: "6s" }}
+            />
           </Button>
 
           <Button
             size="icon"
             variant="ghost"
-            className="h-8 w-8 rounded-lg bg-background/85 dark:bg-zinc-900/80 backdrop-blur-md border border-border/80 hover:bg-muted text-foreground shadow-xs"
+            className="bg-background/85 border-border/80 hover:bg-muted text-foreground h-8 w-8 rounded-lg border shadow-xs backdrop-blur-md dark:bg-zinc-900/80"
             onClick={resetView}
             title={t("products.stage.reset_camera")}
           >
@@ -401,7 +470,7 @@ export function Bounded3DStage({
             <a
               href={usdzUrl}
               rel="ar"
-              className="inline-flex items-center gap-1 h-8 px-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium shadow-xs hover:opacity-90 transition-opacity"
+              className="bg-primary text-primary-foreground inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-medium shadow-xs transition-opacity hover:opacity-90"
               title={t("products.stage.ar_quicklook")}
             >
               <Smartphone className="h-3.5 w-3.5" />
@@ -412,11 +481,11 @@ export function Bounded3DStage({
       </div>
 
       {/* Stage Hint Footer */}
-      <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-[11px] text-muted-foreground pointer-events-none">
-        <span className="flex items-center gap-1 bg-background/80 dark:bg-zinc-900/60 backdrop-blur-xs px-2 py-0.5 rounded-md border border-border/60 shadow-xs">
+      <div className="text-muted-foreground pointer-events-none absolute right-3 bottom-2.5 left-3 flex items-center justify-between text-[11px]">
+        <span className="bg-background/80 border-border/60 flex items-center gap-1 rounded-md border px-2 py-0.5 shadow-xs backdrop-blur-xs dark:bg-zinc-900/60">
           <Eye className="h-3 w-3" /> {t("products.stage.drag_to_rotate")}
         </span>
-        <span className="font-mono text-[10px] bg-background/80 dark:bg-zinc-900/60 backdrop-blur-xs px-1.5 py-0.5 rounded border border-border/60 shadow-xs">
+        <span className="bg-background/80 border-border/60 rounded border px-1.5 py-0.5 font-mono text-[10px] shadow-xs backdrop-blur-xs dark:bg-zinc-900/60">
           Turntable Stage
         </span>
       </div>
@@ -425,7 +494,11 @@ export function Bounded3DStage({
 }
 
 // Helper to create high quality procedural NFC Card
-function createProceduralCard(group: THREE.Group, colorHex: string, materialType: string) {
+function createProceduralCard(
+  group: THREE.Group,
+  colorHex: string,
+  materialType: string,
+) {
   group.clear();
 
   // Standard Credit Card aspect ratio (85.6mm x 53.98mm x 0.8mm) => ~1.6 x 1.0 x 0.04
@@ -442,7 +515,12 @@ function createProceduralCard(group: THREE.Group, colorHex: string, materialType
   shape.lineTo(x + cardWidth - radius, y);
   shape.quadraticCurveTo(x + cardWidth, y, x + cardWidth, y + radius);
   shape.lineTo(x + cardWidth, y + cardHeight - radius);
-  shape.quadraticCurveTo(x + cardWidth, y + cardHeight, x + cardWidth - radius, y + cardHeight);
+  shape.quadraticCurveTo(
+    x + cardWidth,
+    y + cardHeight,
+    x + cardWidth - radius,
+    y + cardHeight,
+  );
   shape.lineTo(x + radius, y + cardHeight);
   shape.quadraticCurveTo(x, y + cardHeight, x, y + cardHeight - radius);
   shape.lineTo(x, y + radius);

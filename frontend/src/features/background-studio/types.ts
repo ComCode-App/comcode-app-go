@@ -81,10 +81,7 @@ export type ShaderBackground = BackgroundBase & {
 };
 
 export type BackgroundDocument =
-  | SolidBackground
-  | GradientBackground
-  | VideoBackground
-  | ShaderBackground;
+  SolidBackground | GradientBackground | VideoBackground | ShaderBackground;
 
 /** Legacy furkan schema (shader-only, no `kind`). */
 export interface LegacyShaderConfig {

@@ -19,11 +19,21 @@ type RawEventDrawerProps = {
   typeLabel: (type: string) => string;
 };
 
-function Field({ label, value, mono }: { label: string; value: ReactNode; mono?: boolean }) {
+function Field({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: ReactNode;
+  mono?: boolean;
+}) {
   return (
     <div className="min-w-0 space-y-1">
       <dt className="text-muted-foreground text-xs font-medium">{label}</dt>
-      <dd className={mono ? "font-mono text-xs break-all" : "text-sm break-words"}>
+      <dd
+        className={mono ? "font-mono text-xs break-all" : "text-sm break-words"}
+      >
         {value === undefined || value === null || value === "" ? "—" : value}
       </dd>
     </div>
@@ -31,7 +41,8 @@ function Field({ label, value, mono }: { label: string; value: ReactNode; mono?:
 }
 
 function JsonBlock({ label, value }: { label: string; value: unknown }) {
-  if (!value || (typeof value === "object" && Object.keys(value).length === 0)) return null;
+  if (!value || (typeof value === "object" && Object.keys(value).length === 0))
+    return null;
   return (
     <div className="space-y-1 sm:col-span-2">
       <dt className="text-muted-foreground text-xs font-medium">{label}</dt>
@@ -46,7 +57,12 @@ function JsonBlock({ label, value }: { label: string; value: unknown }) {
 
 const STAMP = "dd.MM.yyyy HH:mm:ss";
 
-export function RawEventDrawer({ event, onOpenChange, onFilterSubject, typeLabel }: RawEventDrawerProps) {
+export function RawEventDrawer({
+  event,
+  onOpenChange,
+  onFilterSubject,
+  typeLabel,
+}: RawEventDrawerProps) {
   const { t, locale } = useLocale();
   const c = event?.context;
 
@@ -64,11 +80,18 @@ export function RawEventDrawer({ event, onOpenChange, onFilterSubject, typeLabel
             label={t("platform_analytics.events.fields.type")}
             value={
               <>
-                {typeLabel(event.type)} <span className="text-muted-foreground font-mono text-xs">({event.type})</span>
+                {typeLabel(event.type)}{" "}
+                <span className="text-muted-foreground font-mono text-xs">
+                  ({event.type})
+                </span>
               </>
             }
           />
-          <Field label={t("platform_analytics.events.fields.uuid")} value={event.uuid} mono />
+          <Field
+            label={t("platform_analytics.events.fields.uuid")}
+            value={event.uuid}
+            mono
+          />
           <Field
             label={t("platform_analytics.events.fields.occurred_at")}
             value={datetime(event.occurred_at, STAMP, locale)}
@@ -82,8 +105,12 @@ export function RawEventDrawer({ event, onOpenChange, onFilterSubject, typeLabel
               {t("platform_analytics.events.fields.subject")}
             </dt>
             <dd className="flex flex-wrap items-center gap-2">
-              <span className="text-sm">{subjectTypeLabel(t, event.subject.type)}</span>
-              <span className="text-muted-foreground font-mono text-xs break-all">{event.subject.id}</span>
+              <span className="text-sm">
+                {subjectTypeLabel(t, event.subject.type)}
+              </span>
+              <span className="text-muted-foreground font-mono text-xs break-all">
+                {event.subject.id}
+              </span>
               <Button
                 type="button"
                 size="sm"
@@ -98,20 +125,40 @@ export function RawEventDrawer({ event, onOpenChange, onFilterSubject, typeLabel
           </div>
           <Field
             label={t("platform_analytics.events.fields.actor")}
-            value={event.actor ? `${event.actor.type}:${event.actor.id}` : undefined}
+            value={
+              event.actor ? `${event.actor.type}:${event.actor.id}` : undefined
+            }
             mono
           />
-          <Field label={t("platform_analytics.events.fields.session_id")} value={event.session_id} mono />
-          <Field label={t("platform_analytics.events.fields.request_id")} value={event.request_id} mono />
-          <Field label={t("platform_analytics.events.fields.schema_version")} value={event.schema_version} />
+          <Field
+            label={t("platform_analytics.events.fields.session_id")}
+            value={event.session_id}
+            mono
+          />
+          <Field
+            label={t("platform_analytics.events.fields.request_id")}
+            value={event.request_id}
+            mono
+          />
+          <Field
+            label={t("platform_analytics.events.fields.schema_version")}
+            value={event.schema_version}
+          />
           <Field
             label={t("platform_analytics.events.fields.location")}
-            value={[c.city, c.country_name || c.country_code].filter(Boolean).join(", ")}
+            value={[c.city, c.country_name || c.country_code]
+              .filter(Boolean)
+              .join(", ")}
           />
-          <Field label={t("platform_analytics.events.fields.timezone")} value={c.timezone} />
+          <Field
+            label={t("platform_analytics.events.fields.timezone")}
+            value={c.timezone}
+          />
           <Field
             label={t("platform_analytics.events.fields.device")}
-            value={[c.device_type, c.device_brand, c.device_model].filter(Boolean).join(" · ")}
+            value={[c.device_type, c.device_brand, c.device_model]
+              .filter(Boolean)
+              .join(" · ")}
           />
           <Field
             label={t("platform_analytics.events.fields.browser")}
@@ -121,15 +168,32 @@ export function RawEventDrawer({ event, onOpenChange, onFilterSubject, typeLabel
             label={t("platform_analytics.events.fields.os")}
             value={[c.os, c.os_version].filter(Boolean).join(" ")}
           />
-          <Field label={t("platform_analytics.events.fields.referer")} value={c.referer} mono />
-          <Field label={t("platform_analytics.events.fields.ip_hash")} value={c.ip_hash} mono />
+          <Field
+            label={t("platform_analytics.events.fields.referer")}
+            value={c.referer}
+            mono
+          />
+          <Field
+            label={t("platform_analytics.events.fields.ip_hash")}
+            value={c.ip_hash}
+            mono
+          />
           <Field
             label={t("platform_analytics.events.fields.delivery")}
-            value={[event.metadata?.source, event.metadata?.delivery_mode].filter(Boolean).join(" · ")}
+            value={[event.metadata?.source, event.metadata?.delivery_mode]
+              .filter(Boolean)
+              .join(" · ")}
           />
-          <JsonBlock label={t("platform_analytics.events.fields.properties")} value={event.properties} />
+          <JsonBlock
+            label={t("platform_analytics.events.fields.properties")}
+            value={event.properties}
+          />
           <div className="sm:col-span-2">
-            <Field label={t("platform_analytics.events.fields.user_agent")} value={c.user_agent} mono />
+            <Field
+              label={t("platform_analytics.events.fields.user_agent")}
+              value={c.user_agent}
+              mono
+            />
           </div>
         </dl>
       ) : null}

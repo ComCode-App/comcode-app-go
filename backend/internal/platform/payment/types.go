@@ -12,23 +12,23 @@ var (
 
 // CheckoutInput is passed to a provider when starting checkout.
 type CheckoutInput struct {
-	SessionUUID  string
-	MerchantOID  string
-	AmountMinor  int64
-	Currency     string
-	PlanName     string
-	UserEmail    string
-	UserName     string
-	UserPhone    string
-	UserAddress  string
-	ClientIP     string
-	SuccessURL   string
-	FailURL      string
-	CallbackURL  string
-	TestMode     bool
-	StoreCard    bool
-	SavedUToken  string
-	SavedCToken  string
+	SessionUUID string
+	MerchantOID string
+	AmountMinor int64
+	Currency    string
+	PlanName    string
+	UserEmail   string
+	UserName    string
+	UserPhone   string
+	UserAddress string
+	ClientIP    string
+	SuccessURL  string
+	FailURL     string
+	CallbackURL string
+	TestMode    bool
+	StoreCard   bool
+	SavedUToken string
+	SavedCToken string
 	// Physical marks a physical goods purchase (card orders, TEC-943) instead of a subscription.
 	Physical bool
 }
@@ -91,11 +91,11 @@ type CheckoutResult struct {
 
 // CallbackInput carries verified callback data.
 type CallbackInput struct {
-	MerchantOID  string
-	Status       string
-	ProviderRef  string
-	TotalAmount  string
-	RawPayload   map[string]string
+	MerchantOID string
+	Status      string
+	ProviderRef string
+	TotalAmount string
+	RawPayload  map[string]string
 }
 
 // CallbackResult indicates whether payment succeeded.
@@ -156,12 +156,12 @@ type SettingsReader interface {
 
 // ProviderConfig holds decrypted credentials for a provider.
 type ProviderConfig struct {
-	Provider      string
-	Enabled       bool
-	MerchantID    string
-	BaseURL       string
-	MerchantKey   string
-	MerchantSalt  string
-	APIKey        string
-	SecretKey     string
+	Provider     string
+	Enabled      bool
+	MerchantID   string
+	BaseURL      string
+	MerchantKey  string
+	MerchantSalt string
+	APIKey       string
+	SecretKey    string
 }

@@ -19,9 +19,13 @@ export function BillingSuccessPage() {
           <CardTitle className="mt-4">{t("billing.success.title")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-center text-sm">
-          <p className="text-muted-foreground">{t("billing.success.description")}</p>
+          <p className="text-muted-foreground">
+            {t("billing.success.description")}
+          </p>
           <Button asChild>
-            <Link href={routes.app.billing.root}>{t("billing.success.back")}</Link>
+            <Link href={routes.app.billing.root}>
+              {t("billing.success.back")}
+            </Link>
           </Button>
         </CardContent>
       </Card>

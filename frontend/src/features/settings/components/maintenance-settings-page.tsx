@@ -9,10 +9,10 @@ export function MaintenanceSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold tracking-tight text-foreground md:text-2xl">
+        <h1 className="text-foreground text-xl font-bold tracking-tight md:text-2xl">
           {t("settings.subnav.purge_rules")}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-1 text-sm">
           {t("settings.system.maintenance_description")}
         </p>
       </div>

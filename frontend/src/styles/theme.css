@@ -55,9 +55,11 @@
   --comcode-accent-soft: oklch(0.95 0.045 340);
   --comcode-glow: oklch(0.58 0.24 340 / 24%);
   --comcode-surface-glass: oklch(1 0.002 340 / 84%);
-  --comcode-gradient: linear-gradient(135deg,
-      var(--comcode-magenta) 0%,
-      var(--comcode-purple) 100%);
+  --comcode-gradient: linear-gradient(
+    135deg,
+    var(--comcode-magenta) 0%,
+    var(--comcode-purple) 100%
+  );
 }
 
 .dark {
@@ -151,14 +153,18 @@
   --color-comcode-magenta: var(--comcode-magenta);
 
   --font-sans: var(--font-comcode-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-comcode-mono), ui-monospace, SFMono-Regular, Menlo,
-    Monaco, Consolas, monospace;
-  --font-display: var(--font-comcode-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    var(--font-comcode-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, monospace;
+  --font-display:
+    var(--font-comcode-sans), ui-sans-serif, system-ui, sans-serif;
 
   --shadow-comcode-sm: 0 1px 2px oklch(0.1 0.03 305 / 8%);
-  --shadow-comcode-md: 0 4px 24px -4px oklch(0.42 0.22 305 / 12%),
+  --shadow-comcode-md:
+    0 4px 24px -4px oklch(0.42 0.22 305 / 12%),
     0 0 0 1px oklch(0.58 0.24 340 / 6%);
-  --shadow-comcode-lg: 0 12px 40px -8px oklch(0.42 0.22 305 / 16%),
+  --shadow-comcode-lg:
+    0 12px 40px -8px oklch(0.42 0.22 305 / 16%),
     0 0 0 1px oklch(0.58 0.24 340 / 8%);
   --shadow-comcode-glow: 0 0 48px -6px var(--comcode-glow);
 }

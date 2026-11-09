@@ -18,12 +18,18 @@ import { useLocale } from "@/providers/locale-provider";
 import { authService } from "@/services/auth.service";
 
 /** The invite page words rate limiting for invites; other codes use the central map. */
-const INVITE_ERROR_KEYS = { RATE_LIMITED: "accounts.invite_page.rate_limited" } as const;
+const INVITE_ERROR_KEYS = {
+  RATE_LIMITED: "accounts.invite_page.rate_limited",
+} as const;
 
 /** Maps the accept endpoint's error codes to messages. */
 function acceptErrorKey(error: unknown): string {
-  const key = isApiError(error) ? apiErrorMessageKey(error, INVITE_ERROR_KEYS) : null;
-  return key?.startsWith("accounts.invite_page.") ? key : "accounts.invite_page.accept_failed";
+  const key = isApiError(error)
+    ? apiErrorMessageKey(error, INVITE_ERROR_KEYS)
+    : null;
+  return key?.startsWith("accounts.invite_page.")
+    ? key
+    : "accounts.invite_page.accept_failed";
 }
 
 /**
@@ -33,7 +39,8 @@ function acceptErrorKey(error: unknown): string {
  */
 export function InviteAcceptPage({ token }: { token: string }) {
   const { t } = useLocale();
-  const { user, isAuthenticated, bootstrapped, hydrateProfile, logout } = useAuth();
+  const { user, isAuthenticated, bootstrapped, hydrateProfile, logout } =
+    useAuth();
   const [error, setError] = useState<string | null>(null);
 
   const preview = useQuery({
@@ -60,7 +67,14 @@ export function InviteAcceptPage({ token }: { token: string }) {
   });
 
   if (preview.isLoading || !bootstrapped) {
-    return <AuthCard title={t("accounts.invite_page.title")} description={t("common.loading")}>{null}</AuthCard>;
+    return (
+      <AuthCard
+        title={t("accounts.invite_page.title")}
+        description={t("common.loading")}
+      >
+        {null}
+      </AuthCard>
+    );
   }
   if (preview.isError || !preview.data) {
     return (
@@ -73,7 +87,9 @@ export function InviteAcceptPage({ token }: { token: string }) {
         }
       >
         <Button asChild className="w-full">
-          <Link href={routes.app.home}>{t("accounts.invite_page.go_home")}</Link>
+          <Link href={routes.app.home}>
+            {t("accounts.invite_page.go_home")}
+          </Link>
         </Button>
       </AuthCard>
     );
@@ -97,7 +113,9 @@ export function InviteAcceptPage({ token }: { token: string }) {
     return (
       <AuthCard title={invite.account_name} description={t(key)}>
         <Button asChild className="w-full">
-          <Link href={routes.app.home}>{t("accounts.invite_page.go_home")}</Link>
+          <Link href={routes.app.home}>
+            {t("accounts.invite_page.go_home")}
+          </Link>
         </Button>
       </AuthCard>
     );
@@ -120,12 +138,16 @@ export function InviteAcceptPage({ token }: { token: string }) {
           </p>
           <Button asChild className="w-full">
             <Link href={invite.user_exists ? loginHref : registerHref}>
-              {invite.user_exists ? t("accounts.invite_page.login") : t("accounts.invite_page.signup")}
+              {invite.user_exists
+                ? t("accounts.invite_page.login")
+                : t("accounts.invite_page.signup")}
             </Link>
           </Button>
           <Button asChild variant="outline" className="w-full">
             <Link href={invite.user_exists ? registerHref : loginHref}>
-              {invite.user_exists ? t("accounts.invite_page.signup") : t("accounts.invite_page.login")}
+              {invite.user_exists
+                ? t("accounts.invite_page.signup")
+                : t("accounts.invite_page.login")}
             </Link>
           </Button>
         </div>
@@ -137,7 +159,10 @@ export function InviteAcceptPage({ token }: { token: string }) {
     return (
       <AuthCard
         title={invite.account_name}
-        description={t("accounts.invite_page.signed_in_as_other", { email: user.email, invited: invite.email })}
+        description={t("accounts.invite_page.signed_in_as_other", {
+          email: user.email,
+          invited: invite.email,
+        })}
       >
         <Button
           className="w-full"
@@ -154,9 +179,17 @@ export function InviteAcceptPage({ token }: { token: string }) {
   return (
     <AuthCard title={invite.account_name} description={description}>
       <div className="space-y-3">
-        {error ? <p className="text-destructive text-center text-sm">{error}</p> : null}
-        <Button className="w-full" disabled={accept.isPending} onClick={() => accept.mutate()}>
-          {accept.isPending ? t("accounts.invite_page.accepting") : t("accounts.invite_page.accept")}
+        {error ? (
+          <p className="text-destructive text-center text-sm">{error}</p>
+        ) : null}
+        <Button
+          className="w-full"
+          disabled={accept.isPending}
+          onClick={() => accept.mutate()}
+        >
+          {accept.isPending
+            ? t("accounts.invite_page.accepting")
+            : t("accounts.invite_page.accept")}
         </Button>
       </div>
     </AuthCard>

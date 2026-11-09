@@ -1,7 +1,8 @@
 import type { components } from "@/generated/api";
 import { platformRequest } from "@/lib/api/platform-request";
 
-export type ProfileVerificationReview = components["schemas"]["ProfileVerificationReview"];
+export type ProfileVerificationReview =
+  components["schemas"]["ProfileVerificationReview"];
 export type ProfileVerificationRequestStatus =
   components["schemas"]["ProfileVerificationRequestStatus"];
 
@@ -34,17 +35,28 @@ export const profileVerificationsService = {
     });
   },
   approve(uuid: string) {
-    return platformRequest<ProfileVerificationReview>("POST", `${base}/${uuid}/approve`);
+    return platformRequest<ProfileVerificationReview>(
+      "POST",
+      `${base}/${uuid}/approve`,
+    );
   },
   reject(uuid: string, reason: string) {
-    return platformRequest<ProfileVerificationReview>("POST", `${base}/${uuid}/reject`, {
-      body: { reason },
-    });
+    return platformRequest<ProfileVerificationReview>(
+      "POST",
+      `${base}/${uuid}/reject`,
+      {
+        body: { reason },
+      },
+    );
   },
   revoke(uuid: string, reason: string) {
-    return platformRequest<ProfileVerificationReview>("POST", `${base}/${uuid}/revoke`, {
-      body: { reason },
-    });
+    return platformRequest<ProfileVerificationReview>(
+      "POST",
+      `${base}/${uuid}/revoke`,
+      {
+        body: { reason },
+      },
+    );
   },
 };
 

@@ -60,7 +60,11 @@ export function IyzicoSettingsPage() {
       appToast.success(t("integrations.payment.toast.saved"));
     },
     onError: (error) => {
-      appToast.error(isApiError(error) ? error.message : t("integrations.payment.toast.failed"));
+      appToast.error(
+        isApiError(error)
+          ? error.message
+          : t("integrations.payment.toast.failed"),
+      );
     },
   });
 
@@ -93,33 +97,51 @@ export function IyzicoSettingsPage() {
         >
           {() => (
             <FormLayout>
-              <FormSection title={t("integrations.payment.iyzico.section")} columns={2}>
+              <FormSection
+                title={t("integrations.payment.iyzico.section")}
+                columns={2}
+              >
                 <PaymentCallbackUrlField provider="iyzico" />
                 <AppSwitch
                   name="enabled"
                   label={t("integrations.payment.iyzico.enabled")}
                   description={t("integrations.payment.iyzico.enabled_hint")}
                   disabled={!canWrite}
-                  className="sm:col-span-2 items-center rounded-lg border p-4"
+                  className="items-center rounded-lg border p-4 sm:col-span-2"
                 />
-                <AppInput name="base_url" label={t("integrations.payment.iyzico.base_url")} disabled={!canWrite} />
+                <AppInput
+                  name="base_url"
+                  label={t("integrations.payment.iyzico.base_url")}
+                  disabled={!canWrite}
+                />
                 <AppInput
                   name="api_key"
                   label={t("integrations.payment.iyzico.api_key")}
                   type="password"
-                  placeholder={data.api_key_configured ? t("integrations.payment.secret_configured") : ""}
+                  placeholder={
+                    data.api_key_configured
+                      ? t("integrations.payment.secret_configured")
+                      : ""
+                  }
                   disabled={!canWrite}
                 />
                 <AppInput
                   name="secret_key"
                   label={t("integrations.payment.iyzico.secret_key")}
                   type="password"
-                  placeholder={data.secret_key_configured ? t("integrations.payment.secret_configured") : ""}
+                  placeholder={
+                    data.secret_key_configured
+                      ? t("integrations.payment.secret_configured")
+                      : ""
+                  }
                   disabled={!canWrite}
                 />
               </FormSection>
               <FormActions>
-                <Button type="submit" disabled={!canWrite || saveMutation.isPending}>
+                <Button
+                  type="submit"
+                  disabled={!canWrite || saveMutation.isPending}
+                >
                   {t("form.save")}
                 </Button>
               </FormActions>

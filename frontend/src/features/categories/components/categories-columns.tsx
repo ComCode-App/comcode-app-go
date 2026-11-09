@@ -39,12 +39,14 @@ export function getCategoriesColumns({
         const item = row.original;
         return (
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border bg-muted/50 text-muted-foreground">
+            <div className="bg-muted/50 text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border">
               <Tag className="h-4 w-4" />
             </div>
             <div className="flex flex-col">
-              <span className="font-medium text-foreground">{item.name}</span>
-              <span className="text-xs text-muted-foreground font-mono">/{item.slug}</span>
+              <span className="text-foreground font-medium">{item.name}</span>
+              <span className="text-muted-foreground font-mono text-xs">
+                /{item.slug}
+              </span>
             </div>
           </div>
         );
@@ -55,7 +57,7 @@ export function getCategoriesColumns({
       labelKey: "categories.columns.description",
       enableSorting: false,
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground line-clamp-1 max-w-[280px]">
+        <span className="text-muted-foreground line-clamp-1 max-w-[280px] text-sm">
           {row.original.description || "—"}
         </span>
       ),
@@ -77,7 +79,9 @@ export function getCategoriesColumns({
       accessorKey: "display_order",
       labelKey: "categories.columns.order",
       enableSorting: true,
-      cell: ({ row }) => <span className="font-mono text-xs">{row.original.display_order}</span>,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs">{row.original.display_order}</span>
+      ),
     }),
     createColumn<CategorySummary>({
       accessorKey: "is_active",
@@ -92,7 +96,7 @@ export function getCategoriesColumns({
               onCheckedChange={() => onToggleActive(item)}
               className="scale-85"
             />
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               {item.is_active ? t("common.active") : t("common.inactive")}
             </span>
           </div>
@@ -114,7 +118,7 @@ export function getCategoriesColumns({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    className="text-muted-foreground hover:text-foreground h-8 w-8"
                     onClick={() => onEdit(item)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -130,7 +134,7 @@ export function getCategoriesColumns({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-destructive/80 hover:text-destructive hover:bg-destructive/10"
+                    className="text-destructive/80 hover:text-destructive hover:bg-destructive/10 h-8 w-8"
                     onClick={() => onDelete(item.uuid)}
                   >
                     <Trash2 className="h-4 w-4" />

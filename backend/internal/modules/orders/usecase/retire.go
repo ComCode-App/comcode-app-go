@@ -1,8 +1,8 @@
 package usecase
 
 import (
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/searchengine"
 	"context"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/searchengine"
 
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/orders/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/routecache"

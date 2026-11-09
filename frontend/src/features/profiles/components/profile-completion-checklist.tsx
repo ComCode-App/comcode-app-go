@@ -4,7 +4,13 @@ import { ArrowRight, ListChecks } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { routes } from "@/config/routes";
 import type { ProfileCompletionSuggestion } from "@/features/profiles/services/profiles.service";
@@ -39,9 +45,15 @@ export function ProfileCompletionChecklist({
           <ListChecks className="text-primary size-4" />
           {t("profiles.completion.checklist_title")}
         </CardTitle>
-        <CardDescription>{t("profiles.completion.checklist_desc")}</CardDescription>
+        <CardDescription>
+          {t("profiles.completion.checklist_desc")}
+        </CardDescription>
         <div className="flex items-center gap-3 pt-1">
-          <Progress value={rate} className="bg-muted/60 h-1.5 flex-1" aria-label={t("profiles.completion.rate_label")} />
+          <Progress
+            value={rate}
+            className="bg-muted/60 h-1.5 flex-1"
+            aria-label={t("profiles.completion.rate_label")}
+          />
           <span className="text-sm font-semibold tabular-nums">%{rate}</span>
         </div>
       </CardHeader>
@@ -54,7 +66,12 @@ export function ProfileCompletionChecklist({
                 <Badge variant="secondary" className="font-mono text-xs">
                   +{s.points}
                 </Badge>
-                {canEdit ? <ArrowRight aria-hidden className="text-muted-foreground size-4" /> : null}
+                {canEdit ? (
+                  <ArrowRight
+                    aria-hidden
+                    className="text-muted-foreground size-4"
+                  />
+                ) : null}
               </>
             );
             return (

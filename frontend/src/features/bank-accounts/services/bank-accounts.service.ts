@@ -88,17 +88,12 @@ export const bankAccountsService = {
   },
 
   async reorder(uuids: string[]) {
-    return platformRequest<void>(
-      "POST",
-      "/v1/bank-accounts/reorder",
-      { body: { uuids } },
-    );
+    return platformRequest<void>("POST", "/v1/bank-accounts/reorder", {
+      body: { uuids },
+    });
   },
 
   async remove(uuid: string) {
-    return platformRequest<void>(
-      "DELETE",
-      `/v1/bank-accounts/${uuid}`,
-    );
+    return platformRequest<void>("DELETE", `/v1/bank-accounts/${uuid}`);
   },
 };

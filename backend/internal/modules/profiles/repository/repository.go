@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profiles/model"
+	"github.com/google/uuid"
 )
 
 var (

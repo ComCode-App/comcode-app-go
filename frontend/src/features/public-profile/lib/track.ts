@@ -19,12 +19,19 @@ function sessionId(): string | undefined {
  * Fire-and-forget visitor event for a public profile (POST /v1/events via the BFF).
  * keepalive lets it survive navigation away (tel:, external links).
  */
-export function trackProfileEvent(type: string, profileUuid: string, properties?: Record<string, string>) {
+export function trackProfileEvent(
+  type: string,
+  profileUuid: string,
+  properties?: Record<string, string>,
+) {
   try {
     void fetch("/api/v1/events", {
       method: "POST",
       keepalive: true,
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
       body: JSON.stringify({
         type,
         subject: { type: "profile", id: profileUuid },

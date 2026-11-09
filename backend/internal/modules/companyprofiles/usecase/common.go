@@ -67,10 +67,10 @@ type Profiles interface {
 type actor struct {
 	accountID   int64
 	accountUUID uuid.UUID
-	userID    int64
-	userUUID  uuid.UUID
-	memberID  int64
-	role      string
+	userID      int64
+	userUUID    uuid.UUID
+	memberID    int64
+	role        string
 }
 
 func (a actor) isAdmin() bool {

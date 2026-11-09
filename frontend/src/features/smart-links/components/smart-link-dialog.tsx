@@ -31,7 +31,12 @@ import { entitlementKeys } from "@/features/entitlements/hooks/use-entitlements"
 import { profilesKeys } from "@/features/profiles/hooks/query-keys";
 import { profilesService } from "@/features/profiles/services/profiles.service";
 import { ProfileThemePicker } from "@/features/public-profile/components/theme-picker";
-import { isLayoutMode, isThemeId, type LayoutMode, type ThemeId } from "@/features/public-profile/lib/themes";
+import {
+  isLayoutMode,
+  isThemeId,
+  type LayoutMode,
+  type ThemeId,
+} from "@/features/public-profile/lib/themes";
 import {
   PROFILE_PAGE_TARGETS,
   type SmartLink,
@@ -48,13 +53,32 @@ import { appToast } from "@/providers/toast-provider";
 
 type PublicModule = components["schemas"]["PublicModule"];
 
-const TARGETS: SmartLinkTarget[] = ["profile", "social_hub", "direct_url", "vcard_download"];
-const MODULES: PublicModule[] = ["bio", "contacts", "social_links", "addresses", "bank_accounts"];
-const PRIMARY_ACTIONS: SmartLinkPrimaryAction[] = ["save_contact", "call", "email", "whatsapp", "website"];
+const TARGETS: SmartLinkTarget[] = [
+  "profile",
+  "social_hub",
+  "direct_url",
+  "vcard_download",
+];
+const MODULES: PublicModule[] = [
+  "bio",
+  "contacts",
+  "social_links",
+  "addresses",
+  "bank_accounts",
+];
+const PRIMARY_ACTIONS: SmartLinkPrimaryAction[] = [
+  "save_contact",
+  "call",
+  "email",
+  "whatsapp",
+  "website",
+];
 const PASSCODE_MIN = 4;
 
 /** Stored presentation as the API returns it: the passcode itself is never sent back. */
-type StoredPresentation = Omit<SmartLinkPresentation, "security"> & { security?: { passcode_enabled?: boolean } };
+type StoredPresentation = Omit<SmartLinkPresentation, "security"> & {
+  security?: { passcode_enabled?: boolean };
+};
 
 type Props = {
   open: boolean;
@@ -66,13 +90,25 @@ type Props = {
 export function SmartLinkDialog({ open, onOpenChange, link }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {open ? <SmartLinkLoader key={link?.uuid ?? "new"} link={link} onDone={() => onOpenChange(false)} /> : null}
+      {open ? (
+        <SmartLinkLoader
+          key={link?.uuid ?? "new"}
+          link={link}
+          onDone={() => onOpenChange(false)}
+        />
+      ) : null}
     </Dialog>
   );
 }
 
 /** The list carries no presentation_config, so editing loads the link first. */
-function SmartLinkLoader({ link, onDone }: { link?: SmartLink; onDone: () => void }) {
+function SmartLinkLoader({
+  link,
+  onDone,
+}: {
+  link?: SmartLink;
+  onDone: () => void;
+}) {
   const detailQuery = useQuery({
     queryKey: smartLinkKeys.detail(link?.uuid ?? ""),
     queryFn: () => smartLinksService.get(link!.uuid),
@@ -88,10 +124,20 @@ function SmartLinkLoader({ link, onDone }: { link?: SmartLink; onDone: () => voi
       </DialogContent>
     );
   }
-  return <SmartLinkForm link={link} detail={detailQuery.data} onDone={onDone} />;
+  return (
+    <SmartLinkForm link={link} detail={detailQuery.data} onDone={onDone} />
+  );
 }
 
-function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: SmartLinkDetail; onDone: () => void }) {
+function SmartLinkForm({
+  link,
+  detail,
+  onDone,
+}: {
+  link?: SmartLink;
+  detail?: SmartLinkDetail;
+  onDone: () => void;
+}) {
   const { t } = useLocale();
   const queryClient = useQueryClient();
   const profilesQuery = useQuery({
@@ -102,15 +148,27 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
   const hadPasscode = stored.security?.passcode_enabled === true;
 
   const [slug, setSlug] = useState(link ? link.path.replace(/^s\//, "") : "");
-  const [target, setTarget] = useState<SmartLinkTarget>((link?.target_type as SmartLinkTarget) || "profile");
+  const [target, setTarget] = useState<SmartLinkTarget>(
+    (link?.target_type as SmartLinkTarget) || "profile",
+  );
   const [profileUuid, setProfileUuid] = useState(link?.profile_uuid ?? "");
   const [url, setUrl] = useState(link?.direct_url ?? "");
-  const [theme, setTheme] = useState<ThemeId | "">(isThemeId(stored.theme) ? stored.theme : "");
-  const [layoutMode, setLayoutMode] = useState<LayoutMode | "">(isLayoutMode(stored.layout_mode) ? stored.layout_mode : "");
+  const [theme, setTheme] = useState<ThemeId | "">(
+    isThemeId(stored.theme) ? stored.theme : "",
+  );
+  const [layoutMode, setLayoutMode] = useState<LayoutMode | "">(
+    isLayoutMode(stored.layout_mode) ? stored.layout_mode : "",
+  );
   // null = the profile's own sections.
-  const [modules, setModules] = useState<PublicModule[] | null>(stored.visible_modules ?? null);
-  const [primaryAction, setPrimaryAction] = useState<SmartLinkPrimaryAction>(stored.primary_action?.type ?? "save_contact");
-  const [leadCapture, setLeadCapture] = useState(stored.lead_capture?.enabled === true);
+  const [modules, setModules] = useState<PublicModule[] | null>(
+    stored.visible_modules ?? null,
+  );
+  const [primaryAction, setPrimaryAction] = useState<SmartLinkPrimaryAction>(
+    stored.primary_action?.type ?? "save_contact",
+  );
+  const [leadCapture, setLeadCapture] = useState(
+    stored.lead_capture?.enabled === true,
+  );
   const [passcodeOn, setPasscodeOn] = useState(hadPasscode);
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -150,8 +208,12 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["smart-links"] });
-      void queryClient.invalidateQueries({ queryKey: entitlementKeys.overview });
-      appToast.success(t(link ? "smart_links.toast.updated" : "smart_links.toast.created"));
+      void queryClient.invalidateQueries({
+        queryKey: entitlementKeys.overview,
+      });
+      appToast.success(
+        t(link ? "smart_links.toast.updated" : "smart_links.toast.created"),
+      );
       onDone();
     },
     onError: (err) => {
@@ -159,8 +221,10 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
         onDone();
         return; // the global plan-limit toast offers the upgrade
       }
-      if (isApiError(err) && err.status === 409) setError(t("smart_links.error.slug_taken"));
-      else if (isApiError(err) && /reserved/i.test(err.serverMessage ?? "")) setError(t("smart_links.error.slug_reserved"));
+      if (isApiError(err) && err.status === 409)
+        setError(t("smart_links.error.slug_taken"));
+      else if (isApiError(err) && /reserved/i.test(err.serverMessage ?? ""))
+        setError(t("smart_links.error.slug_reserved"));
       else setError(isApiError(err) ? err.message : t("common.error_generic"));
     },
   });
@@ -168,10 +232,17 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
   const submit = (event: FormEvent) => {
     event.preventDefault();
     setError(null);
-    if (needsProfile && !profileUuid) return setError(t("smart_links.error.profile_required"));
-    if (target === "direct_url" && !/^https:\/\/\S+$/i.test(url.trim())) return setError(t("smart_links.error.url_required"));
-    if (passcodeOn && (passcode ? [...passcode].length < PASSCODE_MIN : !hadPasscode))
-      return setError(t("smart_links.error.passcode_short", { min: PASSCODE_MIN }));
+    if (needsProfile && !profileUuid)
+      return setError(t("smart_links.error.profile_required"));
+    if (target === "direct_url" && !/^https:\/\/\S+$/i.test(url.trim()))
+      return setError(t("smart_links.error.url_required"));
+    if (
+      passcodeOn &&
+      (passcode ? [...passcode].length < PASSCODE_MIN : !hadPasscode)
+    )
+      return setError(
+        t("smart_links.error.passcode_short", { min: PASSCODE_MIN }),
+      );
     save.mutate();
   };
 
@@ -179,14 +250,18 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
     <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
       <form onSubmit={submit} className="space-y-4">
         <DialogHeader>
-          <DialogTitle>{t(link ? "smart_links.edit" : "smart_links.create")}</DialogTitle>
+          <DialogTitle>
+            {t(link ? "smart_links.edit" : "smart_links.create")}
+          </DialogTitle>
           <DialogDescription>{t("smart_links.subtitle")}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-1.5">
           <Label htmlFor="smart-link-slug">{t("smart_links.slug")}</Label>
           <div className="flex items-center">
-            <span className="text-muted-foreground bg-muted rounded-l-md border border-r-0 px-3 py-2 text-sm">/s/</span>
+            <span className="text-muted-foreground bg-muted rounded-l-md border border-r-0 px-3 py-2 text-sm">
+              /s/
+            </span>
             <Input
               id="smart-link-slug"
               value={slug}
@@ -198,12 +273,17 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
               required
             />
           </div>
-          <p className="text-muted-foreground text-xs">{t("smart_links.slug_hint")}</p>
+          <p className="text-muted-foreground text-xs">
+            {t("smart_links.slug_hint")}
+          </p>
         </div>
 
         <div className="grid gap-1.5">
           <Label>{t("smart_links.target")}</Label>
-          <Select value={target} onValueChange={(v) => setTarget(v as SmartLinkTarget)}>
+          <Select
+            value={target}
+            onValueChange={(v) => setTarget(v as SmartLinkTarget)}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -216,7 +296,9 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
             </SelectContent>
           </Select>
           {target === "social_hub" ? (
-            <p className="text-muted-foreground text-xs">{t("smart_links.target_hint.social_hub")}</p>
+            <p className="text-muted-foreground text-xs">
+              {t("smart_links.target_hint.social_hub")}
+            </p>
           ) : null}
         </div>
 
@@ -225,7 +307,9 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
             <Label>{t("smart_links.profile")}</Label>
             <Select value={profileUuid} onValueChange={setProfileUuid}>
               <SelectTrigger>
-                <SelectValue placeholder={t("smart_links.profile_placeholder")} />
+                <SelectValue
+                  placeholder={t("smart_links.profile_placeholder")}
+                />
               </SelectTrigger>
               <SelectContent>
                 {(profilesQuery.data?.items ?? []).map((p) => (
@@ -252,8 +336,12 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
 
         <Separator />
         <div>
-          <p className="text-sm font-medium">{t("smart_links.presentation.title")}</p>
-          <p className="text-muted-foreground text-xs">{t("smart_links.presentation.subtitle")}</p>
+          <p className="text-sm font-medium">
+            {t("smart_links.presentation.title")}
+          </p>
+          <p className="text-muted-foreground text-xs">
+            {t("smart_links.presentation.subtitle")}
+          </p>
         </div>
 
         {opensProfilePage ? (
@@ -275,20 +363,31 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
                   {t("smart_links.presentation.custom_modules")}
                   <Switch
                     checked={modules !== null}
-                    onCheckedChange={(on) => setModules(on ? [...MODULES] : null)}
+                    onCheckedChange={(on) =>
+                      setModules(on ? [...MODULES] : null)
+                    }
                     disabled={save.isPending}
                   />
                 </label>
-                <p className="text-muted-foreground text-xs">{t("smart_links.presentation.modules_hint")}</p>
+                <p className="text-muted-foreground text-xs">
+                  {t("smart_links.presentation.modules_hint")}
+                </p>
                 {modules !== null ? (
                   <div className="grid gap-2 sm:grid-cols-2">
                     {MODULES.map((m) => (
-                      <label key={m} className="flex items-center gap-2 text-sm">
+                      <label
+                        key={m}
+                        className="flex items-center gap-2 text-sm"
+                      >
                         <Checkbox
                           checked={modules.includes(m)}
                           onCheckedChange={(on) =>
                             setModules((list) =>
-                              on === true ? MODULES.filter((x) => x === m || list?.includes(x)) : (list ?? []).filter((x) => x !== m),
+                              on === true
+                                ? MODULES.filter(
+                                    (x) => x === m || list?.includes(x),
+                                  )
+                                : (list ?? []).filter((x) => x !== m),
                             )
                           }
                           disabled={save.isPending}
@@ -303,7 +402,12 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
 
             <div className="grid gap-1.5">
               <Label>{t("smart_links.presentation.primary_action")}</Label>
-              <Select value={primaryAction} onValueChange={(v) => setPrimaryAction(v as SmartLinkPrimaryAction)}>
+              <Select
+                value={primaryAction}
+                onValueChange={(v) =>
+                  setPrimaryAction(v as SmartLinkPrimaryAction)
+                }
+              >
                 <SelectTrigger className="w-full sm:w-72">
                   <SelectValue />
                 </SelectTrigger>
@@ -315,7 +419,9 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-muted-foreground text-xs">{t("smart_links.presentation.primary_action_hint")}</p>
+              <p className="text-muted-foreground text-xs">
+                {t("smart_links.presentation.primary_action_hint")}
+              </p>
             </div>
           </>
         ) : null}
@@ -323,10 +429,16 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
         <div className="space-y-1.5">
           <label className="flex items-center justify-between gap-3 text-sm font-medium">
             {t("smart_links.presentation.lead_capture")}
-            <Switch checked={leadCapture} onCheckedChange={setLeadCapture} disabled={save.isPending} />
+            <Switch
+              checked={leadCapture}
+              onCheckedChange={setLeadCapture}
+              disabled={save.isPending}
+            />
           </label>
           {opensProfilePage ? (
-            <p className="text-muted-foreground text-xs">{t("smart_links.presentation.lead_capture_hint")}</p>
+            <p className="text-muted-foreground text-xs">
+              {t("smart_links.presentation.lead_capture_hint")}
+            </p>
           ) : (
             <p className="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
               <Info className="mt-px size-3.5 shrink-0" />
@@ -338,9 +450,15 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
         <div className="space-y-1.5">
           <label className="flex items-center justify-between gap-3 text-sm font-medium">
             {t("smart_links.presentation.passcode")}
-            <Switch checked={passcodeOn} onCheckedChange={setPasscodeOn} disabled={save.isPending} />
+            <Switch
+              checked={passcodeOn}
+              onCheckedChange={setPasscodeOn}
+              disabled={save.isPending}
+            />
           </label>
-          <p className="text-muted-foreground text-xs">{t("smart_links.presentation.passcode_hint")}</p>
+          <p className="text-muted-foreground text-xs">
+            {t("smart_links.presentation.passcode_hint")}
+          </p>
           {passcodeOn ? (
             <Input
               type="password"
@@ -352,7 +470,9 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
               placeholder={
                 hadPasscode
                   ? t("smart_links.presentation.passcode_keep")
-                  : t("smart_links.presentation.passcode_placeholder", { min: PASSCODE_MIN })
+                  : t("smart_links.presentation.passcode_placeholder", {
+                      min: PASSCODE_MIN,
+                    })
               }
               className="sm:w-72"
             />

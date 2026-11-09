@@ -6,6 +6,8 @@ export const profilesKeys = {
   details: () => [...profilesKeys.all, "detail"] as const,
   detail: (uuid: string) => [...profilesKeys.details(), uuid] as const,
   meta: () => [...profilesKeys.all, "meta"] as const,
-  publicPage: (uuid: string) => [...profilesKeys.all, "public-page", uuid] as const,
-  verification: (uuid: string) => [...profilesKeys.all, "verification", uuid] as const,
+  publicPage: (uuid: string) =>
+    [...profilesKeys.all, "public-page", uuid] as const,
+  verification: (uuid: string) =>
+    [...profilesKeys.all, "verification", uuid] as const,
 };

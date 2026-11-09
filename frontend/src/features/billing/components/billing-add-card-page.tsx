@@ -22,7 +22,11 @@ export function BillingAddCardPage({ sessionUuid }: { sessionUuid: string }) {
     queryFn: () => billingService.getAddCardSession(sessionUuid),
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      if (status === "completed" || status === "failed" || status === "expired") {
+      if (
+        status === "completed" ||
+        status === "failed" ||
+        status === "expired"
+      ) {
         return false;
       }
       return 3000;

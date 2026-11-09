@@ -3,7 +3,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useLocale } from "@/providers/locale-provider";
-import { categoriesService, type UpsertCategoryPayload } from "../services/categories.service";
+import {
+  categoriesService,
+  type UpsertCategoryPayload,
+} from "../services/categories.service";
 import { categoriesQueryKeys } from "./query-keys";
 
 export function useCategoryMutations() {
@@ -15,7 +18,8 @@ export function useCategoryMutations() {
   };
 
   const createMutation = useMutation({
-    mutationFn: (payload: UpsertCategoryPayload) => categoriesService.create(payload),
+    mutationFn: (payload: UpsertCategoryPayload) =>
+      categoriesService.create(payload),
     onSuccess: () => {
       toast.success(t("categories.created_success"));
       invalidate();
@@ -26,8 +30,13 @@ export function useCategoryMutations() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ uuid, payload }: { uuid: string; payload: UpsertCategoryPayload }) =>
-      categoriesService.update(uuid, payload),
+    mutationFn: ({
+      uuid,
+      payload,
+    }: {
+      uuid: string;
+      payload: UpsertCategoryPayload;
+    }) => categoriesService.update(uuid, payload),
     onSuccess: () => {
       toast.success(t("categories.updated_success"));
       invalidate();
@@ -49,8 +58,15 @@ export function useCategoryMutations() {
   });
 
   const toggleActiveMutation = useMutation({
-    mutationFn: ({ uuid, payload, isActive }: { uuid: string; payload: UpsertCategoryPayload; isActive: boolean }) =>
-      categoriesService.update(uuid, { ...payload, is_active: isActive }),
+    mutationFn: ({
+      uuid,
+      payload,
+      isActive,
+    }: {
+      uuid: string;
+      payload: UpsertCategoryPayload;
+      isActive: boolean;
+    }) => categoriesService.update(uuid, { ...payload, is_active: isActive }),
     onSuccess: () => {
       toast.success(t("categories.status_updated"));
       invalidate();

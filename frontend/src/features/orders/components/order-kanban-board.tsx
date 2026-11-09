@@ -80,7 +80,10 @@ const KANBAN_COLUMNS: ColumnConfig[] = [
   },
 ];
 
-export function OrderKanbanBoard({ orders, onSelectOrder }: OrderKanbanBoardProps) {
+export function OrderKanbanBoard({
+  orders,
+  onSelectOrder,
+}: OrderKanbanBoardProps) {
   const { t, locale } = useLocale();
   const { updateStatusMutation } = useOrderMutations();
 
@@ -109,57 +112,77 @@ export function OrderKanbanBoard({ orders, onSelectOrder }: OrderKanbanBoardProp
     return map;
   }, [orders]);
 
-  const handleAdvance = (e: React.MouseEvent, ord: OrderSummary, nextStatus?: OrderStatus) => {
+  const handleAdvance = (
+    e: React.MouseEvent,
+    ord: OrderSummary,
+    nextStatus?: OrderStatus,
+  ) => {
     e.stopPropagation();
     if (!nextStatus) return;
     updateStatusMutation.mutate({ uuid: ord.uuid, status: nextStatus });
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3 pb-8 overflow-x-auto min-w-[1000px]">
+    <div className="grid min-w-[1000px] grid-cols-1 gap-3 overflow-x-auto pb-8 md:grid-cols-3 lg:grid-cols-6">
       {KANBAN_COLUMNS.map((col) => {
         const items = groupedOrders[col.id] || [];
         const Icon = col.icon;
 
         return (
-          <div key={col.id} className="flex flex-col rounded-xl bg-muted/30 border p-2.5 min-h-[500px]">
+          <div
+            key={col.id}
+            className="bg-muted/30 flex min-h-[500px] flex-col rounded-xl border p-2.5"
+          >
             {/* Column Header */}
-            <div className="flex items-center justify-between pb-3 border-b mb-3">
+            <div className="mb-3 flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-1.5">
-                <Icon className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs font-semibold text-foreground">{t(col.titleKey)}</span>
+                <Icon className="text-muted-foreground h-4 w-4" />
+                <span className="text-foreground text-xs font-semibold">
+                  {t(col.titleKey)}
+                </span>
               </div>
-              <Badge variant="outline" className={`font-mono text-[11px] ${col.badgeColor}`}>
+              <Badge
+                variant="outline"
+                className={`font-mono text-[11px] ${col.badgeColor}`}
+              >
                 {items.length}
               </Badge>
             </div>
 
             {/* Column Cards */}
-            <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[calc(100vh-280px)] pr-1">
+            <div className="max-h-[calc(100vh-280px)] flex-1 space-y-2.5 overflow-y-auto pr-1">
               {items.map((ord) => (
                 <Card
                   key={ord.uuid}
                   onClick={() => onSelectOrder(ord)}
-                  className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md bg-card shadow-2xs group"
+                  className="hover:border-primary/50 bg-card group cursor-pointer shadow-2xs transition-all hover:shadow-md"
                 >
-                  <CardContent className="p-3 space-y-2">
+                  <CardContent className="space-y-2 p-3">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+                      <span className="text-foreground group-hover:text-primary font-mono text-xs font-bold transition-colors">
                         {ord.order_number}
                       </span>
-                      <span className="font-mono text-xs font-semibold text-foreground">
-                        {ord.grand_total.toLocaleString(locale === "tr" ? "tr-TR" : "en-US", { minimumFractionDigits: 0 })} {ord.currency}
+                      <span className="text-foreground font-mono text-xs font-semibold">
+                        {ord.grand_total.toLocaleString(
+                          locale === "tr" ? "tr-TR" : "en-US",
+                          { minimumFractionDigits: 0 },
+                        )}{" "}
+                        {ord.currency}
                       </span>
                     </div>
 
-                    <div className="text-xs text-muted-foreground line-clamp-1">
+                    <div className="text-muted-foreground line-clamp-1 text-xs">
                       {ord.user_name || ord.user_email}
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/50">
-                      <span>{ord.items_count} {t("orders.detail_quantity")}</span>
+                    <div className="text-muted-foreground border-border/50 flex items-center justify-between border-t pt-1 text-[11px]">
+                      <span>
+                        {ord.items_count} {t("orders.detail_quantity")}
+                      </span>
                       <span className="font-mono text-[10px]">
-                        {new Date(ord.created_at).toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US")}
+                        {new Date(ord.created_at).toLocaleDateString(
+                          locale === "tr" ? "tr-TR" : "en-US",
+                        )}
                       </span>
                     </div>
 
@@ -168,7 +191,7 @@ export function OrderKanbanBoard({ orders, onSelectOrder }: OrderKanbanBoardProp
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="w-full h-6 text-[11px] justify-between px-2 bg-muted/60 hover:bg-primary hover:text-primary-foreground transition-colors mt-1"
+                        className="bg-muted/60 hover:bg-primary hover:text-primary-foreground mt-1 h-6 w-full justify-between px-2 text-[11px] transition-colors"
                         onClick={(e) => handleAdvance(e, ord, col.nextStatus)}
                         disabled={updateStatusMutation.isPending}
                       >
@@ -181,7 +204,7 @@ export function OrderKanbanBoard({ orders, onSelectOrder }: OrderKanbanBoardProp
               ))}
 
               {items.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground text-xs font-mono">
+                <div className="text-muted-foreground py-8 text-center font-mono text-xs">
                   {t("orders.kanban.empty_column")}
                 </div>
               )}

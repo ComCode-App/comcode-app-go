@@ -18,7 +18,10 @@ import trCards from "@/locales/tr/cards.json";
 import trErrors from "@/locales/tr/errors.json";
 
 export type MessageDictionary = Record<string, string>;
-export type MessageCatalogs = Record<AppLocale, Record<string, MessageDictionary>>;
+export type MessageCatalogs = Record<
+  AppLocale,
+  Record<string, MessageDictionary>
+>;
 
 /**
  * Namespaces every route needs, including visitor pages (`/{username}`, `/c/*`, `/s/*`):

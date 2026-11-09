@@ -9,11 +9,11 @@ import (
 )
 
 var (
-	ErrEmptyIBAN        = errors.New("iban cannot be empty")
-	ErrInvalidLength    = errors.New("iban length is invalid")
-	ErrInvalidFormat    = errors.New("iban contains invalid characters")
-	ErrInvalidChecksum  = errors.New("iban checksum verification failed")
-	ErrCountryNotMatch  = errors.New("iban country length does not match standard")
+	ErrEmptyIBAN       = errors.New("iban cannot be empty")
+	ErrInvalidLength   = errors.New("iban length is invalid")
+	ErrInvalidFormat   = errors.New("iban contains invalid characters")
+	ErrInvalidChecksum = errors.New("iban checksum verification failed")
+	ErrCountryNotMatch = errors.New("iban country length does not match standard")
 )
 
 // Standard IBAN lengths per country code (ISO 13616)

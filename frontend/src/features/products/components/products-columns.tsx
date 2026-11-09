@@ -1,7 +1,14 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { Box, Sparkles, CheckCircle2, FileText, Pencil, Trash2 } from "lucide-react";
+import {
+  Box,
+  Sparkles,
+  CheckCircle2,
+  FileText,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 
 import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
@@ -44,19 +51,29 @@ export function getProductsColumns({
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-foreground">{item.name}</span>
+                <span className="text-foreground font-semibold">
+                  {item.name}
+                </span>
                 {has3D && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-500 bg-amber-500/5">
-                    <Sparkles className="h-2.5 w-2.5 mr-0.5 inline" /> 3D
+                  <Badge
+                    variant="outline"
+                    className="border-amber-500/30 bg-amber-500/5 px-1.5 py-0 text-[10px] text-amber-500"
+                  >
+                    <Sparkles className="mr-0.5 inline h-2.5 w-2.5" /> 3D
                   </Badge>
                 )}
                 {item.model_3d_usdz_url && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-emerald-500/30 text-emerald-500 bg-emerald-500/5">
+                  <Badge
+                    variant="outline"
+                    className="border-emerald-500/30 bg-emerald-500/5 px-1.5 py-0 text-[10px] text-emerald-500"
+                  >
                     USDZ
                   </Badge>
                 )}
               </div>
-              <span className="text-xs text-muted-foreground font-mono">{item.sku || `/${item.slug}`}</span>
+              <span className="text-muted-foreground font-mono text-xs">
+                {item.sku || `/${item.slug}`}
+              </span>
             </div>
           </div>
         );
@@ -69,7 +86,7 @@ export function getProductsColumns({
       cell: ({ row }) => {
         const cat = row.original.category_name;
         return cat ? (
-          <Badge variant="secondary" className="font-normal text-xs">
+          <Badge variant="secondary" className="text-xs font-normal">
             {cat}
           </Badge>
         ) : (
@@ -85,10 +102,15 @@ export function getProductsColumns({
         const item = row.original;
         return (
           <div className="flex flex-col">
-            <span className="font-mono font-medium text-foreground">
-              {item.base_price.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} {item.currency}
+            <span className="text-foreground font-mono font-medium">
+              {item.base_price.toLocaleString("tr-TR", {
+                minimumFractionDigits: 2,
+              })}{" "}
+              {item.currency}
             </span>
-            <span className="text-[11px] text-muted-foreground">+{item.tax_rate}% KDV</span>
+            <span className="text-muted-foreground text-[11px]">
+              +{item.tax_rate}% KDV
+            </span>
           </div>
         );
       },
@@ -117,15 +139,18 @@ export function getProductsColumns({
         const status = row.original.status;
         if (status === "active") {
           return (
-            <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-700 text-xs">
-              <CheckCircle2 className="h-3 w-3 mr-1" /> {t("common.active")}
+            <Badge
+              variant="default"
+              className="bg-emerald-600 text-xs hover:bg-emerald-700"
+            >
+              <CheckCircle2 className="mr-1 h-3 w-3" /> {t("common.active")}
             </Badge>
           );
         }
         if (status === "draft") {
           return (
             <Badge variant="outline" className="text-xs">
-              <FileText className="h-3 w-3 mr-1" /> {t("common.draft")}
+              <FileText className="mr-1 h-3 w-3" /> {t("common.draft")}
             </Badge>
           );
         }
@@ -151,7 +176,7 @@ export function getProductsColumns({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10"
+                    className="h-8 w-8 text-amber-500 hover:bg-amber-500/10 hover:text-amber-400"
                     onClick={() => onOpenStudio(item)}
                   >
                     <Sparkles className="h-4 w-4" />
@@ -167,7 +192,7 @@ export function getProductsColumns({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    className="text-muted-foreground hover:text-foreground h-8 w-8"
                     onClick={() => onEdit(item)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -183,7 +208,7 @@ export function getProductsColumns({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-destructive/80 hover:text-destructive hover:bg-destructive/10"
+                    className="text-destructive/80 hover:text-destructive hover:bg-destructive/10 h-8 w-8"
                     onClick={() => onDelete(item.uuid)}
                   >
                     <Trash2 className="h-4 w-4" />

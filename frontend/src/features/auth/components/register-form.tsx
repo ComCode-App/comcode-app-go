@@ -53,7 +53,8 @@ export function RegisterForm() {
   });
 
   const methods = appConfig?.auth_methods;
-  const passwordRegister = Boolean(methods?.password.register) || Boolean(inviteToken);
+  const passwordRegister =
+    Boolean(methods?.password.register) || Boolean(inviteToken);
   const oauthRegister = [
     {
       id: "github" as const,
@@ -120,7 +121,9 @@ export function RegisterForm() {
       }
       markAuthenticated();
       const user = await hydrateProfile();
-      router.replace(user ? (next ?? defaultHomeForUser(user)) : routes.guest.login);
+      router.replace(
+        user ? (next ?? defaultHomeForUser(user)) : routes.guest.login,
+      );
     } catch (error) {
       if (isApiError(error)) {
         setFormError(error.message || t("auth.register.error"));
@@ -244,7 +247,11 @@ export function RegisterForm() {
         <p className="text-muted-foreground text-center text-sm">
           {t("auth.register.have_account")}{" "}
           <Link
-            href={next ? `${routes.guest.login}?next=${encodeURIComponent(next)}` : routes.guest.login}
+            href={
+              next
+                ? `${routes.guest.login}?next=${encodeURIComponent(next)}`
+                : routes.guest.login
+            }
             className="underline-offset-4 hover:underline"
           >
             {t("auth.register.login_link")}

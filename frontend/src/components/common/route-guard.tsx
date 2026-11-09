@@ -103,7 +103,9 @@ export function RouteGuard({ children, mode }: RouteGuardProps) {
     return (
       <RoleMismatch
         expected={t("errors.area_app")}
-        home={isPlatformUser(user) ? routes.platform.home : routes.errors.forbidden}
+        home={
+          isPlatformUser(user) ? routes.platform.home : routes.errors.forbidden
+        }
       />
     );
   }
