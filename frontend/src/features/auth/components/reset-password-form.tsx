@@ -44,7 +44,9 @@ export function ResetPasswordForm() {
       toast.success(t("auth.reset.success"));
       router.replace(routes.guest.login);
     } catch (error) {
-      if (isApiError(error)) {
+      if (isApiError(error) && error.code === "RATE_LIMITED") {
+        setFormError(t("auth.rate_limited"));
+      } else if (isApiError(error)) {
         setFormError(error.message || t("auth.reset.error"));
       } else {
         setFormError(t("auth.reset.error"));

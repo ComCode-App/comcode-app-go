@@ -38,7 +38,9 @@ export function ForgotPasswordForm() {
       setSent(true);
       toast.success(t("auth.forgot.success"));
     } catch (error) {
-      if (isApiError(error)) {
+      if (isApiError(error) && error.code === "RATE_LIMITED") {
+        setFormError(t("auth.rate_limited"));
+      } else if (isApiError(error)) {
         setFormError(error.message || t("common.error_generic"));
       } else {
         setFormError(t("common.error_generic"));

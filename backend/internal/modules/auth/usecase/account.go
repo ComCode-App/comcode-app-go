@@ -195,20 +195,19 @@ func (u *AuthUseCase) ChangePassword(ctx context.Context, userUUID uuid.UUID, cu
 	return u.repo.RevokeAllRefresh(ctx, user.ID)
 }
 
-// RequestEmailVerification issues a verification OTP email.
-func (u *AuthUseCase) RequestEmailVerification(ctx context.Context, userUUID uuid.UUID, emailOverride string) error {
-	var user model.User
-	var err error
-	if emailOverride != "" {
-		user, err = u.repo.FindUserByEmail(ctx, strings.ToLower(strings.TrimSpace(emailOverride)))
-	} else {
-		user, err = u.repo.FindUserByUUID(ctx, userUUID)
-	}
+// RequestEmailVerification issues a verification OTP email to the caller's own address.
+// A different address in the request is ignored with the same accepted response: it used to
+// let any signed-in user mail codes to (and reset the OTP attempt budget of) other accounts.
+func (u *AuthUseCase) RequestEmailVerification(ctx context.Context, userUUID uuid.UUID, requestedEmail string) error {
+	user, err := u.repo.FindUserByUUID(ctx, userUUID)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			return nil
 		}
 		return err
+	}
+	if e := strings.ToLower(strings.TrimSpace(requestedEmail)); e != "" && e != strings.ToLower(strings.TrimSpace(user.Email)) {
+		return nil
 	}
 	if user.EmailVerified {
 		return nil
