@@ -21,6 +21,8 @@ Canonical env is the **repo-root** `.env`. Compose files are `compose.local.yml`
 | [github-integration](./.agents/skills/github-integration/SKILL.md) | GitHub App OAuth, encrypted credentials |
 | [step-up-engine](./.agents/skills/step-up-engine/SKILL.md) | Re-auth gates (password/passkey) on sensitive actions |
 | [admin-date-picker](./.agents/skills/admin-date-picker/SKILL.md) | Any date field in `frontend/` |
+| [db-migration](./.agents/skills/db-migration/SKILL.md) | New table/column/seed/query: migration (ComCode numbering) → `account_tables.txt` → sqlc → OpenAPI |
+| [verify-changes](./.agents/skills/verify-changes/SKILL.md) | Checks to run before commit / PR (mirrors CI) |
 
 ## Human docs
 
@@ -57,7 +59,7 @@ Canonical env is the **repo-root** `.env`. Compose files are `compose.local.yml`
 ## Hard rules
 
 - Browser talks to same-origin `/api/v1/*`, never the Go host.
-- Media URLs are API-owned. Never assemble MinIO/S3 keys in the browser.
+- Media URLs are API-owned. Never assemble S3 (SeaweedFS) keys in the browser.
 - Never expose Meilisearch to the browser; search goes through `/v1/search`.
 - New `/v1` routes update `backend/docs/openapi.yaml` in the same change (CI checks it: `backend/scripts/openapi_routes.py`).
 - Permission slugs are added only via migration + `internal/platform/rbac` + `frontend/src/config/permissions.ts`.
