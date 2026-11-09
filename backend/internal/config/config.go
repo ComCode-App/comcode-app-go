@@ -49,6 +49,9 @@ type AuthConfig struct {
 	AdapterSecret string
 	WebAuthnRPID  string
 	FrontendURL   string
+	// ReviewAccounts maps a lower-cased email to its fixed App Store / Play review sign-in
+	// code (AUTH_REVIEW_ACCOUNTS=email:code,...). Empty = disabled (TEC-1182).
+	ReviewAccounts map[string]string
 }
 
 // VAPIDConfig holds Web Push keys (empty = push disabled).
@@ -283,6 +286,12 @@ func Load() (Config, error) {
 			IndexPrefix: getEnv("MEILI_INDEX_PREFIX", "app"),
 		},
 	}
+
+	reviewAccounts, err := parseReviewAccounts(getEnv("AUTH_REVIEW_ACCOUNTS", ""))
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.Auth.ReviewAccounts = reviewAccounts
 
 	if err := cfg.validate(); err != nil {
 		return Config{}, err
