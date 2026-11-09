@@ -94,3 +94,21 @@ test("invalidate forces a rebuild", async () => {
   cache.invalidate();
   assert.equal(await cache.get(), 2);
 });
+
+test("a build is not served past its expiresAt (generated Apple secret, TEC-1123)", async () => {
+  let t = 1_000_000;
+  let builds = 0;
+  const cache = createProviderCache(
+    async () => {
+      builds += 1;
+      return { value: builds, complete: true, expiresAt: t + 10_000 };
+    },
+    60_000,
+    () => t,
+  );
+  assert.equal(await cache.get(), 1);
+  t += 9_999;
+  assert.equal(await cache.get(), 1);
+  t += 1;
+  assert.equal(await cache.get(), 2);
+});

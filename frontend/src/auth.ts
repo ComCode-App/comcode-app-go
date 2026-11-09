@@ -18,6 +18,7 @@ import {
   loginWithPassword,
   type OAuthConfigPayload,
 } from "@/lib/auth/go-adapter-client";
+import { appleFormPostCookies } from "@/lib/auth/apple-form-post";
 import { createProviderCache } from "@/lib/auth/provider-cache";
 import { secureAuthCookies } from "@/lib/auth/secure-cookies";
 import {
@@ -84,7 +85,15 @@ type OAuthConfigResult = {
   config: OAuthConfigPayload | null;
   /** False when the backend call failed (the provider then stays off for this build). */
   ok: boolean;
+  /** Epoch ms after which the providers must be rebuilt (generated client secret). */
+  usableUntil?: number;
 };
+
+/**
+ * A generated client secret (Apple signing key, valid 24 h) is never handed to
+ * Auth.js this close to its expiry, and the provider cache is rebuilt before it.
+ */
+const SECRET_EXPIRY_MARGIN_MS = 10 * 60 * 1000;
 
 async function loadOAuthConfig(
   provider: OAuthProviderId,
@@ -92,6 +101,15 @@ async function loadOAuthConfig(
   try {
     const config = await adapterGetOAuthConfig(provider);
     if (config.enabled && config.client_id && config.client_secret) {
+      if (config.client_secret_expires_at) {
+        const exp = Date.parse(config.client_secret_expires_at);
+        if (Number.isFinite(exp)) {
+          const usableUntil = exp - SECRET_EXPIRY_MARGIN_MS;
+          // Already (nearly) expired: keep the provider off and retry next build.
+          if (usableUntil <= Date.now()) return { config: null, ok: false };
+          return { config, ok: true, usableUntil };
+        }
+      }
       return { config, ok: true };
     }
     return { config: null, ok: true };
@@ -118,6 +136,7 @@ async function loadLoginMethods() {
 async function buildProviders(): Promise<{
   value: Provider[];
   complete: boolean;
+  expiresAt: number | null;
 }> {
   // All backend lookups run in parallel (TEC-1113).
   const [methods, githubResult, googleResult, facebookResult, appleResult] =
@@ -136,6 +155,15 @@ async function buildProviders(): Promise<{
     facebookResult,
     appleResult,
   ].every((r) => r.ok);
+  const secretDeadlines = [
+    githubResult,
+    googleResult,
+    facebookResult,
+    appleResult,
+  ].flatMap((r) => (r.usableUntil ? [r.usableUntil] : []));
+  const expiresAt = secretDeadlines.length
+    ? Math.min(...secretDeadlines)
+    : null;
 
   const providers: Provider[] = [];
 
@@ -238,142 +266,161 @@ async function buildProviders(): Promise<{
     );
   }
 
-  return { value: providers, complete };
+  return { value: providers, complete, expiresAt };
 }
 
 /** Shared across requests in this server process; TTL in provider-cache.ts. */
 const providerCache = createProviderCache(buildProviders);
 
-const authHandlers = NextAuth(async () => ({
-  adapter: goAdapter({ pendingGitHubLogins }),
-  trustHost: process.env.AUTH_TRUST_HOST === "true",
-  useSecureCookies: secureAuthCookies(),
-  session: { strategy: "jwt" },
-  logger: { error: logAuthError },
-  providers: await providerCache.get(),
-  experimental: {
-    enableWebAuthn: true,
-  },
-  pages: {
-    signIn: routes.guest.login,
-    error: routes.guest.login,
-  },
-  callbacks: {
-    authorized({ auth, request }) {
-      const { pathname } = request.nextUrl;
-      if (!isProtectedPath(pathname) || auth) {
-        return true;
-      }
+function requestPathname(request: Request | undefined): string {
+  if (!request) return "";
+  try {
+    return new URL(request.url).pathname;
+  } catch {
+    return "";
+  }
+}
 
-      const url = request.nextUrl.clone();
-      url.pathname = routes.guest.login;
-      // Keep the query so the deep link survives sign-in; the login form runs
-      // it through safeNextPath before redirecting.
-      url.search = "";
-      url.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
-      return NextResponse.redirect(url);
+const authHandlers = NextAuth(async (request) => {
+  // Apple's form_post callback is a cross-site POST: its check cookies are
+  // SameSite=None on the Apple sign-in / callback requests only (TEC-1123).
+  const appleCookies = appleFormPostCookies(
+    requestPathname(request),
+    secureAuthCookies(),
+  );
+  return {
+    adapter: goAdapter({ pendingGitHubLogins }),
+    trustHost: process.env.AUTH_TRUST_HOST === "true",
+    useSecureCookies: secureAuthCookies(),
+    ...(appleCookies ? { cookies: appleCookies } : {}),
+    session: { strategy: "jwt" },
+    logger: { error: logAuthError },
+    providers: await providerCache.get(),
+    experimental: {
+      enableWebAuthn: true,
     },
-    async signIn({ account, profile }) {
-      if (!isOAuthProvider(account?.provider)) {
-        return true;
-      }
-
-      const provider = account.provider;
-
-      if (
-        provider === "github" &&
-        profile &&
-        typeof profile === "object" &&
-        "login" in profile &&
-        typeof profile.login === "string" &&
-        account.providerAccountId
-      ) {
-        pendingGitHubLogins.set(account.providerAccountId, profile.login);
-      }
-
-      const providerAccountId = account.providerAccountId ?? "";
-      try {
-        await adapterGetOAuthAccountUser(provider, providerAccountId);
-        return true;
-      } catch {
-        // Not linked yet.
-      }
-
-      const { getApiTokens } = await import("@/lib/server/auth-tokens");
-      const session = await getApiTokens();
-      if (session.userId) {
-        return true;
-      }
-
-      try {
-        const config = await adapterGetOAuthConfig(provider);
-        if (config.register_allowed) {
+    pages: {
+      signIn: routes.guest.login,
+      error: routes.guest.login,
+    },
+    callbacks: {
+      authorized({ auth, request }) {
+        const { pathname } = request.nextUrl;
+        if (!isProtectedPath(pathname) || auth) {
           return true;
         }
-      } catch {
-        // fall through
-      }
 
-      return `${routes.guest.login}?error=OAuthNotLinked`;
-    },
-    async jwt({ token, user, account, trigger, session }) {
-      if (user) {
-        token.sub = user.id;
-        token.email = user.email;
-        const extended = user as typeof user & {
-          accessToken?: string;
-          refreshToken?: string;
-          expiresIn?: number;
-        };
-        if (extended.accessToken && extended.refreshToken) {
-          token.accessToken = extended.accessToken;
-          token.refreshToken = extended.refreshToken;
-          token.expiresIn = extended.expiresIn;
+        const url = request.nextUrl.clone();
+        url.pathname = routes.guest.login;
+        // Keep the query so the deep link survives sign-in; the login form runs
+        // it through safeNextPath before redirecting.
+        url.search = "";
+        url.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
+        return NextResponse.redirect(url);
+      },
+      async signIn({ account, profile }) {
+        if (!isOAuthProvider(account?.provider)) {
+          return true;
         }
-      }
 
-      if (
-        account &&
-        (account.provider === "passkey" || isOAuthProvider(account.provider)) &&
-        token.sub &&
-        !token.accessToken
-      ) {
+        const provider = account.provider;
+
+        if (
+          provider === "github" &&
+          profile &&
+          typeof profile === "object" &&
+          "login" in profile &&
+          typeof profile.login === "string" &&
+          account.providerAccountId
+        ) {
+          pendingGitHubLogins.set(account.providerAccountId, profile.login);
+        }
+
+        const providerAccountId = account.providerAccountId ?? "";
         try {
-          const authMethod =
-            account.provider === "passkey" ? "passkey" : "oauth";
-          const tokens = await adapterIssueSession(token.sub, authMethod);
-          token.accessToken = tokens.access_token;
-          token.refreshToken = tokens.refresh_token;
-          token.expiresIn = tokens.expires_in;
+          await adapterGetOAuthAccountUser(provider, providerAccountId);
+          return true;
         } catch {
-          token.error = isOAuthProvider(account.provider)
-            ? "OAuthSessionError"
-            : "PasskeySessionError";
+          // Not linked yet.
         }
-      }
 
-      if (trigger === "update" && session) {
-        const patch = session as {
-          accessToken?: string;
-          refreshToken?: string;
-          expiresIn?: number;
-        };
-        if (patch.accessToken) token.accessToken = patch.accessToken;
-        if (patch.refreshToken) token.refreshToken = patch.refreshToken;
-        if (patch.expiresIn) token.expiresIn = patch.expiresIn;
-      }
+        const { getApiTokens } = await import("@/lib/server/auth-tokens");
+        const session = await getApiTokens();
+        if (session.userId) {
+          return true;
+        }
 
-      return token;
+        try {
+          const config = await adapterGetOAuthConfig(provider);
+          if (config.register_allowed) {
+            return true;
+          }
+        } catch {
+          // fall through
+        }
+
+        return `${routes.guest.login}?error=OAuthNotLinked`;
+      },
+      async jwt({ token, user, account, trigger, session }) {
+        if (user) {
+          token.sub = user.id;
+          token.email = user.email;
+          const extended = user as typeof user & {
+            accessToken?: string;
+            refreshToken?: string;
+            expiresIn?: number;
+          };
+          if (extended.accessToken && extended.refreshToken) {
+            token.accessToken = extended.accessToken;
+            token.refreshToken = extended.refreshToken;
+            token.expiresIn = extended.expiresIn;
+          }
+        }
+
+        if (
+          account &&
+          (account.provider === "passkey" ||
+            isOAuthProvider(account.provider)) &&
+          token.sub &&
+          !token.accessToken
+        ) {
+          try {
+            const authMethod =
+              account.provider === "passkey" ? "passkey" : "oauth";
+            const tokens = await adapterIssueSession(token.sub, authMethod);
+            token.accessToken = tokens.access_token;
+            token.refreshToken = tokens.refresh_token;
+            token.expiresIn = tokens.expires_in;
+          } catch {
+            token.error = isOAuthProvider(account.provider)
+              ? "OAuthSessionError"
+              : "PasskeySessionError";
+          }
+        }
+
+        if (trigger === "update" && session) {
+          const patch = session as {
+            accessToken?: string;
+            refreshToken?: string;
+            expiresIn?: number;
+          };
+          if (patch.accessToken) token.accessToken = patch.accessToken;
+          if (patch.refreshToken) token.refreshToken = patch.refreshToken;
+          if (patch.expiresIn) token.expiresIn = patch.expiresIn;
+        }
+
+        return token;
+      },
+      async session({ session, token }) {
+        if (session.user) {
+          session.user.id = token.sub ?? "";
+        }
+        (session as { error?: string }).error = token.error as
+          "PasskeySessionError" | "OAuthSessionError" | undefined;
+        return session;
+      },
     },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.sub ?? "";
-      }
-      (session as { error?: string }).error = token.error as
-        "PasskeySessionError" | "OAuthSessionError" | undefined;
-      return session;
-    },
-  },
-}));
+  };
+});
 
 export const { handlers, auth, signIn, signOut } = authHandlers;

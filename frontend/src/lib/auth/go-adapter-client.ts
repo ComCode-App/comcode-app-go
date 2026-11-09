@@ -82,7 +82,10 @@ export type GitHubOAuthConfigPayload = {
   client_secret: string;
 };
 
-export type OAuthConfigPayload = GitHubOAuthConfigPayload;
+export type OAuthConfigPayload = GitHubOAuthConfigPayload & {
+  /** Set when the API generated the secret (Apple signing key); RFC 3339. */
+  client_secret_expires_at?: string;
+};
 
 export type LinkOAuthAccountPayload = {
   userId: string;

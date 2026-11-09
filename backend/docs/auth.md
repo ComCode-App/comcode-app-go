@@ -47,6 +47,12 @@ Super admin bypasses permission checks in `HasPermission`. Most platform HTTP ro
 - **OAuth**: linked accounts can sign in when `login` is enabled. Unlinked accounts may self-register only when register is allowed for that provider.
 - Secrets for OAuth apps are encrypted with `APP_ENCRYPTION_KEY`.
 
+### Sign in with Apple (web, TEC-1123)
+
+- **Signing key**: the platform admin uploads the `.p8` key with its Team ID and Key ID on the Apple integration page (`PATCH /v1/platform/integrations/apple`: `team_id`, `key_id`, `private_key`, `remove_private_key`). The key is validated (PEM, PKCS#8, EC P-256), stored encrypted with `APP_ENCRYPTION_KEY` in `oauth_provider_settings.apple_private_key_enc` (migration 000076) and is write-only: responses carry only `private_key_configured`, `private_key_fingerprint` (SHA-256 of the public key) and `client_secret_source`. Activity log meta has the Key ID and fingerprint, never the key; `logredact` / `redact.ts` replace any PEM private key in log text with `[private-key]`.
+- **Client secret precedence**: (1) a stored signing key: the adapter route `/v1/internal/auth/oauth/apple` returns a freshly generated ES256 `client_secret` (sub = Services ID, valid 24 h) with `client_secret_expires_at`; (2) otherwise the pasted client secret JWT (`client_secret`); (3) otherwise Apple sign-in stays off. There is no env fallback: ComCode never read Apple settings from env. The frontend provider cache (TEC-1113) never outlives `client_secret_expires_at` minus 10 minutes.
+- **form_post callback**: Apple returns with a cross-site POST to `/api/auth/callback/apple`. On `signin/apple` and `callback/apple` only, and only over https, the Auth.js state / PKCE / nonce cookies (and a dedicated callback-url cookie) are `SameSite=None; Secure` (`frontend/src/lib/auth/apple-form-post.ts`); session and CSRF cookies are unchanged. The Auth.js route refuses every other cross-site POST to `/api/auth/*` with the BFF's origin check.
+
 ## Linked identities
 
 | Method | Path | Auth |
