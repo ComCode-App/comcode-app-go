@@ -68,6 +68,16 @@ Super admin bypasses permission checks in `HasPermission`. Most platform HTTP ro
 - **Sign-up by code**: for an unknown email, while the global `registration_enabled` switch is on, a valid code creates the user (email verified, no password, `name` = email local part, empty `surname`, default role, welcome notification, personal account via the users trigger) and signs in on the personal account. With registration closed no account is created. Users who never set a password set one with the password reset flow.
 - Email-code login is not gated by the password login switch; it is always offered on the login page.
 
+### App Store / Play review accounts (TEC-1182)
+
+Store reviewers cannot receive the emailed code, so the backend can give chosen accounts a fixed code.
+
+- **Configure**: `AUTH_REVIEW_ACCOUNTS=review@example.com:246810[,other@example.com:913572]` (production: `.env.server` / Dokploy env, delivered by `compose.prod.yml`; blank or unset = off). Create the review account first (a normal active user, no authenticator unless you hand the reviewer one); give the reviewer only that email and its code.
+- **Validation at boot** (`internal/config/review_accounts.go`): each entry is `email:code`, the code exactly 6 digits and not trivially guessable (repeated digits like `000000`, runs like `123456` / `654321`, patterns like `121212` / `123123`, and a few common codes are refused). Any malformed entry or duplicate email stops the API in every environment, so a typo never half-enables the bypass. Errors name the entry number, never the code.
+- **Behaviour**: for a listed email that belongs to an **existing active** account, `request` sends no email and stores no code (same `accepted` response), and `verify` accepts the fixed code for that email only. Emailed codes keep working. The fixed code never works for another email, for an unknown email (it never creates an account, even with registration open) or for a disabled account, and does not mark the email verified. MFA rules are unchanged (authenticator `MFA_REQUIRED` round-trip, `MFA_NOT_ENROLLED` policy), and the per-IP / per-email rate limits below apply as for any code.
+- **Audit**: each sign-in with a fixed code logs INFO `auth_review_code_used` with `user_id`, a truncated SHA-256 of the email (`email_sha256`) and `request_id`; never the code or the email in clear. A suppressed request logs `auth_review_account_code_request` (`user_id`), and boot logs `auth_review_accounts_enabled` with the count only.
+- **Rotate** the code after each store review (new random 6 digits, redeploy): a reviewer's code must not stay valid for the next submission. **Remove** the variable (blank) when no review is pending; the account itself can stay.
+
 ## Linked identities
 
 | Method | Path | Auth |

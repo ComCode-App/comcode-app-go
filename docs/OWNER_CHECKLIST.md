@@ -8,6 +8,7 @@ Repoda hiçbir kodun yapamayacağı, yalnız repo sahibinin bir kez yapacağı a
 - [ ] **Branch koruması:** `main` için tek zorunlu status check **`ci`** olsun (tek tek işler değil; onlar path filtresiyle bilerek atlanır). İstenirse aynısı `cc-collective-branch` için. Doğrulama: `ci` kırmızıyken PR'da merge düğmesi kapalı.
 - [ ] **Self-hosted runner:** Artık kullanılmıyor (her iş `ubuntu-24.04`). Settings → Actions → Runners altındaki eski runner kaydı silinebilir. Doğrulama: liste boş, CI işleri yine de çalışıyor.
 - [ ] **Mobil (yalnız istenirse):** Settings → Secrets and variables → Actions → Variables altında `MOBILE_ENABLED=true`; EAS sürümü için Secrets altında `EXPO_TOKEN`. Doğrulama: `mobile/package.json` olan bir push'ta `mobile` işi çalışır (atlanmaz).
+- [ ] **Mobil mağaza incelemesi (TEC-1182, yalnız inceleme sırasında):** App Store / Play inceleyicisi e-posta kodu alamaz. Önce normal, aktif bir inceleme hesabı aç; Dokploy env'ine `AUTH_REVIEW_ACCOUNTS=<eposta>:<rastgele 6 hane>` yaz ve redeploy et (zayıf kod, ör. `123456`, backend'i açılışta durdurur). E-postayı ve kodu yalnız mağaza inceleme notuna yaz. İnceleme bitince kodu değiştir, inceleme beklenmiyorsa değişkeni boşalt. Doğrulama: backend logunda `auth_review_accounts_enabled count=1`; giriş ekranında e-posta + kod ile oturum açılır, e-posta gönderilmez. Ayrıntı: [backend/docs/auth.md](../backend/docs/auth.md) → App Store / Play review accounts.
 
 ## GHCR
 

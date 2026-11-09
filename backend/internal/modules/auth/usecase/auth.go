@@ -150,6 +150,8 @@ type AuthUseCase struct {
 	box          SecretBox
 	totpIssuer   string
 	invites      InviteChecker
+	// reviewAccounts maps email -> fixed App Store / Play review sign-in code (TEC-1182).
+	reviewAccounts map[string]string
 }
 
 // InviteChecker reports open company invites (accounts usecase.Invites, TEC-945).
