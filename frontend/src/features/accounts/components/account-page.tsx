@@ -21,6 +21,7 @@ import {
   type AccountMember,
   type AccountRole,
   accountService,
+  isInvitedResult,
 } from "@/features/accounts/services/account.service";
 import { CompanySectorCard } from "@/features/company-structure";
 import { PlanUsageCard } from "@/features/entitlements";
@@ -71,10 +72,16 @@ export function AccountPage() {
   const [role, setRole] = useState<AccountRole>("member");
   const addMember = useMutation({
     mutationFn: accountService.addMember,
-    onSuccess: () => {
+    onSuccess: (result) => {
       setEmail("");
       setRole("member");
       invalidate();
+      if (isInvitedResult(result)) {
+        // Not a verified user: an invite went to the address instead (TEC-1104).
+        void queryClient.invalidateQueries({ queryKey: ["account", "invites"] });
+        appToast.success(t("accounts.toast.member_invited", { email: result.invite.email }));
+        return;
+      }
       appToast.success(t("accounts.toast.member_added"));
     },
     onError,

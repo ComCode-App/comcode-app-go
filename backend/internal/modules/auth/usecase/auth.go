@@ -33,7 +33,13 @@ var (
 	ErrAlreadyImpersonating = errors.New("already impersonating another user")
 	ErrSessionRevoked       = errors.New("session revoked or expired")
 	ErrAccountSuspended     = errors.New("account is suspended")
+	// ErrLastSignInMethod: the change would leave the user without any way to sign in.
+	ErrLastSignInMethod = errors.New("cannot remove the last sign-in method")
 )
+
+// ErrSuperAdminRequired: only a super admin may grant or remove the super_admin role or change a
+// super admin account (roles, status, password, impersonation). It wraps ErrForbidden (403).
+var ErrSuperAdminRequired = fmt.Errorf("%w: only a super admin can change super admin accounts or the super_admin role", ErrForbidden)
 
 // Repository is the persistence port for auth use cases.
 type Repository interface {
@@ -43,6 +49,7 @@ type Repository interface {
 	FindUserByID(ctx context.Context, id int64) (model.User, error)
 	UpdateLastLogin(ctx context.Context, userID int64) error
 	UpdatePassword(ctx context.Context, userID int64, hash string) error
+	MarkPasswordUnset(ctx context.Context, userID int64) error
 	UpdateProfile(ctx context.Context, userUUID uuid.UUID, name, surname, locale *string) (model.User, error)
 	SetEmailVerified(ctx context.Context, userID int64) (model.User, error)
 	UpdateUserPlatform(ctx context.Context, id uuid.UUID, name, surname, status *string) (model.User, error)
@@ -325,6 +332,11 @@ func (u *AuthUseCase) RegisterOAuthUser(ctx context.Context, email, name, surnam
 	if err != nil {
 		return model.AdapterUser{}, err
 	}
+	// The random hash above is not a password the user can sign in with.
+	if err := u.repo.MarkPasswordUnset(ctx, user.ID); err != nil {
+		return model.AdapterUser{}, err
+	}
+	user.PasswordSet = false
 	if err := u.assignDefaultRole(ctx, user.ID); err != nil {
 		return model.AdapterUser{}, err
 	}

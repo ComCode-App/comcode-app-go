@@ -14,6 +14,11 @@ type ChannelAuthorizer interface {
 	CanSubscribeChannel(ctx context.Context, userUUID uuid.UUID, isSuperAdmin bool, channel string) (bool, error)
 }
 
+// UserChannel returns the canonical per-user channel name "user:{uuid}".
+func UserChannel(userUUID uuid.UUID) string {
+	return "user:" + userUUID.String()
+}
+
 // ParseUserChannel returns the user UUID from "user:{uuid}".
 func ParseUserChannel(channel string) (uuid.UUID, bool) {
 	raw, ok := stripPrefix(channel, "user:")

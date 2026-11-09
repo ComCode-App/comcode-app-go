@@ -14,6 +14,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  isLastSignInIdentity,
+  isLastSignInMethodError,
+} from "@/features/account/lib/sign-in-methods";
 import { isApiError } from "@/lib/api";
 import { datetime } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
@@ -65,7 +69,11 @@ export function OAuthIdentityManager({ providers }: OAuthIdentityManagerProps) {
     queryFn: async () => {
       try {
         const result = await authService.listIdentities();
-        return result.items ?? [];
+        return {
+          items: result.items ?? [],
+          hasPassword: result.has_password ?? true,
+          hasPasskey: result.has_passkey ?? false,
+        };
       } catch (error) {
         toast.error(
           isApiError(error)
@@ -76,8 +84,14 @@ export function OAuthIdentityManager({ providers }: OAuthIdentityManagerProps) {
       }
     },
   });
-  const items = identitiesQuery.data ?? [];
+  const items = identitiesQuery.data?.items ?? [];
   const loading = identitiesQuery.isPending;
+  // Without a password or passkey the only linked identity cannot be removed.
+  const unlinkLocked = isLastSignInIdentity({
+    hasPassword: identitiesQuery.data?.hasPassword ?? true,
+    hasPasskey: identitiesQuery.data?.hasPasskey ?? false,
+    identityCount: items.length,
+  });
 
   const connect = async (provider: ProviderId) => {
     setPendingProvider(provider);
@@ -99,7 +113,10 @@ export function OAuthIdentityManager({ providers }: OAuthIdentityManagerProps) {
       toast.success(t("auth.oauth.unlink_success"));
       await identitiesQuery.refetch();
     } catch (error) {
-      if (isApiError(error)) {
+      if (isLastSignInMethodError(error)) {
+        // The global API error toast already showed the localized message.
+        await identitiesQuery.refetch();
+      } else if (isApiError(error)) {
         toast.error(error.message || t("auth.oauth.unlink_error"));
       } else {
         toast.error(t("auth.oauth.unlink_error"));
@@ -156,9 +173,7 @@ export function OAuthIdentityManager({ providers }: OAuthIdentityManagerProps) {
                 ) : (
                   meta.icon
                 )}
-                {pending
-                  ? t("auth.oauth.connecting")
-                  : t(meta.connectKey)}
+                {pending ? t("auth.oauth.connecting") : t(meta.connectKey)}
               </Button>
             </div>
           );
@@ -195,7 +210,10 @@ export function OAuthIdentityManager({ providers }: OAuthIdentityManagerProps) {
                 variant="outline"
                 size="sm"
                 onClick={() => unlink(provider.id)}
-                disabled={pendingProvider !== null}
+                disabled={pendingProvider !== null || unlinkLocked}
+                aria-describedby={
+                  unlinkLocked ? `unlink-locked-${provider.id}` : undefined
+                }
               >
                 {pending ? (
                   <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -205,6 +223,14 @@ export function OAuthIdentityManager({ providers }: OAuthIdentityManagerProps) {
                 {pending ? t("auth.oauth.unlinking") : t("auth.oauth.unlink")}
               </Button>
             </div>
+            {unlinkLocked ? (
+              <p
+                id={`unlink-locked-${provider.id}`}
+                className="text-muted-foreground text-xs"
+              >
+                {t("auth.oauth.set_password_hint")}
+              </p>
+            ) : null}
           </div>
         );
       })}
@@ -214,7 +240,5 @@ export function OAuthIdentityManager({ providers }: OAuthIdentityManagerProps) {
 
 /** @deprecated Prefer OAuthIdentityManager */
 export function GitHubIdentityManager({ enabled }: { enabled: boolean }) {
-  return (
-    <OAuthIdentityManager providers={[{ id: "github", enabled }]} />
-  );
+  return <OAuthIdentityManager providers={[{ id: "github", enabled }]} />;
 }

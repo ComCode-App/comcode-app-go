@@ -7,7 +7,6 @@
 package usecase
 
 import (
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/searchengine"
 	"context"
 	"errors"
 	"fmt"
@@ -16,6 +15,8 @@ import (
 
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/database/db"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/searchengine"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/slug"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -33,9 +34,14 @@ var (
 )
 
 type Service struct {
-	q      *db.Queries
-	search searchengine.Enqueuer
+	q       *db.Queries
+	search  searchengine.Enqueuer
+	invites *Invites
 }
+
+// SetInvites lets AddMember send an email invite instead of adding an address that is not
+// verified (TEC-1104). Without it such addresses are rejected.
+func (s *Service) SetInvites(i *Invites) { s.invites = i }
 
 // SetSearchIndexer keeps company accounts in the Cmd+K index (TEC-595).
 func (s *Service) SetSearchIndexer(e searchengine.Enqueuer) { s.search = e }
@@ -115,33 +121,59 @@ func (s *Service) Members(ctx context.Context, p authctx.Principal) ([]Member, e
 	return s.listMembers(ctx, p.Account.ID)
 }
 
-// AddMember adds an existing user by email to the active company account. Owners may add any
-// role; admins may add admins and members.
-func (s *Service) AddMember(ctx context.Context, p authctx.Principal, email, role string) (Member, error) {
+// AddMemberResult is either the added member or, for an address that may not be added
+// directly, the invite that was sent instead (TEC-1104).
+type AddMemberResult struct {
+	Member *Member
+	Invite *Invite
+}
+
+// AddMember adds a user by email to the active company account. Owners may add any role; admins
+// may add admins and members.
+//
+// Only a user whose email is verified is added directly. While self-registration is open anyone
+// can register someone else's address, so an unverified user (or an address without a user) gets
+// an email invite instead: only the mailbox owner can accept it (TEC-1104). Sending the invite
+// needs the app.account_invites.write permission, like POST /v1/account/invites.
+func (s *Service) AddMember(ctx context.Context, p authctx.Principal, email, role string) (AddMemberResult, error) {
 	if p.Account.IsPersonal() {
-		return Member{}, ErrPersonalAccount
+		return AddMemberResult{}, ErrPersonalAccount
 	}
 	if !p.Account.CanManageMembers() {
-		return Member{}, ErrForbidden
+		return AddMemberResult{}, ErrForbidden
 	}
 	role, err := parseRole(role, authctx.AccountRoleMember)
 	if err != nil {
-		return Member{}, err
+		return AddMemberResult{}, err
 	}
 	if role == authctx.AccountRoleOwner && !p.Account.IsOwner() {
-		return Member{}, ErrForbidden
+		return AddMemberResult{}, ErrForbidden
 	}
-	userID, err := s.q.GetActiveUserIDByEmail(ctx, email)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return Member{}, fmt.Errorf("%w: no user with this email", ErrNotFound)
+	user, err := s.q.GetUserForMembershipByEmail(ctx, email)
+	switch {
+	case err == nil && user.EmailVerified:
+		if err := s.q.AddAccountMember(ctx, db.AddAccountMemberParams{AccountID: p.Account.ID, UserID: user.ID, Role: db.AccountRole(role)}); err != nil {
+			return AddMemberResult{}, mapWriteErr(err)
 		}
-		return Member{}, err
+		m, err := s.memberByUserID(ctx, p.Account.ID, user.ID)
+		if err != nil {
+			return AddMemberResult{}, err
+		}
+		return AddMemberResult{Member: &m}, nil
+	case err != nil && !errors.Is(err, pgx.ErrNoRows):
+		return AddMemberResult{}, err
 	}
-	if err := s.q.AddAccountMember(ctx, db.AddAccountMemberParams{AccountID: p.Account.ID, UserID: userID, Role: db.AccountRole(role)}); err != nil {
-		return Member{}, mapWriteErr(err)
+	if s.invites == nil {
+		return AddMemberResult{}, fmt.Errorf("%w: no user with a verified email address", ErrNotFound)
 	}
-	return s.memberByUserID(ctx, p.Account.ID, userID)
+	if !p.HasPermission(rbac.PermAppAccountInvitesWrite) {
+		return AddMemberResult{}, ErrForbidden
+	}
+	inv, err := s.invites.Create(ctx, p, email, role)
+	if err != nil {
+		return AddMemberResult{}, err
+	}
+	return AddMemberResult{Invite: &inv}, nil
 }
 
 // ChangeRole changes a member's role in the active company account. Only owners may grant or
@@ -381,6 +413,8 @@ func (s *Service) setRole(ctx context.Context, accountID, userID int64, role str
 	return s.memberByUserID(ctx, accountID, userID)
 }
 
+// removeMember removes the membership and revokes the person's open invites to the account, so
+// an old link cannot bring a removed member back (TEC-1104).
 func (s *Service) removeMember(ctx context.Context, accountID, userID int64) error {
 	n, err := s.q.RemoveAccountMember(ctx, db.RemoveAccountMemberParams{AccountID: accountID, UserID: userID})
 	if err != nil {
@@ -388,6 +422,9 @@ func (s *Service) removeMember(ctx context.Context, accountID, userID int64) err
 	}
 	if n == 0 {
 		return ErrNotFound
+	}
+	if _, err := s.q.RevokeOpenAccountInvitesForUser(ctx, db.RevokeOpenAccountInvitesForUserParams{AccountID: accountID, UserID: userID}); err != nil {
+		return fmt.Errorf("revoke open invites: %w", err)
 	}
 	return nil
 }

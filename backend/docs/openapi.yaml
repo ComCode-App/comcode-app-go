@@ -946,6 +946,10 @@ paths:
       tags: [Auth]
       operationId: getAuthIdentities
       summary: List linked OAuth identities
+      description: |
+        Also reports the user's other sign-in methods: `has_password` is false when the
+        user never chose a password (OAuth sign-up stores a random hash; any password
+        update, including a password reset, sets it), `has_passkey` when a passkey exists.
       security:
         - bearerAuth: []
       responses:
@@ -965,6 +969,9 @@ paths:
       tags: [Auth]
       operationId: deleteAuthIdentity
       summary: Unlink an OAuth identity
+      description: |
+        `409 LAST_SIGN_IN_METHOD` when the user has no password, no passkey and this is
+        their last linked identity (TEC-1105).
       security:
         - bearerAuth: []
       parameters:
@@ -985,6 +992,8 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/LastSignInMethod"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1042,6 +1051,9 @@ paths:
       tags: [Auth]
       operationId: deleteAuthPasskey
       summary: Delete a passkey
+      description: |
+        `409 LAST_SIGN_IN_METHOD` when the user has no password, no linked identity and
+        this is their last passkey (TEC-1105).
       security:
         - bearerAuth: []
       parameters:
@@ -1057,6 +1069,8 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/LastSignInMethod"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1459,8 +1473,10 @@ paths:
       operationId: postRealtimeSubscriptionToken
       summary: Issue Centrifugo subscription JWT
       description: |
-        Body `{ channel }`. Allowlist `user:{own_uuid}`, member `workspace:{uuid}`,
-        and `conversation:{uuid}` (authenticated session; HTTP inbox ACL is the hard boundary).
+        Body `{ channel }`. Explicit allowlist: `user:{own_uuid}` (the caller's own
+        channel) and `system.notifications` (super admins only). Every other channel,
+        including `conversation:{uuid}`, `workspace:{uuid}` and account channels, is
+        denied with 403.
       security:
         - bearerAuth: []
       requestBody:
@@ -2453,10 +2469,13 @@ paths:
     post:
       tags: [Accounts]
       operationId: addActiveAccountMember
-      summary: Add an existing user to the active company account
+      summary: Add a user to the active company account (or invite the address)
       description: >-
         Owners may add any role; admins may add admins and members. Personal accounts cannot have
-        other members (400); an existing membership returns 409.
+        other members (400); an existing membership returns 409. Only a user whose email is
+        verified is added directly (201). For an unverified user or an address without a user an
+        email invite is sent instead (202, needs `app.account_invites.write`; an open invite for
+        the address is 409), so only the mailbox owner can join (TEC-1104).
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -2475,6 +2494,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeAccountMember"
+        "202":
+          description: The address is not verified (or has no user); an invite was sent instead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAccountMemberInvited"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -2528,7 +2553,7 @@ paths:
       tags: [Accounts]
       operationId: removeActiveAccountMember
       summary: Remove a member or leave the account
-      description: Any member may leave; removing others needs owner/admin, removing an owner needs an owner. The last owner cannot leave (409).
+      description: Any member may leave; removing others needs owner/admin, removing an owner needs an owner. The last owner cannot leave (409). The person's open invites to the account are revoked.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: user_uuid
@@ -2674,7 +2699,9 @@ paths:
       tags: [Accounts]
       operationId: previewInvite
       summary: Describe an invite link
-      description: Public; the token is the credential. `user_exists` tells the page whether to offer login or sign-up.
+      description: >-
+        Public; the token is the credential. `user_exists` tells the page whether to offer login or
+        sign-up. Rate-limited per client IP (429); responses carry `Referrer-Policy: no-referrer`.
       security: []
       parameters:
         - name: token
@@ -2690,6 +2717,8 @@ paths:
                 $ref: "#/components/schemas/EnvelopeInvitePreview"
         "404":
           $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /v1/invites/{token}/accept:
     post:
@@ -2701,7 +2730,8 @@ paths:
         the account with the invited role (an existing member keeps theirs). A profile the employee
         import created for the invite becomes the member's employee profile and the member is placed
         in its office/group. Expired: 410 `INVITE_EXPIRED`; accepted or revoked: 409 `INVITE_CLOSED`;
-        suspended account: 403.
+        suspended account: 403; while impersonating: 403 `INVITE_IMPERSONATION`. Rate-limited per
+        user and client IP (429); responses carry `Referrer-Policy: no-referrer`.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: token
@@ -2729,6 +2759,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /v1/platform/accounts/meta:
     get:
@@ -11878,6 +11910,14 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+    LastSignInMethod:
+      description: |
+        `LAST_SIGN_IN_METHOD`: the change would leave the user without any way to sign in.
+        Set a password (password reset) or add another sign-in method first.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     PayloadTooLarge:
       description: |
         `PAYLOAD_TOO_LARGE`: the request body or file is above the upload limit. Upload bodies are
@@ -12565,6 +12605,19 @@ components:
       properties:
         success: { type: boolean, const: true }
         data: { $ref: "#/components/schemas/AccountInvite" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAccountMemberInvited:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: object
+          required: [status, invite]
+          properties:
+            status: { type: string, enum: [invited] }
+            invite: { $ref: "#/components/schemas/AccountInvite" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeAccountInvitePage:
@@ -13753,12 +13806,18 @@ components:
 
     IdentityList:
       type: object
-      required: [items, total]
+      required: [items, total, has_password, has_passkey]
       properties:
         items:
           type: array
           items: { $ref: "#/components/schemas/LinkedIdentity" }
         total: { type: integer, format: int64 }
+        has_password:
+          type: boolean
+          description: False when the user never chose a password (OAuth sign-up).
+        has_passkey:
+          type: boolean
+          description: True when at least one passkey is registered.
 
     EnvelopeIdentityList:
       type: object

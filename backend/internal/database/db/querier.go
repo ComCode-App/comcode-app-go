@@ -418,6 +418,8 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id int64) (User, error)
 	GetUserByUUID(ctx context.Context, argUuid uuid.UUID) (User, error)
 	GetUserForInvite(ctx context.Context, id int64) (GetUserForInviteRow, error)
+	// TEC-1104: only a verified address may be added to a company directly; others get an invite.
+	GetUserForMembershipByEmail(ctx context.Context, email string) (GetUserForMembershipByEmailRow, error)
 	GetUserIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	GetUserTOTPByUserID(ctx context.Context, userID int64) (UserTotp, error)
 	GetValidRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
@@ -664,6 +666,8 @@ type Querier interface {
 	MarkOutboxFailed(ctx context.Context, arg MarkOutboxFailedParams) error
 	MarkOutboxPublished(ctx context.Context, id int64) error
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
+	// OAuth sign-up / user import stores a random hash; the user never chose a password.
+	MarkUserPasswordUnset(ctx context.Context, id int64) error
 	// TEC-953: one row per visitor and hour feeds the platform unique visitor KPI.
 	MarkVisitorHour(ctx context.Context, arg MarkVisitorHourParams) error
 	NextUpgradeAttempt(ctx context.Context, arg NextUpgradeAttemptParams) (int32, error)
@@ -750,6 +754,8 @@ type Querier interface {
 	ReviveCanonicalRoute(ctx context.Context, arg ReviveCanonicalRouteParams) error
 	RevokeAccountInvite(ctx context.Context, arg RevokeAccountInviteParams) (int64, error)
 	RevokeAllRefreshTokensForUser(ctx context.Context, userID int64) error
+	// TEC-1104: a removed member's open invites to the account stop working too.
+	RevokeOpenAccountInvitesForUser(ctx context.Context, arg RevokeOpenAccountInvitesForUserParams) (int64, error)
 	RevokeOtherRefreshFamiliesForUser(ctx context.Context, arg RevokeOtherRefreshFamiliesForUserParams) error
 	RevokeProfileVerificationByUUID(ctx context.Context, arg RevokeProfileVerificationByUUIDParams) (ProfileVerificationRequest, error)
 	RevokeProfileVerificationForProfile(ctx context.Context, arg RevokeProfileVerificationForProfileParams) (ProfileVerificationRequest, error)

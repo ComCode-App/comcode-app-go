@@ -14,7 +14,7 @@ import {
   Smartphone,
   Trash2,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -32,6 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isLastSignInMethodError } from "@/features/account/lib/sign-in-methods";
 import { isApiError } from "@/lib/api";
 import { datetime } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
@@ -259,6 +260,7 @@ function PasskeySkeleton() {
 
 export function PasskeyManager() {
   const { t } = useLocale();
+  const queryClient = useQueryClient();
   const [registerPending, setRegisterPending] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -294,6 +296,9 @@ export function PasskeyManager() {
       }
       toast.success(t("auth.passkey.register_success"));
       await passkeysQuery.refetch();
+      await queryClient.invalidateQueries({
+        queryKey: ["account", "identities"],
+      });
     } catch {
       toast.error(t("auth.passkey.register_error"));
     } finally {
@@ -321,8 +326,13 @@ export function PasskeyManager() {
       await authService.deletePasskey(uuid);
       toast.success(t("auth.passkey.delete_success"));
       await passkeysQuery.refetch();
+      await queryClient.invalidateQueries({
+        queryKey: ["account", "identities"],
+      });
     } catch (error) {
-      if (isApiError(error)) {
+      if (isLastSignInMethodError(error)) {
+        // The global API error toast already showed the localized message.
+      } else if (isApiError(error)) {
         toast.error(error.message || t("common.error_generic"));
       } else {
         toast.error(t("common.error_generic"));
@@ -377,7 +387,9 @@ export function PasskeyManager() {
             <Fingerprint className="text-muted-foreground size-6" aria-hidden />
           </div>
           <div className="space-y-1">
-            <p className="text-sm font-medium">{t("auth.passkey.empty_title")}</p>
+            <p className="text-sm font-medium">
+              {t("auth.passkey.empty_title")}
+            </p>
             <p className="text-muted-foreground text-sm">
               {t("auth.passkey.empty_body")}
             </p>

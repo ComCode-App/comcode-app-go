@@ -23,16 +23,28 @@ func Unique() string {
 	return hex.EncodeToString(b)
 }
 
-// CreateUser inserts an active user; trg_users_create_personal_account adds its personal
-// account with the user as owner.
+// CreateUser inserts an active user with a verified email; trg_users_create_personal_account
+// adds its personal account with the user as owner.
 func (d *DB) CreateUser(t testing.TB) User {
+	t.Helper()
+	return d.createUser(t, true)
+}
+
+// CreateUnverifiedUser is CreateUser for someone who has not verified their email (e.g. a
+// self-registration with someone else's address).
+func (d *DB) CreateUnverifiedUser(t testing.TB) User {
+	t.Helper()
+	return d.createUser(t, false)
+}
+
+func (d *DB) createUser(t testing.TB, verified bool) User {
 	t.Helper()
 	ctx := context.Background()
 	var u User
 	err := d.Pool.QueryRow(ctx, `
-		INSERT INTO users (email, password_hash, name, surname, status)
-		VALUES ($1, 'x', 'Test', 'User', 'active')
-		RETURNING id, uuid`, "user-"+Unique()+"@example.test").Scan(&u.ID, &u.UUID)
+		INSERT INTO users (email, password_hash, name, surname, status, email_verified_at)
+		VALUES ($1, 'x', 'Test', 'User', 'active', CASE WHEN $2::bool THEN now() END)
+		RETURNING id, uuid`, "user-"+Unique()+"@example.test", verified).Scan(&u.ID, &u.UUID)
 	if err != nil {
 		t.Fatalf("pgtest: create user: %v", err)
 	}

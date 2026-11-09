@@ -190,7 +190,17 @@ func (u *AuthUseCase) RenamePasskey(ctx context.Context, userUUID uuid.UUID, pas
 
 // DeletePasskey removes a passkey owned by the user.
 func (u *AuthUseCase) DeletePasskey(ctx context.Context, userUUID uuid.UUID, passkeyUUID uuid.UUID) error {
-	err := u.repo.DeletePasskeyByUUID(ctx, userUUID, passkeyUUID)
+	user, err := u.repo.FindUserByUUID(ctx, userUUID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return ErrNotFound
+		}
+		return err
+	}
+	if err := ensureSignInMethodLeft(ctx, u.repo, user, signInMethodRemoval{passkeyUUID: passkeyUUID}); err != nil {
+		return err
+	}
+	err = u.repo.DeletePasskeyByUUID(ctx, userUUID, passkeyUUID)
 	if errors.Is(err, repository.ErrNotFound) {
 		return ErrNotFound
 	}

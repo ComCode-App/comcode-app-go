@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -19,6 +20,9 @@ import (
 )
 
 const ResourceUsers = "platform.users"
+
+// errImportSuperAdmin is the row error for a user import that asks for the super_admin role.
+const errImportSuperAdmin = "the super_admin role cannot be assigned by import"
 
 // UsersAdapter exports/imports platform users.
 type UsersAdapter struct {
@@ -100,6 +104,15 @@ func (a *UsersAdapter) ApplyRow(ctx context.Context, row map[string]any, default
 	if locale == "" {
 		locale = "tr"
 	}
+	roleSlugs := parseSlugs(strVal(row, "role_slugs"))
+	if len(roleSlugs) == 0 {
+		roleSlugs = parseSlugs(strVal(defaults, "role_slugs"))
+	}
+	// Imports never grant super_admin, whoever runs them: the row is rejected before anything
+	// is written (super admins are made by an existing super admin on the user page).
+	if slices.Contains(roleSlugs, rbac.RoleSuperAdmin) {
+		return ioengine.RowResult{OK: false, Error: errImportSuperAdmin}, nil
+	}
 	if _, err := a.q.GetUserByEmail(ctx, email); err == nil {
 		return ioengine.RowResult{OK: false, Error: "email already exists"}, nil
 	} else if err != nil && err != pgx.ErrNoRows {
@@ -119,11 +132,11 @@ func (a *UsersAdapter) ApplyRow(ctx context.Context, row map[string]any, default
 	if err != nil {
 		return ioengine.RowResult{OK: false, Error: err.Error()}, nil
 	}
-	_ = a.q.UpdateUserLocale(ctx, db.UpdateUserLocaleParams{ID: created.ID, Locale: locale})
-	roleSlugs := parseSlugs(strVal(row, "role_slugs"))
-	if len(roleSlugs) == 0 {
-		roleSlugs = parseSlugs(strVal(defaults, "role_slugs"))
+	// The random password above is never shown to anyone (TEC-1105).
+	if err := a.q.MarkUserPasswordUnset(ctx, created.ID); err != nil {
+		return ioengine.RowResult{}, err
 	}
+	_ = a.q.UpdateUserLocale(ctx, db.UpdateUserLocaleParams{ID: created.ID, Locale: locale})
 	for _, rs := range roleSlugs {
 		_ = a.q.AssignUserRoleBySlug(ctx, db.AssignUserRoleBySlugParams{UserID: created.ID, Slug: rs})
 	}
@@ -143,6 +156,14 @@ func (a *UsersAdapter) RevertRow(ctx context.Context, entityType, entityUUID str
 	user, err := a.q.GetUserByUUID(ctx, id)
 	if err != nil {
 		return err
+	}
+	// The imported user may have been made a super admin since; a rollback does not touch it.
+	isSA, err := a.q.UserHasRoleSlug(ctx, db.UserHasRoleSlugParams{UserID: user.ID, Slug: rbac.RoleSuperAdmin})
+	if err != nil {
+		return err
+	}
+	if isSA {
+		return fmt.Errorf("super admin accounts are not changed by an import rollback")
 	}
 	// soft-delete not available — disable user and clear roles
 	_, err = a.q.UpdateUserPlatform(ctx, db.UpdateUserPlatformParams{

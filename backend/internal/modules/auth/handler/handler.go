@@ -573,6 +573,8 @@ func writeUsecaseError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Error(w, r, http.StatusInternalServerError, response.CodePasswordResetFailed, "Password reset failed")
 	case errors.Is(err, usecase.ErrUserDisabled):
 		response.Forbidden(w, r, "User is disabled")
+	case errors.Is(err, usecase.ErrLastSignInMethod):
+		response.Conflict(w, r, response.CodeLastSignInMethod, "Set a password or add another sign-in method before removing the last one")
 	case errors.Is(err, usecase.ErrLastSuperAdmin):
 		response.Conflict(w, r, response.CodeConflict, "Cannot demote the last super admin")
 	case errors.Is(err, usecase.ErrSystemRole):
@@ -583,6 +585,8 @@ func writeUsecaseError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Unauthorized(w, r, "Session is no longer valid")
 	case errors.Is(err, usecase.ErrAccountSuspended):
 		response.Forbidden(w, r, "Account is suspended")
+	case errors.Is(err, usecase.ErrSuperAdminRequired):
+		response.Forbidden(w, r, "Only a super admin can change super admin accounts or the super_admin role")
 	case errors.Is(err, usecase.ErrForbidden):
 		response.Forbidden(w, r, "You do not have access to this resource")
 	case errors.Is(err, usecase.ErrNotFound):

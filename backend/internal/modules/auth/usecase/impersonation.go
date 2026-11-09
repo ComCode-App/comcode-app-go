@@ -43,7 +43,7 @@ func (u *AuthUseCase) ImpersonatePlatformUser(
 		return model.ImpersonationResult{}, err
 	}
 	if targetIsSuperAdmin && !actorIsSuperAdmin {
-		return model.ImpersonationResult{}, fmt.Errorf("%w: cannot impersonate a super admin", ErrForbidden)
+		return model.ImpersonationResult{}, ErrSuperAdminRequired
 	}
 
 	meta.ImpersonatorUserID = &actor.ID

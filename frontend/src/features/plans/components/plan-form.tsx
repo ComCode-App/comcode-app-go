@@ -18,7 +18,10 @@ import {
   createFormSections,
 } from "@/components/forms";
 import { Button } from "@/components/ui/button";
-import { limitErrorField, limitFieldName } from "@/features/plans/lib/limit-fields";
+import {
+  limitErrorField,
+  limitFieldName,
+} from "@/features/plans/lib/limit-fields";
 import { plansKeys } from "@/features/plans/hooks/query-keys";
 import {
   createPlanFormSchema,
@@ -26,14 +29,13 @@ import {
   updatePlanFormSchema,
   type PlanFormValues,
 } from "@/features/plans/schemas/plan-form";
-import {
-  priceDisplayFromMinor,
-} from "@/features/plans/lib/format-price";
+import { priceDisplayFromMinor } from "@/features/plans/lib/format-price";
 import {
   plansService,
   type PlanDetail,
 } from "@/features/plans/services/plans.service";
 import { ApiError } from "@/lib/api";
+import { slugify } from "@/lib/utils/slugify";
 import { useLocale } from "@/providers/locale-provider";
 
 const limitErrorCodes = new Set([
@@ -77,14 +79,6 @@ type PlanFormProps = {
   onSubmit: (values: PlanFormValues) => Promise<void> | void;
   onCancel: () => void;
 };
-
-function slugifyName(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
 
 function PlanFormFields({
   form,
@@ -151,7 +145,7 @@ function PlanFormFields({
   useEffect(() => {
     if (mode !== "create") return;
     if (form.formState.dirtyFields.slug) return;
-    const next = slugifyName(name);
+    const next = slugify(name);
     if (next && form.getValues("slug") !== next) {
       form.setValue("slug", next, { shouldDirty: false });
     }
@@ -252,7 +246,10 @@ function PlanFormFields({
         <Button type="button" variant="outline" onClick={onCancel}>
           {t("form.cancel")}
         </Button>
-        <Button type="submit" disabled={isSubmitting || form.formState.isSubmitting}>
+        <Button
+          type="submit"
+          disabled={isSubmitting || form.formState.isSubmitting}
+        >
           {mode === "create"
             ? t("plans.actions.create")
             : t("plans.actions.save")}
@@ -285,7 +282,8 @@ export function PlanForm({
         name: initial.name,
         slug: initial.slug,
         description: initial.description ?? "",
-        billing_interval: initial.billing_interval as PlanFormValues["billing_interval"],
+        billing_interval:
+          initial.billing_interval as PlanFormValues["billing_interval"],
         price_display: priceDisplayFromMinor(initial.price_minor ?? 0),
         currency: (initial.currency ?? "TRY") as "TRY",
         trial_days: initial.trial_days ?? 0,

@@ -156,19 +156,20 @@ func (q *Queries) DeleteCompanyMemberProfile(ctx context.Context, arg DeleteComp
 }
 
 const findActiveUserByEmail = `-- name: FindActiveUserByEmail :one
-SELECT id, uuid FROM users
+SELECT id, uuid, (email_verified_at IS NOT NULL)::bool AS email_verified FROM users
 WHERE email = LOWER(TRIM($1::text)) AND deleted_at IS NULL
 `
 
 type FindActiveUserByEmailRow struct {
-	ID   int64     `json:"id"`
-	Uuid uuid.UUID `json:"uuid"`
+	ID            int64     `json:"id"`
+	Uuid          uuid.UUID `json:"uuid"`
+	EmailVerified bool      `json:"email_verified"`
 }
 
 func (q *Queries) FindActiveUserByEmail(ctx context.Context, email string) (FindActiveUserByEmailRow, error) {
 	row := q.db.QueryRow(ctx, findActiveUserByEmail, email)
 	var i FindActiveUserByEmailRow
-	err := row.Scan(&i.ID, &i.Uuid)
+	err := row.Scan(&i.ID, &i.Uuid, &i.EmailVerified)
 	return i, err
 }
 
