@@ -8948,12 +8948,34 @@ export interface components {
             register_enabled: boolean;
             client_id: string;
             client_secret_configured: boolean;
+            /** @description Apple only. Apple Developer Team ID (10 characters). */
+            team_id?: string;
+            /** @description Apple only. Key ID of the uploaded Sign in with Apple key. */
+            key_id?: string;
+            /** @description Apple only. A .p8 signing key is stored (encrypted). The key itself is never returned. */
+            private_key_configured?: boolean;
+            /** @description Apple only. `SHA256:<base64>` hash of the stored key's public half; empty when no usable key is stored. */
+            private_key_fingerprint?: string;
+            /**
+             * @description Apple only. What the web sign-in uses: a client secret generated from the signing key (wins when set), the pasted client secret JWT, or nothing.
+             * @enum {string}
+             */
+            client_secret_source?: "signing_key" | "client_secret" | "none";
         };
         PatchOAuthProviderSettingsRequest: {
             login_enabled?: boolean;
             register_enabled?: boolean;
             client_id?: string;
+            /** @description Write-only. Blank keeps the stored secret. For Apple, an optional fallback client secret JWT. */
             client_secret?: string;
+            /** @description Apple only. 10 letters or digits (normalised to upper case). */
+            team_id?: string;
+            /** @description Apple only. 10 letters or digits; the KEYID in AuthKey_<KEYID>.p8. */
+            key_id?: string;
+            /** @description Apple only. Contents of the .p8 file (PEM, PKCS#8, EC P-256). Stored encrypted with APP_ENCRYPTION_KEY, never returned or logged. Requires team_id and key_id. */
+            private_key?: string;
+            /** @description Apple only. Deletes the stored signing key. Cannot be combined with private_key. */
+            remove_private_key?: boolean;
         };
         EnvelopeOAuthProviderSettings: {
             /** @enum {boolean} */

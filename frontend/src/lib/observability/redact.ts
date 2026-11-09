@@ -6,6 +6,10 @@
 
 const REDACTED = "[redacted]";
 
+// PEM private keys (Apple .p8, GitHub App keys), also pasted as one line with
+// literal \n; an unterminated block is cut to the end of the text.
+const PRIVATE_KEY =
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g;
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 const JWT = /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/g;
 const BEARER = /\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]+/gi;
@@ -17,6 +21,7 @@ const PHONE_TR = /\b0?5\d{2}[\s.-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}\b/g;
 export function redactString(input: string): string {
   if (!input) return input;
   return input
+    .replace(PRIVATE_KEY, "[private-key]")
     .replace(JWT, "[token]")
     .replace(BEARER, "$1 [token]")
     .replace(SECRET_PAIR, `$1$2${REDACTED}`)

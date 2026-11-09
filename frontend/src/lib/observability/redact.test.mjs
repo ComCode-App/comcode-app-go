@@ -75,6 +75,19 @@ test("redactString removes emails, tokens, secrets and phones", () => {
   );
 });
 
+test("redactString removes PEM private keys (TEC-1123)", () => {
+  const cases = [
+    "-----BEGIN PRIVATE KEY-----\nMIGTAgEAMBMG\nAgEG\n-----END PRIVATE KEY-----",
+    '{"private_key":"-----BEGIN PRIVATE KEY-----\\nMIGTAgEAMBMG\\n-----END PRIVATE KEY-----"}',
+    "cut -----BEGIN EC PRIVATE KEY-----\nMIGTAgEAMBMG",
+  ];
+  for (const input of cases) {
+    const out = redactString(input);
+    assert.ok(!out.includes("MIGT"), out);
+    assert.ok(out.includes("[private-key]"), out);
+  }
+});
+
 test("describeError includes the cause and is redacted", () => {
   const err = new Error("fetch failed", {
     cause: new Error("connect to a@b.io refused"),
