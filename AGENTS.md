@@ -42,11 +42,17 @@ Canonical env is the **repo-root** `.env`. Compose files are `compose.local.yml`
 | [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | `X-Request-ID` correlation (BFF → API → queue), 5xx/panic and job-failure logs, Sentry/GlitchTip error tracking (DSNs managed in the admin panel, `SENTRY_DSN` fallback; lazy catcher on visitor pages) and Prometheus (`METRICS_ADDR`) |
 | [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) | Local / prod commands |
 | [docs/EXTENDING.md](./docs/EXTENDING.md) | How to add a feature (narrative), incl. new env vars |
+| [docs/OWNER_CHECKLIST.md](./docs/OWNER_CHECKLIST.md) | Owner-only GitHub / GHCR / Dokploy settings (agents never change them) |
 | [docs/design/env-core.md](./docs/design/env-core.md) | Env schema, `prod-env.sh`, env CI checks, boot guard |
 | [docs/BOILERPLATE_SYNC.md](./docs/BOILERPLATE_SYNC.md) | Boilerplate sync record: last reviewed SHA, per-commit PORT / ZATEN VAR / ATLA decisions, method for the next sync |
 | [backend/API_CONVENTIONS.md](./backend/API_CONVENTIONS.md) | Envelope, lists, meta |
 | [backend/DATABASE_RULES.md](./backend/DATABASE_RULES.md) | Migrations + sqlc |
 | [backend/docs/auth.md](./backend/docs/auth.md) | JWT, roles, permissions |
+
+## Branches and releases
+
+- Branch `cc/<issue-id>-<short-name>` from the latest `cc-collective-branch`; open the PR into `cc-collective-branch`, never into `main`. The owner merges `cc-collective-branch` into `main` with one PR. Flow and required `ci` check: [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) → CI → Branch flow.
+- Only a push to `main` publishes GHCR images and cuts the `v0.N` tag Dokploy deploys. Never push `:main` / `:sha-*` / `:v0.*` images or `v0.*` git tags by hand, and never change repository or Dokploy settings.
 
 ## Hard rules
 
