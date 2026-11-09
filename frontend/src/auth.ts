@@ -211,7 +211,10 @@ const authHandlers = NextAuth(async () => ({
 
       const url = request.nextUrl.clone();
       url.pathname = routes.guest.login;
-      url.searchParams.set("next", pathname);
+      // Keep the query so the deep link survives sign-in; the login form runs
+      // it through safeNextPath before redirecting.
+      url.search = "";
+      url.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
       return NextResponse.redirect(url);
     },
     async signIn({ account, profile }) {
