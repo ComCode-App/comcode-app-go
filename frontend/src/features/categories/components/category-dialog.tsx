@@ -18,7 +18,10 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/providers/locale-provider";
 
-import { categoryFormSchema, type CategoryFormValues } from "../schemas/category-form";
+import {
+  categoryFormSchema,
+  type CategoryFormValues,
+} from "../schemas/category-form";
 import type { CategorySummary } from "../services/categories.service";
 import { useCategoryMutations } from "../hooks/use-categories";
 
@@ -122,7 +125,7 @@ export function CategoryDialog({
             <Label>{t("categories.fields.name")}</Label>
             <Input placeholder="Örn. Metal Kartlar" {...register("name")} />
             {errors.name && (
-              <p className="text-xs text-destructive">{errors.name.message}</p>
+              <p className="text-destructive text-xs">{errors.name.message}</p>
             )}
           </div>
 
@@ -130,14 +133,17 @@ export function CategoryDialog({
             <div className="space-y-2">
               <Label>{t("categories.fields.slug")}</Label>
               <Input placeholder="metal-cards" {...register("slug")} />
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-muted-foreground text-[11px]">
                 {t("categories.fields.slug_hint")}
               </p>
             </div>
 
             <div className="space-y-2">
               <Label>{t("categories.fields.icon")}</Label>
-              <Input placeholder="CreditCard, Shield, QrCode..." {...register("icon")} />
+              <Input
+                placeholder="CreditCard, Shield, QrCode..."
+                {...register("icon")}
+              />
             </div>
           </div>
 
@@ -145,7 +151,9 @@ export function CategoryDialog({
             <Label>{t("categories.fields.image_url")}</Label>
             <Input placeholder="https://..." {...register("image_url")} />
             {errors.image_url && (
-              <p className="text-xs text-destructive">{errors.image_url.message}</p>
+              <p className="text-destructive text-xs">
+                {errors.image_url.message}
+              </p>
             )}
           </div>
 
@@ -158,14 +166,14 @@ export function CategoryDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 items-center">
+          <div className="grid grid-cols-2 items-center gap-4">
             <div className="space-y-2">
               <Label>{t("categories.fields.display_order")}</Label>
               <Input type="number" {...register("display_order")} />
             </div>
 
-            <div className="flex flex-row items-center justify-between rounded-lg border p-3 mt-4">
-              <Label className="text-sm cursor-pointer">
+            <div className="mt-4 flex flex-row items-center justify-between rounded-lg border p-3">
+              <Label className="cursor-pointer text-sm">
                 {t("categories.fields.is_active")}
               </Label>
               <Controller

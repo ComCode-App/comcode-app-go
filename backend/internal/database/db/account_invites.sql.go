@@ -239,6 +239,7 @@ type GetAccountInviteByTokenHashRow struct {
 	InvitedByName string             `json:"invited_by_name"`
 }
 
+// account-lint: cross-account public invite preview/accept: the token hash is the credential
 // The link holder's view: not account-scoped, the token is the credential.
 func (q *Queries) GetAccountInviteByTokenHash(ctx context.Context, tokenHash []byte) (GetAccountInviteByTokenHashRow, error) {
 	row := q.db.QueryRow(ctx, getAccountInviteByTokenHash, tokenHash)
@@ -365,6 +366,7 @@ type LinkInvitedMemberProfileParams struct {
 	ProfileID int64 `json:"profile_id"`
 }
 
+// account-lint: cross-account NOT EXISTS mirrors the global unique keys (member_id, profile_id); the insert itself is scoped
 // Links the invite's profile to the member unless either side is already linked.
 func (q *Queries) LinkInvitedMemberProfile(ctx context.Context, arg LinkInvitedMemberProfileParams) (int64, error) {
 	result, err := q.db.Exec(ctx, linkInvitedMemberProfile, arg.AccountID, arg.MemberID, arg.ProfileID)
@@ -492,6 +494,7 @@ type LockAccountInviteRow struct {
 	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 }
 
+// account-lint: cross-account invite accept: id and token hash come from GetAccountInviteByTokenHash
 // Re-reads the invite under lock; a resend in between changed the token, so the old one misses.
 func (q *Queries) LockAccountInvite(ctx context.Context, arg LockAccountInviteParams) (LockAccountInviteRow, error) {
 	row := q.db.QueryRow(ctx, lockAccountInvite, arg.ID, arg.TokenHash)
@@ -510,6 +513,7 @@ type MarkAccountInviteAcceptedParams struct {
 	ID     int64       `json:"id"`
 }
 
+// account-lint: cross-account invite accept: id comes from the token lookup, inside the locked tx
 func (q *Queries) MarkAccountInviteAccepted(ctx context.Context, arg MarkAccountInviteAcceptedParams) (int64, error) {
 	result, err := q.db.Exec(ctx, markAccountInviteAccepted, arg.UserID, arg.ID)
 	if err != nil {
@@ -560,6 +564,26 @@ type RevokeAccountInviteParams struct {
 
 func (q *Queries) RevokeAccountInvite(ctx context.Context, arg RevokeAccountInviteParams) (int64, error) {
 	result, err := q.db.Exec(ctx, revokeAccountInvite, arg.AccountID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const revokeOpenAccountInvitesForUser = `-- name: RevokeOpenAccountInvitesForUser :execrows
+UPDATE account_invites SET status = 'revoked', revoked_at = now()
+WHERE account_id = $1 AND status = 'pending'
+  AND email = (SELECT lower(u.email) FROM users u WHERE u.id = $2)
+`
+
+type RevokeOpenAccountInvitesForUserParams struct {
+	AccountID int64 `json:"account_id"`
+	UserID    int64 `json:"user_id"`
+}
+
+// TEC-1104: a removed member's open invites to the account stop working too.
+func (q *Queries) RevokeOpenAccountInvitesForUser(ctx context.Context, arg RevokeOpenAccountInvitesForUserParams) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeOpenAccountInvitesForUser, arg.AccountID, arg.UserID)
 	if err != nil {
 		return 0, err
 	}

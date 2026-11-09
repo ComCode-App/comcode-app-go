@@ -1,7 +1,15 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { Lock, QrCode, Settings, User, ExternalLink, Share2, Sparkles } from "lucide-react";
+import {
+  Lock,
+  QrCode,
+  Settings,
+  User,
+  ExternalLink,
+  Share2,
+  Sparkles,
+} from "lucide-react";
 import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,15 +39,17 @@ export function createCardsColumns({
         return (
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-foreground">{card.name}</span>
+              <span className="text-foreground font-semibold">{card.name}</span>
               {card.is_locked && (
-                <Badge variant="danger" className="text-[10px] px-1.5 py-0 h-4">
-                  <Lock className="w-2.5 h-2.5 mr-0.5" />
+                <Badge variant="danger" className="h-4 px-1.5 py-0 text-[10px]">
+                  <Lock className="mr-0.5 h-2.5 w-2.5" />
                   {t("cards.fields.is_locked")}
                 </Badge>
               )}
             </div>
-            <span className="font-mono text-xs text-muted-foreground">{card.smart_code}</span>
+            <span className="text-muted-foreground font-mono text-xs">
+              {card.smart_code}
+            </span>
           </div>
         );
       },
@@ -51,16 +61,28 @@ export function createCardsColumns({
       cell: ({ row }) => {
         const card = row.original;
         return (
-          <div className="flex items-center gap-1.5 text-xs text-foreground">
-            {card.target_type === "profile" && <User className="w-3.5 h-3.5 text-primary" />}
-            {card.target_type === "direct_url" && <ExternalLink className="w-3.5 h-3.5 text-primary" />}
-            {card.target_type === "vcard_download" && <Share2 className="w-3.5 h-3.5 text-primary" />}
-            {card.target_type === "social_hub" && <Sparkles className="w-3.5 h-3.5 text-primary" />}
+          <div className="text-foreground flex items-center gap-1.5 text-xs">
+            {card.target_type === "profile" && (
+              <User className="text-primary h-3.5 w-3.5" />
+            )}
+            {card.target_type === "direct_url" && (
+              <ExternalLink className="text-primary h-3.5 w-3.5" />
+            )}
+            {card.target_type === "vcard_download" && (
+              <Share2 className="text-primary h-3.5 w-3.5" />
+            )}
+            {card.target_type === "social_hub" && (
+              <Sparkles className="text-primary h-3.5 w-3.5" />
+            )}
             <span className="capitalize">
-              {card.target_type === "profile" && t("cards.settings.target_profile")}
-              {card.target_type === "direct_url" && (card.direct_url || t("cards.settings.target_direct_url"))}
-              {card.target_type === "vcard_download" && t("cards.settings.target_vcard")}
-              {card.target_type === "social_hub" && t("cards.settings.target_social")}
+              {card.target_type === "profile" &&
+                t("cards.settings.target_profile")}
+              {card.target_type === "direct_url" &&
+                (card.direct_url || t("cards.settings.target_direct_url"))}
+              {card.target_type === "vcard_download" &&
+                t("cards.settings.target_vcard")}
+              {card.target_type === "social_hub" &&
+                t("cards.settings.target_social")}
             </span>
           </div>
         );
@@ -74,7 +96,11 @@ export function createCardsColumns({
         const val = String(getValue() || "");
         const key = `cards.materials.${val}`;
         const translated = t(key);
-        return <span className="text-xs">{translated.startsWith("cards.") ? val : translated}</span>;
+        return (
+          <span className="text-xs">
+            {translated.startsWith("cards.") ? val : translated}
+          </span>
+        );
       },
     }),
 
@@ -82,7 +108,10 @@ export function createCardsColumns({
       accessorKey: "is_active",
       labelKey: "cards.columns.is_active",
       cell: ({ getValue }) => (
-        <Badge variant={getValue() ? "success" : "secondary"} className="text-xs">
+        <Badge
+          variant={getValue() ? "success" : "secondary"}
+          className="text-xs"
+        >
           {getValue() ? t("common.active") : t("common.inactive")}
         </Badge>
       ),
@@ -98,29 +127,29 @@ export function createCardsColumns({
             <Button
               size="icon"
               variant="ghost"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-8 w-8"
               onClick={() => onQRClick(card)}
               title="QR Code"
             >
-              <QrCode className="w-4 h-4" />
+              <QrCode className="h-4 w-4" />
             </Button>
             <Button
               size="icon"
               variant="ghost"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-8 w-8"
               onClick={() => onToggleLock(card)}
               title={card.is_locked ? t("cards.unlock") : t("cards.lock")}
             >
-              <Lock className="w-4 h-4" />
+              <Lock className="h-4 w-4" />
             </Button>
             <Button
               size="icon"
               variant="ghost"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-8 w-8"
               onClick={() => onSettingsClick(card)}
               title={t("common.edit")}
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="h-4 w-4" />
             </Button>
           </div>
         );

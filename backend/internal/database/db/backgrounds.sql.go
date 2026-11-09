@@ -103,6 +103,7 @@ const getBackgroundThumbnailKey = `-- name: GetBackgroundThumbnailKey :one
 SELECT thumbnail_key FROM backgrounds WHERE uuid = $1
 `
 
+// account-lint: cross-account thumbnail key read before a scoped delete (DeleteAccountBackground / platform DeleteBackgroundPreset); used only when that delete hits
 func (q *Queries) GetBackgroundThumbnailKey(ctx context.Context, argUuid uuid.UUID) (pgtype.Text, error) {
 	row := q.db.QueryRow(ctx, getBackgroundThumbnailKey, argUuid)
 	var thumbnail_key pgtype.Text
@@ -287,6 +288,7 @@ type ListBackgroundsWithoutThumbnailRow struct {
 	Document []byte    `json:"document"`
 }
 
+// account-lint: cross-account startup backfill worker, all accounts
 // Designs saved before thumbnails existed (videos have none by design).
 func (q *Queries) ListBackgroundsWithoutThumbnail(ctx context.Context, maxRows int32) ([]ListBackgroundsWithoutThumbnailRow, error) {
 	rows, err := q.db.Query(ctx, listBackgroundsWithoutThumbnail, maxRows)
@@ -320,6 +322,7 @@ type SetBackgroundThumbnailParams struct {
 	Document     []byte      `json:"document"`
 }
 
+// account-lint: cross-account thumbnail writer: uuid comes from a design just saved through a scoped query (or the backfill worker)
 // Stores the key of a freshly rendered thumbnail (TEC-599). The document must still be the one
 // rendered, so a thumbnail never lands on a newer edit.
 func (q *Queries) SetBackgroundThumbnail(ctx context.Context, arg SetBackgroundThumbnailParams) (int64, error) {

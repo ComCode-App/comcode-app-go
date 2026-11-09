@@ -101,11 +101,14 @@ export type ProfileDetail = {
 };
 
 export type PublicPageSettings = components["schemas"]["PublicPageSettings"];
-export type ProfileCompletionSuggestion = components["schemas"]["ProfileCompletionSuggestion"];
-export type ProfileVerificationStatus = components["schemas"]["ProfileVerificationStatus"];
+export type ProfileCompletionSuggestion =
+  components["schemas"]["ProfileCompletionSuggestion"];
+export type ProfileVerificationStatus =
+  components["schemas"]["ProfileVerificationStatus"];
 export type ProfileVerification = components["schemas"]["ProfileVerification"];
 export type PublicModule = components["schemas"]["PublicModule"];
-export type UpdatePublicPagePayload = components["schemas"]["UpdatePublicPageRequest"];
+export type UpdatePublicPagePayload =
+  components["schemas"]["UpdatePublicPageRequest"];
 
 export type UpsertProfilePayload = {
   primary_locale: "tr" | "en";
@@ -177,26 +180,43 @@ export const profilesService = {
 
   /** Username, visibility, visible modules and published bank accounts. */
   async getPublicPage(uuid: string) {
-    return platformRequest<PublicPageSettings>("GET", `/v1/profiles/${uuid}/public-page`);
+    return platformRequest<PublicPageSettings>(
+      "GET",
+      `/v1/profiles/${uuid}/public-page`,
+    );
   },
 
   async updatePublicPage(uuid: string, body: UpdatePublicPagePayload) {
-    return platformRequest<PublicPageSettings>("PUT", `/v1/profiles/${uuid}/public-page`, { body });
+    return platformRequest<PublicPageSettings>(
+      "PUT",
+      `/v1/profiles/${uuid}/public-page`,
+      { body },
+    );
   },
 
   /** Verified badge status and the latest request (TEC-549). */
   async getVerification(uuid: string) {
-    return platformRequest<ProfileVerification>("GET", `/v1/profiles/${uuid}/verification`);
+    return platformRequest<ProfileVerification>(
+      "GET",
+      `/v1/profiles/${uuid}/verification`,
+    );
   },
 
   async requestVerification(uuid: string, note: string) {
-    return platformRequest<ProfileVerification>("POST", `/v1/profiles/${uuid}/verification`, {
-      body: { note },
-    });
+    return platformRequest<ProfileVerification>(
+      "POST",
+      `/v1/profiles/${uuid}/verification`,
+      {
+        body: { note },
+      },
+    );
   },
 
   async cancelVerification(uuid: string) {
-    return platformRequest<ProfileVerification>("DELETE", `/v1/profiles/${uuid}/verification`);
+    return platformRequest<ProfileVerification>(
+      "DELETE",
+      `/v1/profiles/${uuid}/verification`,
+    );
   },
 
   async create(body: UpsertProfilePayload) {
@@ -273,8 +293,12 @@ export const profilesService = {
   },
 
   async parseVCardText(vcardText: string) {
-    return platformRequest<ParsedVCardProfile>("POST", "/v1/profiles/vcard/parse", {
-      body: { vcard: vcardText },
-    });
+    return platformRequest<ParsedVCardProfile>(
+      "POST",
+      "/v1/profiles/vcard/parse",
+      {
+        body: { vcard: vcardText },
+      },
+    );
   },
 };

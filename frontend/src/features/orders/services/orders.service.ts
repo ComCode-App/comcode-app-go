@@ -1,12 +1,14 @@
 import type { ServerListParams } from "@/components/entity";
 import type { ResourceMeta } from "@/features/io/types";
 import type { components } from "@/generated/api";
+import { ApiError } from "@/lib/api/errors";
 import { platformRequest } from "@/lib/api/platform-request";
 
 /** Provider refunds of online order payments (TEC-935). */
 export type OrderRefund = components["schemas"]["OrderRefund"];
 export type OrderRefunds = components["schemas"]["OrderRefunds"];
-export type OrderRefundablePayment = components["schemas"]["OrderRefundablePayment"];
+export type OrderRefundablePayment =
+  components["schemas"]["OrderRefundablePayment"];
 export type RefundOrderPayload = components["schemas"]["RefundOrderInput"];
 
 export type OrderStatus =
@@ -22,9 +24,19 @@ export type OrderStatus =
   | "refunded";
 
 export type OrderType = "standard" | "bulk" | "corporate";
-export type PaymentStatus = "unpaid" | "pending" | "paid" | "failed" | "partially_refunded" | "refunded";
-export type FulfillmentStatus = "unfulfilled" | "pending" | "processing" | "in_production" | "ready_to_ship" | "shipped" | "delivered" | "cancelled";
-export type ProvisioningStatus = "unprovisioned" | "provisioning" | "provisioned" | "failed";
+export type PaymentStatus =
+  "unpaid" | "pending" | "paid" | "failed" | "partially_refunded" | "refunded";
+export type FulfillmentStatus =
+  | "unfulfilled"
+  | "pending"
+  | "processing"
+  | "in_production"
+  | "ready_to_ship"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
+export type ProvisioningStatus =
+  "unprovisioned" | "provisioning" | "provisioned" | "failed";
 
 export type OrderItemSummary = {
   id?: number;
@@ -220,7 +232,10 @@ export type OrderCheckoutSession = {
 };
 
 /** Whether the customer can start an online payment for the order. */
-export function isOrderPayable(order: { status: string; payment_status: string }) {
+export function isOrderPayable(order: {
+  status: string;
+  payment_status: string;
+}) {
   return (
     order.status === "pending" &&
     (order.payment_status === "unpaid" || order.payment_status === "failed")
@@ -229,18 +244,14 @@ export function isOrderPayable(order: { status: string; payment_status: string }
 
 export const ordersService = {
   async list(params: ServerListParams & { status?: string }) {
-    return platformRequest<OrderListResult>(
-      "GET",
-      "/v1/platform/orders",
-      {
-        query: {
-          limit: params.limit,
-          offset: params.offset,
-          q: params.q,
-          status: params.status,
-        },
+    return platformRequest<OrderListResult>("GET", "/v1/platform/orders", {
+      query: {
+        limit: params.limit,
+        offset: params.offset,
+        q: params.q,
+        status: params.status,
       },
-    );
+    });
   },
 
   async kpis() {
@@ -251,26 +262,19 @@ export const ordersService = {
   },
 
   async get(uuid: string) {
-    return platformRequest<OrderDetail>(
-      "GET",
-      `/v1/platform/orders/${uuid}`,
-    );
+    return platformRequest<OrderDetail>("GET", `/v1/platform/orders/${uuid}`);
   },
 
   async create(payload: CreateOrderPayload) {
-    return platformRequest<OrderDetail>(
-      "POST",
-      "/v1/platform/orders",
-      { body: payload },
-    );
+    return platformRequest<OrderDetail>("POST", "/v1/platform/orders", {
+      body: payload,
+    });
   },
 
   async createBulk(payload: CreateOrderPayload) {
-    return platformRequest<OrderDetail>(
-      "POST",
-      "/v1/platform/orders/bulk",
-      { body: payload },
-    );
+    return platformRequest<OrderDetail>("POST", "/v1/platform/orders/bulk", {
+      body: payload,
+    });
   },
 
   async provisionOrder(uuid: string) {
@@ -287,33 +291,55 @@ export const ordersService = {
     );
   },
 
-  async bulkUpdateItems(orderUuid: string, itemUuids: string[], fulfillmentStatus: string) {
+  async bulkUpdateItems(
+    orderUuid: string,
+    itemUuids: string[],
+    fulfillmentStatus: string,
+  ) {
     return platformRequest<OrderDetail>(
       "PUT",
       `/v1/platform/orders/${orderUuid}/items/bulk`,
-      { body: { item_uuids: itemUuids, fulfillment_status: fulfillmentStatus } },
+      {
+        body: { item_uuids: itemUuids, fulfillment_status: fulfillmentStatus },
+      },
     );
   },
 
-  async updatePaymentStatus(uuid: string, paymentStatus: string, paymentReference?: string) {
+  async updatePaymentStatus(
+    uuid: string,
+    paymentStatus: string,
+    paymentReference?: string,
+  ) {
     return platformRequest<OrderDetail>(
       "PUT",
       `/v1/platform/orders/${uuid}/payment`,
-      { body: { payment_status: paymentStatus, payment_reference: paymentReference } },
+      {
+        body: {
+          payment_status: paymentStatus,
+          payment_reference: paymentReference,
+        },
+      },
     );
   },
 
   async listRefunds(uuid: string) {
-    return platformRequest<OrderRefunds>("GET", `/v1/platform/orders/${uuid}/refunds`);
+    return platformRequest<OrderRefunds>(
+      "GET",
+      `/v1/platform/orders/${uuid}/refunds`,
+    );
   },
 
   // Refunds need a step-up grant; platformRequest asks for it and repeats the request with the
   // same idempotency key. Errors are shown by the refunds panel.
   async refund(uuid: string, payload: RefundOrderPayload) {
-    return platformRequest<OrderRefund>("POST", `/v1/platform/orders/${uuid}/refunds`, {
-      body: payload,
-      silent: true,
-    });
+    return platformRequest<OrderRefund>(
+      "POST",
+      `/v1/platform/orders/${uuid}/refunds`,
+      {
+        body: payload,
+        silent: true,
+      },
+    );
   },
 
   async retryRefund(uuid: string, refundUuid: string) {
@@ -363,7 +389,10 @@ export const ordersService = {
     );
   },
 
-  async createAssetRequest(orderUuid: string, payload: CreateAssetRequestPayload) {
+  async createAssetRequest(
+    orderUuid: string,
+    payload: CreateAssetRequestPayload,
+  ) {
     return platformRequest<AssetRequestSummary>(
       "POST",
       `/v1/platform/orders/${orderUuid}/assets`,
@@ -371,7 +400,11 @@ export const ordersService = {
     );
   },
 
-  async reviewAssetRequest(orderUuid: string, assetUuid: string, payload: ReviewAssetRequestPayload) {
+  async reviewAssetRequest(
+    orderUuid: string,
+    assetUuid: string,
+    payload: ReviewAssetRequestPayload,
+  ) {
     return platformRequest<AssetRequestSummary>(
       "PUT",
       `/v1/platform/orders/${orderUuid}/assets/${assetUuid}/review`,
@@ -380,40 +413,37 @@ export const ordersService = {
   },
 
   async listMyOrders(params?: { limit?: number; offset?: number; q?: string }) {
-    return platformRequest<OrderListResult>(
-      "GET",
-      "/v1/orders",
-      {
-        query: {
-          limit: params?.limit ?? 20,
-          offset: params?.offset ?? 0,
-          q: params?.q,
-        },
+    return platformRequest<OrderListResult>("GET", "/v1/orders", {
+      query: {
+        limit: params?.limit ?? 20,
+        offset: params?.offset ?? 0,
+        q: params?.q,
       },
-    );
+    });
   },
 
   async getMyOrder(uuid: string) {
-    return platformRequest<OrderDetail>(
-      "GET",
-      `/v1/orders/${uuid}`,
-    );
+    return platformRequest<OrderDetail>("GET", `/v1/orders/${uuid}`);
   },
 
   async createMyOrder(payload: CreateOrderPayload) {
-    return platformRequest<OrderDetail>(
-      "POST",
-      "/v1/orders",
-      { body: payload },
-    );
+    return platformRequest<OrderDetail>("POST", "/v1/orders", {
+      body: payload,
+    });
   },
 
   async startCheckout(orderUuid: string) {
-    return platformRequest<OrderCheckoutSession>("POST", `/v1/orders/${orderUuid}/checkout`);
+    return platformRequest<OrderCheckoutSession>(
+      "POST",
+      `/v1/orders/${orderUuid}/checkout`,
+    );
   },
 
   async getCheckout(sessionUuid: string) {
-    return platformRequest<OrderCheckoutSession>("GET", `/v1/orders/checkout/${sessionUuid}`);
+    return platformRequest<OrderCheckoutSession>(
+      "GET",
+      `/v1/orders/checkout/${sessionUuid}`,
+    );
   },
 
   async uploadAsset(token: string, file: File) {
@@ -427,15 +457,18 @@ export const ordersService = {
     });
     const json = await res.json();
     if (!res.ok || json.error) {
-      throw new Error(json.error?.message || "Failed to upload file");
+      // Keep the API error code (e.g. SVG_UNSAFE_CONTENT, PAYLOAD_TOO_LARGE) for the UI.
+      throw new ApiError({
+        status: res.status,
+        code: json.error?.code ?? "",
+        message: json.error?.message || "Failed to upload file",
+        details: json.error?.details,
+      });
     }
     return json.data as AssetRequestSummary;
   },
 
   async meta() {
-    return platformRequest<ResourceMeta>(
-      "GET",
-      "/v1/platform/orders/meta",
-    );
+    return platformRequest<ResourceMeta>("GET", "/v1/platform/orders/meta");
   },
 };

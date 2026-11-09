@@ -40,6 +40,7 @@ INSERT INTO payment_checkout_sessions (
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING *;
 
+-- account-lint: cross-account checkout start: session id from the row just inserted for this account
 -- name: UpdateCheckoutSessionInit :one
 UPDATE payment_checkout_sessions
 SET provider_token = COALESCE(sqlc.narg(provider_token), provider_token),
@@ -48,6 +49,7 @@ SET provider_token = COALESCE(sqlc.narg(provider_token), provider_token),
 WHERE uuid = sqlc.arg(uuid)
 RETURNING *;
 
+-- account-lint: cross-account usecase checks row.AccountID against the active account (404 otherwise)
 -- name: GetCheckoutSessionByUUID :one
 SELECT cs.*,
        p.uuid AS plan_uuid,
@@ -63,6 +65,7 @@ INNER JOIN plans p ON p.id = cs.plan_id
 INNER JOIN users u ON u.id = cs.user_id
 WHERE cs.uuid = $1;
 
+-- account-lint: cross-account payment provider callback: merchant oid is the provider's reference
 -- name: GetCheckoutSessionByMerchantOID :one
 SELECT cs.*,
        p.uuid AS plan_uuid,
@@ -77,6 +80,7 @@ INNER JOIN plans p ON p.id = cs.plan_id
 INNER JOIN users u ON u.id = cs.user_id
 WHERE cs.merchant_oid = $1;
 
+-- account-lint: cross-account payment provider callback: provider token is the reference
 -- name: GetCheckoutSessionByProviderToken :one
 SELECT cs.*,
        p.uuid AS plan_uuid,
@@ -91,6 +95,7 @@ INNER JOIN plans p ON p.id = cs.plan_id
 INNER JOIN users u ON u.id = cs.user_id
 WHERE cs.provider_token = $1;
 
+-- account-lint: cross-account payment provider callback: session found by merchant oid / provider token
 -- name: CompleteCheckoutSession :one
 UPDATE payment_checkout_sessions
 SET status = 'completed',
@@ -100,6 +105,7 @@ WHERE uuid = sqlc.arg(uuid)
   AND status = 'pending'
 RETURNING *;
 
+-- account-lint: cross-account payment provider callback / init failure: session id from that flow
 -- name: FailCheckoutSession :one
 UPDATE payment_checkout_sessions
 SET status = 'failed',
@@ -124,6 +130,7 @@ INSERT INTO subscriptions (
 VALUES ($1, $2, $3, $4, 'payment', $5, $6, $7, $8, $9)
 RETURNING *;
 
+-- account-lint: cross-account payment provider callback: session id from the verified callback
 -- name: LockCheckoutSession :one
 SELECT * FROM payment_checkout_sessions WHERE merchant_oid = $1 FOR UPDATE;
 

@@ -76,7 +76,9 @@ export interface paths {
         put?: never;
         /**
          * Login
-         * @description Authenticates with email/password and returns a token pair.
+         * @description Authenticates with email/password and returns a token pair. An unknown email and a wrong
+         *     password get the same `401 INVALID_CREDENTIALS`; a disabled account is reported (403) only
+         *     after the correct password. Rate limited per IP + email, per IP and per email.
          */
         post: operations["postAuthLogin"];
         delete?: never;
@@ -572,7 +574,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List linked OAuth identities */
+        /**
+         * List linked OAuth identities
+         * @description Also reports the user's other sign-in methods: `has_password` is false when the
+         *     user never chose a password (OAuth sign-up stores a random hash; any password
+         *     update, including a password reset, sets it), `has_passkey` when a passkey exists.
+         */
         get: operations["getAuthIdentities"];
         put?: never;
         post?: never;
@@ -592,7 +599,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Unlink an OAuth identity */
+        /**
+         * Unlink an OAuth identity
+         * @description `409 LAST_SIGN_IN_METHOD` when the user has no password, no passkey and this is
+         *     their last linked identity (TEC-1105).
+         */
         delete: operations["deleteAuthIdentity"];
         options?: never;
         head?: never;
@@ -629,7 +640,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete a passkey */
+        /**
+         * Delete a passkey
+         * @description `409 LAST_SIGN_IN_METHOD` when the user has no password, no linked identity and
+         *     this is their last passkey (TEC-1105).
+         */
         delete: operations["deleteAuthPasskey"];
         options?: never;
         head?: never;
@@ -871,8 +886,10 @@ export interface paths {
         put?: never;
         /**
          * Issue Centrifugo subscription JWT
-         * @description Body `{ channel }`. Allowlist `user:{own_uuid}`, member `workspace:{uuid}`,
-         *     and `conversation:{uuid}` (authenticated session; HTTP inbox ACL is the hard boundary).
+         * @description Body `{ channel }`. Explicit allowlist: `user:{own_uuid}` (the caller's own
+         *     channel) and `system.notifications` (super admins only). Every other channel,
+         *     including `conversation:{uuid}`, `workspace:{uuid}` and account channels, is
+         *     denied with 403.
          */
         post: operations["postRealtimeSubscriptionToken"];
         delete?: never;
@@ -967,7 +984,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Request email verification OTP */
+        /**
+         * Request email verification OTP
+         * @description Sends a verification code to the caller's own email address. An `email` that differs from the caller's address is ignored with the same accepted response. Rate limited per user and per client IP.
+         */
         post: operations["postAuthEmailVerifyRequest"];
         delete?: never;
         options?: never;
@@ -984,7 +1004,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Verify email with OTP */
+        /**
+         * Verify email with OTP
+         * @description Rate limited per client IP and per email.
+         */
         post: operations["postAuthEmailVerify"];
         delete?: never;
         options?: never;
@@ -1001,7 +1024,7 @@ export interface paths {
         };
         /**
          * List own inbox
-         * @description Requires `notifications.read`. Supports `limit`,`offset`,`q`,`sort`,`status`,`channel`,`unread`.
+         * @description Requires `notifications.read`. Supports `limit`,`offset`,`q`,`sort`,`status`,`channel`,`unread`. The inbox holds `inapp` rows only: email and other channel rows (verification codes, reset codes, invitation links) are never returned, so any other `channel` value yields an empty page.
          */
         get: operations["getNotifications"];
         put?: never;
@@ -1104,7 +1127,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get own notification */
+        /**
+         * Get own notification
+         * @description Own `inapp` notification. Rows of other channels (e.g. email) answer 404.
+         */
         get: operations["getNotificationByUUID"];
         put?: never;
         post?: never;
@@ -1521,8 +1547,8 @@ export interface paths {
         get: operations["listActiveAccountMembers"];
         put?: never;
         /**
-         * Add an existing user to the active company account
-         * @description Owners may add any role; admins may add admins and members. Personal accounts cannot have other members (400); an existing membership returns 409.
+         * Add a user to the active company account (or invite the address)
+         * @description Owners may add any role; admins may add admins and members. Personal accounts cannot have other members (400); an existing membership returns 409. Only a user whose email is verified is added directly (201). For an unverified user or an address without a user an email invite is sent instead (202, needs `app.account_invites.write`; an open invite for the address is 409), so only the mailbox owner can join (TEC-1104).
          */
         post: operations["addActiveAccountMember"];
         delete?: never;
@@ -1543,7 +1569,7 @@ export interface paths {
         post?: never;
         /**
          * Remove a member or leave the account
-         * @description Any member may leave; removing others needs owner/admin, removing an owner needs an owner. The last owner cannot leave (409).
+         * @description Any member may leave; removing others needs owner/admin, removing an owner needs an owner. The last owner cannot leave (409). The person's open invites to the account are revoked.
          */
         delete: operations["removeActiveAccountMember"];
         options?: never;
@@ -1628,7 +1654,7 @@ export interface paths {
         };
         /**
          * Describe an invite link
-         * @description Public; the token is the credential. `user_exists` tells the page whether to offer login or sign-up.
+         * @description Public; the token is the credential. `user_exists` tells the page whether to offer login or sign-up. Rate-limited per client IP (429); responses carry `Referrer-Policy: no-referrer`.
          */
         get: operations["previewInvite"];
         put?: never;
@@ -1650,7 +1676,7 @@ export interface paths {
         put?: never;
         /**
          * Accept an invite as the signed-in user
-         * @description The user's email must be the invited address (403 `INVITE_EMAIL_MISMATCH`). The user joins the account with the invited role (an existing member keeps theirs). A profile the employee import created for the invite becomes the member's employee profile and the member is placed in its office/group. Expired: 410 `INVITE_EXPIRED`; accepted or revoked: 409 `INVITE_CLOSED`; suspended account: 403.
+         * @description The user's email must be the invited address (403 `INVITE_EMAIL_MISMATCH`). The user joins the account with the invited role (an existing member keeps theirs). A profile the employee import created for the invite becomes the member's employee profile and the member is placed in its office/group. Expired: 410 `INVITE_EXPIRED`; accepted or revoked: 409 `INVITE_CLOSED`; suspended account: 403; while impersonating: 403 `INVITE_IMPERSONATION`. Rate-limited per user and client IP (429); responses carry `Referrer-Policy: no-referrer`.
          */
         post: operations["acceptInvite"];
         delete?: never;
@@ -3463,7 +3489,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Upload customer logo/vector artwork using secure token */
+        /**
+         * Upload customer logo/vector artwork using secure token
+         * @description Unauthenticated; the asset request token is the only gate (TEC-1097). The token is checked
+         *     before the file is read: pass it as `?token=` or as the `token` form field, which must come
+         *     before the `file` part. Invalid token: 404. The file type is sniffed (PNG/JPEG/WebP/GIF, PDF
+         *     or AI, EPS, ZIP, static SVG); max 20 MiB (413). Unsafe SVG: 422 `SVG_UNSAFE_CONTENT`.
+         */
         post: operations["uploadOrderAssetPublic"];
         delete?: never;
         options?: never;
@@ -5152,6 +5184,10 @@ export interface paths {
         /**
          * PUT /v1/platform/settings/logo
          * @description Registered in `internal/modules/settings/routes.go`. Requires `platform.settings.write`.
+         *     Multipart `logo` file up to 2 MiB. The type is sniffed from the bytes: PNG, JPEG, WebP, GIF or a
+         *     static SVG (max 512 KiB). An SVG with script, event handlers, external references, DOCTYPE or
+         *     similar is rejected with 422 `SVG_UNSAFE_CONTENT` (TEC-1097). Stored SVGs are served as
+         *     attachments with `nosniff` and a sandbox CSP.
          */
         put: operations["putPlatformSettingsLogo"];
         post?: never;
@@ -6541,7 +6577,7 @@ export interface paths {
         put?: never;
         /**
          * Upload a file to the company media library
-         * @description TEC-946. Requires app.company_branding.write and an owner/admin role in the active company. The content type is sniffed: logo, cover and image take JPEG, PNG or WebP up to 5 MiB; document takes PDF up to 10 MiB. At most 500 files per company (409).
+         * @description TEC-946. Requires app.company_branding.write and an owner/admin role in the active company. The content type is sniffed: cover and image take JPEG, PNG or WebP up to 5 MiB; logo also takes GIF and static SVG (max 512 KiB; unsafe SVG is 422 SVG_UNSAFE_CONTENT, TEC-1097); document takes PDF up to 10 MiB. Bodies above the limit are 413 PAYLOAD_TOO_LARGE. At most 500 files per company (409).
          */
         post: operations["uploadCompanyMedia"];
         delete?: never;
@@ -7602,6 +7638,8 @@ export interface components {
             /**
              * @description Machine-readable error code
              * @example VALIDATION_ERROR
+             * @example PAYLOAD_TOO_LARGE
+             * @example SVG_UNSAFE_CONTENT
              * @example INVALID_RESET_CODE
              * @example INVALID_VERIFICATION_CODE
              * @example INVALID_CREDENTIALS
@@ -8003,6 +8041,16 @@ export interface components {
             /** @constant */
             success: true;
             data: components["schemas"]["AccountInvite"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAccountMemberInvited: {
+            /** @constant */
+            success: true;
+            data: {
+                /** @enum {string} */
+                status: "invited";
+                invite: components["schemas"]["AccountInvite"];
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeAccountInvitePage: {
@@ -8873,6 +8921,10 @@ export interface components {
             items: components["schemas"]["LinkedIdentity"][];
             /** Format: int64 */
             total: number;
+            /** @description False when the user never chose a password (OAuth sign-up). */
+            has_password: boolean;
+            /** @description True when at least one passkey is registered. */
+            has_passkey: boolean;
         };
         EnvelopeIdentityList: {
             /** @enum {boolean} */
@@ -12147,6 +12199,44 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /**
+         * @description `LAST_SIGN_IN_METHOD`: the change would leave the user without any way to sign in.
+         *     Set a password (password reset) or add another sign-in method first.
+         */
+        LastSignInMethod: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /**
+         * @description `PAYLOAD_TOO_LARGE`: the request body or file is above the upload limit. Upload bodies are
+         *     capped before they are read (`http.MaxBytesReader`; storage uploads use `STORAGE_MAX_BYTES`).
+         */
+        PayloadTooLarge: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /**
+         * @description `SVG_UNSAFE_CONTENT`: an SVG upload contains more than static vector content (script, event
+         *     handler attributes, `javascript:` / external references, foreignObject, DOCTYPE/ENTITY,
+         *     external CSS `url()` / `@import`). The file is rejected, never stripped;
+         *     `error.details[0].message` holds the reason.
+         */
+        SVGUnsafeContent: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description Unexpected server error */
         InternalError: {
             headers: {
@@ -13122,6 +13212,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["LastSignInMethod"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -13170,6 +13261,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["LastSignInMethod"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -13765,7 +13857,10 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
-                    /** Format: email */
+                    /**
+                     * Format: email
+                     * @description Optional; must be the caller's own address, any other value sends nothing.
+                     */
                     email?: string;
                 };
             };
@@ -13781,6 +13876,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -13807,6 +13903,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -13819,6 +13916,7 @@ export interface operations {
                 /** @description Comma-separated fields; prefix `-` for descending */
                 sort?: components["parameters"]["Sort"];
                 status?: string;
+                /** @description Only `inapp` matches; the inbox never returns other channels. */
                 channel?: string;
                 unread?: boolean;
             };
@@ -14696,6 +14794,15 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeAccountMember"];
                 };
             };
+            /** @description The address is not verified (or has no user); an invite was sent instead */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAccountMemberInvited"];
+                };
+            };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
@@ -14903,6 +15010,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     acceptInvite: {
@@ -14938,6 +15046,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getPlatformAccountsMeta: {
@@ -15288,6 +15397,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeParsedVCardProfile"];
                 };
             };
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     getProfile: {
@@ -15608,6 +15718,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeSocialPlatformDetail"];
                 };
             };
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     listActiveBanks: {
@@ -15797,6 +15908,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeBankDetail"];
                 };
             };
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     getBankAccountsMeta: {
@@ -16055,6 +16167,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     uploadProfileCover: {
@@ -16088,6 +16201,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     setPrimaryProfile: {
@@ -17618,6 +17732,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeProductDetail"];
                 };
             };
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     uploadProductImage: {
@@ -17648,6 +17763,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeProductDetail"];
                 };
             };
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     listProductVariants: {
@@ -18382,7 +18498,9 @@ export interface operations {
     };
     uploadOrderAssetPublic: {
         parameters: {
-            query?: never;
+            query?: {
+                token?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -18406,6 +18524,8 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeAssetRequestSummary"];
                 };
             };
+            413: components["responses"]["PayloadTooLarge"];
+            422: components["responses"]["SVGUnsafeContent"];
         };
     };
     listMyOrders: {
@@ -21135,10 +21255,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": {
-                    [key: string]: unknown;
+                "multipart/form-data": {
+                    /** Format: binary */
+                    logo: string;
                 };
             };
         };
@@ -21154,6 +21275,8 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            413: components["responses"]["PayloadTooLarge"];
+            422: components["responses"]["SVGUnsafeContent"];
         };
     };
     deletePlatformSettingsLogo: {
@@ -21708,6 +21831,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     postPlatformStorageUploadsComplete: {
@@ -23861,6 +23985,8 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
+            422: components["responses"]["SVGUnsafeContent"];
         };
     };
     deleteCompanyMedia: {
@@ -24367,6 +24493,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            413: components["responses"]["PayloadTooLarge"];
         };
     };
     getCompanyEmployeesImportSample: {

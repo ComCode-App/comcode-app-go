@@ -105,41 +105,37 @@ export type UpsertVariantPayload = {
 };
 
 export const productsService = {
-  async listPublic(params?: { limit?: number; offset?: number; q?: string; product_type?: string }) {
-    return platformRequest<ProductListResult>(
-      "GET",
-      "/v1/products",
-      {
-        query: {
-          limit: params?.limit ?? 50,
-          offset: params?.offset ?? 0,
-          q: params?.q,
-          product_type: params?.product_type,
-        },
+  async listPublic(params?: {
+    limit?: number;
+    offset?: number;
+    q?: string;
+    product_type?: string;
+  }) {
+    return platformRequest<ProductListResult>("GET", "/v1/products", {
+      query: {
+        limit: params?.limit ?? 50,
+        offset: params?.offset ?? 0,
+        q: params?.q,
+        product_type: params?.product_type,
       },
-    );
+    });
   },
 
   async getPublic(uuid: string) {
-    return platformRequest<ProductDetail>(
-      "GET",
-      `/v1/products/${uuid}`,
-    );
+    return platformRequest<ProductDetail>("GET", `/v1/products/${uuid}`);
   },
 
-  async list(params: ServerListParams & { status?: string; category_id?: number }) {
-    return platformRequest<ProductListResult>(
-      "GET",
-      "/v1/platform/products",
-      {
-        query: {
-          limit: params.limit,
-          offset: params.offset,
-          q: params.q,
-          status: params.status,
-        },
+  async list(
+    params: ServerListParams & { status?: string; category_id?: number },
+  ) {
+    return platformRequest<ProductListResult>("GET", "/v1/platform/products", {
+      query: {
+        limit: params.limit,
+        offset: params.offset,
+        q: params.q,
+        status: params.status,
       },
-    );
+    });
   },
 
   async get(uuid: string) {
@@ -150,11 +146,9 @@ export const productsService = {
   },
 
   async create(payload: UpsertProductPayload) {
-    return platformRequest<ProductDetail>(
-      "POST",
-      "/v1/platform/products",
-      { body: payload },
-    );
+    return platformRequest<ProductDetail>("POST", "/v1/platform/products", {
+      body: payload,
+    });
   },
 
   async update(uuid: string, payload: UpsertProductPayload) {
@@ -165,7 +159,14 @@ export const productsService = {
     );
   },
 
-  async update3DViewbox(uuid: string, payload: { model_3d_viewbox: Model3DViewboxConfig; model_3d_file_url?: string; model_3d_usdz_url?: string }) {
+  async update3DViewbox(
+    uuid: string,
+    payload: {
+      model_3d_viewbox: Model3DViewboxConfig;
+      model_3d_file_url?: string;
+      model_3d_usdz_url?: string;
+    },
+  ) {
     return platformRequest<ProductDetail>(
       "PUT",
       `/v1/platform/products/${uuid}/viewbox`,
@@ -195,7 +196,11 @@ export const productsService = {
     );
   },
 
-  async updateVariant(productUuid: string, variantUuid: string, payload: UpsertVariantPayload) {
+  async updateVariant(
+    productUuid: string,
+    variantUuid: string,
+    payload: UpsertVariantPayload,
+  ) {
     return platformRequest<ProductVariantSummary>(
       "PUT",
       `/v1/platform/products/${productUuid}/variants/${variantUuid}`,
@@ -211,9 +216,6 @@ export const productsService = {
   },
 
   async meta() {
-    return platformRequest<ResourceMeta>(
-      "GET",
-      "/v1/platform/products/meta",
-    );
+    return platformRequest<ResourceMeta>("GET", "/v1/platform/products/meta");
   },
 };

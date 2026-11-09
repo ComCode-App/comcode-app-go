@@ -104,10 +104,7 @@ export function GeoIPPage() {
       ) : null}
 
       {statusData ? (
-        <GeoIPStatusCard
-          status={statusData}
-          queryKey={STATUS_QUERY_KEY}
-        />
+        <GeoIPStatusCard status={statusData} queryKey={STATUS_QUERY_KEY} />
       ) : null}
 
       <GeoIPLookupTester />

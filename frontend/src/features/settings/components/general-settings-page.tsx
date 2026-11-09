@@ -9,6 +9,7 @@ import { SettingsForm } from "@/features/io/components/settings-form";
 import { ioKeys } from "@/features/io/hooks/query-keys";
 import type { PatchSettingsRequest } from "@/features/io/services/settings.service";
 import { settingsService } from "@/features/io/services/settings.service";
+import { uploadErrorKey } from "@/lib/api/upload-errors";
 import { useAppMutation } from "@/lib/query/mutation";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
@@ -42,6 +43,17 @@ export function GeneralSettingsPage() {
       void queryClient.setQueryData(ioKeys.settings.all, data);
       appToast.success(t("settings.toast.logo_saved"));
     },
+    onError: (err) => {
+      // Unsafe SVG (422 SVG_UNSAFE_CONTENT) or oversized file: clear localized warning.
+      const key = uploadErrorKey(err);
+      appToast.error(
+        key
+          ? t(key)
+          : err instanceof Error && err.message
+            ? err.message
+            : t("common.error_generic"),
+      );
+    },
   });
 
   const removeLogo = useAppMutation({
@@ -64,10 +76,10 @@ export function GeneralSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold tracking-tight text-foreground md:text-2xl">
+        <h1 className="text-foreground text-xl font-bold tracking-tight md:text-2xl">
           {t("settings.subnav.general_branding")}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-1 text-sm">
           {t("settings.description")}
         </p>
       </div>

@@ -30,8 +30,14 @@ export function BankAccountsPage() {
     useState<UserBankAccountSummary | null>(null);
 
   const listState = useServerListState({ initialPageSize: 20 });
-  const { data: accounts = [], isLoading, isError, refetch } = useBankAccounts();
-  const { deleteMutation, toggleActiveMutation, updateMutation } = useBankAccountMutations();
+  const {
+    data: accounts = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useBankAccounts();
+  const { deleteMutation, toggleActiveMutation, updateMutation } =
+    useBankAccountMutations();
 
   const handleCreate = useCallback(() => {
     setEditingAccount(null);

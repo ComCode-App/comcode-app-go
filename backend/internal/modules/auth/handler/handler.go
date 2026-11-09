@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/clientip"
 	"encoding/json"
 	"errors"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/clientip"
 	"net/http"
 	"strings"
 	"time"
@@ -213,7 +213,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.limiter != nil {
-		ok, retry := h.limiter.AllowResetPassword(r.Context(), sessionMeta(r).IP)
+		ok, retry := h.limiter.AllowResetPassword(r.Context(), sessionMeta(r).IP, in.Email)
 		if h.writeRateLimited(w, r, ok, retry) {
 			return
 		}
@@ -250,6 +250,11 @@ func (h *Handler) VerifyEmailRequest(w http.ResponseWriter, r *http.Request) {
 		Email string `json:"email"`
 	}
 	_ = json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&in)
+	if !h.allowAuthRate(w, r, func() (bool, time.Duration) {
+		return h.limiter.AllowEmailVerificationRequest(r.Context(), p.UserID.String(), sessionMeta(r).IP)
+	}) {
+		return
+	}
 	if err := h.uc.RequestEmailVerification(r.Context(), p.UserID, in.Email); err != nil {
 		writeUsecaseError(w, r, err)
 		return
@@ -263,6 +268,11 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		Code  string `json:"code"`
 	}
 	if err := decodeJSON(w, r, &in); err != nil {
+		return
+	}
+	if !h.allowAuthRate(w, r, func() (bool, time.Duration) {
+		return h.limiter.AllowEmailVerificationSubmit(r.Context(), sessionMeta(r).IP, in.Email)
+	}) {
 		return
 	}
 	if err := h.uc.VerifyEmail(r.Context(), in.Email, in.Code); err != nil {
@@ -531,6 +541,8 @@ func sessionMeta(r *http.Request) model.SessionMeta {
 }
 
 func writeUsecaseError(w http.ResponseWriter, r *http.Request, err error) {
+	// Keeps the cause for the request log (redacted there); 5xx are recorded by InternalErr.
+	response.RecordFailure(w, err)
 	var ve *apiquery.ValidationError
 	if errors.As(err, &ve) {
 		details := make([]response.Detail, 0, len(ve.Details))
@@ -563,6 +575,8 @@ func writeUsecaseError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Error(w, r, http.StatusInternalServerError, response.CodePasswordResetFailed, "Password reset failed")
 	case errors.Is(err, usecase.ErrUserDisabled):
 		response.Forbidden(w, r, "User is disabled")
+	case errors.Is(err, usecase.ErrLastSignInMethod):
+		response.Conflict(w, r, response.CodeLastSignInMethod, "Set a password or add another sign-in method before removing the last one")
 	case errors.Is(err, usecase.ErrLastSuperAdmin):
 		response.Conflict(w, r, response.CodeConflict, "Cannot demote the last super admin")
 	case errors.Is(err, usecase.ErrSystemRole):
@@ -573,6 +587,8 @@ func writeUsecaseError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Unauthorized(w, r, "Session is no longer valid")
 	case errors.Is(err, usecase.ErrAccountSuspended):
 		response.Forbidden(w, r, "Account is suspended")
+	case errors.Is(err, usecase.ErrSuperAdminRequired):
+		response.Forbidden(w, r, "Only a super admin can change super admin accounts or the super_admin role")
 	case errors.Is(err, usecase.ErrForbidden):
 		response.Forbidden(w, r, "You do not have access to this resource")
 	case errors.Is(err, usecase.ErrNotFound):

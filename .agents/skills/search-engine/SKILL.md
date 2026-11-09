@@ -56,7 +56,7 @@ Boot: worker/API call `Indexer.Bootstrap` when an index is empty.
 | Spec | Permission | Hit opens |
 |------|------------|-----------|
 | users | `platform.users.read` | `/platform/users/{uuid}` |
-| roles | `platform.roles.read` | role detail |
+| roles | `platform.roles.read` | `/platform/settings/roles/{uuid}` |
 | orders | `platform.orders.read` | `/platform/orders?open={uuid}` (detail dialog) |
 | products | `platform.products.read` | `/platform/products?open={uuid}` (edit dialog) |
 | companies | `platform.accounts.read` | `/platform/companies/{uuid}` |

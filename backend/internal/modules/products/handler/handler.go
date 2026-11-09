@@ -5,12 +5,13 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/products/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/products/usecase"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/resourcemeta"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/apiquery"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/response"
+	"github.com/google/uuid"
 )
 
 type Handler struct {
@@ -177,6 +178,12 @@ func (h *Handler) Update3DViewbox(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, prod)
 }
 
+// Upload limits (TEC-1097): the body is capped before it is read.
+const (
+	maxModelBytes        = 50 << 20
+	maxProductImageBytes = 10 << 20
+)
+
 func (h *Handler) Upload3DModel(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(r.PathValue("uuid"))
 	if err != nil {
@@ -184,14 +191,9 @@ func (h *Handler) Upload3DModel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseMultipartForm(50 << 20); err != nil { // 50MB max for 3d models
-		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
-		return
-	}
-
-	file, header, err := r.FormFile("model")
-	if err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "model file is required")
+	file, header, ok := upload.FormFile(w, r, maxModelBytes, "model")
+	defer upload.Cleanup(r)
+	if !ok {
 		return
 	}
 	defer func() { _ = file.Close() }()
@@ -200,6 +202,9 @@ func (h *Handler) Upload3DModel(w http.ResponseWriter, r *http.Request) {
 
 	prod, err := h.svc.Upload3DModel(r.Context(), id, file, header.Filename, header.Header.Get("Content-Type"), header.Size, isUSDZ)
 	if err != nil {
+		if upload.WriteError(w, r, err) {
+			return
+		}
 		if errors.Is(err, usecase.ErrNotFound) {
 			response.NotFound(w, r, "product not found")
 			return
@@ -218,20 +223,18 @@ func (h *Handler) UploadImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
-		return
-	}
-
-	file, header, err := r.FormFile("image")
-	if err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "image file is required")
+	file, header, ok := upload.FormFile(w, r, maxProductImageBytes, "image")
+	defer upload.Cleanup(r)
+	if !ok {
 		return
 	}
 	defer func() { _ = file.Close() }()
 
 	prod, err := h.svc.UploadImage(r.Context(), id, file, header.Filename, header.Header.Get("Content-Type"), header.Size)
 	if err != nil {
+		if upload.WriteError(w, r, err) {
+			return
+		}
 		if errors.Is(err, usecase.ErrNotFound) {
 			response.NotFound(w, r, "product not found")
 			return

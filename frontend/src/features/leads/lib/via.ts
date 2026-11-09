@@ -7,12 +7,18 @@
  */
 export function withVia(targetUrl: string, routePath: string): string {
   try {
-    const base = typeof window === "undefined" ? "http://localhost" : window.location.origin;
+    const base =
+      typeof window === "undefined"
+        ? "http://localhost"
+        : window.location.origin;
     const url = new URL(targetUrl, base);
-    const isProfilePage = /^\/[^/]+\/?$/.test(url.pathname) && !url.pathname.startsWith("/api/");
+    const isProfilePage =
+      /^\/[^/]+\/?$/.test(url.pathname) && !url.pathname.startsWith("/api/");
     if (!isProfilePage) return targetUrl;
     url.searchParams.set("via", routePath);
-    return /^https?:\/\//i.test(targetUrl) ? url.toString() : `${url.pathname}${url.search}`;
+    return /^https?:\/\//i.test(targetUrl)
+      ? url.toString()
+      : `${url.pathname}${url.search}`;
   } catch {
     return targetUrl;
   }

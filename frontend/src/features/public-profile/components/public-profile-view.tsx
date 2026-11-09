@@ -26,7 +26,12 @@ import type { ExchangeForm, LeadForm } from "@/features/leads/lib/form-config";
 import type { PublicProfile } from "@/features/public-profile/lib/load";
 import { fontProfileSerif } from "@/features/public-profile/lib/theme-fonts";
 import { brandStyle } from "@/features/public-profile/lib/brand";
-import { getTheme, resolveLayout, themeStyle, type LayoutMode } from "@/features/public-profile/lib/themes";
+import {
+  getTheme,
+  resolveLayout,
+  themeStyle,
+  type LayoutMode,
+} from "@/features/public-profile/lib/themes";
 import { trackProfileEvent } from "@/features/public-profile/lib/track";
 import {
   addressLines,
@@ -86,24 +91,43 @@ const SECTION: Record<LayoutMode, string> = {
  * The theme (TEC-601) sets the tokens on the root; a Background Studio design replaces only the
  * theme's backdrop.
  */
-export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Props) {
+export function PublicProfileView({
+  profile,
+  lang,
+  leadForm,
+  exchange,
+  via,
+}: Props) {
   const { t } = useLocale();
   const theme = getTheme(profile.theme);
   const layout = resolveLayout(theme, profile.layout_mode);
   // Backdrop blur is costly on weak phones; glass cards are opaque enough without it.
   const constrained = useConstrainedDevice();
-  const surface = cn("bg-card", SURFACE[layout], theme?.glass && !constrained && "backdrop-blur-xl");
+  const surface = cn(
+    "bg-card",
+    SURFACE[layout],
+    theme?.glass && !constrained && "backdrop-blur-xl",
+  );
   const section = cn(surface, SECTION[layout]);
   const headingStyle = theme
-    ? { fontFamily: "var(--pp-font-heading)", fontWeight: "var(--pp-heading-weight)" }
+    ? {
+        fontFamily: "var(--pp-font-heading)",
+        fontWeight: "var(--pp-heading-weight)",
+      }
     : undefined;
   const tr = pickTranslation(profile, lang);
   const name = displayName(tr);
   const subline = headline(tr);
   const activeLocale = tr?.locale ?? profile.primary_locale;
-  const locales = Array.from(new Set(profile.translations.map((x) => x.locale)));
+  const locales = Array.from(
+    new Set(profile.translations.map((x) => x.locale)),
+  );
   const track = (type: string, props?: Record<string, string>) =>
-    trackProfileEvent(type, profile.profile_uuid, via ? { ...props, via } : props);
+    trackProfileEvent(
+      type,
+      profile.profile_uuid,
+      via ? { ...props, via } : props,
+    );
 
   const viewed = useRef(false);
   useEffect(() => {
@@ -115,14 +139,17 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
     });
   }, [profile.profile_uuid, profile.username, via]);
 
-  const first = (category: string) => profile.contacts.find((c) => c.category === category);
+  const first = (category: string) =>
+    profile.contacts.find((c) => c.category === category);
   const quick = [first("phone"), first("email"), first("whatsapp")].filter(
     (c): c is PublicContact => Boolean(c),
   );
   const vcardHref = `/api/v1/public/p/${encodeURIComponent(profile.username)}/vcard?locale=${activeLocale}`;
   // The smart link that opened the page may lead with another action (TEC-556); without a
   // matching contact the main button stays "save contact".
-  const primaryContact = profile.primary_action ? first(PRIMARY_ACTION_CATEGORY[profile.primary_action] ?? "") : undefined;
+  const primaryContact = profile.primary_action
+    ? first(PRIMARY_ACTION_CATEGORY[profile.primary_action] ?? "")
+    : undefined;
   const primaryHref = primaryContact ? contactHref(primaryContact) : null;
   const initials = name
     .split(/\s+/)
@@ -159,7 +186,9 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
             scroll={false}
             className={cn(
               "rounded-full px-2.5 py-1 uppercase",
-              loc === activeLocale ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+              loc === activeLocale
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground",
             )}
           >
             {loc}
@@ -172,9 +201,17 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
     <div className="relative h-36 sm:h-44">
       {profile.cover_url ? (
         // eslint-disable-next-line @next/next/no-img-element -- API-owned media URL, any host
-        <img src={profile.cover_url} alt="" className="h-full w-full object-cover" fetchPriority="high" />
+        <img
+          src={profile.cover_url}
+          alt=""
+          className="h-full w-full object-cover"
+          fetchPriority="high"
+        />
       ) : theme ? (
-        <div className="h-full w-full" style={{ backgroundImage: "var(--pp-cover)" }} />
+        <div
+          className="h-full w-full"
+          style={{ backgroundImage: "var(--pp-cover)" }}
+        />
       ) : (
         <div className="from-primary h-full w-full bg-gradient-to-br to-purple-700" />
       )}
@@ -182,7 +219,11 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
         // On a pill so the company logo (TEC-946) stays readable over any cover.
         <div className="bg-card absolute top-3 left-3 z-10 rounded-lg border p-1.5 shadow-sm">
           {/* eslint-disable-next-line @next/next/no-img-element -- API-owned media URL, any host */}
-          <img src={profile.company_logo_url} alt="" className="h-8 max-w-28 object-contain" />
+          <img
+            src={profile.company_logo_url}
+            alt=""
+            className="h-8 max-w-28 object-contain"
+          />
         </div>
       ) : null}
       {languageNav}
@@ -191,7 +232,9 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
 
   const avatar = (size: string, text: string, ring: boolean) => (
     <Avatar className={cn(size, ring && "border-card border-4 shadow-md")}>
-      {profile.avatar_url ? <AvatarImage src={profile.avatar_url} alt={name} /> : null}
+      {profile.avatar_url ? (
+        <AvatarImage src={profile.avatar_url} alt={name} />
+      ) : null}
       <AvatarFallback className={text}>{initials || "?"}</AvatarFallback>
     </Avatar>
   );
@@ -199,22 +242,36 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
   const nameBlock = (align: "center" | "left") => (
     <div className={cn("min-w-0", align === "center" && "text-center")}>
       <h1
-        className={cn("font-semibold tracking-tight", layout === "compact" ? "text-xl" : "mt-3 text-2xl")}
+        className={cn(
+          "font-semibold tracking-tight",
+          layout === "compact" ? "text-xl" : "mt-3 text-2xl",
+        )}
         style={headingStyle}
       >
         {name}
-        {profile.verified ? <VerifiedBadge className="ml-1.5 -translate-y-px text-[0.85em]" /> : null}
+        {profile.verified ? (
+          <VerifiedBadge className="ml-1.5 -translate-y-px text-[0.85em]" />
+        ) : null}
       </h1>
-      {subline ? <p className="text-muted-foreground mt-1 text-sm">{subline}</p> : null}
-      {tr?.department ? <p className="text-muted-foreground text-xs">{tr.department}</p> : null}
+      {subline ? (
+        <p className="text-muted-foreground mt-1 text-sm">{subline}</p>
+      ) : null}
+      {tr?.department ? (
+        <p className="text-muted-foreground text-xs">{tr.department}</p>
+      ) : null}
     </div>
   );
 
   return (
     <div
-      className={cn("min-h-dvh", theme ? fontProfileSerif.variable : "bg-background")}
+      className={cn(
+        "min-h-dvh",
+        theme ? fontProfileSerif.variable : "bg-background",
+      )}
       style={{
-        ...(theme ? { ...themeStyle(theme), backgroundColor: theme.backdropBase } : {}),
+        ...(theme
+          ? { ...themeStyle(theme), backgroundColor: theme.backdropBase }
+          : {}),
         // Company brand color (TEC-946) over the theme's primary.
         ...brandStyle(profile.primary_color),
       }}
@@ -227,14 +284,23 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
           thumbnailUrl={profile.background_thumbnail_url}
         />
       ) : theme ? (
-        <div aria-hidden className="pointer-events-none fixed inset-0" style={{ background: "var(--pp-backdrop)" }} />
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0"
+          style={{ background: "var(--pp-backdrop)" }}
+        />
       ) : (
         <div
           aria-hidden
           className="from-primary/15 via-background to-background pointer-events-none fixed inset-0 bg-gradient-to-b"
         />
       )}
-      <main className={cn("relative mx-auto w-full max-w-md px-4 pb-10", layout === "minimal" ? "pt-8" : "pt-4")}>
+      <main
+        className={cn(
+          "relative mx-auto w-full max-w-md px-4 pb-10",
+          layout === "minimal" ? "pt-8" : "pt-4",
+        )}
+      >
         <article className={cn(surface, "relative overflow-hidden")}>
           {layout === "standard" ? (
             <>
@@ -258,13 +324,28 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
             </div>
           )}
 
-          <div className={cn("flex flex-col items-center text-center", layout === "compact" ? "px-4 pb-4" : "px-5 pb-6")}>
-            <div className={cn("flex w-full flex-col gap-2", layout === "compact" ? "mt-4" : "mt-5")}>
+          <div
+            className={cn(
+              "flex flex-col items-center text-center",
+              layout === "compact" ? "px-4 pb-4" : "px-5 pb-6",
+            )}
+          >
+            <div
+              className={cn(
+                "flex w-full flex-col gap-2",
+                layout === "compact" ? "mt-4" : "mt-5",
+              )}
+            >
               {primaryContact && primaryHref ? (
                 <Button asChild size="lg" className="w-full">
                   <a
                     href={primaryHref}
-                    target={primaryContact.category === "phone" || primaryContact.category === "email" ? undefined : "_blank"}
+                    target={
+                      primaryContact.category === "phone" ||
+                      primaryContact.category === "email"
+                        ? undefined
+                        : "_blank"
+                    }
                     rel="noopener noreferrer"
                     onClick={() => {
                       const event = contactEvent(primaryContact);
@@ -272,15 +353,28 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
                     }}
                   >
                     {(() => {
-                      const Icon = CONTACT_ICONS[primaryContact.category] ?? Globe;
+                      const Icon =
+                        CONTACT_ICONS[primaryContact.category] ?? Globe;
                       return <Icon className="size-4" />;
                     })()}
-                    {t(`public_profile.primary_action.${profile.primary_action}`)}
+                    {t(
+                      `public_profile.primary_action.${profile.primary_action}`,
+                    )}
                   </a>
                 </Button>
               ) : null}
-              <Button asChild size="lg" variant={primaryHref ? "outline" : "default"} className="w-full">
-                <a href={vcardHref} onClick={() => track("vcard.download", { locale: activeLocale })}>
+              <Button
+                asChild
+                size="lg"
+                variant={primaryHref ? "outline" : "default"}
+                className="w-full"
+              >
+                <a
+                  href={vcardHref}
+                  onClick={() =>
+                    track("vcard.download", { locale: activeLocale })
+                  }
+                >
                   <Download className="size-4" />
                   {t("public_profile.save_contact")}
                 </a>
@@ -292,10 +386,18 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
                   const event = contactEvent(c);
                   if (!href) return null;
                   return (
-                    <Button key={`${c.category}-${c.value}`} asChild variant="outline" size="icon" className="size-11 rounded-full">
+                    <Button
+                      key={`${c.category}-${c.value}`}
+                      asChild
+                      variant="outline"
+                      size="icon"
+                      className="size-11 rounded-full"
+                    >
                       <a
                         href={href}
-                        target={c.category === "whatsapp" ? "_blank" : undefined}
+                        target={
+                          c.category === "whatsapp" ? "_blank" : undefined
+                        }
                         rel="noopener noreferrer"
                         aria-label={t(`public_profile.category.${c.category}`)}
                         onClick={() => event && track(event)}
@@ -327,7 +429,9 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
               ownerName={name || profile.username}
               locale={activeLocale}
               vcardHref={vcardHref}
-              onSaveContact={() => track("vcard.download", { locale: activeLocale })}
+              onSaveContact={() =>
+                track("vcard.download", { locale: activeLocale })
+              }
             />
           </Section>
         ) : null}
@@ -346,7 +450,9 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
 
         {tr?.bio ? (
           <Section className={section} title={t("public_profile.about")}>
-            <p className="text-sm leading-relaxed whitespace-pre-line">{tr.bio}</p>
+            <p className="text-sm leading-relaxed whitespace-pre-line">
+              {tr.bio}
+            </p>
           </Section>
         ) : null}
 
@@ -366,7 +472,9 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
                       <span className="text-muted-foreground block text-xs">
                         {c.label || t(`public_profile.category.${c.category}`)}
                       </span>
-                      <span className="block truncate text-sm font-medium">{c.value}</span>
+                      <span className="block truncate text-sm font-medium">
+                        {c.value}
+                      </span>
                     </span>
                   </>
                 );
@@ -375,7 +483,11 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
                     {href ? (
                       <a
                         href={href}
-                        target={c.category === "url" || c.category === "whatsapp" ? "_blank" : undefined}
+                        target={
+                          c.category === "url" || c.category === "whatsapp"
+                            ? "_blank"
+                            : undefined
+                        }
                         rel="noopener noreferrer"
                         onClick={() => event && track(event)}
                         className="hover:bg-muted/60 -mx-2 flex items-center gap-3 rounded-lg px-2 py-2"
@@ -401,13 +513,20 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => track("social.link.click", { platform: link.platform })}
+                    onClick={() =>
+                      track("social.link.click", { platform: link.platform })
+                    }
                     className="hover:bg-muted/60 flex flex-col items-center gap-1.5 rounded-xl p-2 text-center"
                   >
                     <span className="bg-muted flex size-11 items-center justify-center overflow-hidden rounded-full">
                       {link.icon_url ? (
                         // eslint-disable-next-line @next/next/no-img-element -- platform icons are API-owned
-                        <img src={link.icon_url} alt="" className="size-6 object-contain" loading="lazy" />
+                        <img
+                          src={link.icon_url}
+                          alt=""
+                          className="size-6 object-contain"
+                          loading="lazy"
+                        />
                       ) : (
                         <Globe className="size-5" />
                       )}
@@ -431,7 +550,9 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
                     <MapPin className="size-4" />
                   </span>
                   <div className="min-w-0 text-sm">
-                    {a.label ? <p className="text-muted-foreground text-xs">{a.label}</p> : null}
+                    {a.label ? (
+                      <p className="text-muted-foreground text-xs">{a.label}</p>
+                    ) : null}
                     {addressLines(a).map((line) => (
                       <p key={line}>{line}</p>
                     ))}
@@ -452,7 +573,10 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
         ) : null}
 
         {profile.bank_accounts.length > 0 ? (
-          <Section className={section} title={t("public_profile.bank_accounts")}>
+          <Section
+            className={section}
+            title={t("public_profile.bank_accounts")}
+          >
             <ul className="space-y-3">
               {profile.bank_accounts.map((b, i) => (
                 <li key={`${b.iban}-${i}`} className="rounded-xl border p-3">
@@ -460,14 +584,23 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
                     <span className="bg-muted flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md">
                       {b.bank_icon_url ? (
                         // eslint-disable-next-line @next/next/no-img-element -- bank icons are API-owned
-                        <img src={b.bank_icon_url} alt="" className="size-6 object-contain" loading="lazy" />
+                        <img
+                          src={b.bank_icon_url}
+                          alt=""
+                          className="size-6 object-contain"
+                          loading="lazy"
+                        />
                       ) : (
                         <Building2 className="size-4" />
                       )}
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{b.bank_name || b.title}</p>
-                      <p className="text-muted-foreground truncate text-xs">{b.account_holder}</p>
+                      <p className="truncate text-sm font-medium">
+                        {b.bank_name || b.title}
+                      </p>
+                      <p className="text-muted-foreground truncate text-xs">
+                        {b.account_holder}
+                      </p>
                     </div>
                   </div>
                   <div className="mt-2 flex items-center gap-2">
@@ -482,7 +615,9 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
                       onClick={() => {
                         void navigator.clipboard
                           .writeText(b.iban.replace(/\s+/g, ""))
-                          .then(() => appToast.success(t("public_profile.iban_copied")));
+                          .then(() =>
+                            appToast.success(t("public_profile.iban_copied")),
+                          );
                         track("bank.iban.copy");
                       }}
                     >
@@ -511,10 +646,20 @@ export function PublicProfileView({ profile, lang, leadForm, exchange, via }: Pr
   );
 }
 
-function Section({ title, className, children }: { title: string; className: string; children: ReactNode }) {
+function Section({
+  title,
+  className,
+  children,
+}: {
+  title: string;
+  className: string;
+  children: ReactNode;
+}) {
   return (
     <section className={className}>
-      <h2 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{title}</h2>
+      <h2 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+        {title}
+      </h2>
       {children}
     </section>
   );

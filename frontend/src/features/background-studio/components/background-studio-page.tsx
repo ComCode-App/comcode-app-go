@@ -61,14 +61,13 @@ import type {
   BackgroundKind,
   ShaderBackground,
 } from "../types";
-import { backgroundKeys, backgroundsService } from "../services/backgrounds.service";
+import {
+  backgroundKeys,
+  backgroundsService,
+} from "../services/backgrounds.service";
 import { BackgroundViewer } from "./background-viewer";
 import { SavedBackgroundsPanel } from "./saved-backgrounds-panel";
-import {
-  GradientEditor,
-  SolidEditor,
-  VideoEditor,
-} from "./kind-editors";
+import { GradientEditor, SolidEditor, VideoEditor } from "./kind-editors";
 import { ShaderEditor } from "./shader-editor";
 
 const KINDS: {
@@ -149,9 +148,7 @@ function shuffleDocument(doc: BackgroundDocument): BackgroundDocument {
       ) {
         const rand = p.min + Math.random() * (p.max - p.min);
         updated[p.name] =
-          p.step && p.step >= 1
-            ? Math.round(rand)
-            : Number(rand.toFixed(2));
+          p.step && p.step >= 1 ? Math.round(rand) : Number(rand.toFixed(2));
       }
     });
     return { ...doc, params: updated };
@@ -249,7 +246,7 @@ export function BackgroundStudioPage() {
     <div
       className={cn(
         "flex flex-col gap-6",
-        fullscreen && "fixed inset-0 z-50 bg-background p-4",
+        fullscreen && "bg-background fixed inset-0 z-50 p-4",
       )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -260,7 +257,7 @@ export function BackgroundStudioPage() {
             </h1>
             <Badge variant="secondary">{t("common.beta")}</Badge>
           </div>
-          <p className="max-w-2xl text-sm text-muted-foreground">
+          <p className="text-muted-foreground max-w-2xl text-sm">
             {t("background_studio.description")}
           </p>
           {canSave && saveLocked ? <PremiumNotice /> : null}
@@ -268,26 +265,54 @@ export function BackgroundStudioPage() {
         <div className="flex flex-wrap gap-2">
           {canSave ? (
             <>
-              <Button type="button" size="sm" onClick={() => handleSave(false)} disabled={save.isPending || saveLocked}>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => handleSave(false)}
+                disabled={save.isPending || saveLocked}
+              >
                 <Save className="size-4" />
-                {savedUuid ? t("background_studio.actions.save_changes") : t("background_studio.actions.save")}
+                {savedUuid
+                  ? t("background_studio.actions.save_changes")
+                  : t("background_studio.actions.save")}
               </Button>
               {savedUuid ? (
-                <Button type="button" variant="outline" size="sm" onClick={() => handleSave(true)} disabled={save.isPending || saveLocked}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSave(true)}
+                  disabled={save.isPending || saveLocked}
+                >
                   {t("background_studio.actions.save_as_new")}
                 </Button>
               ) : null}
             </>
           ) : null}
-          <Button type="button" variant="outline" size="sm" onClick={handleShuffle}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleShuffle}
+          >
             <Shuffle className="size-4" />
             {t("background_studio.actions.shuffle")}
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={handleReset}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleReset}
+          >
             <RotateCcw className="size-4" />
             {t("background_studio.actions.reset")}
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={handleCopy}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleCopy}
+          >
             <Copy className="size-4" />
             {t("background_studio.actions.copy_json")}
           </Button>
@@ -334,7 +359,11 @@ export function BackgroundStudioPage() {
                 className="absolute right-3 bottom-3"
                 onClick={() => setPaused((v) => !v)}
               >
-                {paused ? <Play className="size-4" /> : <Pause className="size-4" />}
+                {paused ? (
+                  <Play className="size-4" />
+                ) : (
+                  <Pause className="size-4" />
+                )}
               </Button>
             )}
           </div>
@@ -350,7 +379,9 @@ export function BackgroundStudioPage() {
               >
                 <Icon className="size-4" />
                 {t(labelKey)}
-                {id === "video" && !allowPremium ? <PremiumLockIcon className="text-current" /> : null}
+                {id === "video" && !allowPremium ? (
+                  <PremiumLockIcon className="text-current" />
+                ) : null}
               </Button>
             ))}
           </div>
@@ -362,11 +393,13 @@ export function BackgroundStudioPage() {
               setDoc(loaded);
               setSavedUuid(item.is_preset ? null : item.uuid);
             }}
-            onDeleted={(uuid) => setSavedUuid((cur) => (cur === uuid ? null : cur))}
+            onDeleted={(uuid) =>
+              setSavedUuid((cur) => (cur === uuid ? null : cur))
+            }
           />
         </div>
 
-        <div className="space-y-4 rounded-xl border bg-card p-4">
+        <div className="bg-card space-y-4 rounded-xl border p-4">
           <div className="space-y-2">
             <Label>{t("background_studio.fields.name")}</Label>
             <Input
@@ -422,10 +455,7 @@ export function BackgroundStudioPage() {
                 <VideoEditor doc={doc} onChange={setDoc} />
               )}
               {doc.kind === "shader" && (
-                <ShaderEditor
-                  doc={doc as ShaderBackground}
-                  onChange={setDoc}
-                />
+                <ShaderEditor doc={doc as ShaderBackground} onChange={setDoc} />
               )}
             </TabsContent>
 

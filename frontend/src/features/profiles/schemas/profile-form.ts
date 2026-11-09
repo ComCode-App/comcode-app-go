@@ -131,10 +131,7 @@ export function calculateLiveCompletion(
   ) {
     score += 5;
   }
-  if (
-    values.social_links &&
-    values.social_links.some((s) => s?.url?.trim())
-  ) {
+  if (values.social_links && values.social_links.some((s) => s?.url?.trim())) {
     score += 10;
   }
 

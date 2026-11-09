@@ -13,7 +13,7 @@ export function AppSidebarLogo({ className }: AppSidebarLogoProps) {
     <>
       <span
         className={cn(
-          "comcode-brand-gradient flex aspect-square size-8 items-center justify-center rounded-xl p-1.5 shadow-comcode-glow",
+          "comcode-brand-gradient shadow-comcode-glow flex aspect-square size-8 items-center justify-center rounded-xl p-1.5",
           className,
         )}
       >

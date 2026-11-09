@@ -70,6 +70,8 @@ export function useMarkNotificationRead(options?: { silent?: boolean }) {
   const silent = options?.silent ?? false;
 
   return useAppMutation({
+    // onError only refreshes the inbox; keep the global error toast.
+    meta: { toastErrors: true },
     mutationFn: (uuid: string) => notificationsService.markRead(uuid),
     onMutate: async (uuid) => {
       await queryClient.cancelQueries({ queryKey: notificationsKeys.all });

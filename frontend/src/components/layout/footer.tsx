@@ -11,7 +11,7 @@ function FooterMark() {
   return (
     <BrandMark
       title={brand.productName}
-      className="size-3.5 shrink-0 brightness-0 opacity-50 dark:brightness-100 dark:opacity-75"
+      className="size-3.5 shrink-0 opacity-50 brightness-0 dark:opacity-75 dark:brightness-100"
     />
   );
 }

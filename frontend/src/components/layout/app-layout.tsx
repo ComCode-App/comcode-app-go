@@ -32,7 +32,7 @@ export function AppLayout({
         <AppSidebar variant={variant} />
         <SidebarInset
           className={
-            "comcode-shell-inset @container/content md:peer-data-[variant=inset]:overflow-clip has-data-[layout=fixed]:h-svh peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]"
+            "comcode-shell-inset @container/content has-data-[layout=fixed]:h-svh peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))] md:peer-data-[variant=inset]:overflow-clip"
           }
         >
           <Header fixed>

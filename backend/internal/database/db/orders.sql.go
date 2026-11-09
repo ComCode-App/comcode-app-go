@@ -350,6 +350,7 @@ SET deleted_at = NOW()
 WHERE uuid = $1
 `
 
+// account-lint: cross-account platform /v1/platform/orders (platform.orders.write)
 func (q *Queries) DeleteOrder(ctx context.Context, argUuid uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteOrder, argUuid)
 	return err
@@ -384,6 +385,7 @@ type GetAssetRequestByTokenRow struct {
 	OrderUserID     int64              `json:"order_user_id"`
 }
 
+// account-lint: cross-account public asset upload link: the token is the credential
 func (q *Queries) GetAssetRequestByToken(ctx context.Context, token string) (GetAssetRequestByTokenRow, error) {
 	row := q.db.QueryRow(ctx, getAssetRequestByToken, token)
 	var i GetAssetRequestByTokenRow
@@ -496,6 +498,7 @@ type GetOrderByOrderNumberRow struct {
 	AccountType       AccountType        `json:"account_type"`
 }
 
+// account-lint: cross-account platform order lookup by number (platform.orders.read)
 func (q *Queries) GetOrderByOrderNumber(ctx context.Context, orderNumber string) (GetOrderByOrderNumberRow, error) {
 	row := q.db.QueryRow(ctx, getOrderByOrderNumber, orderNumber)
 	var i GetOrderByOrderNumberRow
@@ -606,6 +609,7 @@ type GetOrderByUUIDRow struct {
 	AccountType       AccountType        `json:"account_type"`
 }
 
+// account-lint: cross-account platform orders; app GET /v1/orders/{uuid} goes through GetForAccount, which checks AccountID
 func (q *Queries) GetOrderByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrderByUUIDRow, error) {
 	row := q.db.QueryRow(ctx, getOrderByUUID, argUuid)
 	var i GetOrderByUUIDRow
@@ -717,6 +721,7 @@ type GetOrderItemByUUIDRow struct {
 	RouteStatus         pgtype.Text        `json:"route_status"`
 }
 
+// account-lint: cross-account platform order provisioning (platform.orders.write)
 func (q *Queries) GetOrderItemByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrderItemByUUIDRow, error) {
 	row := q.db.QueryRow(ctx, getOrderItemByUUID, argUuid)
 	var i GetOrderItemByUUIDRow
@@ -785,6 +790,7 @@ type GetOrderStatsRow struct {
 	TotalRevenue        pgtype.Numeric `json:"total_revenue"`
 }
 
+// account-lint: cross-account platform order KPIs
 func (q *Queries) GetOrderStats(ctx context.Context) (GetOrderStatsRow, error) {
 	row := q.db.QueryRow(ctx, getOrderStats)
 	var i GetOrderStatsRow
@@ -953,6 +959,7 @@ type ListOrderItemsByOrderIDRow struct {
 	RouteStatus         pgtype.Text        `json:"route_status"`
 }
 
+// account-lint: cross-account items of an order already loaded through a platform route or GetForAccount
 func (q *Queries) ListOrderItemsByOrderID(ctx context.Context, orderID int64) ([]ListOrderItemsByOrderIDRow, error) {
 	rows, err := q.db.Query(ctx, listOrderItemsByOrderID, orderID)
 	if err != nil {
@@ -1047,6 +1054,7 @@ type ListOrderManifestRow struct {
 	CardStatus     string      `json:"card_status"`
 }
 
+// account-lint: cross-account platform production manifest (platform.orders.read + step-up)
 // Production manifest (TEC-581): one row per provisioned card of an order, including the
 // activation code. Platform-only; callers gate it behind platform.orders.read + step-up.
 func (q *Queries) ListOrderManifest(ctx context.Context, argUuid uuid.UUID) ([]ListOrderManifestRow, error) {
@@ -1270,6 +1278,7 @@ type LockOrderForStatusChangeRow struct {
 
 // Locks the order row so the from_status written to order_status_history (TEC-944) is the
 // status the transition actually replaced.
+// account-lint: cross-account platform order status change (platform.orders.write)
 func (q *Queries) LockOrderForStatusChange(ctx context.Context, argUuid uuid.UUID) (LockOrderForStatusChangeRow, error) {
 	row := q.db.QueryRow(ctx, lockOrderForStatusChange, argUuid)
 	var i LockOrderForStatusChangeRow
@@ -1302,6 +1311,7 @@ type RetireOrderCardRoutesRow struct {
 	CardUuid uuid.UUID `json:"card_uuid"`
 }
 
+// account-lint: cross-account platform cancel/refund: retires the cards of that order
 // Cancelled/refunded orders (TEC-585): the order's card routes become retired, which the
 // resolver shows as "card deactivated". Paths are never released for reuse. Unused activation
 // codes are cleared so nobody can still claim those cards.
@@ -1382,6 +1392,7 @@ type UpdateOrderFulfillmentStatusParams struct {
 	Uuid              uuid.UUID `json:"uuid"`
 }
 
+// account-lint: cross-account platform /v1/platform/orders (platform.orders.write)
 func (q *Queries) UpdateOrderFulfillmentStatus(ctx context.Context, arg UpdateOrderFulfillmentStatusParams) (Order, error) {
 	row := q.db.QueryRow(ctx, updateOrderFulfillmentStatus, arg.FulfillmentStatus, arg.Uuid)
 	var i Order
@@ -1537,6 +1548,7 @@ type UpdateOrderNotesParams struct {
 	Uuid         uuid.UUID   `json:"uuid"`
 }
 
+// account-lint: cross-account platform /v1/platform/orders (platform.orders.write)
 func (q *Queries) UpdateOrderNotes(ctx context.Context, arg UpdateOrderNotesParams) (Order, error) {
 	row := q.db.QueryRow(ctx, updateOrderNotes, arg.AdminNote, arg.CustomerNote, arg.Uuid)
 	var i Order
@@ -1595,6 +1607,7 @@ type UpdateOrderPaymentStatusParams struct {
 	Uuid             uuid.UUID   `json:"uuid"`
 }
 
+// account-lint: cross-account platform order payment / provider callback apply
 func (q *Queries) UpdateOrderPaymentStatus(ctx context.Context, arg UpdateOrderPaymentStatusParams) (Order, error) {
 	row := q.db.QueryRow(ctx, updateOrderPaymentStatus,
 		arg.PaymentStatus,
@@ -1661,6 +1674,7 @@ type UpdateOrderShippingParams struct {
 	Uuid            uuid.UUID `json:"uuid"`
 }
 
+// account-lint: cross-account platform /v1/platform/orders (platform.orders.write)
 func (q *Queries) UpdateOrderShipping(ctx context.Context, arg UpdateOrderShippingParams) (Order, error) {
 	row := q.db.QueryRow(ctx, updateOrderShipping,
 		arg.ShippingCarrier,
@@ -1724,6 +1738,7 @@ type UpdateOrderStatusParams struct {
 	Uuid   uuid.UUID `json:"uuid"`
 }
 
+// account-lint: cross-account platform order status / provider callback apply
 func (q *Queries) UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (Order, error) {
 	row := q.db.QueryRow(ctx, updateOrderStatus, arg.Status, arg.Uuid)
 	var i Order

@@ -38,6 +38,7 @@ type ListCardsForSearchRow struct {
 	ProfileName string    `json:"profile_name"`
 }
 
+// account-lint: cross-account search index builder: documents carry account_id and searches filter on it
 func (q *Queries) ListCardsForSearch(ctx context.Context, argUuid pgtype.UUID) ([]ListCardsForSearchRow, error) {
 	rows, err := q.db.Query(ctx, listCardsForSearch, argUuid)
 	if err != nil {
@@ -128,6 +129,7 @@ type ListOrdersForSearchRow struct {
 
 // Cmd+K search sources (TEC-595). Platform-wide by design: the specs are gated by platform.*
 // permissions and link to platform pages; app users never see them.
+// account-lint: cross-account search index builder: documents carry account_id and searches filter on it
 func (q *Queries) ListOrdersForSearch(ctx context.Context, argUuid pgtype.UUID) ([]ListOrdersForSearchRow, error) {
 	rows, err := q.db.Query(ctx, listOrdersForSearch, argUuid)
 	if err != nil {
@@ -241,6 +243,7 @@ type ListProfilesForSearchRow struct {
 // Account-scoped app specs (TEC-951). Each row carries its account_id; the search index stores
 // it as a filterable attribute and app queries always filter on the caller's active account.
 // Activation codes and passcodes are never selected.
+// account-lint: cross-account search index builder: documents carry account_id and searches filter on it
 func (q *Queries) ListProfilesForSearch(ctx context.Context, argUuid pgtype.UUID) ([]ListProfilesForSearchRow, error) {
 	rows, err := q.db.Query(ctx, listProfilesForSearch, argUuid)
 	if err != nil {

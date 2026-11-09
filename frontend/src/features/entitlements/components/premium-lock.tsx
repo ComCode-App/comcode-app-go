@@ -23,7 +23,10 @@ export function useDesignPremium(): boolean {
 export function PremiumLockIcon({ className }: { className?: string }) {
   const { t } = useLocale();
   return (
-    <Lock aria-label={t("entitlements.premium")} className={cn("text-muted-foreground size-3.5 shrink-0", className)} />
+    <Lock
+      aria-label={t("entitlements.premium")}
+      className={cn("text-muted-foreground size-3.5 shrink-0", className)}
+    />
   );
 }
 
@@ -31,7 +34,13 @@ export function PremiumLockIcon({ className }: { className?: string }) {
 export function UpgradeLink({ className }: { className?: string }) {
   const { t } = useLocale();
   return (
-    <Link href={routes.app.billing.root} className={cn("text-primary text-xs font-medium hover:underline", className)}>
+    <Link
+      href={routes.app.billing.root}
+      className={cn(
+        "text-primary text-xs font-medium hover:underline",
+        className,
+      )}
+    >
       {t("entitlements.upgrade")}
     </Link>
   );
@@ -41,7 +50,12 @@ export function UpgradeLink({ className }: { className?: string }) {
 export function PremiumNotice({ className }: { className?: string }) {
   const { t } = useLocale();
   return (
-    <p className={cn("text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs", className)}>
+    <p
+      className={cn(
+        "text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs",
+        className,
+      )}
+    >
       <PremiumLockIcon />
       <span>{t("entitlements.premium_locked")}</span>
       <UpgradeLink />

@@ -105,7 +105,7 @@ export function GradientEditor({ doc, onChange }: GradientEditorProps) {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label>{t("background_studio.gradient.angle")}</Label>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               {doc.params.angle ?? 135}°
             </span>
           </div>
@@ -200,7 +200,7 @@ export function VideoEditor({ doc, onChange }: VideoEditorProps) {
           placeholder="https://…/video.mp4"
           onChange={(e) => setParam("src", e.target.value)}
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           {t("background_studio.video.src_hint")}
         </p>
       </div>
@@ -252,7 +252,7 @@ export function VideoEditor({ doc, onChange }: VideoEditorProps) {
               type="checkbox"
               checked={doc.params[key] !== false}
               onChange={(e) => setParam(key, e.target.checked)}
-              className="size-4 accent-primary"
+              className="accent-primary size-4"
             />
             {label}
           </label>

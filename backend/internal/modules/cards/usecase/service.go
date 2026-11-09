@@ -1,30 +1,30 @@
 package usecase
 
 import (
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/routecache"
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
 	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/routecache"
 	"math/big"
 	"strings"
 
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/cards/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/cards/repository"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/searchengine"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 var (
-	ErrCardNotFound       = errors.New("card not found")
-	ErrCardLocked         = errors.New("card is locked")
+	ErrCardNotFound      = errors.New("card not found")
+	ErrCardLocked        = errors.New("card is locked")
 	ErrInvalidActivation = errors.New("invalid activation code or card already activated")
 	ErrInvalidProfile    = errors.New("invalid profile selected")
-	ErrUnauthorizedCard   = errors.New("unauthorized to access card")
-	ErrForbidden          = errors.New("account role cannot modify cards")
+	ErrUnauthorizedCard  = errors.New("unauthorized to access card")
+	ErrForbidden         = errors.New("account role cannot modify cards")
 )
 
 // Cards belong to the active account. Every member can read them; creating, editing, locking,

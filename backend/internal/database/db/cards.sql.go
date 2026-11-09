@@ -80,6 +80,7 @@ type ActivateCardByCodeRow struct {
 
 // ActivateCardByCode moves an unactivated card into the activating account and activates its
 // reserved card route in the same statement, so the card resolves as soon as it is activated.
+// account-lint: cross-account card activation: the activation code is the credential; moves the card into the active account
 func (q *Queries) ActivateCardByCode(ctx context.Context, arg ActivateCardByCodeParams) (ActivateCardByCodeRow, error) {
 	row := q.db.QueryRow(ctx, activateCardByCode,
 		arg.AccountID,
@@ -133,6 +134,7 @@ type CheckSmartCodeExistsParams struct {
 	ExcludeUuid pgtype.UUID `json:"exclude_uuid"`
 }
 
+// account-lint: cross-account smart codes are globally unique
 func (q *Queries) CheckSmartCodeExists(ctx context.Context, arg CheckSmartCodeExistsParams) (bool, error) {
 	row := q.db.QueryRow(ctx, checkSmartCodeExists, arg.SmartCode, arg.ExcludeUuid)
 	var exists bool
@@ -550,6 +552,7 @@ WHERE activation_code = $1
   AND deleted_at IS NULL
 `
 
+// account-lint: cross-account card activation: the activation code is the credential
 func (q *Queries) GetCardByActivationCode(ctx context.Context, activationCode pgtype.Text) (NfcCard, error) {
 	row := q.db.QueryRow(ctx, getCardByActivationCode, activationCode)
 	var i NfcCard
@@ -626,6 +629,7 @@ type GetCardBySmartCodeRow struct {
 	ProfilePrimaryLocale pgtype.Text        `json:"profile_primary_locale"`
 }
 
+// account-lint: cross-account public smart link resolver (/c/{code})
 func (q *Queries) GetCardBySmartCode(ctx context.Context, smartCode string) (GetCardBySmartCodeRow, error) {
 	row := q.db.QueryRow(ctx, getCardBySmartCode, smartCode)
 	var i GetCardBySmartCodeRow
@@ -658,95 +662,6 @@ func (q *Queries) GetCardBySmartCode(ctx context.Context, smartCode string) (Get
 		&i.ProfileUuid,
 		&i.ProfileAvatarUrl,
 		&i.ProfilePrimaryLocale,
-	)
-	return i, err
-}
-
-const getCardByUUIDAdmin = `-- name: GetCardByUUIDAdmin :one
-SELECT 
-    c.id, c.uuid, c.user_id, c.name, c.card_uid, c.activation_code, c.smart_code, c.target_type, c.profile_id, c.direct_url, c.custom_data, c.card_type, c.material, c.color_hex, c.is_active, c.is_locked, c.lead_capture_enabled, c.passcode, c.created_at, c.updated_at, c.deleted_at, c.order_id, c.order_item_id, c.status, c.account_id,
-    p.uuid as profile_uuid,
-    p.avatar_url as profile_avatar_url,
-    p.primary_locale as profile_primary_locale,
-    u.email as owner_email,
-    u.name as owner_name,
-    u.surname as owner_surname
-FROM nfc_cards c
-JOIN users u ON u.id = c.user_id
-LEFT JOIN profiles p ON p.id = c.profile_id AND p.deleted_at IS NULL
-WHERE c.uuid = $1
-  AND c.deleted_at IS NULL
-`
-
-type GetCardByUUIDAdminRow struct {
-	ID                   int64              `json:"id"`
-	Uuid                 uuid.UUID          `json:"uuid"`
-	UserID               int64              `json:"user_id"`
-	Name                 string             `json:"name"`
-	CardUid              pgtype.Text        `json:"card_uid"`
-	ActivationCode       pgtype.Text        `json:"activation_code"`
-	SmartCode            string             `json:"smart_code"`
-	TargetType           string             `json:"target_type"`
-	ProfileID            pgtype.Int8        `json:"profile_id"`
-	DirectUrl            string             `json:"direct_url"`
-	CustomData           []byte             `json:"custom_data"`
-	CardType             string             `json:"card_type"`
-	Material             string             `json:"material"`
-	ColorHex             string             `json:"color_hex"`
-	IsActive             bool               `json:"is_active"`
-	IsLocked             bool               `json:"is_locked"`
-	LeadCaptureEnabled   bool               `json:"lead_capture_enabled"`
-	Passcode             pgtype.Text        `json:"passcode"`
-	CreatedAt            pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt            pgtype.Timestamptz `json:"deleted_at"`
-	OrderID              pgtype.Int8        `json:"order_id"`
-	OrderItemID          pgtype.Int8        `json:"order_item_id"`
-	Status               string             `json:"status"`
-	AccountID            int64              `json:"account_id"`
-	ProfileUuid          pgtype.UUID        `json:"profile_uuid"`
-	ProfileAvatarUrl     pgtype.Text        `json:"profile_avatar_url"`
-	ProfilePrimaryLocale pgtype.Text        `json:"profile_primary_locale"`
-	OwnerEmail           string             `json:"owner_email"`
-	OwnerName            string             `json:"owner_name"`
-	OwnerSurname         string             `json:"owner_surname"`
-}
-
-func (q *Queries) GetCardByUUIDAdmin(ctx context.Context, argUuid uuid.UUID) (GetCardByUUIDAdminRow, error) {
-	row := q.db.QueryRow(ctx, getCardByUUIDAdmin, argUuid)
-	var i GetCardByUUIDAdminRow
-	err := row.Scan(
-		&i.ID,
-		&i.Uuid,
-		&i.UserID,
-		&i.Name,
-		&i.CardUid,
-		&i.ActivationCode,
-		&i.SmartCode,
-		&i.TargetType,
-		&i.ProfileID,
-		&i.DirectUrl,
-		&i.CustomData,
-		&i.CardType,
-		&i.Material,
-		&i.ColorHex,
-		&i.IsActive,
-		&i.IsLocked,
-		&i.LeadCaptureEnabled,
-		&i.Passcode,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
-		&i.OrderID,
-		&i.OrderItemID,
-		&i.Status,
-		&i.AccountID,
-		&i.ProfileUuid,
-		&i.ProfileAvatarUrl,
-		&i.ProfilePrimaryLocale,
-		&i.OwnerEmail,
-		&i.OwnerName,
-		&i.OwnerSurname,
 	)
 	return i, err
 }
@@ -819,6 +734,7 @@ type ListAccountCardsRow struct {
 	RouteUuid            uuid.UUID          `json:"route_uuid"`
 }
 
+// account-lint: cross-account card-route subquery is keyed by this account's card id (display only)
 func (q *Queries) ListAccountCards(ctx context.Context, arg ListAccountCardsParams) ([]ListAccountCardsRow, error) {
 	rows, err := q.db.Query(ctx, listAccountCards,
 		arg.AccountID,

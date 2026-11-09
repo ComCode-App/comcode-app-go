@@ -154,7 +154,9 @@ paths:
       operationId: postAuthLogin
       summary: Login
       description: |
-        Authenticates with email/password and returns a token pair.
+        Authenticates with email/password and returns a token pair. An unknown email and a wrong
+        password get the same `401 INVALID_CREDENTIALS`; a disabled account is reported (403) only
+        after the correct password. Rate limited per IP + email, per IP and per email.
       security: []
       requestBody:
         required: true
@@ -944,6 +946,10 @@ paths:
       tags: [Auth]
       operationId: getAuthIdentities
       summary: List linked OAuth identities
+      description: |
+        Also reports the user's other sign-in methods: `has_password` is false when the
+        user never chose a password (OAuth sign-up stores a random hash; any password
+        update, including a password reset, sets it), `has_passkey` when a passkey exists.
       security:
         - bearerAuth: []
       responses:
@@ -963,6 +969,9 @@ paths:
       tags: [Auth]
       operationId: deleteAuthIdentity
       summary: Unlink an OAuth identity
+      description: |
+        `409 LAST_SIGN_IN_METHOD` when the user has no password, no passkey and this is
+        their last linked identity (TEC-1105).
       security:
         - bearerAuth: []
       parameters:
@@ -983,6 +992,8 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/LastSignInMethod"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1040,6 +1051,9 @@ paths:
       tags: [Auth]
       operationId: deleteAuthPasskey
       summary: Delete a passkey
+      description: |
+        `409 LAST_SIGN_IN_METHOD` when the user has no password, no linked identity and
+        this is their last passkey (TEC-1105).
       security:
         - bearerAuth: []
       parameters:
@@ -1055,6 +1069,8 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/LastSignInMethod"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1457,8 +1473,10 @@ paths:
       operationId: postRealtimeSubscriptionToken
       summary: Issue Centrifugo subscription JWT
       description: |
-        Body `{ channel }`. Allowlist `user:{own_uuid}`, member `workspace:{uuid}`,
-        and `conversation:{uuid}` (authenticated session; HTTP inbox ACL is the hard boundary).
+        Body `{ channel }`. Explicit allowlist: `user:{own_uuid}` (the caller's own
+        channel) and `system.notifications` (super admins only). Every other channel,
+        including `conversation:{uuid}`, `workspace:{uuid}` and account channels, is
+        denied with 403.
       security:
         - bearerAuth: []
       requestBody:
@@ -1599,6 +1617,10 @@ paths:
       tags: [Auth]
       operationId: postAuthEmailVerifyRequest
       summary: Request email verification OTP
+      description: >-
+        Sends a verification code to the caller's own email address. An `email` that differs from
+        the caller's address is ignored with the same accepted response. Rate limited per user and
+        per client IP.
       security:
         - bearerAuth: []
       requestBody:
@@ -1611,6 +1633,7 @@ paths:
                 email:
                   type: string
                   format: email
+                  description: Optional; must be the caller's own address, any other value sends nothing.
       responses:
         "200":
           description: Accepted
@@ -1622,12 +1645,15 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "500":
           $ref: "#/components/responses/InternalError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /v1/auth/email/verify:
     post:
       tags: [Auth]
       operationId: postAuthEmailVerify
       summary: Verify email with OTP
+      description: Rate limited per client IP and per email.
       security: []
       requestBody:
         required: true
@@ -1646,13 +1672,19 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /v1/notifications:
     get:
       tags: [Notifications]
       operationId: getNotifications
       summary: List own inbox
-      description: Requires `notifications.read`. Supports `limit`,`offset`,`q`,`sort`,`status`,`channel`,`unread`.
+      description: >-
+        Requires `notifications.read`. Supports `limit`,`offset`,`q`,`sort`,`status`,`channel`,`unread`.
+        The inbox holds `inapp` rows only: email and other channel rows (verification codes,
+        reset codes, invitation links) are never returned, so any other `channel` value yields
+        an empty page.
       security:
         - bearerAuth: []
       parameters:
@@ -1665,6 +1697,7 @@ paths:
           schema: { type: string }
         - name: channel
           in: query
+          description: Only `inapp` matches; the inbox never returns other channels.
           schema: { type: string }
         - name: unread
           in: query
@@ -1798,6 +1831,7 @@ paths:
       tags: [Notifications]
       operationId: getNotificationByUUID
       summary: Get own notification
+      description: Own `inapp` notification. Rows of other channels (e.g. email) answer 404.
       security:
         - bearerAuth: []
       parameters:
@@ -2435,10 +2469,13 @@ paths:
     post:
       tags: [Accounts]
       operationId: addActiveAccountMember
-      summary: Add an existing user to the active company account
+      summary: Add a user to the active company account (or invite the address)
       description: >-
         Owners may add any role; admins may add admins and members. Personal accounts cannot have
-        other members (400); an existing membership returns 409.
+        other members (400); an existing membership returns 409. Only a user whose email is
+        verified is added directly (201). For an unverified user or an address without a user an
+        email invite is sent instead (202, needs `app.account_invites.write`; an open invite for
+        the address is 409), so only the mailbox owner can join (TEC-1104).
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -2457,6 +2494,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeAccountMember"
+        "202":
+          description: The address is not verified (or has no user); an invite was sent instead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAccountMemberInvited"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -2510,7 +2553,7 @@ paths:
       tags: [Accounts]
       operationId: removeActiveAccountMember
       summary: Remove a member or leave the account
-      description: Any member may leave; removing others needs owner/admin, removing an owner needs an owner. The last owner cannot leave (409).
+      description: Any member may leave; removing others needs owner/admin, removing an owner needs an owner. The last owner cannot leave (409). The person's open invites to the account are revoked.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: user_uuid
@@ -2656,7 +2699,9 @@ paths:
       tags: [Accounts]
       operationId: previewInvite
       summary: Describe an invite link
-      description: Public; the token is the credential. `user_exists` tells the page whether to offer login or sign-up.
+      description: >-
+        Public; the token is the credential. `user_exists` tells the page whether to offer login or
+        sign-up. Rate-limited per client IP (429); responses carry `Referrer-Policy: no-referrer`.
       security: []
       parameters:
         - name: token
@@ -2672,6 +2717,8 @@ paths:
                 $ref: "#/components/schemas/EnvelopeInvitePreview"
         "404":
           $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /v1/invites/{token}/accept:
     post:
@@ -2683,7 +2730,8 @@ paths:
         the account with the invited role (an existing member keeps theirs). A profile the employee
         import created for the invite becomes the member's employee profile and the member is placed
         in its office/group. Expired: 410 `INVITE_EXPIRED`; accepted or revoked: 409 `INVITE_CLOSED`;
-        suspended account: 403.
+        suspended account: 403; while impersonating: 403 `INVITE_IMPERSONATION`. Rate-limited per
+        user and client IP (429); responses carry `Referrer-Policy: no-referrer`.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: token
@@ -2711,6 +2759,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /v1/platform/accounts/meta:
     get:
@@ -3039,6 +3089,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeParsedVCardProfile"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/profiles/{uuid}:
     get:
@@ -3325,6 +3376,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeSocialPlatformDetail"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/banks:
     get:
@@ -3484,6 +3536,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeBankDetail"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/bank-accounts/meta:
     get:
@@ -3729,6 +3782,7 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/profiles/{uuid}/cover:
     post:
@@ -3767,6 +3821,7 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/profiles/{uuid}/primary:
     post:
@@ -5151,6 +5206,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeProductDetail"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/platform/products/{uuid}/images:
     post:
@@ -5178,6 +5234,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeProductDetail"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/platform/products/{uuid}/variants:
     get:
@@ -5772,6 +5829,16 @@ paths:
       tags: [Commerce Orders]
       operationId: uploadOrderAssetPublic
       summary: Upload customer logo/vector artwork using secure token
+      description: |
+        Unauthenticated; the asset request token is the only gate (TEC-1097). The token is checked
+        before the file is read: pass it as `?token=` or as the `token` form field, which must come
+        before the `file` part. Invalid token: 404. The file type is sniffed (PNG/JPEG/WebP/GIF, PDF
+        or AI, EPS, ZIP, static SVG); max 20 MiB (413). Unsafe SVG: 422 `SVG_UNSAFE_CONTENT`.
+      parameters:
+        - name: token
+          in: query
+          required: false
+          schema: { type: string }
       requestBody:
         required: true
         content:
@@ -5792,6 +5859,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeAssetRequestSummary"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "422": { $ref: "#/components/responses/SVGUnsafeContent" }
 
   /v1/orders:
     get:
@@ -7929,13 +7998,22 @@ paths:
       tags: [Settings]
       operationId: putPlatformSettingsLogo
       summary: "PUT /v1/platform/settings/logo"
-      description: "Registered in `internal/modules/settings/routes.go`. Requires `platform.settings.write`."
+      description: |
+        Registered in `internal/modules/settings/routes.go`. Requires `platform.settings.write`.
+        Multipart `logo` file up to 2 MiB. The type is sniffed from the bytes: PNG, JPEG, WebP, GIF or a
+        static SVG (max 512 KiB). An SVG with script, event handlers, external references, DOCTYPE or
+        similar is rejected with 422 `SVG_UNSAFE_CONTENT` (TEC-1097). Stored SVGs are served as
+        attachments with `nosniff` and a sandbox CSP.
       security: [{ bearerAuth: [] }]
       requestBody:
-        required: false
+        required: true
         content:
-          application/json:
-            schema: { type: object, additionalProperties: true }
+          multipart/form-data:
+            schema:
+              type: object
+              required: [logo]
+              properties:
+                logo: { type: string, format: binary }
       responses:
         "200":
           description: Success envelope (see API_CONVENTIONS.md); some endpoints stream files or redirect
@@ -7944,6 +8022,8 @@ paths:
               schema: { $ref: "#/components/schemas/EnvelopeGeneric" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "422": { $ref: "#/components/responses/SVGUnsafeContent" }
 
   /v1/platform/storage/activity:
     get:
@@ -8327,6 +8407,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeGeneric" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/platform/storage/uploads/complete:
     post:
@@ -10000,7 +10081,7 @@ paths:
       tags: ["App"]
       operationId: "uploadCompanyMedia"
       summary: "Upload a file to the company media library"
-      description: "TEC-946. Requires app.company_branding.write and an owner/admin role in the active company. The content type is sniffed: logo, cover and image take JPEG, PNG or WebP up to 5 MiB; document takes PDF up to 10 MiB. At most 500 files per company (409)."
+      description: "TEC-946. Requires app.company_branding.write and an owner/admin role in the active company. The content type is sniffed: cover and image take JPEG, PNG or WebP up to 5 MiB; logo also takes GIF and static SVG (max 512 KiB; unsafe SVG is 422 SVG_UNSAFE_CONTENT, TEC-1097); document takes PDF up to 10 MiB. Bodies above the limit are 413 PAYLOAD_TOO_LARGE. At most 500 files per company (409)."
       security: [{"bearerAuth": []}]
       requestBody:
         required: true
@@ -10023,6 +10104,8 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "422": { $ref: "#/components/responses/SVGUnsafeContent" }
   /v1/company/media/{uuid}:
     delete:
       tags: ["App"]
@@ -10480,6 +10563,7 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
 
   /v1/company/employees/import/sample:
     get:
@@ -11826,6 +11910,32 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+    LastSignInMethod:
+      description: |
+        `LAST_SIGN_IN_METHOD`: the change would leave the user without any way to sign in.
+        Set a password (password reset) or add another sign-in method first.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    PayloadTooLarge:
+      description: |
+        `PAYLOAD_TOO_LARGE`: the request body or file is above the upload limit. Upload bodies are
+        capped before they are read (`http.MaxBytesReader`; storage uploads use `STORAGE_MAX_BYTES`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    SVGUnsafeContent:
+      description: |
+        `SVG_UNSAFE_CONTENT`: an SVG upload contains more than static vector content (script, event
+        handler attributes, `javascript:` / external references, foreignObject, DOCTYPE/ENTITY,
+        external CSS `url()` / `@import`). The file is rejected, never stripped;
+        `error.details[0].message` holds the reason.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     InternalError:
       description: Unexpected server error
       content:
@@ -12028,6 +12138,8 @@ components:
           description: Machine-readable error code
           examples:
             - VALIDATION_ERROR
+            - PAYLOAD_TOO_LARGE
+            - SVG_UNSAFE_CONTENT
             - INVALID_RESET_CODE
             - INVALID_VERIFICATION_CODE
             - INVALID_CREDENTIALS
@@ -12493,6 +12605,19 @@ components:
       properties:
         success: { type: boolean, const: true }
         data: { $ref: "#/components/schemas/AccountInvite" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAccountMemberInvited:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: object
+          required: [status, invite]
+          properties:
+            status: { type: string, enum: [invited] }
+            invite: { $ref: "#/components/schemas/AccountInvite" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeAccountInvitePage:
@@ -13681,12 +13806,18 @@ components:
 
     IdentityList:
       type: object
-      required: [items, total]
+      required: [items, total, has_password, has_passkey]
       properties:
         items:
           type: array
           items: { $ref: "#/components/schemas/LinkedIdentity" }
         total: { type: integer, format: int64 }
+        has_password:
+          type: boolean
+          description: False when the user never chose a password (OAuth sign-up).
+        has_passkey:
+          type: boolean
+          description: True when at least one passkey is registered.
 
     EnvelopeIdentityList:
       type: object

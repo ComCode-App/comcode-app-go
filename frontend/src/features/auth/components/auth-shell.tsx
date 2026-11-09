@@ -6,6 +6,11 @@ import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
 
 import { AppWordmark } from "@/components/brand";
+import {
+  canRenderShaderBackground,
+  useIdleValue,
+  usePrefersReducedMotion,
+} from "@/features/background-studio/lib/render-budget";
 import { LocaleSwitch } from "@/components/layout/locale-switch";
 import { ThemeSwitch } from "@/components/layout/theme-switch";
 import { routes } from "@/config/routes";
@@ -36,23 +41,29 @@ export function AuthShell({ children }: { children: ReactNode }) {
   );
 
   const isDark = mounted ? resolvedTheme === "dark" : true;
+  // Same gates as the public profile backgrounds (TEC-600): weak devices, data saver and software
+  // WebGL (no GPU, e.g. CI runners) keep the plain background; reduced motion freezes the shader.
+  const capable = useIdleValue(canRenderShaderBackground);
+  const reduceMotion = usePrefersReducedMotion();
   const colors = isDark ? DARK_COLORS : LIGHT_COLORS;
 
   return (
     <div className="bg-background relative flex min-h-svh flex-col items-center justify-center overflow-hidden p-6 md:p-10">
       {/* Background Mesh Gradient Shader */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-90 dark:opacity-85">
-        <MeshGradient
-          width="100%"
-          height="100%"
-          colors={colors}
-          distortion={0.65}
-          swirl={0.15}
-          grainMixer={0.08}
-          grainOverlay={0.04}
-          speed={0.4}
-          fit="cover"
-        />
+        {capable ? (
+          <MeshGradient
+            width="100%"
+            height="100%"
+            colors={colors}
+            distortion={0.65}
+            swirl={0.15}
+            grainMixer={0.08}
+            grainOverlay={0.04}
+            speed={reduceMotion ? 0 : 0.4}
+            fit="cover"
+          />
+        ) : null}
       </div>
 
       {/* Subtle overlay grid for tech texture */}

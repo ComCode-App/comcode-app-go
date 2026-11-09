@@ -11,6 +11,7 @@ FROM users
 WHERE deleted_at IS NULL;
 
 -- A profile is published when it has a live (active) username route.
+-- account-lint: cross-account platform overview dashboard, all accounts
 -- name: PlatformOverviewProfiles :one
 SELECT
     COUNT(*)::bigint AS total,
@@ -25,6 +26,7 @@ FROM profiles p
 WHERE p.deleted_at IS NULL;
 
 -- Provisioned cards start as 'unactivated' and become 'active' when the customer activates them.
+-- account-lint: cross-account platform overview dashboard, all accounts
 -- name: PlatformOverviewCards :one
 SELECT
     COUNT(*)::bigint AS total,
@@ -33,6 +35,7 @@ FROM nfc_cards
 WHERE deleted_at IS NULL;
 
 -- Orders created since the window start, grouped by their current status.
+-- account-lint: cross-account platform overview dashboard, all accounts
 -- name: PlatformOverviewOrderStatusCounts :many
 SELECT status, COUNT(*)::bigint AS count
 FROM orders
@@ -40,6 +43,7 @@ WHERE deleted_at IS NULL
   AND created_at >= sqlc.arg(since)::timestamptz
 GROUP BY status;
 
+-- account-lint: cross-account platform overview dashboard, all accounts
 -- name: PlatformOverviewSubscriptionCounts :one
 SELECT
     COUNT(*) FILTER (WHERE status = 'active')::bigint AS active,
@@ -52,6 +56,7 @@ FROM subscriptions;
 -- MRR: active subscriptions (online payment and manual alike) on recurring plans, the yearly
 -- price spread over 12 months. Free and lifetime plans have no recurring revenue and are left
 -- out. past_due subscriptions are not MRR; they are summed separately as at-risk MRR (TEC-944).
+-- account-lint: cross-account platform overview dashboard, all accounts
 -- name: PlatformOverviewMRR :many
 SELECT
     p.currency,
@@ -77,6 +82,7 @@ ORDER BY p.currency;
 -- → delivered). Stage times are averaged from the order's creation to the first recorded entry;
 -- backfilled rows (from_status NULL, migration 000058) count as reached but carry no timing.
 -- Bounded by the period: idx_orders_created_at, then idx_order_status_history_order per order.
+-- account-lint: cross-account platform overview dashboard, all accounts
 -- name: PlatformOverviewConversionFunnel :one
 WITH opened AS (
     SELECT id, created_at, status
@@ -122,6 +128,7 @@ SELECT
 FROM per_order;
 
 -- Most viewed live profiles from the daily aggregates (public profile page views).
+-- account-lint: cross-account platform overview dashboard, all accounts
 -- name: PlatformOverviewTopProfiles :many
 WITH top AS (
     SELECT

@@ -15,6 +15,7 @@ import (
 const countNotificationsForUser = `-- name: CountNotificationsForUser :one
 SELECT COUNT(*)::bigint FROM notifications
 WHERE user_id = $1
+  AND channel = 'inapp'
   AND ($2::text IS NULL OR status = $2)
   AND ($3::text IS NULL OR channel = $3)
   AND (
@@ -102,30 +103,31 @@ const createNotification = `-- name: CreateNotification :one
 INSERT INTO notifications (
     user_id, channel, status, priority,
     title, body, payload, action_url, recipient, template_code, source_event,
-    scheduled_at, max_attempts
+    scheduled_at, max_attempts, sealed_content
 ) VALUES (
     $1, $2, $3, $4,
     $5, $6, $7, $8, $9, $10, $11,
-    $12, $13
+    $12, $13, $14
 )
 ON CONFLICT DO NOTHING
-RETURNING id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at
+RETURNING id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at, sealed_content
 `
 
 type CreateNotificationParams struct {
-	UserID       pgtype.Int8        `json:"user_id"`
-	Channel      string             `json:"channel"`
-	Status       string             `json:"status"`
-	Priority     string             `json:"priority"`
-	Title        string             `json:"title"`
-	Body         string             `json:"body"`
-	Payload      []byte             `json:"payload"`
-	ActionUrl    pgtype.Text        `json:"action_url"`
-	Recipient    pgtype.Text        `json:"recipient"`
-	TemplateCode pgtype.Text        `json:"template_code"`
-	SourceEvent  pgtype.Text        `json:"source_event"`
-	ScheduledAt  pgtype.Timestamptz `json:"scheduled_at"`
-	MaxAttempts  int32              `json:"max_attempts"`
+	UserID        pgtype.Int8        `json:"user_id"`
+	Channel       string             `json:"channel"`
+	Status        string             `json:"status"`
+	Priority      string             `json:"priority"`
+	Title         string             `json:"title"`
+	Body          string             `json:"body"`
+	Payload       []byte             `json:"payload"`
+	ActionUrl     pgtype.Text        `json:"action_url"`
+	Recipient     pgtype.Text        `json:"recipient"`
+	TemplateCode  pgtype.Text        `json:"template_code"`
+	SourceEvent   pgtype.Text        `json:"source_event"`
+	ScheduledAt   pgtype.Timestamptz `json:"scheduled_at"`
+	MaxAttempts   int32              `json:"max_attempts"`
+	SealedContent pgtype.Text        `json:"sealed_content"`
 }
 
 func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error) {
@@ -143,6 +145,7 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 		arg.SourceEvent,
 		arg.ScheduledAt,
 		arg.MaxAttempts,
+		arg.SealedContent,
 	)
 	var i Notification
 	err := row.Scan(
@@ -172,6 +175,7 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 		&i.ProviderReference,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SealedContent,
 	)
 	return i, err
 }
@@ -192,7 +196,7 @@ func (q *Queries) DeletePushSubscription(ctx context.Context, arg DeletePushSubs
 }
 
 const getNotificationByID = `-- name: GetNotificationByID :one
-SELECT id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at FROM notifications WHERE id = $1
+SELECT id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at, sealed_content FROM notifications WHERE id = $1
 `
 
 func (q *Queries) GetNotificationByID(ctx context.Context, id int64) (Notification, error) {
@@ -225,12 +229,13 @@ func (q *Queries) GetNotificationByID(ctx context.Context, id int64) (Notificati
 		&i.ProviderReference,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SealedContent,
 	)
 	return i, err
 }
 
 const getNotificationByUUID = `-- name: GetNotificationByUUID :one
-SELECT id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at FROM notifications WHERE uuid = $1
+SELECT id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at, sealed_content FROM notifications WHERE uuid = $1
 `
 
 func (q *Queries) GetNotificationByUUID(ctx context.Context, argUuid uuid.UUID) (Notification, error) {
@@ -263,6 +268,7 @@ func (q *Queries) GetNotificationByUUID(ctx context.Context, argUuid uuid.UUID) 
 		&i.ProviderReference,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SealedContent,
 	)
 	return i, err
 }
@@ -290,7 +296,7 @@ func (q *Queries) GetNotificationPreferences(ctx context.Context, userID int64) 
 }
 
 const getOrderStatusNotification = `-- name: GetOrderStatusNotification :one
-SELECT id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at FROM notifications
+SELECT id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at, sealed_content FROM notifications
 WHERE source_event = $1 AND channel = $2
   AND (source_event LIKE 'orders.status:%' OR source_event LIKE 'billing:%')
 `
@@ -330,6 +336,7 @@ func (q *Queries) GetOrderStatusNotification(ctx context.Context, arg GetOrderSt
 		&i.ProviderReference,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SealedContent,
 	)
 	return i, err
 }
@@ -393,8 +400,9 @@ func (q *Queries) InsertNotificationHistory(ctx context.Context, arg InsertNotif
 }
 
 const listNotificationsForUser = `-- name: ListNotificationsForUser :many
-SELECT id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at FROM notifications
+SELECT id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at, sealed_content FROM notifications
 WHERE user_id = $1
+  AND channel = 'inapp'
   AND ($2::text IS NULL OR status = $2)
   AND ($3::text IS NULL OR channel = $3)
   AND (
@@ -423,6 +431,8 @@ type ListNotificationsForUserParams struct {
 	LimitCount  int32       `json:"limit_count"`
 }
 
+// The user inbox is in-app only (TEC-1099): email rows hold security codes and links
+// meant for the mailbox, so they are never served back to the account owner.
 func (q *Queries) ListNotificationsForUser(ctx context.Context, arg ListNotificationsForUserParams) ([]Notification, error) {
 	rows, err := q.db.Query(ctx, listNotificationsForUser,
 		arg.UserID,
@@ -467,6 +477,7 @@ func (q *Queries) ListNotificationsForUser(ctx context.Context, arg ListNotifica
 			&i.ProviderReference,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.SealedContent,
 		); err != nil {
 			return nil, err
 		}
@@ -479,7 +490,7 @@ func (q *Queries) ListNotificationsForUser(ctx context.Context, arg ListNotifica
 }
 
 const listPlatformNotifications = `-- name: ListPlatformNotifications :many
-SELECT id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at FROM notifications
+SELECT id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at, sealed_content FROM notifications
 WHERE ($1::text IS NULL OR status = $1)
   AND ($2::text IS NULL OR channel = $2)
   AND ($3::bigint IS NULL OR user_id = $3)
@@ -544,6 +555,7 @@ func (q *Queries) ListPlatformNotifications(ctx context.Context, arg ListPlatfor
 			&i.ProviderReference,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.SealedContent,
 		); err != nil {
 			return nil, err
 		}
@@ -556,7 +568,7 @@ func (q *Queries) ListPlatformNotifications(ctx context.Context, arg ListPlatfor
 }
 
 const listPlatformNotificationsForExport = `-- name: ListPlatformNotificationsForExport :many
-SELECT id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at FROM notifications
+SELECT id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at, sealed_content FROM notifications
 WHERE ($1::text IS NULL OR status = $1)
   AND ($2::text IS NULL OR channel = $2)
   AND ($3::bigint IS NULL OR user_id = $3)
@@ -616,6 +628,7 @@ func (q *Queries) ListPlatformNotificationsForExport(ctx context.Context, arg Li
 			&i.ProviderReference,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.SealedContent,
 		); err != nil {
 			return nil, err
 		}
@@ -711,7 +724,7 @@ SET status = 'failed',
     failed_at = NOW(),
     last_error = $2
 WHERE id = $1
-RETURNING id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at
+RETURNING id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at, sealed_content
 `
 
 type MarkNotificationFailedParams struct {
@@ -749,6 +762,7 @@ func (q *Queries) MarkNotificationFailed(ctx context.Context, arg MarkNotificati
 		&i.ProviderReference,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SealedContent,
 	)
 	return i, err
 }
@@ -759,7 +773,7 @@ SET status = 'processing',
     attempt_count = attempt_count + 1
 WHERE id = $1
   AND status IN ('queued', 'failed')
-RETURNING id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at
+RETURNING id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at, sealed_content
 `
 
 func (q *Queries) MarkNotificationProcessing(ctx context.Context, id int64) (Notification, error) {
@@ -792,6 +806,7 @@ func (q *Queries) MarkNotificationProcessing(ctx context.Context, id int64) (Not
 		&i.ProviderReference,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SealedContent,
 	)
 	return i, err
 }
@@ -803,7 +818,7 @@ SET status = 'read',
 WHERE uuid = $1
   AND user_id = $2
   AND channel = 'inapp'
-RETURNING id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at
+RETURNING id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at, sealed_content
 `
 
 type MarkNotificationReadParams struct {
@@ -841,6 +856,7 @@ func (q *Queries) MarkNotificationRead(ctx context.Context, arg MarkNotification
 		&i.ProviderReference,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SealedContent,
 	)
 	return i, err
 }
@@ -855,9 +871,10 @@ SET status = $1::varchar,
     END,
     provider = $2,
     provider_reference = $3,
-    last_error = NULL
+    last_error = NULL,
+    sealed_content = NULL
 WHERE id = $4
-RETURNING id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at
+RETURNING id, uuid, user_id, channel, status, priority, title, body, payload, action_url, recipient, template_code, source_event, scheduled_at, sent_at, delivered_at, read_at, failed_at, cancelled_at, attempt_count, max_attempts, last_error, provider, provider_reference, created_at, updated_at, sealed_content
 `
 
 type MarkNotificationSentParams struct {
@@ -905,6 +922,7 @@ func (q *Queries) MarkNotificationSent(ctx context.Context, arg MarkNotification
 		&i.ProviderReference,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SealedContent,
 	)
 	return i, err
 }
@@ -913,7 +931,7 @@ const setUserEmailVerified = `-- name: SetUserEmailVerified :one
 UPDATE users
 SET email_verified_at = NOW()
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, password_set
 `
 
 func (q *Queries) SetUserEmailVerified(ctx context.Context, id int64) (User, error) {
@@ -933,6 +951,7 @@ func (q *Queries) SetUserEmailVerified(ctx context.Context, id int64) (User, err
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.PasswordSet,
 	)
 	return i, err
 }
@@ -942,7 +961,7 @@ UPDATE users
 SET name = COALESCE($1, name),
     surname = COALESCE($2, surname)
 WHERE id = $3 AND deleted_at IS NULL
-RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at
+RETURNING id, uuid, email, password_hash, name, surname, status, email_verified_at, last_login_at, locale, created_at, updated_at, deleted_at, password_set
 `
 
 type UpdateUserProfileParams struct {
@@ -968,6 +987,7 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.PasswordSet,
 	)
 	return i, err
 }

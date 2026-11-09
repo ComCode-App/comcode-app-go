@@ -17,7 +17,7 @@ export function OrderKPICards() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className="h-24 w-full rounded-xl" />
         ))}
@@ -69,17 +69,24 @@ export function OrderKPICards() {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5 mb-6">
+    <div className="mb-6 grid grid-cols-2 gap-3.5 md:grid-cols-5">
       {cards.map((card, idx) => {
         const Icon = card.icon;
         return (
-          <Card key={idx} className={`shadow-xs border ${card.border} transition-all hover:shadow-md`}>
-            <CardContent className="p-4 flex items-center justify-between">
+          <Card
+            key={idx}
+            className={`border shadow-xs ${card.border} transition-all hover:shadow-md`}
+          >
+            <CardContent className="flex items-center justify-between p-4">
               <div>
-                <p className="text-xs font-medium text-muted-foreground">{card.title}</p>
-                <p className="text-2xl font-bold tracking-tight text-foreground mt-1">{card.value}</p>
+                <p className="text-muted-foreground text-xs font-medium">
+                  {card.title}
+                </p>
+                <p className="text-foreground mt-1 text-2xl font-bold tracking-tight">
+                  {card.value}
+                </p>
               </div>
-              <div className={`p-2.5 rounded-xl ${card.bg} ${card.color}`}>
+              <div className={`rounded-xl p-2.5 ${card.bg} ${card.color}`}>
                 <Icon className="h-5 w-5" />
               </div>
             </CardContent>

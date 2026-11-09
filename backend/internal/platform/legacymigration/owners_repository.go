@@ -97,7 +97,7 @@ func assignOwnerGroup(ctx context.Context, tx pgx.Tx, group ownerGroup) error {
 			}
 			err = tx.QueryRow(
 				ctx,
-				`INSERT INTO users(email,name,surname,status,password_hash) VALUES($1,$2,$3,'pending',$4) RETURNING id`,
+				`INSERT INTO users(email,name,surname,status,password_hash,password_set) VALUES($1,$2,$3,'pending',$4,FALSE) RETURNING id`,
 				c.Email,
 				short(c.Name, 100),
 				short(c.Surname, 100),

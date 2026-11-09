@@ -169,6 +169,7 @@ DELETE FROM leads WHERE uuid = $1 AND kind = 'exchange'
 RETURNING id
 `
 
+// account-lint: cross-account visitor "delete my data" link: the signed token is checked before
 // KVKK "delete my data" link of the visitor copy email (TEC-940). Only exchanges; the token is
 // checked before. Deleting the row is what makes the link single use.
 func (q *Queries) DeleteVisitorExchange(ctx context.Context, argUuid uuid.UUID) (int64, error) {
@@ -229,6 +230,7 @@ type GetAccountLeadRow struct {
 	SenderUsername    pgtype.Text        `json:"sender_username"`
 }
 
+// account-lint: cross-account sender_username shows the public canonical route of the sender's profile (another account, exchange)
 func (q *Queries) GetAccountLead(ctx context.Context, arg GetAccountLeadParams) (GetAccountLeadRow, error) {
 	row := q.db.QueryRow(ctx, getAccountLead, arg.Uuid, arg.AccountID, arg.ViewerUserID)
 	var i GetAccountLeadRow
@@ -351,6 +353,7 @@ type GetLeadCaptureRouteByPathRow struct {
 // only leads that came to their own employee profile (company_member_profiles) or to a card that
 // points at it. The role is read live from account_members, so an unknown viewer sees nothing.
 // The viewer condition is repeated in each read because sqlc cannot share it.
+// account-lint: cross-account public lead form: resolves a public route by path
 // The route a visitor submits through, with what decides whether its form is on. A card route
 // follows its card's current profile.
 func (q *Queries) GetLeadCaptureRouteByPath(ctx context.Context, path string) (GetLeadCaptureRouteByPathRow, error) {
@@ -391,6 +394,7 @@ type GetLeadProfileNameParams struct {
 	ID     int64  `json:"id"`
 }
 
+// account-lint: cross-account visitor copy email: profile id comes from the stored lead
 // Display name of the profile an exchange went to, for the visitor copy email (TEC-940).
 func (q *Queries) GetLeadProfileName(ctx context.Context, arg GetLeadProfileNameParams) (string, error) {
 	row := q.db.QueryRow(ctx, getLeadProfileName, arg.Locale, arg.ID)
@@ -478,6 +482,7 @@ type ListAccountLeadsRow struct {
 	SenderUsername    pgtype.Text        `json:"sender_username"`
 }
 
+// account-lint: cross-account sender_username shows the public canonical route of the sender's profile (another account, exchange)
 // A locked lead (TEC-941) matches q only on company: its name, email and phone are masked.
 func (q *Queries) ListAccountLeads(ctx context.Context, arg ListAccountLeadsParams) ([]ListAccountLeadsRow, error) {
 	rows, err := q.db.Query(ctx, listAccountLeads,
@@ -597,7 +602,7 @@ func (q *Queries) UnlockLeadsBefore(ctx context.Context, arg UnlockLeadsBeforePa
 
 const unlockMonthLeads = `-- name: UnlockMonthLeads :execrows
 UPDATE leads SET locked = false
-WHERE locked AND id IN (
+WHERE leads.account_id = $1 AND leads.locked AND leads.id IN (
     SELECT x.id FROM leads x
     WHERE x.account_id = $1 AND x.kind = $2 AND x.locked
       AND x.created_at >= $3::timestamptz

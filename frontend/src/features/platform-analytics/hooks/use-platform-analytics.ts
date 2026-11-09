@@ -12,7 +12,10 @@ import {
 } from "../services/platform-analytics.service";
 import { platformAnalyticsKeys } from "./query-keys";
 
-export function useEventDefinitions(filters: EventDefinitionFilters = {}, enabled = true) {
+export function useEventDefinitions(
+  filters: EventDefinitionFilters = {},
+  enabled = true,
+) {
   return useQuery({
     queryKey: platformAnalyticsKeys.definitionList(filters),
     queryFn: () => platformAnalyticsService.listDefinitions(filters),
@@ -31,7 +34,9 @@ export function useAnalyticsConfig(enabled = true) {
 function useErrorToast() {
   const { t } = useLocale();
   return (err: unknown) => {
-    appToast.error(isApiError(err) && err.message ? err.message : t("common.error_generic"));
+    appToast.error(
+      isApiError(err) && err.message ? err.message : t("common.error_generic"),
+    );
   };
 }
 
@@ -39,10 +44,12 @@ export function useEventDefinitionMutations() {
   const qc = useQueryClient();
   const { t } = useLocale();
   const onError = useErrorToast();
-  const invalidate = () => qc.invalidateQueries({ queryKey: platformAnalyticsKeys.definitions() });
+  const invalidate = () =>
+    qc.invalidateQueries({ queryKey: platformAnalyticsKeys.definitions() });
 
   const create = useMutation({
-    mutationFn: (body: EventDefinitionInput) => platformAnalyticsService.createDefinition(body),
+    mutationFn: (body: EventDefinitionInput) =>
+      platformAnalyticsService.createDefinition(body),
     onSuccess: async () => {
       await invalidate();
       appToast.success(t("platform_analytics.definitions.toast.created"));
@@ -85,7 +92,8 @@ export function useUpdateAnalyticsConfig() {
   const { t } = useLocale();
   const onError = useErrorToast();
   return useMutation({
-    mutationFn: (body: AnalyticsSettingsInput) => platformAnalyticsService.updateConfig(body),
+    mutationFn: (body: AnalyticsSettingsInput) =>
+      platformAnalyticsService.updateConfig(body),
     onSuccess: (data) => {
       qc.setQueryData(platformAnalyticsKeys.config(), data);
       appToast.success(t("platform_analytics.config.toast.saved"));

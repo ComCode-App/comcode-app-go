@@ -1,7 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, Clock, Loader2, Monitor, Shield, Trash2 } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Loader2,
+  Monitor,
+  Shield,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -41,11 +48,8 @@ export function SessionManager() {
         const list = await authService.listSessions();
         return list.items ?? [];
       } catch (error) {
-        toast.error(
-          isApiError(error)
-            ? error.message || t("common.error_generic")
-            : t("common.error_generic"),
-        );
+        // API errors already get the global toast (TEC-1110).
+        if (!isApiError(error)) toast.error(t("common.error_generic"));
         throw error;
       }
     },
@@ -61,11 +65,8 @@ export function SessionManager() {
       setPending(null);
       await sessionsQuery.refetch();
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message || t("common.error_generic"));
-      } else {
-        toast.error(t("common.error_generic"));
-      }
+      // API errors already get the global toast (TEC-1110).
+      if (!isApiError(error)) toast.error(t("common.error_generic"));
     } finally {
       setRevokingId(null);
     }
@@ -79,11 +80,8 @@ export function SessionManager() {
       setRevokeOthersOpen(false);
       await sessionsQuery.refetch();
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message || t("common.error_generic"));
-      } else {
-        toast.error(t("common.error_generic"));
-      }
+      // API errors already get the global toast (TEC-1110).
+      if (!isApiError(error)) toast.error(t("common.error_generic"));
     } finally {
       setRevokingOthers(false);
     }
@@ -138,7 +136,9 @@ export function SessionManager() {
             <Monitor className="text-muted-foreground size-6" aria-hidden />
           </div>
           <div className="space-y-1">
-            <p className="text-sm font-medium">{t("auth.sessions.empty_title")}</p>
+            <p className="text-sm font-medium">
+              {t("auth.sessions.empty_title")}
+            </p>
             <p className="text-muted-foreground text-sm">
               {t("auth.sessions.empty_body")}
             </p>
@@ -161,7 +161,9 @@ export function SessionManager() {
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
                     {item.current ? (
-                      <Badge variant="success">{t("auth.sessions.current")}</Badge>
+                      <Badge variant="success">
+                        {t("auth.sessions.current")}
+                      </Badge>
                     ) : null}
                     {item.impersonated ? (
                       <Badge variant="outline">
@@ -226,7 +228,11 @@ export function SessionManager() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setPending(null)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPending(null)}
+            >
               {t("common.cancel")}
             </Button>
             <Button
@@ -237,7 +243,9 @@ export function SessionManager() {
                 if (pending) void revoke(pending.uuid);
               }}
             >
-              {revokingId ? t("auth.sessions.revoking") : t("auth.sessions.revoke")}
+              {revokingId
+                ? t("auth.sessions.revoking")
+                : t("auth.sessions.revoke")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -71,6 +71,7 @@ type PlatformGetCardRow struct {
 	LegacySerial      string             `json:"legacy_serial"`
 }
 
+// account-lint: cross-account platform support tools (platform.* permission)
 func (q *Queries) PlatformGetCard(ctx context.Context, argUuid uuid.UUID) (PlatformGetCardRow, error) {
 	row := q.db.QueryRow(ctx, platformGetCard, argUuid)
 	var i PlatformGetCardRow
@@ -129,6 +130,7 @@ type PlatformGetProfileForCardRow struct {
 	OwnerUserID int64     `json:"owner_user_id"`
 }
 
+// account-lint: cross-account platform support tools (platform.* permission)
 // The profile a card is reassigned to, with the user who will own the card: the profile's user,
 // or the account owner for profiles without one (legacy/company profiles).
 func (q *Queries) PlatformGetProfileForCard(ctx context.Context, argUuid uuid.UUID) (PlatformGetProfileForCardRow, error) {
@@ -147,6 +149,7 @@ const platformGetRouteIDByUUID = `-- name: PlatformGetRouteIDByUUID :one
 SELECT id FROM routes WHERE uuid = $1
 `
 
+// account-lint: cross-account platform support tools (platform.* permission)
 func (q *Queries) PlatformGetRouteIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, platformGetRouteIDByUUID, argUuid)
 	var id int64
@@ -205,6 +208,7 @@ type PlatformGetRoutesRow struct {
 	CardSmartCode        pgtype.Text        `json:"card_smart_code"`
 }
 
+// account-lint: cross-account platform support tools (platform.* permission)
 // A card route follows its card's current profile; other routes use their own.
 func (q *Queries) PlatformGetRoutes(ctx context.Context, ids []int64) ([]PlatformGetRoutesRow, error) {
 	rows, err := q.db.Query(ctx, platformGetRoutes, ids)
@@ -275,6 +279,7 @@ type PlatformListRouteHistoryRow struct {
 	ChangedByEmail       pgtype.Text        `json:"changed_by_email"`
 }
 
+// account-lint: cross-account platform support tools (platform.* permission)
 func (q *Queries) PlatformListRouteHistory(ctx context.Context, routeIds []int64) ([]PlatformListRouteHistoryRow, error) {
 	rows, err := q.db.Query(ctx, platformListRouteHistory, routeIds)
 	if err != nil {
@@ -337,6 +342,7 @@ type PlatformReassignCardParams struct {
 	CardID    int64       `json:"card_id"`
 }
 
+// account-lint: cross-account platform support tools: moves a card between accounts on purpose
 // The card and its card route move to the profile, its account and owner in one statement. The
 // printed identity (smart_code, card_uid, path) does not change.
 func (q *Queries) PlatformReassignCard(ctx context.Context, arg PlatformReassignCardParams) (int64, error) {
@@ -362,6 +368,7 @@ WHERE LOWER(TRIM(path)) = LOWER(TRIM($1::text))
 RETURNING uuid
 `
 
+// account-lint: cross-account platform support tools (platform.* permission)
 // Ends the 30-day hold of deleted smart links on this path (TEC-559 hold, TEC-950 release).
 func (q *Queries) PlatformReleaseDeletedRoutePath(ctx context.Context, path string) ([]uuid.UUID, error) {
 	rows, err := q.db.Query(ctx, platformReleaseDeletedRoutePath, path)
@@ -395,6 +402,7 @@ WHERE r.id = h.route_id
 RETURNING r.uuid
 `
 
+// account-lint: cross-account platform support tools (platform.* permission)
 // Ends the 30-day hold a smart link rename left on its old path (TEC-558 hold, TEC-950 release).
 func (q *Queries) PlatformReleaseRenamedPath(ctx context.Context, path string) ([]uuid.UUID, error) {
 	rows, err := q.db.Query(ctx, platformReleaseRenamedPath, path)
@@ -434,6 +442,7 @@ WITH retired AS (
 SELECT path FROM retired
 `
 
+// account-lint: cross-account platform support tools (platform.* permission)
 // One card's version of RetireOrderCardRoutes (TEC-585): its route becomes retired ("card
 // deactivated", the path is never handed out again) and an unused activation code is cleared.
 func (q *Queries) PlatformRetireCard(ctx context.Context, cardID pgtype.Int8) ([]string, error) {
@@ -529,6 +538,7 @@ type PlatformSearchCardsRow struct {
 
 // Platform card and route support screens (TEC-950). These are platform queries: they are not
 // scoped to an account and are only reachable behind platform.cards.* / platform.routes.*.
+// account-lint: cross-account platform support tools (platform.* permission)
 // Prefix match on smart code, card UID (system serial) or a migrated card's legacy serial.
 func (q *Queries) PlatformSearchCards(ctx context.Context, arg PlatformSearchCardsParams) ([]PlatformSearchCardsRow, error) {
 	rows, err := q.db.Query(ctx, platformSearchCards, arg.Prefix, arg.LimitCount)
@@ -600,6 +610,7 @@ type PlatformSearchRoutesParams struct {
 	LimitCount int32  `json:"limit_count"`
 }
 
+// account-lint: cross-account platform support tools (platform.* permission)
 // Path search over every route, deleted smart links included (they hold their path for 30 days),
 // plus routes whose renamed-away old path matches.
 func (q *Queries) PlatformSearchRoutes(ctx context.Context, arg PlatformSearchRoutesParams) ([]int64, error) {

@@ -1,7 +1,10 @@
 # Root env
 .env
 .env.server
+# prod-env.sh backups and temp files hold live secrets too
+.env.server.*
 !.env.example
+!.env.server.example
 
 # Frontend (Next.js)
 frontend/node_modules/
@@ -31,6 +34,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+
+# Claude Code personal overrides (project settings in .claude/settings.json are shared)
+.claude/settings.local.json
+
+# Playwright MCP (.mcp.json) snapshots, console logs and screenshots
+.playwright-mcp/
 
 /tmp/
 # Private repeatable legacy sync state and package cache

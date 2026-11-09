@@ -51,8 +51,13 @@ Super admin bypasses permission checks in `HasPermission`. Most platform HTTP ro
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/v1/auth/identities` | Bearer |
+| GET | `/v1/auth/identities` | Bearer → `{items, total, has_password, has_passkey}` |
 | DELETE | `/v1/auth/identities/{provider}` | Bearer (`github`, `google`, `facebook`, `apple`) |
+
+Last sign-in method guard (TEC-1105):
+
+- `has_password` comes from `users.password_set` (migration 000073). OAuth sign-up and user imports store a random hash and set it `false`; every password update (reset, change, admin set) sets it `true`. An OAuth-only user sets a password through the password reset flow.
+- `DELETE /v1/auth/identities/{provider}` and `DELETE /v1/auth/passkeys/{uuid}` answer `409 LAST_SIGN_IN_METHOD` when the user has no password and the identity / passkey is their last sign-in method (no other identity, no other passkey).
 
 GitHub: `GET/PATCH /v1/platform/integrations/github`. Google / Facebook / Apple: `/v1/platform/integrations/{provider}`. Auth policy: `GET/PATCH /v1/platform/auth/settings`.
 
@@ -80,12 +85,16 @@ Redis INCR, 15-minute window, fail-open if Redis is down. `429 RATE_LIMITED` + `
 
 | Endpoint | Key | Max |
 |----------|-----|-----|
-| Login | IP + email | 10 |
+| Login | IP + email, IP, email | 10, 50, 30 |
 | Register | IP | 5 |
-| Forgot password | IP + email | 5 |
-| Reset password | IP | 10 |
+| Forgot password | IP + email, IP, email | 5, 20, 5 |
+| Reset password | IP, email | 10, 10 |
+| Verification email request (`/auth/email/verify-request`) | user, IP | 5, 20 |
+| Verify email (`/auth/email/verify`) | IP, email | 10, 10 |
 | Card activation | user, and client IP | 10, 30 |
 | Public analytics events (`POST /v1/events`) | client IP | 600 |
+
+Login and forgot-password keep a per-email cap across IPs so a botnet cannot guess one account's password from many addresses; it is higher than the IP + email cap, so locking a person out takes many requests and only lasts until the window ends (password reset and passkey sign-in are not affected).
 
 "IP" is the end user's address, resolved once per request by `internal/platform/clientip`:
 
@@ -93,6 +102,16 @@ Redis INCR, 15-minute window, fail-open if Redis is down. `429 RATE_LIMITED` + `
 - Go honours `X-Forwarded-For` only when the direct peer is in `TRUSTED_PROXIES` (default: loopback + private ranges). It walks the chain right to left and takes the first address that is not a trusted proxy; the client-supplied prefix is ignored.
 - From any other peer the socket address is used, so a spoofed header cannot bypass the limits.
 - The middleware rewrites `RemoteAddr`; use `clientip.String(r)` / `clientip.IP(r)` and never read `X-Forwarded-For` in handlers.
+
+## Account enumeration (TEC-1101)
+
+- Login verifies the password first. An unknown email runs an Argon2 check against a dummy hash (computed once, same parameters), so it costs as much as a wrong password, and both return the same `401 INVALID_CREDENTIALS` "Email or password is incorrect". A disabled or suspended account is reported (`403`) only after the correct password; 2FA (`MFA_REQUIRED`, `INVALID_MFA_CODE`, `MFA_NOT_ENROLLED`) also follows a correct password.
+- `POST /v1/auth/password/forgot` always answers `accepted`; `POST /v1/auth/password/reset` and `POST /v1/auth/email/verify` answer an unknown email like a wrong code.
+- `POST /v1/auth/email/verify-request` only mails the caller's own address. An `email` field naming another address is ignored with the same `accepted` response.
+
+## Security emails
+
+Email verification and password reset codes (`SecurityEmail`) and account invitation links (`SecretVars: invite_url`) never sit readable on `notifications` rows (TEC-1099). The row keeps a masked rendering (`••••••` in place of the code or link, `action_url` dropped), so `GET /v1/platform/notifications`, its search, the export and backups never see it. The real subject and body are AES-GCM encrypted with `APP_ENCRYPTION_KEY` in `notifications.sealed_content`; the delivery worker decrypts them in memory, so retries and stuck-row reclaims send the real code, and a successful send sets the column to NULL. Without a usable key (none, or the built-in development key outside development/test) such notifications are refused instead of stored in plaintext. `GET /v1/notifications` and `GET /v1/notifications/{uuid}` serve `inapp` rows only, so an account cannot read its own verification code back. Migration `000072` masked older rows and cancelled unsent ones.
 
 ## `/v1/auth/me`
 
@@ -123,6 +142,29 @@ Returns `user`, `roles[]`, `permissions[]`, `account` (active), `accounts[]`, `s
 | POST | `/v1/auth/impersonation/stop` | Bearer (active impersonation session) |
 
 Last super admin cannot be demoted via role removal or disable.
+
+### Super admin boundary
+
+Permissions alone never reach a super admin. A caller who holds `platform.users.*` but not the
+`super_admin` role gets **403 `FORBIDDEN`** ("Only a super admin can change super admin accounts
+or the super_admin role", `usecase.ErrSuperAdminRequired`) when they:
+
+- grant `super_admin` (create or patch with its uuid in `role_uuids[]`, also to themselves);
+- change a super admin account at all: profile, `role_uuids[]` (so also removing `super_admin`),
+  `status` (disable/enable), password (`/password`) or impersonation.
+
+The check reads the request principal, which `LoadPrincipal` reloads from the database on every
+request. The other write paths enforce the same rule:
+
+- **Bulk** (`POST /v1/platform/users/bulk`): the bulk service puts the job's actor on the context
+  (`bulkengine.WithActor`, also for queued runs and rollbacks); `disable`/`enable` of a super admin
+  fails that item unless the actor is a super admin, and so does a rollback that touches a super
+  admin or restores a role snapshot holding `super_admin`.
+- **Import** (`POST /v1/platform/users/import`): a row whose `role_slugs` (or the default
+  `role_slugs`) contain `super_admin` is rejected ("the super_admin role cannot be assigned by
+  import"), whoever runs it. An import rollback leaves users who are super admins by then alone.
+
+New super admins come from an existing super admin on the user page, or from `make create-super-admin`.
 
 ## Platform roles
 

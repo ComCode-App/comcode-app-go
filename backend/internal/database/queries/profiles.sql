@@ -1,3 +1,4 @@
+-- account-lint: cross-account canonical-route subquery is keyed by this account's profile id (display only)
 -- name: ListProfilesByAccountID :many
 SELECT 
     p.id,
@@ -49,12 +50,6 @@ WHERE p.account_id = sqlc.arg(account_id)
     OR pt.company_name ILIKE '%' || sqlc.narg(q) || '%'
     OR pt.title ILIKE '%' || sqlc.narg(q) || '%'
   );
-
--- name: GetProfileByUUID :one
-SELECT *
-FROM profiles
-WHERE uuid = $1
-  AND deleted_at IS NULL;
 
 -- name: GetProfileByUUIDForAccount :one
 SELECT *

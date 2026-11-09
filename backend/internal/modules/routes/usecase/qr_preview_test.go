@@ -172,4 +172,3 @@ func TestPreviewQRRejectsOutOfScopeAndInvalid(t *testing.T) {
 		t.Fatalf("max size svg: %v", err)
 	}
 }
-

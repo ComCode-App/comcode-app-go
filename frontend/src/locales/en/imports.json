@@ -98,6 +98,7 @@
   "row_errors.too_long": "too long",
   "row_errors.invalid_email": "invalid email address",
   "row_errors.user_not_found": "no registered user with this email",
+  "row_errors.user_not_verified": "the email address is not verified yet",
   "row_errors.office_not_found": "no office with this name",
   "row_errors.office_ambiguous": "several offices have this name",
   "row_errors.group_not_found": "no group with this name",

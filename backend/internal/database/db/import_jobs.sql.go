@@ -16,6 +16,7 @@ const countAllImportJobs = `-- name: CountAllImportJobs :one
 SELECT COUNT(*)::bigint FROM import_jobs
 `
 
+// account-lint: cross-account platform /v1/platform/imports admin list
 func (q *Queries) CountAllImportJobs(ctx context.Context) (int64, error) {
 	row := q.db.QueryRow(ctx, countAllImportJobs)
 	var column_1 int64
@@ -46,6 +47,7 @@ const countImportJobsForActor = `-- name: CountImportJobsForActor :one
 SELECT COUNT(*)::bigint FROM import_jobs WHERE actor_id = $1
 `
 
+// account-lint: cross-account platform /v1/platform/imports: the caller's own jobs (actor_id)
 func (q *Queries) CountImportJobsForActor(ctx context.Context, actorID int64) (int64, error) {
 	row := q.db.QueryRow(ctx, countImportJobsForActor, actorID)
 	var column_1 int64
@@ -105,6 +107,7 @@ const getImportJobByID = `-- name: GetImportJobByID :one
 SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, account_id FROM import_jobs WHERE id = $1
 `
 
+// account-lint: cross-account import worker / Confirm: job id from an owned job (getOwned) or the queue
 func (q *Queries) GetImportJobByID(ctx context.Context, id int64) (ImportJob, error) {
 	row := q.db.QueryRow(ctx, getImportJobByID, id)
 	var i ImportJob
@@ -134,6 +137,7 @@ const getImportJobByUUID = `-- name: GetImportJobByUUID :one
 SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, account_id FROM import_jobs WHERE uuid = $1
 `
 
+// account-lint: cross-account usecase getOwned checks account + actor; platform GetJob checks admin/actor
 func (q *Queries) GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error) {
 	row := q.db.QueryRow(ctx, getImportJobByUUID, argUuid)
 	var i ImportJob
@@ -206,6 +210,7 @@ type ListAllImportJobsParams struct {
 	LimitCount  int32 `json:"limit_count"`
 }
 
+// account-lint: cross-account platform /v1/platform/imports admin list
 func (q *Queries) ListAllImportJobs(ctx context.Context, arg ListAllImportJobsParams) ([]ImportJob, error) {
 	rows, err := q.db.Query(ctx, listAllImportJobs, arg.OffsetCount, arg.LimitCount)
 	if err != nil {
@@ -353,6 +358,7 @@ type ListImportJobsForActorParams struct {
 	LimitCount  int32 `json:"limit_count"`
 }
 
+// account-lint: cross-account platform /v1/platform/imports: the caller's own jobs (actor_id)
 func (q *Queries) ListImportJobsForActor(ctx context.Context, arg ListImportJobsForActorParams) ([]ImportJob, error) {
 	rows, err := q.db.Query(ctx, listImportJobsForActor, arg.ActorID, arg.OffsetCount, arg.LimitCount)
 	if err != nil {
@@ -406,6 +412,7 @@ type MarkImportJobAppliedParams struct {
 	PreviewJson []byte `json:"preview_json"`
 }
 
+// account-lint: cross-account import worker: job id from the queue
 func (q *Queries) MarkImportJobApplied(ctx context.Context, arg MarkImportJobAppliedParams) (ImportJob, error) {
 	row := q.db.QueryRow(ctx, markImportJobApplied, arg.ID, arg.PreviewJson)
 	var i ImportJob
@@ -438,6 +445,7 @@ WHERE id = $1 AND status = 'queued'
 RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, account_id
 `
 
+// account-lint: cross-account import worker: job id from the queue
 func (q *Queries) MarkImportJobApplying(ctx context.Context, id int64) (ImportJob, error) {
 	row := q.db.QueryRow(ctx, markImportJobApplying, id)
 	var i ImportJob
@@ -476,6 +484,7 @@ type MarkImportJobFailedParams struct {
 	Error pgtype.Text `json:"error"`
 }
 
+// account-lint: cross-account import worker: job id from the queue
 func (q *Queries) MarkImportJobFailed(ctx context.Context, arg MarkImportJobFailedParams) (ImportJob, error) {
 	row := q.db.QueryRow(ctx, markImportJobFailed, arg.ID, arg.Error)
 	var i ImportJob
@@ -508,6 +517,7 @@ WHERE id = $1 AND status = 'applied'
 RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, account_id
 `
 
+// account-lint: cross-account import rollback: job already checked by getOwned
 func (q *Queries) MarkImportJobRolledBack(ctx context.Context, id int64) (ImportJob, error) {
 	row := q.db.QueryRow(ctx, markImportJobRolledBack, id)
 	var i ImportJob
@@ -540,6 +550,7 @@ WHERE uuid = $1 AND status = 'previewed'
 RETURNING id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, account_id
 `
 
+// account-lint: cross-account import confirm: job already checked by getOwned
 func (q *Queries) QueueImportJob(ctx context.Context, argUuid uuid.UUID) (ImportJob, error) {
 	row := q.db.QueryRow(ctx, queueImportJob, argUuid)
 	var i ImportJob
@@ -577,6 +588,7 @@ type UpdateImportJobFileKeyParams struct {
 	FileKey pgtype.Text `json:"file_key"`
 }
 
+// account-lint: cross-account import upload: job id from the row just inserted for this account
 func (q *Queries) UpdateImportJobFileKey(ctx context.Context, arg UpdateImportJobFileKeyParams) (ImportJob, error) {
 	row := q.db.QueryRow(ctx, updateImportJobFileKey, arg.Uuid, arg.FileKey)
 	var i ImportJob
@@ -617,6 +629,7 @@ type UpdateImportJobMappingParams struct {
 	DefaultsJson []byte    `json:"defaults_json"`
 }
 
+// account-lint: cross-account import mapping: job already checked by getOwned
 func (q *Queries) UpdateImportJobMapping(ctx context.Context, arg UpdateImportJobMappingParams) (ImportJob, error) {
 	row := q.db.QueryRow(ctx, updateImportJobMapping, arg.Uuid, arg.MappingJson, arg.DefaultsJson)
 	var i ImportJob
@@ -655,6 +668,7 @@ type UpdateImportJobPreviewParams struct {
 	PreviewJson []byte    `json:"preview_json"`
 }
 
+// account-lint: cross-account import preview: job already checked by getOwned
 func (q *Queries) UpdateImportJobPreview(ctx context.Context, arg UpdateImportJobPreviewParams) (ImportJob, error) {
 	row := q.db.QueryRow(ctx, updateImportJobPreview, arg.Uuid, arg.PreviewJson)
 	var i ImportJob

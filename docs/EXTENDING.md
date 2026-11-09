@@ -1,6 +1,6 @@
 # Extending ComCode
 
-Add product modules on top of auth, RBAC, accounts, notifications, and the two shells. Owned data belongs to an account: add `account_id`, scope app queries by the active account and check the account role on writes ([TENANCY_AND_ACCESS.md](./TENANCY_AND_ACCESS.md)).
+Add product modules on top of auth, RBAC, accounts, notifications, and the two shells. Owned data belongs to an account: add `account_id`, scope app queries by the active account and check the account role on writes ([TENANCY_AND_ACCESS.md](./TENANCY_AND_ACCESS.md)). New owned tables go into `backend/internal/database/account_tables.txt`; the account isolation lint then requires an `account_id` filter (or a `-- account-lint: cross-account <reason>` comment) on every query that touches them ([DATABASE_RULES.md](../backend/DATABASE_RULES.md#account-isolation-lint)).
 
 For a full agent checklist, use `.agents/skills/add-platform-resource`. Narrative is here; checklists are in skills.
 
@@ -24,6 +24,7 @@ For a full agent checklist, use `.agents/skills/add-platform-resource`. Narrativ
 4. Call the BFF (`/api/v1/...`), not the Go host, from the browser.
 5. Dates: shared `DatePicker` / `AppDatePicker` — see `.agents/skills/admin-date-picker`.
 6. After OpenAPI changes: `cd frontend && pnpm api:generate`.
+7. API errors: a failed request shows one global toast, worded from the error code (`frontend/src/lib/api/error-messages.ts`, en/tr keys). A new backend error code needs an entry there; `api-errors.test.mjs` fails otherwise. A mutation with its own `onError` gets no global toast (add `meta: { toastErrors: true }` if that handler only cleans up); `meta: { silentErrors: true }` silences queries and mutations; a plain `await` caller uses `suppressApiErrorToast(err)`.
 
 ## Sidebar (nav-engine)
 
@@ -70,7 +71,7 @@ Package: `internal/platform/searchengine`. HTTP: `internal/modules/search`. Skil
 
 ## GitHub OAuth (integrations)
 
-Skill: `.agents/skills/github-integration`. Super-admin settings at `/platform/integrations/github`.
+Skill: `.agents/skills/github-integration`. Super-admin settings on the GitHub tab of `/platform/settings/integrations`.
 
 - Credentials (`client_secret`, private key) encrypted with `APP_ENCRYPTION_KEY` via `internal/platform/crypto`. API never returns plaintext secrets.
 - Users **link** GitHub from profile (`GET/DELETE /v1/auth/identities`). Unlinked GitHub accounts cannot self-register.
@@ -102,7 +103,7 @@ Sensitive mutations can require a fresh password or passkey confirmation even wh
 
 - Backend: `middleware.RequireStepUp` after `Authenticate`. `403` + `STEP_UP_REQUIRED` until grant TTL.
 - Frontend: `StepUpGate` / `useStepUp()` from `@/features/step-up-engine`.
-- Admin TTL/methods: `/platform/access` (`platform.access.read` / `.write`).
+- Admin TTL/methods: `/platform/settings/access` (`platform.access.read` / `.write`).
 
 ## Settings (letterhead)
 
@@ -113,6 +114,22 @@ Sensitive mutations can require a fresh password or passkey confirmation even wh
 - Task names use the `app:` prefix (`app:notification:deliver`, `app:bulk:process`).
 - Redis keys should use `app:<env>:…` if you add caching.
 - Realtime channels: prefer `user:{user_uuid}`. Issue tokens only through `/v1/realtime/*`.
+
+## Environment variables
+
+`deploy/env/schema` is the source of truth for the production env; CI (`env` job, `make env-check`) keeps the other files in line with it ([design](./design/env-core.md)). Adding a variable:
+
+1. **Read it** in `backend/internal/config/config.go` (or `billing.go`) with a string-literal key (`getEnv("MY_KEY", "default")`); the checks find reads by literal name. `config.go` owns the default.
+2. **Local default** in `.env.example` (local dev never needs a generator).
+3. **Schema**: every key the backend reads must be in `deploy/env/schema`, else `scripts/check-env-sync.sh` fails.
+   - An operator value: add `MY_KEY | <rule>` (`derive:`, `const:`, `secret:…`, `ask:` or `empty`; an optional knob is `empty` under "Optional tuning", with its default in a `#` comment), bump `@version`, then `scripts/prod-env.sh example > .env.server.example`.
+   - Not an operator value (compose fixes it, an alias, a one-off tool input): `@unmanaged MY_KEY <reason>`.
+   - Renaming or dropping a key: `@rename OLD NEW <ver>` / `@remove KEY <ver>`, so `make prod-env-upgrade` migrates deployed files without losing values.
+4. **Deliver it** to the containers: add it to `x-backend-environment` in `compose.prod.yml` (`MY_KEY: ${MY_KEY:-}` keeps the `config.go` default when unset), or record why not in `deploy/env/compose-env.allow` (`omit`, and `@unmanaged` in the schema).
+5. **Secrets**: a `secret:` key needs a row in `guardedSecrets` (`backend/internal/config/guard.go`) with its development value and minimum length, so staging/production refuse it. `schema_test.go` fails until you add it (or exempt it with a reason, like the frontend-only `AUTH_SECRET`). Payment provider credentials are not env vars: they are stored in the database, encrypted with `APP_ENCRYPTION_KEY`.
+6. `make env-check && (cd backend && go test ./internal/config/)`.
+
+Do not edit `.env.server.example` by hand, and never put real values in either example file.
 
 ## What not to bring back
 

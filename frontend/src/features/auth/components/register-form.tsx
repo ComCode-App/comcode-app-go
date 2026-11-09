@@ -20,6 +20,7 @@ import {
   type RegisterFormValues,
 } from "@/features/auth/schemas";
 import { isApiError } from "@/lib/api";
+import { safeNextPath } from "@/lib/auth/safe-next";
 import { defaultHomeForUser } from "@/lib/auth/types";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
@@ -30,11 +31,6 @@ import { AuthCard } from "./auth-card";
 
 type OAuthId = "github" | "google" | "facebook" | "apple";
 
-/** Same-origin path from ?next=, else null. */
-function safeNext(raw: string | null) {
-  return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : null;
-}
-
 export function RegisterForm() {
   const { t, locale } = useLocale();
   const router = useRouter();
@@ -43,7 +39,7 @@ export function RegisterForm() {
   // self-registration is closed; afterwards the person returns to the invite to accept it.
   const inviteToken = searchParams.get("invite") ?? "";
   const invitedEmail = inviteToken ? (searchParams.get("email") ?? "") : "";
-  const next = safeNext(searchParams.get("next"));
+  const next = safeNextPath(searchParams.get("next"), null);
   const { markAuthenticated, hydrateProfile } = useAuth();
   const { status: sessionStatus } = useSession();
   const [formError, setFormError] = useState<string | null>(null);
@@ -57,7 +53,8 @@ export function RegisterForm() {
   });
 
   const methods = appConfig?.auth_methods;
-  const passwordRegister = Boolean(methods?.password.register) || Boolean(inviteToken);
+  const passwordRegister =
+    Boolean(methods?.password.register) || Boolean(inviteToken);
   const oauthRegister = [
     {
       id: "github" as const,
@@ -124,7 +121,9 @@ export function RegisterForm() {
       }
       markAuthenticated();
       const user = await hydrateProfile();
-      router.replace(user ? (next ?? defaultHomeForUser(user)) : routes.guest.login);
+      router.replace(
+        user ? (next ?? defaultHomeForUser(user)) : routes.guest.login,
+      );
     } catch (error) {
       if (isApiError(error)) {
         setFormError(error.message || t("auth.register.error"));
@@ -248,7 +247,11 @@ export function RegisterForm() {
         <p className="text-muted-foreground text-center text-sm">
           {t("auth.register.have_account")}{" "}
           <Link
-            href={next ? `${routes.guest.login}?next=${encodeURIComponent(next)}` : routes.guest.login}
+            href={
+              next
+                ? `${routes.guest.login}?next=${encodeURIComponent(next)}`
+                : routes.guest.login
+            }
             className="underline-offset-4 hover:underline"
           >
             {t("auth.register.login_link")}

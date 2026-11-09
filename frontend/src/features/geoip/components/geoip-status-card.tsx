@@ -91,7 +91,7 @@ export function GeoIPStatusCard({ status, queryKey }: GeoIPStatusCardProps) {
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
         <div className="space-y-1">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Server className="size-5 text-primary" />
+            <Server className="text-primary size-5" />
             {t("geoip.status.title")}
           </CardTitle>
           <CardDescription>{t("geoip.status.description")}</CardDescription>
@@ -107,10 +107,10 @@ export function GeoIPStatusCard({ status, queryKey }: GeoIPStatusCardProps) {
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="flex items-start gap-3 rounded-xl border bg-muted/30 p-3.5">
-            <Database className="size-5 text-muted-foreground mt-0.5" />
+          <div className="bg-muted/30 flex items-start gap-3 rounded-xl border p-3.5">
+            <Database className="text-muted-foreground mt-0.5 size-5" />
             <div className="space-y-1 overflow-hidden">
-              <p className="text-xs font-medium text-muted-foreground">
+              <p className="text-muted-foreground text-xs font-medium">
                 {t("geoip.status.provider")}
               </p>
               <p className="text-sm font-semibold capitalize">
@@ -119,22 +119,25 @@ export function GeoIPStatusCard({ status, queryKey }: GeoIPStatusCardProps) {
             </div>
           </div>
 
-          <div className="flex items-start gap-3 rounded-xl border bg-muted/30 p-3.5">
-            <FileCode className="size-5 text-muted-foreground mt-0.5" />
+          <div className="bg-muted/30 flex items-start gap-3 rounded-xl border p-3.5">
+            <FileCode className="text-muted-foreground mt-0.5 size-5" />
             <div className="space-y-1 overflow-hidden">
-              <p className="text-xs font-medium text-muted-foreground">
+              <p className="text-muted-foreground text-xs font-medium">
                 {t("geoip.status.database_version")}
               </p>
-              <p className="truncate text-sm font-semibold" title={status.database_version || "N/A"}>
+              <p
+                className="truncate text-sm font-semibold"
+                title={status.database_version || "N/A"}
+              >
                 {status.database_version || "N/A"}
               </p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3 rounded-xl border bg-muted/30 p-3.5">
-            <Layers className="size-5 text-muted-foreground mt-0.5" />
+          <div className="bg-muted/30 flex items-start gap-3 rounded-xl border p-3.5">
+            <Layers className="text-muted-foreground mt-0.5 size-5" />
             <div className="space-y-1 overflow-hidden">
-              <p className="text-xs font-medium text-muted-foreground">
+              <p className="text-muted-foreground text-xs font-medium">
                 {t("geoip.status.cache_entries")}
               </p>
               <p className="text-sm font-semibold">
@@ -143,16 +146,16 @@ export function GeoIPStatusCard({ status, queryKey }: GeoIPStatusCardProps) {
             </div>
           </div>
 
-          <div className="flex items-start gap-3 rounded-xl border bg-muted/30 p-3.5">
+          <div className="bg-muted/30 flex items-start gap-3 rounded-xl border p-3.5">
             {status.last_update_status === "success" ? (
-              <CheckCircle2 className="size-5 text-emerald-600 mt-0.5" />
+              <CheckCircle2 className="mt-0.5 size-5 text-emerald-600" />
             ) : status.last_update_status === "failed" ? (
-              <XCircle className="size-5 text-rose-600 mt-0.5" />
+              <XCircle className="mt-0.5 size-5 text-rose-600" />
             ) : (
-              <RefreshCw className="size-5 text-amber-600 mt-0.5" />
+              <RefreshCw className="mt-0.5 size-5 text-amber-600" />
             )}
             <div className="space-y-1 overflow-hidden">
-              <p className="text-xs font-medium text-muted-foreground">
+              <p className="text-muted-foreground text-xs font-medium">
                 {t("geoip.status.last_update_status")}
               </p>
               <div className="flex items-center gap-1.5">
@@ -160,7 +163,7 @@ export function GeoIPStatusCard({ status, queryKey }: GeoIPStatusCardProps) {
                   {status.last_update_status || "Pending"}
                 </span>
                 {status.last_update_at ? (
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">
                     ({new Date(status.last_update_at).toLocaleDateString()})
                   </span>
                 ) : null}
@@ -169,12 +172,12 @@ export function GeoIPStatusCard({ status, queryKey }: GeoIPStatusCardProps) {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-2 border-t text-xs text-muted-foreground">
-          <div className="flex items-center gap-2 truncate max-w-xl">
-            <span className="font-medium text-foreground">
+        <div className="text-muted-foreground flex flex-col items-start justify-between gap-4 border-t pt-2 text-xs sm:flex-row sm:items-center">
+          <div className="flex max-w-xl items-center gap-2 truncate">
+            <span className="text-foreground font-medium">
               {t("geoip.status.database_path")}:
             </span>
-            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+            <code className="bg-muted rounded px-1.5 py-0.5 text-xs">
               {status.database_path || "/data/geoip/GeoLite2-City.mmdb"}
             </code>
           </div>
@@ -188,7 +191,9 @@ export function GeoIPStatusCard({ status, queryKey }: GeoIPStatusCardProps) {
                 disabled={isClearing || isUpdating}
               >
                 <Trash2 className="mr-1.5 size-3.5" />
-                {isClearing ? t("geoip.status.clearing") : t("geoip.status.clear_cache")}
+                {isClearing
+                  ? t("geoip.status.clearing")
+                  : t("geoip.status.clear_cache")}
               </Button>
 
               <Button
@@ -196,8 +201,12 @@ export function GeoIPStatusCard({ status, queryKey }: GeoIPStatusCardProps) {
                 onClick={() => updateMutation.mutate()}
                 disabled={isUpdating || isClearing}
               >
-                <DownloadCloud className={`mr-1.5 size-3.5 ${isUpdating ? "animate-pulse" : ""}`} />
-                {isUpdating ? t("geoip.status.updating") : t("geoip.status.update_now")}
+                <DownloadCloud
+                  className={`mr-1.5 size-3.5 ${isUpdating ? "animate-pulse" : ""}`}
+                />
+                {isUpdating
+                  ? t("geoip.status.updating")
+                  : t("geoip.status.update_now")}
               </Button>
             </div>
           ) : null}

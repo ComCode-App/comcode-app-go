@@ -8,7 +8,10 @@ import type { ShaderType } from "../data/shader-types";
 import { SHADER_LOADERS, type ShaderComponent } from "../lib/shader-loaders";
 
 /** Renders nothing (the static fallback underneath stays visible) if the shader throws. */
-class ShaderErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+class ShaderErrorBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
   state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
@@ -33,8 +36,16 @@ const MAX_PIXEL_COUNT = 1280 * 720 * 2;
  * Loads only the selected shader's chunk, then fades it in over whatever static layer sits below.
  * Callers decide *whether* to mount it (device budget, idle, reduced motion); see TEC-600.
  */
-export function LazyShader({ shaderType, params, paused = false, className }: LazyShaderProps) {
-  const [loaded, setLoaded] = useState<{ type: ShaderType; component: ShaderComponent } | null>(null);
+export function LazyShader({
+  shaderType,
+  params,
+  paused = false,
+  className,
+}: LazyShaderProps) {
+  const [loaded, setLoaded] = useState<{
+    type: ShaderType;
+    component: ShaderComponent;
+  } | null>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -62,7 +73,11 @@ export function LazyShader({ shaderType, params, paused = false, className }: La
   const Shader = loaded.component;
   return (
     <div
-      className={cn("absolute inset-0 transition-opacity duration-700", visible ? "opacity-100" : "opacity-0", className)}
+      className={cn(
+        "absolute inset-0 transition-opacity duration-700",
+        visible ? "opacity-100" : "opacity-0",
+        className,
+      )}
     >
       <ShaderErrorBoundary>
         <Shader

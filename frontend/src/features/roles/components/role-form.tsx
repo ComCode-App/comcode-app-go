@@ -25,6 +25,7 @@ import {
   type UpdateRoleFormValues,
 } from "@/features/roles/schemas/role-form";
 import { rolesService } from "@/features/roles/services/roles.service";
+import { slugify } from "@/lib/utils/slugify";
 import { useLocale } from "@/providers/locale-provider";
 
 type RoleFormValues = CreateRoleFormValues | UpdateRoleFormValues;
@@ -36,14 +37,6 @@ type RoleFormProps = {
   onSubmit: (values: RoleFormValues) => Promise<void> | void;
   onCancel: () => void;
 };
-
-function slugifyName(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
 
 function RoleFormFields({
   form,
@@ -85,7 +78,7 @@ function RoleFormFields({
   useEffect(() => {
     if (mode !== "create") return;
     if (form.formState.dirtyFields.slug) return;
-    const next = slugifyName(name);
+    const next = slugify(name, "_");
     if (next && form.getValues("slug") !== next) {
       form.setValue("slug", next, { shouldDirty: false });
     }
@@ -135,8 +128,13 @@ function RoleFormFields({
         <Button type="button" variant="outline" onClick={onCancel}>
           {t("form.cancel")}
         </Button>
-        <Button type="submit" disabled={isSubmitting || form.formState.isSubmitting}>
-          {mode === "create" ? t("roles.actions.create") : t("roles.actions.save")}
+        <Button
+          type="submit"
+          disabled={isSubmitting || form.formState.isSubmitting}
+        >
+          {mode === "create"
+            ? t("roles.actions.create")
+            : t("roles.actions.save")}
         </Button>
       </FormActions>
     </FormLayout>

@@ -1,21 +1,21 @@
 package usecase
 
 import (
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/searchengine"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/searchengine"
 	"io"
-	"mime"
-	"path/filepath"
 	"regexp"
 	"strings"
 
-	"github.com/google/uuid"
 	categoriesRepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/categories/repository"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/products/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/products/repository"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/storage"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
+	"github.com/google/uuid"
 )
 
 var (
@@ -178,15 +178,24 @@ func (s *Service) Upload3DModel(ctx context.Context, id uuid.UUID, file io.Reade
 		return nil, ErrNotFound
 	}
 
-	ext := strings.ToLower(filepath.Ext(filename))
-	if ext == "" {
-		if isUSDZ {
-			ext = ".usdz"
-		} else {
-			ext = ".glb"
-		}
+	// Only binary glTF (GLB) and USDZ are stored; the format comes from the
+	// bytes and the content type is server-chosen (TEC-1097).
+	head := make([]byte, 4)
+	n, _ := io.ReadFull(file, head)
+	head = head[:n]
+	var ext, modelType string
+	switch {
+	case bytes.Equal(head, []byte("glTF")):
+		ext, modelType = "glb", "model/gltf-binary"
+	case bytes.Equal(head, []byte("PK\x03\x04")):
+		ext, modelType = "usdz", "model/vnd.usdz+zip"
+	default:
+		return nil, fmt.Errorf("%w: 3D models must be GLB or USDZ", upload.ErrUnsupportedType)
 	}
-	ext = strings.TrimPrefix(ext, ".")
+	if isUSDZ && ext != "usdz" {
+		return nil, fmt.Errorf("%w: format=usdz needs a USDZ file", upload.ErrUnsupportedType)
+	}
+	file = io.MultiReader(bytes.NewReader(head), file)
 
 	modelID := uuid.New().String()[:8]
 	key := storage.Product3DModelObjectKey(prod.Slug, modelID, ext)
@@ -196,7 +205,7 @@ func (s *Service) Upload3DModel(ctx context.Context, id uuid.UUID, file io.Reade
 		err = s.storage.Upload(ctx, storage.File{
 			Body:        file,
 			Size:        size,
-			ContentType: contentType,
+			ContentType: modelType,
 			Filename:    filename,
 		}, key)
 		if err != nil {
@@ -229,16 +238,13 @@ func (s *Service) UploadImage(ctx context.Context, id uuid.UUID, file io.Reader,
 		return nil, ErrNotFound
 	}
 
-	ext := strings.ToLower(filepath.Ext(filename))
-	if ext == "" {
-		exts, _ := mime.ExtensionsByType(contentType)
-		if len(exts) > 0 {
-			ext = exts[0]
-		} else {
-			ext = ".png"
-		}
+	// Type and extension come from the bytes, never from the client
+	// filename or Content-Type (TEC-1097).
+	sniffed, err := upload.SniffImage(file)
+	if err != nil {
+		return nil, err
 	}
-	ext = strings.TrimPrefix(ext, ".")
+	ext := sniffed.Ext
 
 	imgID := uuid.New().String()[:8]
 	key := storage.ProductImageObjectKey(prod.Slug, imgID, ext)
@@ -246,9 +252,9 @@ func (s *Service) UploadImage(ctx context.Context, id uuid.UUID, file io.Reader,
 	var imageURL string
 	if s.storage != nil {
 		err = s.storage.Upload(ctx, storage.File{
-			Body:        file,
+			Body:        sniffed.Body,
 			Size:        size,
-			ContentType: contentType,
+			ContentType: sniffed.ContentType,
 			Filename:    filename,
 		}, key)
 		if err != nil {

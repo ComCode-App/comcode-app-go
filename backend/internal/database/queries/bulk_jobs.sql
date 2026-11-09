@@ -4,18 +4,22 @@ VALUES (sqlc.arg(resource), sqlc.arg(action), sqlc.arg(actor_id), sqlc.arg(local
         sqlc.arg(target_json), sqlc.narg(account_id), sqlc.arg(params_json))
 RETURNING *;
 
+-- account-lint: cross-account usecase checks JobAccess.allows (account + actor) or platform admin/actor
 -- name: GetBulkJobByUUID :one
 SELECT * FROM bulk_jobs WHERE uuid = $1;
 
+-- account-lint: cross-account bulk worker: job id from the queue
 -- name: GetBulkJobByID :one
 SELECT * FROM bulk_jobs WHERE id = $1;
 
+-- account-lint: cross-account bulk worker: job id from the queue
 -- name: MarkBulkJobProcessing :one
 UPDATE bulk_jobs
 SET status = 'processing'
 WHERE id = $1 AND status = 'queued'
 RETURNING *;
 
+-- account-lint: cross-account bulk worker: job id from the queue
 -- name: MarkBulkJobCompleted :one
 UPDATE bulk_jobs
 SET status = 'completed',
@@ -25,6 +29,7 @@ SET status = 'completed',
 WHERE id = $1
 RETURNING *;
 
+-- account-lint: cross-account bulk worker: job id from the queue
 -- name: MarkBulkJobFailed :one
 UPDATE bulk_jobs
 SET status = 'failed',
@@ -32,26 +37,31 @@ SET status = 'failed',
 WHERE id = $1
 RETURNING *;
 
+-- account-lint: cross-account bulk rollback: job already checked by JobAccess.allows
 -- name: MarkBulkJobRolledBack :one
 UPDATE bulk_jobs
 SET status = $2
 WHERE id = $1 AND status = 'completed'
 RETURNING *;
 
+-- account-lint: cross-account platform /v1/platform/bulk: the caller's own jobs (actor_id)
 -- name: ListBulkJobsForActor :many
 SELECT * FROM bulk_jobs
 WHERE actor_id = $1
 ORDER BY created_at DESC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
+-- account-lint: cross-account platform /v1/platform/bulk: the caller's own jobs (actor_id)
 -- name: CountBulkJobsForActor :one
 SELECT COUNT(*)::bigint FROM bulk_jobs WHERE actor_id = $1;
 
+-- account-lint: cross-account platform /v1/platform/bulk admin list
 -- name: ListAllBulkJobs :many
 SELECT * FROM bulk_jobs
 ORDER BY created_at DESC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
+-- account-lint: cross-account platform /v1/platform/bulk admin list
 -- name: CountAllBulkJobs :one
 SELECT COUNT(*)::bigint FROM bulk_jobs;
 

@@ -4,7 +4,11 @@ import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import {
   SidebarMenuButton,
@@ -102,7 +106,9 @@ function NavSidebarBranchItem({
   const title = t(item.titleKey);
   const Icon = item.icon;
   const hasActive = item.items.some((child) =>
-    child.href ? isNavHrefActive(pathname, child.href, homeHref, child.exact) : false,
+    child.href
+      ? isNavHrefActive(pathname, child.href, homeHref, child.exact)
+      : false,
   );
   const [open, onOpenChange] = useNavGroupOpen(
     catalogId,

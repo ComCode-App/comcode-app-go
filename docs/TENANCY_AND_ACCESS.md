@@ -75,7 +75,7 @@ Platform routes (`/v1/platform/*`) are not account-scoped; they use dedicated `*
 | GET | `/v1/account` | Active account detail |
 | PATCH | `/v1/account` | Rename (owner/admin, company accounts) |
 | GET | `/v1/account/members` | Members of the active account |
-| POST | `/v1/account/members` | Add existing user by email (owner/admin) |
+| POST | `/v1/account/members` | Add a user with a verified email (owner/admin); other addresses get an email invite (202) |
 | PATCH | `/v1/account/members/{user_uuid}` | Change role |
 | DELETE | `/v1/account/members/{user_uuid}` | Remove member / leave |
 | — | `/v1/platform/accounts/*` | Platform CRUD for company accounts + members; replaces `/v1/platform/companies/*` |

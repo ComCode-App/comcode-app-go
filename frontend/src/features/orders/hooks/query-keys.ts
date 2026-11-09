@@ -10,6 +10,7 @@ export const ordersQueryKeys = {
   kpis: () => [...ordersQueryKeys.all, "kpis"] as const,
   details: () => [...ordersQueryKeys.all, "detail"] as const,
   detail: (uuid: string) => [...ordersQueryKeys.details(), uuid] as const,
-  refunds: (uuid: string) => [...ordersQueryKeys.detail(uuid), "refunds"] as const,
+  refunds: (uuid: string) =>
+    [...ordersQueryKeys.detail(uuid), "refunds"] as const,
   meta: () => [...ordersQueryKeys.all, "meta"] as const,
 };

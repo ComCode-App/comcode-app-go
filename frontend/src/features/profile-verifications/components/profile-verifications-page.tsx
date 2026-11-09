@@ -1,7 +1,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BadgeCheck, Check, ExternalLink, RotateCcw, Search, X } from "lucide-react";
+import {
+  BadgeCheck,
+  Check,
+  ExternalLink,
+  RotateCcw,
+  Search,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { EntityPage } from "@/components/entity";
@@ -35,23 +42,37 @@ import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
 const PAGE_SIZE = 20;
-const FILTERS: (ProfileVerificationRequestStatus | "all")[] = ["pending", "approved", "rejected", "revoked", "all"];
+const FILTERS: (ProfileVerificationRequestStatus | "all")[] = [
+  "pending",
+  "approved",
+  "rejected",
+  "revoked",
+  "all",
+];
 
 const STATUS_STYLE: Record<ProfileVerificationRequestStatus, string> = {
-  pending: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-  approved: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  rejected: "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300",
+  pending:
+    "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  approved:
+    "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  rejected:
+    "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300",
   revoked: "border-border text-muted-foreground",
   cancelled: "border-border text-muted-foreground",
 };
 
-type ReasonAction = { kind: "reject" | "revoke"; item: ProfileVerificationReview };
+type ReasonAction = {
+  kind: "reject" | "revoke";
+  item: ProfileVerificationReview;
+};
 
 /** Platform review queue for verified-badge requests (TEC-549). Pending first, oldest first. */
 export function ProfileVerificationsPage() {
   const { t, locale } = useLocale();
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<ProfileVerificationRequestStatus | "all">("pending");
+  const [filter, setFilter] = useState<
+    ProfileVerificationRequestStatus | "all"
+  >("pending");
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
   const [offset, setOffset] = useState(0);
@@ -67,7 +88,12 @@ export function ProfileVerificationsPage() {
   }, [search]);
 
   const params = useMemo(
-    () => ({ limit: PAGE_SIZE, offset, q: q || undefined, status: filter === "all" ? undefined : filter }),
+    () => ({
+      limit: PAGE_SIZE,
+      offset,
+      q: q || undefined,
+      status: filter === "all" ? undefined : filter,
+    }),
     [filter, offset, q],
   );
   const { data, isLoading } = useQuery({
@@ -78,10 +104,13 @@ export function ProfileVerificationsPage() {
   const total = data?.total ?? 0;
 
   const done = (message: string) => {
-    void queryClient.invalidateQueries({ queryKey: profileVerificationsKeys.all });
+    void queryClient.invalidateQueries({
+      queryKey: profileVerificationsKeys.all,
+    });
     appToast.success(message);
   };
-  const onError = (err: unknown) => appToast.error(isApiError(err) ? err.message : t("common.error_generic"));
+  const onError = (err: unknown) =>
+    appToast.error(isApiError(err) ? err.message : t("common.error_generic"));
 
   const approve = useMutation({
     mutationFn: (uuid: string) => profileVerificationsService.approve(uuid),
@@ -94,7 +123,13 @@ export function ProfileVerificationsPage() {
         ? profileVerificationsService.reject(item.uuid, reason.trim())
         : profileVerificationsService.revoke(item.uuid, reason.trim()),
     onSuccess: (_, { kind }) => {
-      done(t(kind === "reject" ? "profiles.review.rejected_toast" : "profiles.review.revoked_toast"));
+      done(
+        t(
+          kind === "reject"
+            ? "profiles.review.rejected_toast"
+            : "profiles.review.revoked_toast",
+        ),
+      );
       setReasonAction(null);
       setReason("");
     },
@@ -103,7 +138,10 @@ export function ProfileVerificationsPage() {
 
   const fmt = (iso?: string | null) =>
     iso
-      ? new Date(iso).toLocaleString(locale === "tr" ? "tr-TR" : "en-GB", { dateStyle: "medium", timeStyle: "short" })
+      ? new Date(iso).toLocaleString(locale === "tr" ? "tr-TR" : "en-GB", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
       : "";
 
   return (
@@ -128,7 +166,10 @@ export function ProfileVerificationsPage() {
               className="h-9 pl-9 text-sm"
             />
           </div>
-          <div className="bg-muted/70 flex flex-wrap items-center rounded-lg border p-0.5" role="group">
+          <div
+            className="bg-muted/70 flex flex-wrap items-center rounded-lg border p-0.5"
+            role="group"
+          >
             {FILTERS.map((value) => (
               <Button
                 key={value}
@@ -148,7 +189,9 @@ export function ProfileVerificationsPage() {
         </div>
 
         {isLoading ? (
-          <p className="text-muted-foreground py-10 text-center text-sm">{t("common.loading")}</p>
+          <p className="text-muted-foreground py-10 text-center text-sm">
+            {t("common.loading")}
+          </p>
         ) : items.length === 0 ? (
           <Card>
             <CardContent className="text-muted-foreground py-12 text-center text-sm">
@@ -159,20 +202,31 @@ export function ProfileVerificationsPage() {
         ) : (
           <ul className="space-y-3">
             {items.map((item) => {
-              const name = `${item.profile.first_name} ${item.profile.last_name}`.trim() || item.profile.username;
+              const name =
+                `${item.profile.first_name} ${item.profile.last_name}`.trim() ||
+                item.profile.username;
               return (
                 <li key={item.uuid}>
                   <Card className="shadow-sm">
                     <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start">
                       <Avatar className="size-12 shrink-0 rounded-xl">
-                        {item.profile.avatar_url ? <AvatarImage src={item.profile.avatar_url} alt="" /> : null}
-                        <AvatarFallback className="rounded-xl">{name.slice(0, 1).toUpperCase() || "?"}</AvatarFallback>
+                        {item.profile.avatar_url ? (
+                          <AvatarImage src={item.profile.avatar_url} alt="" />
+                        ) : null}
+                        <AvatarFallback className="rounded-xl">
+                          {name.slice(0, 1).toUpperCase() || "?"}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1 space-y-1.5">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-semibold">{name}</span>
-                          {item.status === "approved" ? <VerifiedBadge /> : null}
-                          <Badge variant="outline" className={cn("text-xs", STATUS_STYLE[item.status])}>
+                          {item.status === "approved" ? (
+                            <VerifiedBadge />
+                          ) : null}
+                          <Badge
+                            variant="outline"
+                            className={cn("text-xs", STATUS_STYLE[item.status])}
+                          >
                             {t(`profiles.review.status.${item.status}`)}
                           </Badge>
                           {item.origin === "re_review" ? (
@@ -182,28 +236,41 @@ export function ProfileVerificationsPage() {
                           ) : null}
                         </div>
                         <p className="text-muted-foreground text-sm">
-                          {[item.profile.title, item.profile.company_name].filter(Boolean).join(" · ") ||
+                          {[item.profile.title, item.profile.company_name]
+                            .filter(Boolean)
+                            .join(" · ") ||
                             t("profiles.review.no_organization")}
                         </p>
                         <p className="text-muted-foreground text-xs">
                           {t("profiles.review.account", {
                             name: item.account.name,
-                            type: t(`profiles.review.account_type.${item.account.type}`),
+                            type: t(
+                              `profiles.review.account_type.${item.account.type}`,
+                            ),
                           })}
-                          {item.requested_by_email ? ` · ${item.requested_by_email}` : ""} · {fmt(item.requested_at)}
+                          {item.requested_by_email
+                            ? ` · ${item.requested_by_email}`
+                            : ""}{" "}
+                          · {fmt(item.requested_at)}
                         </p>
                         {item.note ? (
-                          <p className="bg-muted/40 rounded-md border px-2.5 py-1.5 text-sm">{item.note}</p>
+                          <p className="bg-muted/40 rounded-md border px-2.5 py-1.5 text-sm">
+                            {item.note}
+                          </p>
                         ) : null}
                         {item.review_reason ? (
                           <p className="text-sm">
-                            <span className="font-medium">{t("profiles.review.reason")}: </span>
+                            <span className="font-medium">
+                              {t("profiles.review.reason")}:{" "}
+                            </span>
                             {item.review_reason}
                           </p>
                         ) : null}
                         {item.revoke_reason ? (
                           <p className="text-sm">
-                            <span className="font-medium">{t("profiles.review.revoke_reason")}: </span>
+                            <span className="font-medium">
+                              {t("profiles.review.revoke_reason")}:{" "}
+                            </span>
                             {item.revoke_reason}
                           </p>
                         ) : null}
@@ -211,7 +278,11 @@ export function ProfileVerificationsPage() {
                       <div className="flex shrink-0 flex-wrap items-center gap-2">
                         {item.profile.username ? (
                           <Button asChild size="sm" variant="ghost">
-                            <a href={`/${item.profile.username}`} target="_blank" rel="noreferrer">
+                            <a
+                              href={`/${item.profile.username}`}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
                               <ExternalLink className="mr-1.5 size-4" />
                               {t("profiles.review.open_page")}
                             </a>
@@ -227,14 +298,26 @@ export function ProfileVerificationsPage() {
                               <Check className="mr-1.5 size-4" />
                               {t("profiles.review.approve")}
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => setReasonAction({ kind: "reject", item })}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setReasonAction({ kind: "reject", item })
+                              }
+                            >
                               <X className="mr-1.5 size-4" />
                               {t("profiles.review.reject")}
                             </Button>
                           </>
                         ) : null}
                         {item.status === "approved" ? (
-                          <Button size="sm" variant="outline" onClick={() => setReasonAction({ kind: "revoke", item })}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setReasonAction({ kind: "revoke", item })
+                            }
+                          >
                             <RotateCcw className="mr-1.5 size-4" />
                             {t("profiles.review.revoke")}
                           </Button>
@@ -257,10 +340,20 @@ export function ProfileVerificationsPage() {
                 total,
               })}
             </span>
-            <Button size="sm" variant="outline" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={offset === 0}
+              onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+            >
               {t("table.go_prev")}
             </Button>
-            <Button size="sm" variant="outline" disabled={offset + PAGE_SIZE >= total} onClick={() => setOffset(offset + PAGE_SIZE)}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={offset + PAGE_SIZE >= total}
+              onClick={() => setOffset(offset + PAGE_SIZE)}
+            >
               {t("table.go_next")}
             </Button>
           </div>
@@ -279,14 +372,24 @@ export function ProfileVerificationsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {t(reasonAction?.kind === "revoke" ? "profiles.review.revoke_title" : "profiles.review.reject_title")}
+              {t(
+                reasonAction?.kind === "revoke"
+                  ? "profiles.review.revoke_title"
+                  : "profiles.review.reject_title",
+              )}
             </DialogTitle>
             <DialogDescription>
-              {t(reasonAction?.kind === "revoke" ? "profiles.review.revoke_desc" : "profiles.review.reject_desc")}
+              {t(
+                reasonAction?.kind === "revoke"
+                  ? "profiles.review.revoke_desc"
+                  : "profiles.review.reject_desc",
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="verification-reason">{t("profiles.review.reason")}</Label>
+            <Label htmlFor="verification-reason">
+              {t("profiles.review.reason")}
+            </Label>
             <Textarea
               id="verification-reason"
               value={reason}
@@ -304,7 +407,11 @@ export function ProfileVerificationsPage() {
               disabled={!reason.trim() || withReason.isPending}
               onClick={() => reasonAction && withReason.mutate(reasonAction)}
             >
-              {t(reasonAction?.kind === "revoke" ? "profiles.review.revoke" : "profiles.review.reject")}
+              {t(
+                reasonAction?.kind === "revoke"
+                  ? "profiles.review.revoke"
+                  : "profiles.review.reject",
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

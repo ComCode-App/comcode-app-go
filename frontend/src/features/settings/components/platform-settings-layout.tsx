@@ -8,7 +8,7 @@ import {
 
 export function PlatformSettingsLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-6 min-h-[calc(100svh-8.5rem)]">
+    <div className="flex min-h-[calc(100svh-8.5rem)] flex-col gap-4 lg:flex-row lg:items-start lg:gap-6">
       {/* Mobile Top Navigation with Quick Pills Carousel & Drawer */}
       <SettingsMobileNav />
 

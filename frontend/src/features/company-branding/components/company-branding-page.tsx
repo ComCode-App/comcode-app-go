@@ -5,7 +5,11 @@ import { ExternalLink, FileText, Trash2, Upload } from "lucide-react";
 import { type FormEvent, useRef, useState } from "react";
 
 import { Loading } from "@/components/common/loading";
-import { EntityPage, EntitySectionCard, EntityUnavailable } from "@/components/entity";
+import {
+  EntityPage,
+  EntitySectionCard,
+  EntityUnavailable,
+} from "@/components/entity";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,8 +27,13 @@ import {
   PremiumNotice,
   useDesignPremium,
 } from "@/features/entitlements/components/premium-lock";
-import { LAYOUT_MODES, THEME_IDS, isPremiumTheme } from "@/features/public-profile/lib/themes";
+import {
+  LAYOUT_MODES,
+  THEME_IDS,
+  isPremiumTheme,
+} from "@/features/public-profile/lib/themes";
 import { ApiError } from "@/lib/api/errors";
+import { uploadErrorKey } from "@/lib/api/upload-errors";
 import { assertServiceMediaURL } from "@/lib/media/urls";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
@@ -43,6 +52,8 @@ import {
 
 const NONE = "__none__";
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+// Logos may also be GIF or SVG; the API rejects SVGs with active content (TEC-1097).
+const LOGO_TYPES = [...IMAGE_TYPES, "image/gif", "image/svg+xml"];
 const MAX_IMAGE_BYTES = 5 << 20;
 const MAX_DOCUMENT_BYTES = 10 << 20;
 const COLOR_RE = /^#[0-9a-f]{6}$/;
@@ -50,11 +61,16 @@ const COLOR_RE = /^#[0-9a-f]{6}$/;
 type Translate = ReturnType<typeof useLocale>["t"];
 
 function errorMessage(err: unknown, t: Translate) {
+  const uploadKey = uploadErrorKey(err);
+  if (uploadKey) return t(uploadKey);
   if (err instanceof ApiError) {
     if (err.status === 403) return t("company_branding.errors.forbidden");
-    if (err.status === 409 && err.details.length) return t("company_branding.errors.in_use");
+    if (err.status === 409 && err.details.length)
+      return t("company_branding.errors.in_use");
   }
-  return err instanceof Error && err.message ? err.message : t("common.error_generic");
+  return err instanceof Error && err.message
+    ? err.message
+    : t("common.error_generic");
 }
 
 function formatSize(bytes: number) {
@@ -78,14 +94,20 @@ export function CompanyBrandingPage() {
   const access = useCompanyBrandingAccess();
 
   return (
-    <EntityPage title={t("company_branding.title")} description={t("company_branding.description")}>
+    <EntityPage
+      title={t("company_branding.title")}
+      description={t("company_branding.description")}
+    >
       {!access.isCompany ? (
         <EntityUnavailable
           title={t("company_branding.unavailable.personal_title")}
           description={t("company_branding.unavailable.personal_description")}
         />
       ) : !access.canRead ? (
-        <EntityUnavailable title={t("common.error_forbidden")} description={t("company_branding.errors.forbidden")} />
+        <EntityUnavailable
+          title={t("common.error_forbidden")}
+          description={t("company_branding.errors.forbidden")}
+        />
       ) : (
         <div className="space-y-6">
           <BrandingCard canWrite={access.canWrite} />
@@ -147,7 +169,13 @@ function BrandingCard({ canWrite }: { canWrite: boolean }) {
   );
 }
 
-function BrandingFormCard({ branding, canWrite }: { branding: CompanyBranding; canWrite: boolean }) {
+function BrandingFormCard({
+  branding,
+  canWrite,
+}: {
+  branding: CompanyBranding;
+  canWrite: boolean;
+}) {
   const { t } = useLocale();
   const queryClient = useQueryClient();
   const library = useLibrary();
@@ -163,7 +191,9 @@ function BrandingFormCard({ branding, canWrite }: { branding: CompanyBranding; c
     onError: (err) => appToast.error(errorMessage(err, t)),
   });
 
-  const images = (library.data?.items ?? []).filter((m) => m.kind !== "document");
+  const images = (library.data?.items ?? []).filter(
+    (m) => m.kind !== "document",
+  );
   const set = (patch: Partial<BrandingForm>) => setForm({ ...form, ...patch });
   const color = form.color.trim().toLowerCase();
   const colorInvalid = color !== "" && !COLOR_RE.test(color);
@@ -185,7 +215,12 @@ function BrandingFormCard({ branding, canWrite }: { branding: CompanyBranding; c
     });
   };
 
-  const imageSelect = (id: string, label: string, value: string, onChange: (v: string) => void) => {
+  const imageSelect = (
+    id: string,
+    label: string,
+    value: string,
+    onChange: (v: string) => void,
+  ) => {
     const selected = images.find((m) => m.uuid === value);
     return (
       <div className="grid gap-1.5">
@@ -193,14 +228,20 @@ function BrandingFormCard({ branding, canWrite }: { branding: CompanyBranding; c
         <div className="flex items-center gap-3">
           {selected ? (
             // eslint-disable-next-line @next/next/no-img-element -- API-owned media URL, any host
-            <img src={assertServiceMediaURL(selected.url) ?? undefined} alt="" className="size-10 rounded border object-contain" />
+            <img
+              src={assertServiceMediaURL(selected.url) ?? undefined}
+              alt=""
+              className="size-10 rounded border object-contain"
+            />
           ) : null}
           <Select value={value} onValueChange={onChange} disabled={disabled}>
             <SelectTrigger id={id} className="w-full sm:w-72">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={NONE}>{t("company_branding.branding.none")}</SelectItem>
+              <SelectItem value={NONE}>
+                {t("company_branding.branding.none")}
+              </SelectItem>
               {images.map((m) => (
                 <SelectItem key={m.uuid} value={m.uuid}>
                   {m.name}
@@ -216,20 +257,34 @@ function BrandingFormCard({ branding, canWrite }: { branding: CompanyBranding; c
   return (
     <EntitySectionCard title={t("company_branding.branding.title")}>
       <form onSubmit={onSubmit} className="space-y-5">
-        <p className="text-muted-foreground text-sm">{t("company_branding.branding.hint")}</p>
+        <p className="text-muted-foreground text-sm">
+          {t("company_branding.branding.hint")}
+        </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-1.5">
-            <Label htmlFor="branding-theme">{t("company_branding.branding.theme")}</Label>
-            <Select value={form.theme} onValueChange={(v) => set({ theme: v })} disabled={disabled}>
+            <Label htmlFor="branding-theme">
+              {t("company_branding.branding.theme")}
+            </Label>
+            <Select
+              value={form.theme}
+              onValueChange={(v) => set({ theme: v })}
+              disabled={disabled}
+            >
               <SelectTrigger id="branding-theme" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>{t("company_branding.branding.theme_none")}</SelectItem>
+                <SelectItem value={NONE}>
+                  {t("company_branding.branding.theme_none")}
+                </SelectItem>
                 {THEME_IDS.map((id) => {
                   const locked = !allowPremium && isPremiumTheme(id);
                   return (
-                    <SelectItem key={id} value={id} disabled={locked && id !== branding.theme}>
+                    <SelectItem
+                      key={id}
+                      value={id}
+                      disabled={locked && id !== branding.theme}
+                    >
                       {t(`profiles.public_page.theme_name.${id}`)}
                       {locked ? <PremiumLockIcon /> : null}
                     </SelectItem>
@@ -240,13 +295,21 @@ function BrandingFormCard({ branding, canWrite }: { branding: CompanyBranding; c
             {!allowPremium ? <PremiumNotice /> : null}
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor="branding-layout">{t("company_branding.branding.layout")}</Label>
-            <Select value={form.layout} onValueChange={(v) => set({ layout: v })} disabled={disabled}>
+            <Label htmlFor="branding-layout">
+              {t("company_branding.branding.layout")}
+            </Label>
+            <Select
+              value={form.layout}
+              onValueChange={(v) => set({ layout: v })}
+              disabled={disabled}
+            >
               <SelectTrigger id="branding-layout" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>{t("company_branding.branding.layout_theme")}</SelectItem>
+                <SelectItem value={NONE}>
+                  {t("company_branding.branding.layout_theme")}
+                </SelectItem>
                 {LAYOUT_MODES.map((id) => (
                   <SelectItem key={id} value={id}>
                     {t(`profiles.public_page.layout_name.${id}`)}
@@ -258,7 +321,9 @@ function BrandingFormCard({ branding, canWrite }: { branding: CompanyBranding; c
         </div>
 
         <div className="grid gap-1.5">
-          <Label htmlFor="branding-color">{t("company_branding.branding.primary_color")}</Label>
+          <Label htmlFor="branding-color">
+            {t("company_branding.branding.primary_color")}
+          </Label>
           <div className="flex items-center gap-2">
             <input
               type="color"
@@ -279,29 +344,59 @@ function BrandingFormCard({ branding, canWrite }: { branding: CompanyBranding; c
               disabled={disabled}
             />
             {form.color ? (
-              <Button type="button" variant="ghost" size="sm" onClick={() => set({ color: "" })} disabled={disabled}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => set({ color: "" })}
+                disabled={disabled}
+              >
                 {t("company_branding.branding.clear")}
               </Button>
             ) : null}
           </div>
-          <p className={colorInvalid ? "text-destructive text-xs" : "text-muted-foreground text-xs"}>
-            {colorInvalid ? t("company_branding.branding.color_invalid") : t("company_branding.branding.color_hint")}
+          <p
+            className={
+              colorInvalid
+                ? "text-destructive text-xs"
+                : "text-muted-foreground text-xs"
+            }
+          >
+            {colorInvalid
+              ? t("company_branding.branding.color_invalid")
+              : t("company_branding.branding.color_hint")}
           </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {imageSelect("branding-logo", t("company_branding.branding.logo"), form.logo, (v) => set({ logo: v }))}
-          {imageSelect("branding-cover", t("company_branding.branding.cover"), form.cover, (v) => set({ cover: v }))}
+          {imageSelect(
+            "branding-logo",
+            t("company_branding.branding.logo"),
+            form.logo,
+            (v) => set({ logo: v }),
+          )}
+          {imageSelect(
+            "branding-cover",
+            t("company_branding.branding.cover"),
+            form.cover,
+            (v) => set({ cover: v }),
+          )}
         </div>
         {!images.length ? (
-          <p className="text-muted-foreground text-xs">{t("company_branding.branding.no_images")}</p>
+          <p className="text-muted-foreground text-xs">
+            {t("company_branding.branding.no_images")}
+          </p>
         ) : null}
 
         <div className="flex items-start justify-between gap-4 rounded-md border p-3">
           <div>
-            <Label htmlFor="branding-locked">{t("company_branding.branding.locked")}</Label>
+            <Label htmlFor="branding-locked">
+              {t("company_branding.branding.locked")}
+            </Label>
             <p className="text-muted-foreground mt-1 text-xs">
-              {form.locked ? t("company_branding.branding.locked_on") : t("company_branding.branding.locked_off")}
+              {form.locked
+                ? t("company_branding.branding.locked_on")
+                : t("company_branding.branding.locked_off")}
             </p>
           </div>
           <Switch
@@ -317,7 +412,9 @@ function BrandingFormCard({ branding, canWrite }: { branding: CompanyBranding; c
             {t("company_branding.branding.save")}
           </Button>
         ) : (
-          <p className="text-muted-foreground text-xs">{t("company_branding.read_only")}</p>
+          <p className="text-muted-foreground text-xs">
+            {t("company_branding.read_only")}
+          </p>
         )}
       </form>
     </EntitySectionCard>
@@ -333,7 +430,8 @@ function MediaLibraryCard({ canWrite }: { canWrite: boolean }) {
   const [kind, setKind] = useState<CompanyMediaKind>("logo");
   const [name, setName] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const invalidate = () => void queryClient.invalidateQueries({ queryKey: companyBrandingKeys.all });
+  const invalidate = () =>
+    void queryClient.invalidateQueries({ queryKey: companyBrandingKeys.all });
 
   const upload = useMutation({
     mutationFn: companyBrandingService.uploadMedia,
@@ -358,12 +456,17 @@ function MediaLibraryCard({ canWrite }: { canWrite: boolean }) {
   const fileError = (() => {
     if (!file) return null;
     if (kind === "document") {
-      if (file.type !== "application/pdf") return t("company_branding.library.invalid_document");
-      if (file.size > MAX_DOCUMENT_BYTES) return t("company_branding.library.document_too_large");
+      if (file.type !== "application/pdf")
+        return t("company_branding.library.invalid_document");
+      if (file.size > MAX_DOCUMENT_BYTES)
+        return t("company_branding.library.document_too_large");
       return null;
     }
-    if (!IMAGE_TYPES.includes(file.type)) return t("company_branding.library.invalid_image");
-    if (file.size > MAX_IMAGE_BYTES) return t("company_branding.library.image_too_large");
+    const allowed = kind === "logo" ? LOGO_TYPES : IMAGE_TYPES;
+    if (!allowed.includes(file.type))
+      return t("company_branding.library.invalid_image");
+    if (file.size > MAX_IMAGE_BYTES)
+      return t("company_branding.library.image_too_large");
     return null;
   })();
 
@@ -376,7 +479,9 @@ function MediaLibraryCard({ canWrite }: { canWrite: boolean }) {
   const confirmRemove = async (item: CompanyMedia) => {
     const confirmed = await confirmDelete({
       title: t("company_branding.library.delete_title"),
-      description: t("company_branding.library.delete_description", { name: item.name }),
+      description: t("company_branding.library.delete_description", {
+        name: item.name,
+      }),
     });
     if (confirmed) remove.mutate(item.uuid);
   };
@@ -387,10 +492,18 @@ function MediaLibraryCard({ canWrite }: { canWrite: boolean }) {
     <EntitySectionCard title={t("company_branding.library.title")}>
       <div className="space-y-5">
         {canWrite ? (
-          <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-[10rem_1fr_1fr_auto] sm:items-end">
+          <form
+            onSubmit={onSubmit}
+            className="grid gap-3 sm:grid-cols-[10rem_1fr_1fr_auto] sm:items-end"
+          >
             <div className="grid gap-1.5">
-              <Label htmlFor="media-kind">{t("company_branding.library.kind")}</Label>
-              <Select value={kind} onValueChange={(v) => setKind(v as CompanyMediaKind)}>
+              <Label htmlFor="media-kind">
+                {t("company_branding.library.kind")}
+              </Label>
+              <Select
+                value={kind}
+                onValueChange={(v) => setKind(v as CompanyMediaKind)}
+              >
                 <SelectTrigger id="media-kind" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -404,17 +517,25 @@ function MediaLibraryCard({ canWrite }: { canWrite: boolean }) {
               </Select>
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="media-file">{t("company_branding.library.file")}</Label>
+              <Label htmlFor="media-file">
+                {t("company_branding.library.file")}
+              </Label>
               <Input
                 id="media-file"
                 ref={fileRef}
                 type="file"
-                accept={kind === "document" ? "application/pdf" : IMAGE_TYPES.join(",")}
+                accept={
+                  kind === "document"
+                    ? "application/pdf"
+                    : (kind === "logo" ? LOGO_TYPES : IMAGE_TYPES).join(",")
+                }
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="media-name">{t("company_branding.library.name")}</Label>
+              <Label htmlFor="media-name">
+                {t("company_branding.library.name")}
+              </Label>
               <Input
                 id="media-name"
                 value={name}
@@ -423,11 +544,20 @@ function MediaLibraryCard({ canWrite }: { canWrite: boolean }) {
                 placeholder={file?.name ?? ""}
               />
             </div>
-            <Button type="submit" disabled={!file || Boolean(fileError) || upload.isPending}>
+            <Button
+              type="submit"
+              disabled={!file || Boolean(fileError) || upload.isPending}
+            >
               <Upload className="size-4" />
               {t("company_branding.library.upload")}
             </Button>
-            <p className={fileError ? "text-destructive text-xs sm:col-span-4" : "text-muted-foreground text-xs sm:col-span-4"}>
+            <p
+              className={
+                fileError
+                  ? "text-destructive text-xs sm:col-span-4"
+                  : "text-muted-foreground text-xs sm:col-span-4"
+              }
+            >
               {fileError ?? t("company_branding.library.upload_hint")}
             </p>
           </form>
@@ -436,27 +566,42 @@ function MediaLibraryCard({ canWrite }: { canWrite: boolean }) {
         {library.isLoading ? (
           <Loading />
         ) : !items.length ? (
-          <p className="text-muted-foreground text-sm">{t("company_branding.library.empty")}</p>
+          <p className="text-muted-foreground text-sm">
+            {t("company_branding.library.empty")}
+          </p>
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((item) => {
               const url = assertServiceMediaURL(item.url) ?? undefined;
               return (
-                <li key={item.uuid} className="flex gap-3 rounded-md border p-3">
+                <li
+                  key={item.uuid}
+                  className="flex gap-3 rounded-md border p-3"
+                >
                   <div className="bg-muted flex size-16 shrink-0 items-center justify-center overflow-hidden rounded">
                     {item.kind === "document" ? (
                       <FileText className="text-muted-foreground size-6" />
                     ) : (
                       // eslint-disable-next-line @next/next/no-img-element -- API-owned media URL, any host
-                      <img src={url} alt="" className="h-full w-full object-contain" loading="lazy" />
+                      <img
+                        src={url}
+                        alt=""
+                        className="h-full w-full object-contain"
+                        loading="lazy"
+                      />
                     )}
                   </div>
                   <div className="min-w-0 flex-1 space-y-1">
-                    <p className="truncate text-sm font-medium" title={item.name}>
+                    <p
+                      className="truncate text-sm font-medium"
+                      title={item.name}
+                    >
                       {item.name}
                     </p>
                     <div className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
-                      <Badge variant="secondary">{t(`company_branding.kind.${item.kind}`)}</Badge>
+                      <Badge variant="secondary">
+                        {t(`company_branding.kind.${item.kind}`)}
+                      </Badge>
                       <span>{formatSize(item.size_bytes)}</span>
                     </div>
                     <p className="text-muted-foreground text-xs">
@@ -478,7 +623,11 @@ function MediaLibraryCard({ canWrite }: { canWrite: boolean }) {
                           size="sm"
                           onClick={() => void confirmRemove(item)}
                           disabled={remove.isPending || item.usage.length > 0}
-                          title={item.usage.length ? t("company_branding.errors.in_use") : undefined}
+                          title={
+                            item.usage.length
+                              ? t("company_branding.errors.in_use")
+                              : undefined
+                          }
                         >
                           <Trash2 className="size-4" />
                           {t("common.delete")}

@@ -37,7 +37,10 @@ import {
 } from "@/components/ui/tooltip";
 import { settingsNav } from "@/config/nav";
 import { routes } from "@/config/routes";
-import { useSystemInfo, useSystemPing } from "@/features/settings/hooks/use-system-info";
+import {
+  useSystemInfo,
+  useSystemPing,
+} from "@/features/settings/hooks/use-system-info";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
@@ -131,44 +134,55 @@ export function SettingsSubSidebar({ className }: { className?: string }) {
   return (
     <aside
       className={cn(
-        "hidden lg:flex flex-col border border-border bg-card text-card-foreground shadow-xs transition-[width] duration-200 ease-in-out rounded-2xl shrink-0",
+        "border-border bg-card text-card-foreground hidden shrink-0 flex-col rounded-2xl border shadow-xs transition-[width] duration-200 ease-in-out lg:flex",
         collapsed ? "w-16" : "w-68",
         className,
       )}
     >
       {/* Top Header Card */}
-      <div className={cn("border-b border-border p-3", collapsed && "px-2 py-3 text-center")}>
+      <div
+        className={cn(
+          "border-border border-b p-3",
+          collapsed && "px-2 py-3 text-center",
+        )}
+      >
         <div className="flex items-center justify-between gap-1.5">
           {!collapsed && (
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="bg-primary/10 text-primary border-primary/20 flex size-8 shrink-0 items-center justify-center rounded-lg border">
                 <Server className="size-4" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-xs font-bold tracking-tight text-foreground truncate">
+                <h2 className="text-foreground truncate text-xs font-bold tracking-tight">
                   {t("settings.subnav.title")}
                 </h2>
-                <p className="text-[10px] text-muted-foreground truncate">
+                <p className="text-muted-foreground truncate text-[10px]">
                   {t("settings.subnav.subtitle")}
                 </p>
               </div>
             </div>
           )}
 
-          <div className={cn("flex items-center gap-1", collapsed && "mx-auto flex-col")}>
+          <div
+            className={cn(
+              "flex items-center gap-1",
+              collapsed && "mx-auto flex-col",
+            )}
+          >
             {!collapsed && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-7 text-muted-foreground hover:text-foreground"
+                    className="text-muted-foreground hover:text-foreground size-7"
                     onClick={() => pingMutation.mutate()}
                     disabled={pingMutation.isPending || isSystemLoading}
                   >
                     <RefreshCw
                       className={cn("size-3.5", {
-                        "animate-spin": pingMutation.isPending || isSystemLoading,
+                        "animate-spin":
+                          pingMutation.isPending || isSystemLoading,
                       })}
                     />
                   </Button>
@@ -184,18 +198,20 @@ export function SettingsSubSidebar({ className }: { className?: string }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-7 text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground size-7"
                   onClick={toggleCollapsed}
                 >
                   {collapsed ? (
-                    <PanelLeftOpen className="size-4 text-primary" />
+                    <PanelLeftOpen className="text-primary size-4" />
                   ) : (
                     <PanelLeftClose className="size-4" />
                   )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right">
-                {collapsed ? t("layout.expand_sidebar") : t("layout.collapse_sidebar")}
+                {collapsed
+                  ? t("layout.expand_sidebar")
+                  : t("layout.collapse_sidebar")}
               </TooltipContent>
             </Tooltip>
           </div>
@@ -203,8 +219,8 @@ export function SettingsSubSidebar({ className }: { className?: string }) {
 
         {/* Live System Indicator */}
         {!collapsed ? (
-          <div className="mt-2.5 flex items-center justify-between rounded-lg border border-border/80 bg-muted/40 px-2.5 py-1.5 text-xs">
-            <div className="flex items-center gap-2 min-w-0">
+          <div className="border-border/80 bg-muted/40 mt-2.5 flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs">
+            <div className="flex min-w-0 items-center gap-2">
               <span className="relative flex size-2 shrink-0">
                 <span
                   className={cn(
@@ -227,7 +243,7 @@ export function SettingsSubSidebar({ className }: { className?: string }) {
                   )}
                 />
               </span>
-              <span className="font-medium text-foreground text-[11px] truncate">
+              <span className="text-foreground truncate text-[11px] font-medium">
                 {isHealthy
                   ? t("settings.system.status_operational")
                   : isDegraded
@@ -236,7 +252,10 @@ export function SettingsSubSidebar({ className }: { className?: string }) {
               </span>
             </div>
 
-            <Badge variant="outline" className="text-[9px] font-mono px-1.5 py-0 h-4 border-border">
+            <Badge
+              variant="outline"
+              className="border-border h-4 px-1.5 py-0 font-mono text-[9px]"
+            >
               {systemInfo?.runtime.go_version || "Go 1.24"}
             </Badge>
           </div>
@@ -244,7 +263,7 @@ export function SettingsSubSidebar({ className }: { className?: string }) {
           <div className="mt-2 flex justify-center">
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex size-6 items-center justify-center rounded-full bg-muted/60">
+                <div className="bg-muted/60 flex size-6 items-center justify-center rounded-full">
                   <span className="relative flex size-2">
                     <span
                       className={cn(
@@ -283,12 +302,12 @@ export function SettingsSubSidebar({ className }: { className?: string }) {
         {/* Search Input when expanded */}
         {!collapsed && (
           <div className="relative mt-2.5">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("settings.subnav.search_placeholder")}
-              className="h-7.5 pl-8 text-xs bg-background/70 border-border"
+              className="bg-background/70 border-border h-7.5 pl-8 text-xs"
             />
           </div>
         )}
@@ -298,7 +317,8 @@ export function SettingsSubSidebar({ className }: { className?: string }) {
       <ScrollArea className="min-h-0 flex-1 px-2 py-2 [&>[data-radix-scroll-area-viewport]]:overscroll-contain">
         <div className="space-y-3">
           {filteredGroups.map((group) => {
-            const isGroupOpen = openGroups[group.id] !== false || search.length > 0;
+            const isGroupOpen =
+              openGroups[group.id] !== false || search.length > 0;
 
             if (collapsed) {
               return (
@@ -313,7 +333,7 @@ export function SettingsSubSidebar({ className }: { className?: string }) {
                           <Link
                             href={item.href ?? "#"}
                             className={cn(
-                              "flex size-9 items-center justify-center rounded-lg mx-auto transition-colors",
+                              "mx-auto flex size-9 items-center justify-center rounded-lg transition-colors",
                               isActive
                                 ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -342,12 +362,12 @@ export function SettingsSubSidebar({ className }: { className?: string }) {
                 <CollapsibleTrigger asChild>
                   <button
                     type="button"
-                    className="flex w-full items-center justify-between rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 hover:text-foreground transition-colors group"
+                    className="text-muted-foreground/80 hover:text-foreground group flex w-full items-center justify-between rounded-md px-2 py-1 text-[10px] font-bold tracking-wider uppercase transition-colors"
                   >
                     <span>{t(group.labelKey)}</span>
                     <ChevronDown
                       className={cn(
-                        "size-3 text-muted-foreground/60 transition-transform duration-200 group-hover:text-foreground",
+                        "text-muted-foreground/60 group-hover:text-foreground size-3 transition-transform duration-200",
                         isGroupOpen ? "rotate-0" : "-rotate-90",
                       )}
                     />
@@ -366,11 +386,11 @@ export function SettingsSubSidebar({ className }: { className?: string }) {
                         className={cn(
                           "group flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150",
                           isActive
-                            ? "bg-primary/10 text-primary font-semibold ring-1 ring-primary/20 dark:bg-primary/20"
+                            ? "bg-primary/10 text-primary ring-primary/20 dark:bg-primary/20 font-semibold ring-1"
                             : "text-muted-foreground hover:bg-muted hover:text-foreground",
                         )}
                       >
-                        <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex min-w-0 items-center gap-2">
                           <Icon
                             className={cn(
                               "size-3.5 shrink-0 transition-transform group-hover:scale-105",
@@ -382,7 +402,7 @@ export function SettingsSubSidebar({ className }: { className?: string }) {
                           <span className="truncate">{t(item.titleKey)}</span>
                         </div>
                         {isActive && (
-                          <span className="size-1.5 rounded-full bg-primary shrink-0" />
+                          <span className="bg-primary size-1.5 shrink-0 rounded-full" />
                         )}
                       </Link>
                     );
@@ -393,7 +413,7 @@ export function SettingsSubSidebar({ className }: { className?: string }) {
           })}
 
           {!collapsed && filteredGroups.length === 0 && (
-            <div className="py-6 text-center text-xs text-muted-foreground">
+            <div className="text-muted-foreground py-6 text-center text-xs">
               {t("common.no_results")}
             </div>
           )}
@@ -401,16 +421,21 @@ export function SettingsSubSidebar({ className }: { className?: string }) {
       </ScrollArea>
 
       {/* Footer Info */}
-      <div className={cn("border-t border-border p-2.5 text-[10px] text-muted-foreground", collapsed && "text-center")}>
+      <div
+        className={cn(
+          "border-border text-muted-foreground border-t p-2.5 text-[10px]",
+          collapsed && "text-center",
+        )}
+      >
         {!collapsed ? (
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 font-semibold text-foreground/80">
+            <span className="text-foreground/80 flex items-center gap-1.5 font-semibold">
               <span className="size-1.5 rounded-full bg-emerald-500" />
               {systemInfo?.environment.env
                 ? systemInfo.environment.env.toUpperCase()
                 : "PRODUCTION"}
             </span>
-            <span className="font-mono text-muted-foreground">
+            <span className="text-muted-foreground font-mono">
               {systemInfo
                 ? `${Math.floor(systemInfo.runtime.uptime_seconds / 3600)}h ${Math.floor((systemInfo.runtime.uptime_seconds % 3600) / 60)}m`
                 : "0h 0m"}
@@ -419,7 +444,7 @@ export function SettingsSubSidebar({ className }: { className?: string }) {
         ) : (
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="mx-auto flex size-6 items-center justify-center font-mono text-[9px] text-muted-foreground">
+              <div className="text-muted-foreground mx-auto flex size-6 items-center justify-center font-mono text-[9px]">
                 {systemInfo
                   ? `${Math.floor(systemInfo.runtime.uptime_seconds / 3600)}h`
                   : "0h"}
@@ -513,18 +538,25 @@ export function SettingsMobileNav({ className }: { className?: string }) {
   const ActiveIcon = activeItem?.item?.icon ?? Server;
 
   return (
-    <div className={cn("flex flex-col gap-2 rounded-xl border border-border bg-card p-2.5 shadow-xs lg:hidden", className)}>
+    <div
+      className={cn(
+        "border-border bg-card flex flex-col gap-2 rounded-xl border p-2.5 shadow-xs lg:hidden",
+        className,
+      )}
+    >
       {/* Top row: Current active page info + Open Menu Sheet Trigger */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="bg-primary/10 text-primary flex size-7 shrink-0 items-center justify-center rounded-md">
             <ActiveIcon className="size-3.5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground truncate">
-              {activeItem?.group ? t(activeItem.group.labelKey) : t("settings.subnav.title")}
+            <p className="text-muted-foreground truncate text-[10px] font-semibold tracking-wider uppercase">
+              {activeItem?.group
+                ? t(activeItem.group.labelKey)
+                : t("settings.subnav.title")}
             </p>
-            <h3 className="text-xs font-bold text-foreground truncate">
+            <h3 className="text-foreground truncate text-xs font-bold">
               {activeItem?.item ? t(activeItem.item.titleKey) : ""}
             </h3>
           </div>
@@ -532,46 +564,61 @@ export function SettingsMobileNav({ className }: { className?: string }) {
 
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7.5 gap-1.5 px-2.5 text-xs font-medium shrink-0">
-              <SlidersHorizontal className="size-3.5 text-primary" />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7.5 shrink-0 gap-1.5 px-2.5 text-xs font-medium"
+            >
+              <SlidersHorizontal className="text-primary size-3.5" />
               <span>{t("settings.subnav.title")}</span>
             </Button>
           </SheetTrigger>
 
-          <SheetContent side="left" className="w-[85vw] max-w-sm p-0 flex flex-col">
-            <SheetHeader className="border-b border-border p-4 text-left">
+          <SheetContent
+            side="left"
+            className="flex w-[85vw] max-w-sm flex-col p-0"
+          >
+            <SheetHeader className="border-border border-b p-4 text-left">
               <div className="flex items-center gap-2.5">
-                <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
+                <div className="bg-primary/10 text-primary border-primary/20 flex size-8 items-center justify-center rounded-lg border">
                   <Server className="size-4" />
                 </div>
                 <div>
                   <SheetTitle className="text-sm font-bold">
                     {t("settings.subnav.title")}
                   </SheetTitle>
-                  <SheetDescription className="text-xs text-muted-foreground">
+                  <SheetDescription className="text-muted-foreground text-xs">
                     {t("settings.subnav.subtitle")}
                   </SheetDescription>
                 </div>
               </div>
 
               {/* Live status badge inside sheet */}
-              <div className="mt-3 flex items-center justify-between rounded-lg border border-border/80 bg-muted/40 px-2.5 py-1.5 text-xs">
+              <div className="border-border/80 bg-muted/40 mt-3 flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs">
                 <div className="flex items-center gap-2">
                   <span className="relative flex size-2">
                     <span
                       className={cn(
                         "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
-                        isHealthy ? "bg-emerald-400" : isDegraded ? "bg-amber-400" : "bg-rose-400",
+                        isHealthy
+                          ? "bg-emerald-400"
+                          : isDegraded
+                            ? "bg-amber-400"
+                            : "bg-rose-400",
                       )}
                     />
                     <span
                       className={cn(
                         "relative inline-flex size-2 rounded-full",
-                        isHealthy ? "bg-emerald-500" : isDegraded ? "bg-amber-500" : "bg-rose-500",
+                        isHealthy
+                          ? "bg-emerald-500"
+                          : isDegraded
+                            ? "bg-amber-500"
+                            : "bg-rose-500",
                       )}
                     />
                   </span>
-                  <span className="font-medium text-foreground text-[11px]">
+                  <span className="text-foreground text-[11px] font-medium">
                     {isHealthy
                       ? t("settings.system.status_operational")
                       : isDegraded
@@ -579,19 +626,22 @@ export function SettingsMobileNav({ className }: { className?: string }) {
                         : t("settings.system.status_down")}
                   </span>
                 </div>
-                <Badge variant="outline" className="text-[9px] font-mono px-1.5 py-0 h-4 border-border">
+                <Badge
+                  variant="outline"
+                  className="border-border h-4 px-1.5 py-0 font-mono text-[9px]"
+                >
                   {systemInfo?.runtime.go_version || "Go 1.24"}
                 </Badge>
               </div>
 
               {/* Search input in sheet */}
               <div className="relative mt-2.5">
-                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={t("settings.subnav.search_placeholder")}
-                  className="h-8 pl-8 text-xs bg-background"
+                  className="bg-background h-8 pl-8 text-xs"
                 />
               </div>
             </SheetHeader>
@@ -601,7 +651,7 @@ export function SettingsMobileNav({ className }: { className?: string }) {
               <div className="space-y-4">
                 {filteredGroups.map((group) => (
                   <div key={group.id} className="space-y-1">
-                    <h4 className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
+                    <h4 className="text-muted-foreground/80 px-2 text-[10px] font-bold tracking-wider uppercase">
                       {t(group.labelKey)}
                     </h4>
                     <div className="space-y-0.5">
@@ -621,12 +671,14 @@ export function SettingsMobileNav({ className }: { className?: string }) {
                                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
                             )}
                           >
-                            <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="flex min-w-0 items-center gap-2.5">
                               <Icon className="size-4 shrink-0" />
-                              <span className="truncate">{t(item.titleKey)}</span>
+                              <span className="truncate">
+                                {t(item.titleKey)}
+                              </span>
                             </div>
                             {isActive && (
-                              <span className="size-1.5 rounded-full bg-primary-foreground shrink-0" />
+                              <span className="bg-primary-foreground size-1.5 shrink-0 rounded-full" />
                             )}
                           </Link>
                         );
@@ -636,7 +688,7 @@ export function SettingsMobileNav({ className }: { className?: string }) {
                 ))}
 
                 {filteredGroups.length === 0 && (
-                  <div className="py-6 text-center text-xs text-muted-foreground">
+                  <div className="text-muted-foreground py-6 text-center text-xs">
                     {t("common.no_results")}
                   </div>
                 )}
@@ -659,9 +711,9 @@ export function SettingsMobileNav({ className }: { className?: string }) {
                   key={item.id}
                   href={item.href ?? "#"}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors shrink-0",
+                    "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
                     isActive
-                      ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                       : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >

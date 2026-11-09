@@ -1,9 +1,9 @@
 package usecase
 
 import (
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
 	"context"
 	"errors"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
 	"io"
 	"strings"
 	"testing"
@@ -12,6 +12,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profiles/repository"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/storage"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
 	"github.com/google/uuid"
 )
 
@@ -356,5 +357,49 @@ func TestCreateWithoutQuotaCheckerIsDenied(t *testing.T) {
 	svc := NewService(newMockRepo(), nil)
 	if _, err := svc.Create(context.Background(), principalIn(1, authctx.AccountRoleOwner), sampleProfileInput()); err == nil {
 		t.Fatal("create succeeded without a quota checker")
+	}
+}
+
+// TEC-1097: the avatar type and extension come from the bytes, never from the
+// client filename or Content-Type, so avatar.html cannot be stored as HTML.
+func TestUploadAvatarSniffsContent(t *testing.T) {
+	mem := storage.NewMemory()
+	store := memoryDriver{mem: mem}
+	repo := newMockRepo()
+	svc := NewService(repo, store)
+	svc.SetQuotas(&stubQuotas{})
+	ctx := context.Background()
+	owner := principalIn(1, authctx.AccountRoleOwner)
+	created, err := svc.Create(ctx, owner, sampleProfileInput())
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	html := "<!doctype html><script>alert(document.cookie)</script>"
+	if _, err := svc.UploadAvatar(ctx, owner, created.UUID, strings.NewReader(html), "avatar.html", "text/html", int64(len(html))); !errors.Is(err, upload.ErrUnsupportedType) {
+		t.Fatalf("html avatar: %v", err)
+	}
+	if _, err := svc.UploadCover(ctx, owner, created.UUID, strings.NewReader(html), "cover.png", "image/png", int64(len(html))); !errors.Is(err, upload.ErrUnsupportedType) {
+		t.Fatalf("html disguised as png cover: %v", err)
+	}
+	svg := `<svg xmlns="http://www.w3.org/2000/svg"/>`
+	if _, err := svc.UploadAvatar(ctx, owner, created.UUID, strings.NewReader(svg), "a.svg", "image/svg+xml", int64(len(svg))); !errors.Is(err, upload.ErrUnsupportedType) {
+		t.Fatalf("svg avatar must stay raster-only: %v", err)
+	}
+
+	png := "\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
+	if _, err := svc.UploadAvatar(ctx, owner, created.UUID, strings.NewReader(png), "avatar.html", "text/html", int64(len(png))); err != nil {
+		t.Fatalf("png avatar: %v", err)
+	}
+	key := storage.ProfileAvatarObjectKey(created.UUID.String(), "png")
+	if ct, _, ok := mem.GetMeta(key); !ok || ct != "image/png" {
+		t.Fatalf("avatar stored as %q (found %v)", ct, ok)
+	}
+
+	// A company-library SVG logo cannot become an avatar.
+	in := sampleProfileInput()
+	in.AvatarURL = store.PublicURL(storage.CompanyMediaObjectKey(owner.Account.UUID.String(), uuid.NewString(), "svg"))
+	if _, err := svc.Update(ctx, owner, created.UUID, in); !errors.Is(err, ErrInvalidRequest) {
+		t.Fatalf("svg avatar url: %v", err)
 	}
 }

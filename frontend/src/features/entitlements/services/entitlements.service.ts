@@ -11,11 +11,15 @@ export type QuotaFeatureKey = "profiles.max" | "smart_links.max" | "cards.max";
  * Monthly quotas (TEC-941), counted per calendar month in Europe/Istanbul. Leads and exchanges
  * past the quota are stored locked; exports past it are refused (403 PLAN_LIMIT_EXCEEDED).
  */
-export type MonthlyQuotaKey = "leads.monthly_max" | "exchange.monthly_max" | "leads.export.monthly_max";
+export type MonthlyQuotaKey =
+  "leads.monthly_max" | "exchange.monthly_max" | "leads.export.monthly_max";
 
 /** Plan, features and quota usage of the active account (/v1/account/entitlements). */
 export const entitlementsService = {
   async overview() {
-    return platformRequest<EntitlementOverview>("GET", "/v1/account/entitlements");
+    return platformRequest<EntitlementOverview>(
+      "GET",
+      "/v1/account/entitlements",
+    );
   },
 };

@@ -35,8 +35,12 @@ export function ProductsPage() {
   const { deleteMutation } = useProductMutations();
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<ProductSummary | ProductDetail | null>(null);
-  const [studioProduct, setStudioProduct] = useState<ProductSummary | null>(null);
+  const [editingProduct, setEditingProduct] = useState<
+    ProductSummary | ProductDetail | null
+  >(null);
+  const [studioProduct, setStudioProduct] = useState<ProductSummary | null>(
+    null,
+  );
 
   const listState = useServerListState({ initialPageSize: 20 });
   const listParams = useMemo(

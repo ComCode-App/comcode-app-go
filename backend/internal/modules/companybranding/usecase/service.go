@@ -25,6 +25,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/storage"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -244,15 +245,33 @@ func (s *Service) Upload(ctx context.Context, p authctx.Principal, in model.Uplo
 	if err != nil {
 		return nil, err
 	}
-	head := make([]byte, 512)
-	n, err := io.ReadFull(body, head)
-	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
-		return nil, err
-	}
-	head = head[:n]
-	contentType, ext, err := detect(in.Kind, head, in.Size)
-	if err != nil {
-		return nil, err
+	var (
+		contentType, ext string
+		content          io.Reader
+	)
+	if in.Kind == model.KindLogo {
+		// Logos may also be SVG (owner decision, TEC-1097): only static vector
+		// content passes upload.ValidateSVG; unsafe SVGs fail with ErrSVGUnsafe.
+		if in.Size > model.MaxImageBytes {
+			return nil, invalid("images must be at most 5 MiB")
+		}
+		sniffed, err := upload.SniffLogo(body)
+		if err != nil {
+			return nil, err
+		}
+		contentType, ext, content = sniffed.ContentType, sniffed.Ext, sniffed.Body
+	} else {
+		head := make([]byte, 512)
+		n, err := io.ReadFull(body, head)
+		if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
+			return nil, err
+		}
+		head = head[:n]
+		contentType, ext, err = detect(in.Kind, head, in.Size)
+		if err != nil {
+			return nil, err
+		}
+		content = io.MultiReader(bytes.NewReader(head), body)
 	}
 	count, err := s.q.CountCompanyMedia(ctx, db.CountCompanyMediaParams{AccountID: p.Account.ID})
 	if err != nil {
@@ -264,7 +283,7 @@ func (s *Service) Upload(ctx context.Context, p authctx.Principal, in model.Uplo
 	id := uuid.New()
 	key := storage.CompanyMediaObjectKey(p.Account.UUID.String(), id.String(), ext)
 	if err := s.media.Upload(ctx, storage.File{
-		Body: io.MultiReader(bytes.NewReader(head), body), Size: in.Size, ContentType: contentType,
+		Body: content, Size: in.Size, ContentType: contentType,
 		Filename: name,
 	}, key); err != nil {
 		return nil, fmt.Errorf("upload company media: %w", err)

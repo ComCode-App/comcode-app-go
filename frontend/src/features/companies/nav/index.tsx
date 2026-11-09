@@ -20,7 +20,9 @@ function useCompaniesNavAdornment(): NavAdornment {
   };
 }
 
-export const CompaniesNavAdornment = createNavAdornment(useCompaniesNavAdornment);
+export const CompaniesNavAdornment = createNavAdornment(
+  useCompaniesNavAdornment,
+);
 
 export const companiesNavItem = defineNavItem({
   id: "companies",

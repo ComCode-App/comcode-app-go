@@ -1,12 +1,16 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/accounts/usecase"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/activity"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/clientip"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/apiquery"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/response"
 )
@@ -16,12 +20,34 @@ const (
 	codeInviteExpired       = "INVITE_EXPIRED"
 	codeInviteClosed        = "INVITE_CLOSED"
 	codeInviteEmailMismatch = "INVITE_EMAIL_MISMATCH"
+	codeInviteImpersonation = "INVITE_IMPERSONATION"
 )
+
+// InviteLimiter caps invite link lookups and accepts (ratelimit.Limiter). The token is a bearer
+// secret, so guesses are limited per client IP and, for accepting, per user (TEC-1104).
+type InviteLimiter interface {
+	AllowInvitePreview(ctx context.Context, ip string) (bool, time.Duration)
+	AllowInviteAccept(ctx context.Context, userID, ip string) (bool, time.Duration)
+}
 
 // InvitesHandler serves company email invites (TEC-945).
 type InvitesHandler struct {
 	svc      *usecase.Invites
 	activity *activity.Recorder
+	limiter  InviteLimiter
+}
+
+// SetRateLimiter enables the per-IP / per-user limits on the invite link routes.
+func (h *InvitesHandler) SetRateLimiter(l InviteLimiter) { h.limiter = l }
+
+// noReferrer keeps the token in the URL out of Referer headers (TEC-1104).
+func noReferrer(w http.ResponseWriter) { w.Header().Set("Referrer-Policy", "no-referrer") }
+
+func tooManyInviteAttempts(w http.ResponseWriter, r *http.Request, retry time.Duration) {
+	if retry > 0 {
+		w.Header().Set("Retry-After", strconv.Itoa(int(retry.Seconds())+1))
+	}
+	response.TooManyRequests(w, r, "Too many invite attempts. Try again later.")
 }
 
 func NewInvites(svc *usecase.Invites, rec *activity.Recorder) *InvitesHandler {
@@ -98,6 +124,13 @@ func (h *InvitesHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 
 // Preview is public: the token is the credential.
 func (h *InvitesHandler) Preview(w http.ResponseWriter, r *http.Request) {
+	noReferrer(w)
+	if h.limiter != nil {
+		if ok, retry := h.limiter.AllowInvitePreview(r.Context(), clientip.String(r)); !ok {
+			tooManyInviteAttempts(w, r, retry)
+			return
+		}
+	}
 	out, err := h.svc.Preview(r.Context(), r.PathValue("token"))
 	if err != nil {
 		writeInviteErr(w, r, err)
@@ -106,8 +139,21 @@ func (h *InvitesHandler) Preview(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, out)
 }
 
+// Accept joins the invite's account. It is refused while impersonating: an operator acting as a
+// user must not join companies on their behalf (TEC-1104).
 func (h *InvitesHandler) Accept(w http.ResponseWriter, r *http.Request) {
+	noReferrer(w)
 	p := authctx.MustPrincipal(r.Context())
+	if p.ImpersonatorUserID != nil {
+		response.Error(w, r, http.StatusForbidden, codeInviteImpersonation, "invites cannot be accepted while impersonating")
+		return
+	}
+	if h.limiter != nil {
+		if ok, retry := h.limiter.AllowInviteAccept(r.Context(), p.UserID.String(), clientip.String(r)); !ok {
+			tooManyInviteAttempts(w, r, retry)
+			return
+		}
+	}
 	out, err := h.svc.Accept(r.Context(), p.UserInternal, r.PathValue("token"))
 	if err != nil {
 		writeInviteErr(w, r, err)

@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"mime"
 	"net"
 	"net/smtp"
@@ -157,7 +158,13 @@ func (s *SMTPSender) Send(ctx context.Context, msg Message) error {
 	if err := w.Close(); err != nil {
 		return fmt.Errorf("mail: send: %w", err)
 	}
-	return c.Quit()
+	// The server accepted the message once DATA closed with 250. A failed QUIT
+	// (an error reply or a dropped connection) must not report the send as
+	// failed, or the queue would retry and deliver a duplicate email.
+	if err := c.Quit(); err != nil {
+		slog.WarnContext(ctx, "mail: QUIT failed after message was accepted", "addr", addr, "error", err)
+	}
+	return nil
 }
 
 func (s *SMTPSender) payload(from string, msg Message) string {

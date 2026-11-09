@@ -23,7 +23,9 @@ export function useEntitlements() {
 }
 
 /** One quota feature of the active account, or undefined while loading. */
-export function useQuota(key: QuotaFeatureKey | MonthlyQuotaKey): EntitlementFeature | undefined {
+export function useQuota(
+  key: QuotaFeatureKey | MonthlyQuotaKey,
+): EntitlementFeature | undefined {
   const { data } = useEntitlements();
   return data?.features.find((f) => f.key === key);
 }

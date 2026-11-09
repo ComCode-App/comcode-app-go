@@ -146,7 +146,11 @@ export const IMPORT_SCHEMA: Partial<
     { key: "permission_slugs", labelKey: "roles.fields.permissions" },
   ],
   "app.company_employees": [
-    { key: "name", labelKey: "company_bulk.import.fields.name", required: true },
+    {
+      key: "name",
+      labelKey: "company_bulk.import.fields.name",
+      required: true,
+    },
     {
       key: "surname",
       labelKey: "company_bulk.import.fields.surname",

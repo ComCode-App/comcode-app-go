@@ -1,4 +1,4 @@
-import { proxyToUpstream } from "@/lib/server/bff-proxy";
+import { handleProxyRequest } from "@/lib/server/bff-proxy";
 
 type RouteContext = {
   params: Promise<{ path: string[] }>;
@@ -12,7 +12,8 @@ export const maxDuration = 120;
 
 async function handle(request: Request, context: RouteContext) {
   const { path } = await context.params;
-  return proxyToUpstream(path ?? [], request);
+  // Path allowlist, CSRF origin check, upstream errors → JSON envelope (TEC-1102).
+  return handleProxyRequest(path ?? [], request);
 }
 
 export const GET = handle;

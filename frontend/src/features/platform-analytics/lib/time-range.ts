@@ -25,5 +25,7 @@ export function dayEndIso(day?: string): string | undefined {
 
 /** `yyyy-MM-dd` → `yyyy-MM-dd` of the day `days` before today (local). */
 export function daysAgo(days: number, now = new Date()): string {
-  return localDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - days));
+  return localDay(
+    new Date(now.getFullYear(), now.getMonth(), now.getDate() - days),
+  );
 }

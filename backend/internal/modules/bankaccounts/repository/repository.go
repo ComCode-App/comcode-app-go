@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/bankaccounts/model"
+	"github.com/google/uuid"
 )
 
 // Repository is scoped to an account: rows outside accountID behave as missing.

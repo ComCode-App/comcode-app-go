@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/cards/model"
+	"github.com/google/uuid"
 )
 
 // Repository methods that take accountID are scoped to that account.

@@ -4,26 +4,32 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"mime"
 	"net/http"
-	"path/filepath"
+	"path"
 	"strconv"
-	"strings"
 
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/storage/model"
 	storageusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/storage/usecase"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/resourcemeta"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/apiquery"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/response"
 )
 
 type Handler struct {
 	svc *storageusecase.Service
+	// maxUploadBytes caps a single multipart upload (STORAGE_MAX_BYTES).
+	maxUploadBytes int64
 }
 
-func New(svc *storageusecase.Service) *Handler {
-	return &Handler{svc: svc}
+// New builds the storage handler. maxUploadBytes is STORAGE_MAX_BYTES; a
+// non-positive value falls back to upload.DefaultMaxBytes.
+func New(svc *storageusecase.Service, maxUploadBytes int64) *Handler {
+	if maxUploadBytes <= 0 {
+		maxUploadBytes = upload.DefaultMaxBytes
+	}
+	return &Handler{svc: svc, maxUploadBytes: maxUploadBytes}
 }
 
 func (h *Handler) Meta(w http.ResponseWriter, r *http.Request) {
@@ -106,13 +112,10 @@ func (h *Handler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(512 << 20); err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
-		return
-	}
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "file is required")
+	// Cap the body before reading it (STORAGE_MAX_BYTES); oversize is 413.
+	file, header, ok := upload.FormFile(w, r, h.maxUploadBytes, "file")
+	defer upload.Cleanup(r)
+	if !ok {
 		return
 	}
 	defer func() { _ = file.Close() }()
@@ -425,25 +428,10 @@ func (h *Handler) StreamMedia(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() { _ = rc.Close() }()
 
-	ext := strings.ToLower(filepath.Ext(key))
-	ct := mime.TypeByExtension(ext)
-	if ct == "" {
-		switch ext {
-		case ".svg":
-			ct = "image/svg+xml"
-		case ".webp":
-			ct = "image/webp"
-		case ".ico":
-			ct = "image/x-icon"
-		case ".png":
-			ct = "image/png"
-		case ".jpg", ".jpeg":
-			ct = "image/jpeg"
-		default:
-			ct = "application/octet-stream"
-		}
-	}
-	w.Header().Set("Content-Type", ct)
+	// The type comes from the server-chosen key extension; active types
+	// (SVG, HTML, XML, ...) are served as attachments with nosniff and a
+	// sandbox CSP so they never run as a document on our origin.
+	upload.SetServeHeaders(w, upload.ContentTypeForKey(key), path.Base(key), false)
 	w.Header().Set("Cache-Control", "public, max-age=86400")
 	if size > 0 {
 		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
@@ -451,17 +439,14 @@ func (h *Handler) StreamMedia(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.Copy(w, rc)
 }
 
+// writeFile streams a stored object. The stored MIME type may be
+// uploader-declared, so only inline-safe types render inline; everything else
+// (HTML, SVG, XML, scripts, unknown) downloads, always with nosniff.
 func writeFile(w http.ResponseWriter, opened model.OpenObject) {
-	w.Header().Set("Content-Type", opened.Object.MimeType)
+	upload.SetServeHeaders(w, opened.Object.MimeType, opened.Object.Name, opened.Download)
 	if opened.Size > 0 {
 		w.Header().Set("Content-Length", strconv.FormatInt(opened.Size, 10))
 	}
-	disp := "inline"
-	if opened.Download {
-		disp = "attachment"
-	}
-	name := strings.ReplaceAll(opened.Object.Name, `"`, "")
-	w.Header().Set("Content-Disposition", disp+`; filename="`+name+`"`)
 	_, _ = io.Copy(w, opened.Body)
 }
 

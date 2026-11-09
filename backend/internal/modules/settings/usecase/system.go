@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -243,7 +244,7 @@ func (s *SystemService) checkServices(ctx context.Context) SystemServicesHealth 
 	}
 
 	// Storage Check
-	driverName := "s3"
+	driverName := storageDriverName(s.cfg.Storage)
 	if s.storage != nil {
 		t0 := time.Now()
 		err := s.storage.Ping(ctx)
@@ -306,4 +307,14 @@ func (s *SystemService) checkServices(ctx context.Context) SystemServicesHealth 
 func roundLatency(d time.Duration) float64 {
 	ms := float64(d.Microseconds()) / 1000.0
 	return math.Round(ms*100) / 100
+}
+
+// storageDriverName reports the configured STORAGE_DRIVER (as config and
+// storage.NewFromConfig read it), not a hard-coded name.
+func storageDriverName(cfg config.StorageConfig) string {
+	name := strings.ToLower(strings.TrimSpace(cfg.Driver))
+	if name == "" {
+		return "unknown"
+	}
+	return name
 }

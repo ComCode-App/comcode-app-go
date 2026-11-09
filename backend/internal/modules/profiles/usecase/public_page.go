@@ -1,12 +1,12 @@
 package usecase
 
 import (
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/activity"
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/routecache"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/activity"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/routecache"
 	"slices"
 
 	bgmodel "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/backgrounds/model"

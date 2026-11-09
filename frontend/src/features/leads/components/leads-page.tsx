@@ -1,6 +1,15 @@
 "use client";
 
-import { ArrowLeftRight, ExternalLink, Inbox, Lock, Mail, Phone, Search, Trash2 } from "lucide-react";
+import {
+  ArrowLeftRight,
+  ExternalLink,
+  Inbox,
+  Lock,
+  Mail,
+  Phone,
+  Search,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -23,7 +32,11 @@ import { routes } from "@/config/routes";
 import { useLeadMutations, useLeads } from "@/features/leads/hooks/use-leads";
 import { LeadsExportMenu } from "@/features/leads/components/leads-export-menu";
 import { LeadsQuotaMeter } from "@/features/leads/components/leads-quota-meter";
-import { leadsService, type Lead, type LeadSource } from "@/features/leads/services/leads.service";
+import {
+  leadsService,
+  type Lead,
+  type LeadSource,
+} from "@/features/leads/services/leads.service";
 import { canManageAccount } from "@/lib/auth/types";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
@@ -107,7 +120,12 @@ export function LeadsPage() {
   }, [leadParam]);
 
   const fmt = (iso?: string | null) =>
-    iso ? new Date(iso).toLocaleString(locale === "tr" ? "tr-TR" : "en-GB", { dateStyle: "medium", timeStyle: "short" }) : "";
+    iso
+      ? new Date(iso).toLocaleString(locale === "tr" ? "tr-TR" : "en-GB", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+      : "";
 
   const openLead = (lead: Lead) => {
     setOpen(lead);
@@ -143,7 +161,9 @@ export function LeadsPage() {
               {total}
             </Badge>
           </div>
-          <p className="text-muted-foreground mt-1 text-sm">{t("leads.subtitle")}</p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {t("leads.subtitle")}
+          </p>
         </div>
         <LeadsExportMenu
           query={{
@@ -186,7 +206,9 @@ export function LeadsPage() {
 
       {!isLoading && items.length === 0 ? (
         <Card>
-          <CardContent className="text-muted-foreground p-8 text-center text-sm">{t("leads.empty")}</CardContent>
+          <CardContent className="text-muted-foreground p-8 text-center text-sm">
+            {t("leads.empty")}
+          </CardContent>
         </Card>
       ) : (
         <ul className="bg-card divide-y rounded-xl border">
@@ -199,24 +221,48 @@ export function LeadsPage() {
               >
                 <span
                   aria-hidden
-                  className={cn("mt-2 size-2 shrink-0 rounded-full", lead.read_at ? "bg-transparent" : "bg-primary")}
+                  className={cn(
+                    "mt-2 size-2 shrink-0 rounded-full",
+                    lead.read_at ? "bg-transparent" : "bg-primary",
+                  )}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
-                    <span className={cn("truncate text-sm", !lead.read_at && "font-semibold")}>{lead.name}</span>
-                    {!lead.read_at ? <Badge className="text-[10px]">{t("leads.status.new")}</Badge> : null}
-                    {lead.kind === "exchange" ? <ExchangeBadge label={t("leads.kind.exchange")} /> : null}
-                    {lead.locked ? <LockedBadge label={t("leads.locked.badge")} /> : null}
+                    <span
+                      className={cn(
+                        "truncate text-sm",
+                        !lead.read_at && "font-semibold",
+                      )}
+                    >
+                      {lead.name}
+                    </span>
+                    {!lead.read_at ? (
+                      <Badge className="text-[10px]">
+                        {t("leads.status.new")}
+                      </Badge>
+                    ) : null}
+                    {lead.kind === "exchange" ? (
+                      <ExchangeBadge label={t("leads.kind.exchange")} />
+                    ) : null}
+                    {lead.locked ? (
+                      <LockedBadge label={t("leads.locked.badge")} />
+                    ) : null}
                   </span>
                   {lead.company || lead.job_title ? (
                     <span className="text-muted-foreground block truncate text-xs">
-                      {[lead.job_title, lead.company].filter(Boolean).join(", ")}
+                      {[lead.job_title, lead.company]
+                        .filter(Boolean)
+                        .join(", ")}
                     </span>
                   ) : null}
                   <span className="text-muted-foreground block truncate text-xs">
                     {[lead.email, lead.phone].filter(Boolean).join(" · ")}
                   </span>
-                  {lead.message ? <span className="text-muted-foreground mt-1 line-clamp-1 block text-xs">{lead.message}</span> : null}
+                  {lead.message ? (
+                    <span className="text-muted-foreground mt-1 line-clamp-1 block text-xs">
+                      {lead.message}
+                    </span>
+                  ) : null}
                 </span>
                 <span className="text-muted-foreground shrink-0 text-right text-xs">
                   <span className="block">{fmt(lead.created_at)}</span>
@@ -240,7 +286,12 @@ export function LeadsPage() {
             })}
           </span>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={offset === 0}
+              onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+            >
               {t("leads.pagination.previous")}
             </Button>
             <Button
@@ -255,18 +306,26 @@ export function LeadsPage() {
         </div>
       ) : null}
 
-      <Dialog open={Boolean(open)} onOpenChange={(value) => !value && closeLead()}>
+      <Dialog
+        open={Boolean(open)}
+        onOpenChange={(value) => !value && closeLead()}
+      >
         <DialogContent className="sm:max-w-lg">
           {open ? (
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   {open.name}
-                  {open.kind === "exchange" ? <ExchangeBadge label={t("leads.kind.exchange")} /> : null}
-                  {open.locked ? <LockedBadge label={t("leads.locked.badge")} /> : null}
+                  {open.kind === "exchange" ? (
+                    <ExchangeBadge label={t("leads.kind.exchange")} />
+                  ) : null}
+                  {open.locked ? (
+                    <LockedBadge label={t("leads.locked.badge")} />
+                  ) : null}
                 </DialogTitle>
                 <DialogDescription>
-                  {t(SOURCE_KEYS[open.source_type])} · /{open.route_path} · {fmt(open.created_at)}
+                  {t(SOURCE_KEYS[open.source_type])} · /{open.route_path} ·{" "}
+                  {fmt(open.created_at)}
                 </DialogDescription>
               </DialogHeader>
               {open.locked ? (
@@ -276,26 +335,46 @@ export function LeadsPage() {
                   <AlertDescription className="flex flex-col gap-3">
                     <span>{t("leads.locked.description")}</span>
                     <Button asChild size="sm" className="self-start">
-                      <Link href={routes.app.billing.root}>{t("leads.quota.upgrade")}</Link>
+                      <Link href={routes.app.billing.root}>
+                        {t("leads.quota.upgrade")}
+                      </Link>
                     </Button>
                   </AlertDescription>
                 </Alert>
               ) : null}
               <dl className="grid gap-3 text-sm">
-                {open.company ? <Field label={t("leads.fields.company")}>{open.company}</Field> : null}
-                {open.job_title ? <Field label={t("leads.fields.job_title")}>{open.job_title}</Field> : null}
-                {open.email && open.locked ? <Field label={t("leads.fields.email")}>{open.email}</Field> : null}
-                {open.phone && open.locked ? <Field label={t("leads.fields.phone")}>{open.phone}</Field> : null}
+                {open.company ? (
+                  <Field label={t("leads.fields.company")}>
+                    {open.company}
+                  </Field>
+                ) : null}
+                {open.job_title ? (
+                  <Field label={t("leads.fields.job_title")}>
+                    {open.job_title}
+                  </Field>
+                ) : null}
+                {open.email && open.locked ? (
+                  <Field label={t("leads.fields.email")}>{open.email}</Field>
+                ) : null}
+                {open.phone && open.locked ? (
+                  <Field label={t("leads.fields.phone")}>{open.phone}</Field>
+                ) : null}
                 {open.email && !open.locked ? (
                   <Field label={t("leads.fields.email")}>
-                    <a className="text-primary hover:underline" href={`mailto:${open.email}`}>
+                    <a
+                      className="text-primary hover:underline"
+                      href={`mailto:${open.email}`}
+                    >
                       {open.email}
                     </a>
                   </Field>
                 ) : null}
                 {open.phone && !open.locked ? (
                   <Field label={t("leads.fields.phone")}>
-                    <a className="text-primary hover:underline" href={`tel:${open.phone.replace(/[^\d+]/g, "")}`}>
+                    <a
+                      className="text-primary hover:underline"
+                      href={`tel:${open.phone.replace(/[^\d+]/g, "")}`}
+                    >
                       {open.phone}
                     </a>
                   </Field>
@@ -319,12 +398,19 @@ export function LeadsPage() {
                   </Field>
                 ) : null}
                 <Field label={t("leads.fields.consent")}>
-                  {t("leads.detail.consent_given", { date: fmt(open.consent_at), version: open.consent_version })}
+                  {t("leads.detail.consent_given", {
+                    date: fmt(open.consent_at),
+                    version: open.consent_version,
+                  })}
                 </Field>
               </dl>
               <DialogFooter className="gap-2 sm:justify-between">
                 {canWrite ? (
-                  <Button variant="destructive" onClick={() => void deleteLead(open)} disabled={remove.isPending}>
+                  <Button
+                    variant="destructive"
+                    onClick={() => void deleteLead(open)}
+                    disabled={remove.isPending}
+                  >
                     <Trash2 className="size-4" />
                     {t("leads.actions.delete")}
                   </Button>

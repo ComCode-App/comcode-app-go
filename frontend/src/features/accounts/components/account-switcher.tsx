@@ -11,7 +11,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
 import { routes } from "@/config/routes";
 import type { AccountSummary } from "@/lib/auth/types";
 import { useAuth } from "@/providers/auth-provider";
@@ -69,7 +73,8 @@ export function AccountSwitcher() {
               <span className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{active.name}</span>
                 <span className="text-muted-foreground truncate text-xs">
-                  {t(`accounts.types.${active.type}`)} · {t(`accounts.roles.${active.role}`)}
+                  {t(`accounts.types.${active.type}`)} ·{" "}
+                  {t(`accounts.roles.${active.role}`)}
                 </span>
               </span>
               <ChevronsUpDown className="ml-auto size-4" />
@@ -92,7 +97,9 @@ export function AccountSwitcher() {
                     {t(`accounts.roles.${account.role}`)}
                   </span>
                 </span>
-                {account.uuid === active.uuid ? <Check className="size-4" /> : null}
+                {account.uuid === active.uuid ? (
+                  <Check className="size-4" />
+                ) : null}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>

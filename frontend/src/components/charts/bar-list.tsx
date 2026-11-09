@@ -14,13 +14,19 @@ export function BarList({
   return (
     <ul className="space-y-2">
       {items.slice(0, limit).map((item) => (
-        <li key={item.key || item.label} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1">
+        <li
+          key={item.key || item.label}
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1"
+        >
           <span className="truncate text-sm">{item.label}</span>
           <span className="text-sm tabular-nums">{format(item.count)}</span>
           <span className="bg-muted col-span-2 h-2 overflow-hidden rounded-full">
             <span
               className="block h-full rounded-full"
-              style={{ width: `${(item.count / max) * 100}%`, backgroundColor: "var(--chart-1)" }}
+              style={{
+                width: `${(item.count / max) * 100}%`,
+                backgroundColor: "var(--chart-1)",
+              }}
             />
           </span>
         </li>

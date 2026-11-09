@@ -141,11 +141,12 @@ export function ProfileThemePicker({
           })}
         </div>
         <p className="text-muted-foreground text-xs">
-          {hint ?? (!theme && inheritedTheme
-            ? t("profiles.public_page.theme_inherit_hint", {
-                theme: t(`profiles.public_page.theme_name.${inheritedTheme}`),
-              })
-            : t("profiles.public_page.theme_hint"))}
+          {hint ??
+            (!theme && inheritedTheme
+              ? t("profiles.public_page.theme_inherit_hint", {
+                  theme: t(`profiles.public_page.theme_name.${inheritedTheme}`),
+                })
+              : t("profiles.public_page.theme_hint"))}
         </p>
         {shownInstead ? (
           <p className="text-xs text-amber-700 dark:text-amber-400">

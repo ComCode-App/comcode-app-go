@@ -30,7 +30,7 @@ function BankLogoCell({ item }: { item: BankSummary }) {
   return (
     <div className="flex items-center gap-3">
       <div
-        className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden shadow-xs"
+        className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl text-xs font-bold text-white shadow-xs"
         style={{ backgroundColor: item.brand_color || "#1e3a8a" }}
       >
         {item.icon_url && !error ? (
@@ -39,15 +39,15 @@ function BankLogoCell({ item }: { item: BankSummary }) {
             src={item.icon_url}
             alt={item.name}
             onError={() => setError(true)}
-            className="w-full h-full object-contain p-1"
+            className="h-full w-full object-contain p-1"
           />
         ) : (
-          <Landmark className="w-4 h-4 text-white" />
+          <Landmark className="h-4 w-4 text-white" />
         )}
       </div>
       <div>
-        <div className="font-semibold text-sm text-foreground">{item.name}</div>
-        <div className="text-xs text-muted-foreground font-mono">
+        <div className="text-foreground text-sm font-semibold">{item.name}</div>
+        <div className="text-muted-foreground font-mono text-xs">
           {item.slug}
         </div>
       </div>
@@ -74,7 +74,7 @@ export function getBanksColumns({
       labelKey: "banks.fields.code",
       enableSorting: true,
       cell: ({ row }) => (
-        <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded font-semibold">
+        <span className="bg-muted rounded px-2 py-0.5 font-mono text-xs font-semibold">
           {row.original.code}
         </span>
       ),
@@ -94,7 +94,7 @@ export function getBanksColumns({
       labelKey: "banks.fields.bic_swift",
       enableSorting: false,
       cell: ({ row }) => (
-        <span className="font-mono text-xs text-muted-foreground">
+        <span className="text-muted-foreground font-mono text-xs">
           {row.original.bic_swift || "—"}
         </span>
       ),
@@ -118,10 +118,8 @@ export function getBanksColumns({
               onCheckedChange={() => onToggleActive(item)}
               className="scale-85"
             />
-            <span className="text-xs text-muted-foreground">
-              {item.is_active
-                ? t("common.active")
-                : t("common.inactive")}
+            <span className="text-muted-foreground text-xs">
+              {item.is_active ? t("common.active") : t("common.inactive")}
             </span>
           </div>
         );
@@ -144,7 +142,7 @@ export function getBanksColumns({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    className="text-muted-foreground hover:text-foreground h-8 w-8"
                     onClick={() => onEdit(item)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -161,7 +159,7 @@ export function getBanksColumns({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8"
                     onClick={() => onDelete(item.uuid)}
                   >
                     <Trash2 className="h-4 w-4" />

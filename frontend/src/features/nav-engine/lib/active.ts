@@ -12,16 +12,23 @@ export function isNavHrefActive(
 
 export function isNavItemActive(
   pathname: string,
-  item: { href?: string; exact?: boolean; items?: Array<{ href?: string; exact?: boolean }> },
+  item: {
+    href?: string;
+    exact?: boolean;
+    items?: Array<{ href?: string; exact?: boolean }>;
+  },
   homeHref: string,
 ): boolean {
   if (item.items?.length) {
     return item.items.some(
       (child) =>
-        child.href && isNavHrefActive(pathname, child.href, homeHref, child.exact),
+        child.href &&
+        isNavHrefActive(pathname, child.href, homeHref, child.exact),
     );
   }
-  return item.href ? isNavHrefActive(pathname, item.href, homeHref, item.exact) : false;
+  return item.href
+    ? isNavHrefActive(pathname, item.href, homeHref, item.exact)
+    : false;
 }
 
 export function formatNavCount(value: number, max = 99): string {

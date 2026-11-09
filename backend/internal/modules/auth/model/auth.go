@@ -18,6 +18,9 @@ type User struct {
 	Locale        string
 	EmailVerified bool
 	CreatedAt     time.Time
+	// PasswordSet is false when the user never chose a password (OAuth sign-up
+	// and user imports store a random hash).
+	PasswordSet bool
 }
 
 // UserAuthMethod is a login option linked to a platform user.
@@ -146,12 +149,12 @@ type RegisterInput struct {
 
 // CreatePlatformUserInput creates a platform-managed user.
 type CreatePlatformUserInput struct {
-	Email      string
-	Password   string
-	Name       string
-	Surname    string
-	Status     string
-	RoleUUIDs  []uuid.UUID
+	Email     string
+	Password  string
+	Name      string
+	Surname   string
+	Status    string
+	RoleUUIDs []uuid.UUID
 }
 
 // PatchPlatformUserInput partially updates a platform user.
@@ -253,7 +256,7 @@ type TOTPStatus struct {
 
 // TOTPSetupResult is returned when starting authenticator enrollment.
 type TOTPSetupResult struct {
-	Secret    string `json:"secret"`
+	Secret     string `json:"secret"`
 	OTPAuthURL string `json:"otpauth_url"`
 }
 

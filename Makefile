@@ -19,7 +19,7 @@ endef
 FRONTEND_PORT ?= 3000
 
 .PHONY: infra infra-down infra-logs infra-ps migrate-up backend-dev frontend-dev local-dev \
-	free-dev-ports prod-config prod-up prod-down tools create-super-admin search-reindex seed check-i18n
+	free-dev-ports prod-env-init prod-env-upgrade prod-env-check env-check compose-env-check prod-config prod-up prod-build-local prod-up-local prod-down tools create-super-admin search-reindex seed check-i18n
 
 infra:
 	@if [ -n "$(ENV_FILE)" ]; then \
@@ -136,11 +136,45 @@ local-dev: infra
 	$(MAKE) frontend-dev & \
 	wait
 
+# Production env from deploy/env/schema (docs/design/env-core.md).
+# Extra flags: make prod-env-init ARGS="--set APP_URL=https://app.example.com --yes"
+prod-env-init:
+	scripts/prod-env.sh init --file $(PROD_ENV_FILE) $(ARGS)
+
+prod-env-upgrade:
+	scripts/prod-env.sh upgrade --file $(PROD_ENV_FILE) $(ARGS)
+
+prod-env-check:
+	scripts/prod-env.sh check --file $(PROD_ENV_FILE) $(ARGS)
+
+# CI check (the `env` job): .env.server.example matches the schema, .env.example
+# has every schema key, every backend env read is in the schema, prod-env tests
+# pass. Fix drift: scripts/prod-env.sh example > .env.server.example
+env-check: compose-env-check
+	scripts/check-env-sync.sh
+
+# CI check: every env var the backend reads reaches the backend/worker
+# containers in compose.prod.yml, or has a decision in deploy/env/compose-env.allow.
+compose-env-check:
+	scripts/check-compose-env.sh
+	scripts/check-compose-env.test.sh
+
 prod-config:
 	docker compose --env-file $(PROD_ENV_FILE) -f compose.prod.yml config
 
+# Prebuilt images: CI publishes them to GHCR and the server pulls
+# <IMAGE_REPO>-<service>:<IMAGE_TAG> (pull_policy from IMAGE_PULL_POLICY, default
+# always). Nothing is built on the host.
 prod-up:
-	docker compose --env-file $(PROD_ENV_FILE) -f compose.prod.yml up -d --build
+	docker compose --env-file $(PROD_ENV_FILE) -f compose.prod.yml up -d
+
+# Local smoke test of the prod stack with images built on this machine
+# (compose.build.yml tags them <NAME_PREFIX>-backend:local / -frontend:local).
+prod-build-local:
+	docker compose --env-file $(PROD_ENV_FILE) -f compose.prod.yml -f compose.build.yml build
+
+prod-up-local:
+	docker compose --env-file $(PROD_ENV_FILE) -f compose.prod.yml -f compose.build.yml up -d --build
 
 prod-down:
 	docker compose --env-file $(PROD_ENV_FILE) -f compose.prod.yml down

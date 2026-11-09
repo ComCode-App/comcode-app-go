@@ -12,6 +12,8 @@ export type LiveNotification = {
   action_url?: string;
   signed_action_url?: string;
   template_code?: string;
+  /** Template data forwarded by the realtime event (`notification.payload`). */
+  payload?: Record<string, unknown>;
 };
 
 function asString(value: unknown) {
@@ -36,6 +38,7 @@ function fromRecord(record: Record<string, unknown>): LiveNotification | null {
     action_url: asString(record.action_url),
     signed_action_url: asString(record.signed_action_url),
     template_code: asString(record.template_code),
+    payload: asRecord(record.payload) ?? undefined,
   };
 }
 
@@ -59,13 +62,15 @@ export function liveNotificationFromMessage(
   return null;
 }
 
+/**
+ * Fills in fields a partial realtime event left out. The `notification.created` event carries the
+ * whole record (status, body, action_url, template_code, payload), so it is shown as is; the signed
+ * action link is fetched lazily on click (`redeemSignedAction`).
+ */
 export async function enrichLiveNotification(
   notification: LiveNotification,
 ): Promise<LiveNotification> {
-  if (
-    !notification.uuid ||
-    (notification.action_url && notification.signed_action_url)
-  ) {
+  if (!notification.uuid || notification.status) {
     return notification;
   }
   try {
@@ -79,6 +84,8 @@ export async function enrichLiveNotification(
         notification.signed_action_url || full.signed_action_url,
       template_code: notification.template_code || full.template_code,
       channel: notification.channel || full.channel,
+      status: full.status,
+      payload: notification.payload ?? asRecord(full.payload) ?? undefined,
     };
   } catch {
     return notification;

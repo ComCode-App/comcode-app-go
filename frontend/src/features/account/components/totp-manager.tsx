@@ -45,9 +45,8 @@ export function TotpManager() {
       try {
         return await authService.getTOTPStatus();
       } catch (error) {
-        toast.error(
-          isApiError(error) ? error.message : t("auth.totp.error.load"),
-        );
+        // API errors already get the global toast (TEC-1110).
+        if (!isApiError(error)) toast.error(t("auth.totp.error.load"));
         throw error;
       }
     },
@@ -68,9 +67,8 @@ export function TotpManager() {
       setConfirmCode("");
       setRecoveryCodes(null);
     } catch (error) {
-      toast.error(
-        isApiError(error) ? error.message : t("auth.totp.error.setup"),
-      );
+      // API errors already get the global toast (TEC-1110).
+      if (!isApiError(error)) toast.error(t("auth.totp.error.setup"));
     } finally {
       setPending(false);
     }
@@ -86,9 +84,8 @@ export function TotpManager() {
       await statusQuery.refetch();
       toast.success(t("auth.totp.confirm_success"));
     } catch (error) {
-      toast.error(
-        isApiError(error) ? error.message : t("auth.totp.error.confirm"),
-      );
+      // API errors already get the global toast (TEC-1110).
+      if (!isApiError(error)) toast.error(t("auth.totp.error.confirm"));
     } finally {
       setPending(false);
     }
@@ -105,9 +102,8 @@ export function TotpManager() {
       await statusQuery.refetch();
       toast.success(t("auth.totp.disable_success"));
     } catch (error) {
-      toast.error(
-        isApiError(error) ? error.message : t("auth.totp.error.disable"),
-      );
+      // API errors already get the global toast (TEC-1110).
+      if (!isApiError(error)) toast.error(t("auth.totp.error.disable"));
     } finally {
       setPending(false);
     }
@@ -216,7 +212,11 @@ export function TotpManager() {
           {t("auth.totp.disable")}
         </Button>
       ) : (
-        <Button type="button" disabled={pending} onClick={() => void beginSetup()}>
+        <Button
+          type="button"
+          disabled={pending}
+          onClick={() => void beginSetup()}
+        >
           {pending ? t("auth.totp.setting_up") : t("auth.totp.enable")}
         </Button>
       )}
@@ -230,7 +230,9 @@ export function TotpManager() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="totp-disable-code">{t("auth.totp.confirm_code")}</Label>
+            <Label htmlFor="totp-disable-code">
+              {t("auth.totp.confirm_code")}
+            </Label>
             <Input
               id="totp-disable-code"
               inputMode="numeric"

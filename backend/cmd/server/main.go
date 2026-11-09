@@ -21,6 +21,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/events"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/mail"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/metrics"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/release"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/storage"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/queue"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/realtime"
@@ -34,6 +35,10 @@ func main() {
 	}
 
 	log := logging.New(cfg.Log.Level, cfg.Log.Format)
+	// Baked release (TEC-1094) names Sentry events unless SENTRY_RELEASE overrides it.
+	cfg.Observe.SentryRelease = release.SentryRelease(cfg.Observe.SentryRelease)
+	rel := release.Current()
+	log.Info("app_release", "version", rel.Version, "commit", rel.ShortCommit(), "built_at", rel.BuiltAt)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -90,6 +95,9 @@ func main() {
 	log = persist.Logger()
 	defer persist.Close()
 
+	// Deploy provenance (TEC-1094): upsert this build's app_releases row. Fail-soft.
+	release.RecordBoot(ctx, queries, log)
+
 	eventBus := events.NewBus(log)
 	mailer := mail.NewSMTPSender(cfg.SMTP)
 	provs := []providers.Provider{
@@ -104,7 +112,8 @@ func main() {
 	var worker *queue.Worker
 	if cfg.Queue.Enabled {
 		queueClient = queue.NewClient(cfg.Redis)
-		notifSvc := notifusecase.New(queries, queueClient, provs, log)
+		notifSvc := notifusecase.New(queries, queueClient, provs, log).
+			WithEncryptionKey(cfg.App.Env, cfg.Encryption.Key)
 		if cfg.Queue.WorkerInProcess {
 			worker = queue.NewWorker(cfg, log, notifSvc.Deliver).
 				WithLogPurge(logsSvc.ApplyDueRules)

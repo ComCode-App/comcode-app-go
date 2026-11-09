@@ -19,10 +19,7 @@ export function createSubscriptionFormSchema(t: Translate) {
           path: ["user_uuid"],
         });
       }
-      if (
-        values.subject_type === "company" &&
-        !values.company_uuid?.trim()
-      ) {
+      if (values.subject_type === "company" && !values.company_uuid?.trim()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: t("subscriptions.validation.company"),

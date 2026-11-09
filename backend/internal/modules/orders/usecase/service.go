@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"mime"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -23,6 +21,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/routecache"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/searchengine"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/storage"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
 )
 
 var (
@@ -671,25 +670,21 @@ func (s *Service) UploadAsset(ctx context.Context, token string, file io.Reader,
 		return nil, ErrInvalidToken
 	}
 
-	ext := strings.ToLower(filepath.Ext(filename))
-	if ext == "" {
-		exts, _ := mime.ExtensionsByType(contentType)
-		if len(exts) > 0 {
-			ext = exts[0]
-		} else {
-			ext = ".png"
-		}
+	// Type and extension come from the bytes (raster, PDF/AI, EPS, ZIP or a
+	// static SVG); the client filename and Content-Type are ignored (TEC-1097).
+	sniffed, err := upload.SniffArtwork(file)
+	if err != nil {
+		return nil, err
 	}
-	ext = strings.TrimPrefix(ext, ".")
 
-	key := storage.OrderAssetObjectKey(orderNumber, req.UUID, ext)
+	key := storage.OrderAssetObjectKey(orderNumber, req.UUID, sniffed.Ext)
 
 	var fileURL string
 	if s.storage != nil {
 		err = s.storage.Upload(ctx, storage.File{
-			Body:        file,
+			Body:        sniffed.Body,
 			Size:        size,
-			ContentType: contentType,
+			ContentType: sniffed.ContentType,
 			Filename:    filename,
 		}, key)
 		if err != nil {

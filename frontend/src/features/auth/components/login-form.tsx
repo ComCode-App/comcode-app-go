@@ -21,6 +21,7 @@ import {
   createLoginSchema,
   type LoginFormValues,
 } from "@/features/auth/schemas";
+import { safeNextPath } from "@/lib/auth/safe-next";
 import { defaultHomeForUser } from "@/lib/auth/types";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
@@ -28,13 +29,6 @@ import { fetchAppPublicConfig } from "@/services/app-config.service";
 import { z } from "zod";
 
 import { AuthCard } from "./auth-card";
-
-function resolveNext(raw: string | null, fallback: string) {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
-    return fallback;
-  }
-  return raw;
-}
 
 type OAuthId = "github" | "google" | "facebook" | "apple";
 
@@ -60,9 +54,8 @@ export function LoginForm() {
   const [passkeyPending, setPasskeyPending] = useState(false);
   const [oauthPending, setOauthPending] = useState<OAuthId | null>(null);
   const [mfaStep, setMfaStep] = useState(false);
-  const [savedCredentials, setSavedCredentials] = useState<SavedCredentials | null>(
-    null,
-  );
+  const [savedCredentials, setSavedCredentials] =
+    useState<SavedCredentials | null>(null);
   const schema = useMemo(() => createLoginSchema(t), [t]);
   const mfaSchema = useMemo(() => createMfaSchema(t), [t]);
 
@@ -85,14 +78,14 @@ export function LoginForm() {
   const oauthError = searchParams.get("error");
   const oauthFormError =
     oauthError === "GitHubNotLinked" ||
-      oauthError === "OAuthNotLinked" ||
-      oauthError === "OAuthAccountNotLinked" ||
-      oauthError === "AccountNotLinked"
+    oauthError === "OAuthNotLinked" ||
+    oauthError === "OAuthAccountNotLinked" ||
+    oauthError === "AccountNotLinked"
       ? t("auth.oauth.not_linked")
       : oauthError === "Configuration" ||
-        oauthError === "AccessDenied" ||
-        oauthError === "AdapterError" ||
-        oauthError === "CallbackRouteError"
+          oauthError === "AccessDenied" ||
+          oauthError === "AdapterError" ||
+          oauthError === "CallbackRouteError"
         ? t("auth.oauth.sign_in_error")
         : null;
   const displayError = formError ?? oauthFormError;
@@ -109,7 +102,7 @@ export function LoginForm() {
       setFormError(t("errors.role_mismatch"));
       return false;
     }
-    const next = resolveNext(searchParams.get("next"), home);
+    const next = safeNextPath(searchParams.get("next"), home);
     router.replace(next);
     return true;
   };
@@ -240,7 +233,10 @@ export function LoginForm() {
       }
       await signIn(provider, {
         redirect: true,
-        callbackUrl: resolveNext(searchParams.get("next"), routes.platform.home),
+        callbackUrl: safeNextPath(
+          searchParams.get("next"),
+          routes.platform.home,
+        ),
       });
     } catch {
       setFormError(t("auth.oauth.sign_in_error"));
@@ -257,35 +253,35 @@ export function LoginForm() {
     label: string;
     pendingLabel: string;
   }[] = [
-      {
-        id: "github",
-        enabled: Boolean(methods?.github.login),
-        icon: <GitHubIcon className="size-4" />,
-        label: t("auth.github.sign_in"),
-        pendingLabel: t("auth.github.signing_in"),
-      },
-      {
-        id: "google",
-        enabled: Boolean(methods?.google.login),
-        icon: <GoogleIcon className="size-4" />,
-        label: t("auth.google.sign_in"),
-        pendingLabel: t("auth.google.signing_in"),
-      },
-      {
-        id: "facebook",
-        enabled: Boolean(methods?.facebook.login),
-        icon: <FacebookIcon className="size-4" />,
-        label: t("auth.facebook.sign_in"),
-        pendingLabel: t("auth.facebook.signing_in"),
-      },
-      {
-        id: "apple",
-        enabled: Boolean(methods?.apple.login),
-        icon: <AppleIcon className="size-4" />,
-        label: t("auth.apple.sign_in"),
-        pendingLabel: t("auth.apple.signing_in"),
-      },
-    ];
+    {
+      id: "github",
+      enabled: Boolean(methods?.github.login),
+      icon: <GitHubIcon className="size-4" />,
+      label: t("auth.github.sign_in"),
+      pendingLabel: t("auth.github.signing_in"),
+    },
+    {
+      id: "google",
+      enabled: Boolean(methods?.google.login),
+      icon: <GoogleIcon className="size-4" />,
+      label: t("auth.google.sign_in"),
+      pendingLabel: t("auth.google.signing_in"),
+    },
+    {
+      id: "facebook",
+      enabled: Boolean(methods?.facebook.login),
+      icon: <FacebookIcon className="size-4" />,
+      label: t("auth.facebook.sign_in"),
+      pendingLabel: t("auth.facebook.signing_in"),
+    },
+    {
+      id: "apple",
+      enabled: Boolean(methods?.apple.login),
+      icon: <AppleIcon className="size-4" />,
+      label: t("auth.apple.sign_in"),
+      pendingLabel: t("auth.apple.signing_in"),
+    },
+  ];
 
   if (mfaStep) {
     return (
@@ -316,7 +312,9 @@ export function LoginForm() {
             <div className="flex flex-col gap-2">
               <Button type="submit" disabled={authPending} className="w-full">
                 <ShieldCheck aria-hidden />
-                {pending ? t("auth.login.submitting") : t("auth.totp.verify_login")}
+                {pending
+                  ? t("auth.login.submitting")
+                  : t("auth.totp.verify_login")}
               </Button>
               <Button
                 type="button"
@@ -373,16 +371,15 @@ export function LoginForm() {
 
         {showPassword ? (
           <>
-            {(showPasskey ||
-              oauthButtons.some((button) => button.enabled)) && (
-                <div className="flex items-center gap-3">
-                  <Separator className="flex-1" />
-                  <span className="text-muted-foreground text-xs">
-                    {t("auth.passkey.or_password")}
-                  </span>
-                  <Separator className="flex-1" />
-                </div>
-              )}
+            {(showPasskey || oauthButtons.some((button) => button.enabled)) && (
+              <div className="flex items-center gap-3">
+                <Separator className="flex-1" />
+                <span className="text-muted-foreground text-xs">
+                  {t("auth.passkey.or_password")}
+                </span>
+                <Separator className="flex-1" />
+              </div>
+            )}
 
             <AppForm
               schema={schema}

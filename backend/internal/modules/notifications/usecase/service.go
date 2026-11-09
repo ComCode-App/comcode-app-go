@@ -15,6 +15,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications/providers"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications/templates"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/crypto"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/queue"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/apiquery"
 	"github.com/google/uuid"
@@ -69,6 +70,7 @@ type Service struct {
 	vapid        *VAPIDConfig
 	actionSecret []byte
 	actionTTL    time.Duration
+	box          *crypto.SecretBox
 }
 
 // New creates a notification service.
@@ -94,6 +96,14 @@ func (s *Service) WithActionSigner(secret string, ttl time.Duration) *Service {
 	if ttl > 0 {
 		s.actionTTL = ttl
 	}
+	return s
+}
+
+// WithSecretBox enables notifications that carry secrets (security emails, invitation
+// links): their real content is stored encrypted until delivery (see seal.go). Without a
+// box such notifications are refused.
+func (s *Service) WithSecretBox(box *crypto.SecretBox) *Service {
+	s.box = box
 	return s
 }
 
@@ -126,6 +136,7 @@ func (s *Service) Enqueue(ctx context.Context, in model.EnqueueInput) ([]model.N
 		}
 	}
 
+	secrets := secretValues(in)
 	deduplicatedEvent := strings.HasPrefix(in.SourceEvent, "orders.status:") || strings.HasPrefix(in.SourceEvent, "billing:")
 	var out []model.Notification
 	for _, ch := range in.Channels {
@@ -138,8 +149,11 @@ func (s *Service) Enqueue(ctx context.Context, in model.EnqueueInput) ([]model.N
 			continue
 		}
 		title, body := in.Title, in.Body
+		var tpl db.NotificationTemplate
+		hasTpl := false
 		if in.TemplateCode != "" {
-			tpl, err := s.q.GetTemplateByCodeChannelLang(ctx, db.GetTemplateByCodeChannelLangParams{
+			var err error
+			tpl, err = s.q.GetTemplateByCodeChannelLang(ctx, db.GetTemplateByCodeChannelLangParams{
 				Code: in.TemplateCode, Channel: ch, Language: lang,
 			})
 			if errors.Is(err, pgx.ErrNoRows) && lang != "en" {
@@ -148,6 +162,7 @@ func (s *Service) Enqueue(ctx context.Context, in model.EnqueueInput) ([]model.N
 				})
 			}
 			if err == nil {
+				hasTpl = true
 				title = templates.Render(tpl.Subject, in.TemplateVars)
 				body = templates.Render(tpl.Body, in.TemplateVars)
 			} else if !errors.Is(err, pgx.ErrNoRows) {
@@ -160,6 +175,26 @@ func (s *Service) Enqueue(ctx context.Context, in model.EnqueueInput) ([]model.N
 		if err != nil || in.Payload == nil {
 			payload = []byte("{}")
 		}
+		actionURL := textPtr(in.ActionURL)
+		var sealed pgtype.Text
+		if len(secrets) > 0 {
+			// TEC-1099: the row only ever holds a masked rendering. Email keeps the real
+			// subject and body encrypted for the worker; other channels never get the secret.
+			rowTitle, rowBody := maskSecrets(title, secrets), maskSecrets(body, secrets)
+			if hasTpl {
+				rowTitle, rowBody = renderMasked(tpl.Subject, tpl.Body, in, secrets)
+			}
+			if ch == model.ChannelEmail {
+				if sealed, err = s.sealContent(title, body); err != nil {
+					return nil, err
+				}
+			}
+			title, body = rowTitle, rowBody
+			if actionURL.Valid && maskSecrets(actionURL.String, secrets) != actionURL.String {
+				actionURL = pgtype.Text{}
+			}
+			payload = []byte(maskSecrets(string(payload), secrets))
+		}
 		recipient := textPtr(in.Recipient)
 		if ch == model.ChannelEmail && !recipient.Valid && in.UserID != nil {
 			if u, err := s.q.GetUserByID(ctx, *in.UserID); err == nil {
@@ -167,19 +202,20 @@ func (s *Service) Enqueue(ctx context.Context, in model.EnqueueInput) ([]model.N
 			}
 		}
 		row, err := s.q.CreateNotification(ctx, db.CreateNotificationParams{
-			UserID:       int8Ptr(in.UserID),
-			Channel:      ch,
-			Status:       model.StatusQueued,
-			Priority:     priority,
-			Title:        title,
-			Body:         body,
-			Payload:      payload,
-			ActionUrl:    textPtr(in.ActionURL),
-			Recipient:    recipient,
-			TemplateCode: pgtype.Text{String: in.TemplateCode, Valid: in.TemplateCode != ""},
-			SourceEvent:  pgtype.Text{String: in.SourceEvent, Valid: in.SourceEvent != ""},
-			ScheduledAt:  pgtype.Timestamptz{},
-			MaxAttempts:  5,
+			UserID:        int8Ptr(in.UserID),
+			Channel:       ch,
+			Status:        model.StatusQueued,
+			Priority:      priority,
+			Title:         title,
+			Body:          body,
+			Payload:       payload,
+			ActionUrl:     actionURL,
+			Recipient:     recipient,
+			TemplateCode:  pgtype.Text{String: in.TemplateCode, Valid: in.TemplateCode != ""},
+			SourceEvent:   pgtype.Text{String: in.SourceEvent, Valid: in.SourceEvent != ""},
+			ScheduledAt:   pgtype.Timestamptz{},
+			MaxAttempts:   5,
+			SealedContent: sealed,
 		})
 		if errors.Is(err, pgx.ErrNoRows) && deduplicatedEvent {
 			// A retry may follow a partial multi-channel enqueue or a queue outage.
@@ -276,7 +312,7 @@ func (s *Service) Deliver(ctx context.Context, id int64) error {
 			userUUID = &uid
 		}
 	}
-	res, err := p.Deliver(ctx, row, userUUID)
+	res, err := s.deliverVia(ctx, p, row, userUUID)
 	if err != nil {
 		_, _ = s.q.MarkNotificationFailed(ctx, db.MarkNotificationFailedParams{
 			ID: id, LastError: pgtype.Text{String: err.Error(), Valid: true},
@@ -390,6 +426,10 @@ func (s *Service) GetOwned(ctx context.Context, userID int64, id uuid.UUID) (mod
 	}
 	if !row.UserID.Valid || row.UserID.Int64 != userID {
 		return model.Notification{}, ErrForbidden
+	}
+	// The inbox is in-app only (TEC-1099): email rows are for the mailbox.
+	if row.Channel != model.ChannelInapp {
+		return model.Notification{}, ErrNotFound
 	}
 	return s.project(row), nil
 }

@@ -87,6 +87,7 @@ WHERE account_id = sqlc.arg(account_id) AND id = sqlc.arg(id) AND status = 'pend
 -- Import rollback removes the invite it created.
 DELETE FROM account_invites WHERE account_id = sqlc.arg(account_id) AND id = sqlc.arg(id);
 
+-- account-lint: cross-account public invite preview/accept: the token hash is the credential
 -- name: GetAccountInviteByTokenHash :one
 -- The link holder's view: not account-scoped, the token is the credential.
 SELECT i.id, i.uuid, i.account_id, i.email, i.role, i.status, i.expires_at,
@@ -101,12 +102,14 @@ LEFT JOIN company_groups g ON g.id = i.group_id
 LEFT JOIN users u ON u.id = i.invited_by_user_id
 WHERE i.token_hash = sqlc.arg(token_hash);
 
+-- account-lint: cross-account invite accept: id and token hash come from GetAccountInviteByTokenHash
 -- name: LockAccountInvite :one
 -- Re-reads the invite under lock; a resend in between changed the token, so the old one misses.
 SELECT id, status, expires_at FROM account_invites
 WHERE id = sqlc.arg(id) AND token_hash = sqlc.arg(token_hash)
 FOR UPDATE;
 
+-- account-lint: cross-account invite accept: id comes from the token lookup, inside the locked tx
 -- name: MarkAccountInviteAccepted :execrows
 UPDATE account_invites SET status = 'accepted', accepted_at = now(), accepted_by_user_id = sqlc.arg(user_id)
 WHERE id = sqlc.arg(id) AND status = 'pending';
@@ -114,6 +117,7 @@ WHERE id = sqlc.arg(id) AND status = 'pending';
 -- name: GetAccountMemberIDByUser :one
 SELECT id, role FROM account_members WHERE account_id = sqlc.arg(account_id) AND user_id = sqlc.arg(user_id);
 
+-- account-lint: cross-account NOT EXISTS mirrors the global unique keys (member_id, profile_id); the insert itself is scoped
 -- name: LinkInvitedMemberProfile :execrows
 -- Links the invite's profile to the member unless either side is already linked.
 INSERT INTO company_member_profiles (account_id, member_id, profile_id)
@@ -131,3 +135,9 @@ ON CONFLICT (member_id) DO NOTHING;
 
 -- name: GetUserForInvite :one
 SELECT id, uuid, email, name, surname, locale FROM users WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: RevokeOpenAccountInvitesForUser :execrows
+-- TEC-1104: a removed member's open invites to the account stop working too.
+UPDATE account_invites SET status = 'revoked', revoked_at = now()
+WHERE account_id = sqlc.arg(account_id) AND status = 'pending'
+  AND email = (SELECT lower(u.email) FROM users u WHERE u.id = sqlc.arg(user_id));

@@ -37,9 +37,7 @@ export function SubscriptionCreatePage() {
               plan_uuid: values.plan_uuid,
               status: values.status,
               user_uuid:
-                values.subject_type === "user"
-                  ? values.user_uuid
-                  : undefined,
+                values.subject_type === "user" ? values.user_uuid : undefined,
               company_uuid:
                 values.subject_type === "company"
                   ? values.company_uuid

@@ -31,17 +31,17 @@ export function useProfilesColumns(handlers: ProfileRowActionHandlers) {
           gridPrimary: true,
           cell: ({ row }) => {
             const item = row.original;
-            const fullName = `${item.first_name} ${item.last_name}`.trim() || "Untitled Profile";
+            const fullName =
+              `${item.first_name} ${item.last_name}`.trim() ||
+              "Untitled Profile";
             const initials =
-              `${item.first_name?.[0] || ""}${item.last_name?.[0] || ""}`.toUpperCase() || "ID";
+              `${item.first_name?.[0] || ""}${item.last_name?.[0] || ""}`.toUpperCase() ||
+              "ID";
 
             return (
               <div className="flex items-center gap-3">
                 <Avatar className="h-9 w-9 rounded-xl border">
-                  <AvatarImage
-                    src={item.avatar_url}
-                    alt={fullName}
-                  />
+                  <AvatarImage src={item.avatar_url} alt={fullName} />
                   <AvatarFallback className="rounded-xl text-xs font-semibold">
                     {initials || <User className="h-4 w-4" />}
                   </AvatarFallback>
@@ -50,7 +50,7 @@ export function useProfilesColumns(handlers: ProfileRowActionHandlers) {
                   <div className="flex items-center gap-1.5">
                     <Link
                       href={routes.app.profiles.detail(item.uuid)}
-                      className="font-medium text-foreground hover:underline"
+                      className="text-foreground font-medium hover:underline"
                     >
                       {fullName}
                     </Link>
@@ -64,8 +64,8 @@ export function useProfilesColumns(handlers: ProfileRowActionHandlers) {
                       </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className="uppercase font-mono text-[10px] bg-muted px-1 rounded">
+                  <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                    <span className="bg-muted rounded px-1 font-mono text-[10px] uppercase">
                       {item.primary_locale}
                     </span>
                     {item.company_name && <span>• {item.company_name}</span>}
@@ -81,11 +81,9 @@ export function useProfilesColumns(handlers: ProfileRowActionHandlers) {
           enableSorting: false,
           cell: ({ row }) => (
             <div className="flex flex-col">
-              <span className="text-sm">
-                {row.original.title || "-"}
-              </span>
+              <span className="text-sm">{row.original.title || "-"}</span>
               {row.original.company_name && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   {row.original.company_name}
                 </span>
               )}
@@ -125,10 +123,7 @@ export function useProfilesColumns(handlers: ProfileRowActionHandlers) {
           enableSorting: false,
           enableColumnFilter: false,
           cell: ({ row }) => (
-            <ProfileRowActionsMenu
-              profile={row.original}
-              handlers={handlers}
-            />
+            <ProfileRowActionsMenu profile={row.original} handlers={handlers} />
           ),
         }),
       ] as ColumnDef<ProfileSummary, unknown>[],

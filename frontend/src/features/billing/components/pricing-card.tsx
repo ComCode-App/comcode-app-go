@@ -42,7 +42,7 @@ export function PricingCard({
   return (
     <div
       className={cn(
-        "relative flex flex-col gap-8 overflow-hidden rounded-2xl border p-6 shadow-comcode-sm transition-shadow hover:shadow-comcode-md",
+        "shadow-comcode-sm hover:shadow-comcode-md relative flex flex-col gap-8 overflow-hidden rounded-2xl border p-6 transition-shadow",
         isHighlighted
           ? "border-primary/30 bg-foreground text-background"
           : "bg-card text-card-foreground",
@@ -62,7 +62,7 @@ export function PricingCard({
           </Badge>
         ) : null}
         {isPopular && !isCurrent && popularBadgeLabel ? (
-          <Badge className="comcode-brand-gradient border-0 text-[10px] text-primary-foreground hover:opacity-95">
+          <Badge className="comcode-brand-gradient text-primary-foreground border-0 text-[10px] hover:opacity-95">
             {popularBadgeLabel}
           </Badge>
         ) : null}
@@ -98,7 +98,9 @@ export function PricingCard({
                 key={feature}
                 className={cn(
                   "flex items-start gap-2 text-sm font-medium",
-                  isHighlighted ? "text-background/75" : "text-muted-foreground",
+                  isHighlighted
+                    ? "text-background/75"
+                    : "text-muted-foreground",
                 )}
               >
                 <BadgeCheck
@@ -119,9 +121,12 @@ export function PricingCard({
       <Button
         className={cn(
           "relative h-10 w-full rounded-lg",
-          isHighlighted && "comcode-brand-gradient text-primary-foreground hover:brightness-110",
+          isHighlighted &&
+            "comcode-brand-gradient text-primary-foreground hover:brightness-110",
         )}
-        variant={isHighlighted ? "default" : isCurrent ? "secondary" : "outline"}
+        variant={
+          isHighlighted ? "default" : isCurrent ? "secondary" : "outline"
+        }
         disabled={disabled || isLoading || isCurrent}
         onClick={onSelect}
       >
@@ -134,7 +139,7 @@ export function PricingCard({
 
 function HighlightedBackground() {
   return (
-    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,color-mix(in_oklch,var(--comcode-magenta)_12%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklch,var(--comcode-magenta)_12%,transparent)_1px,transparent_1px)] bg-[size:45px_45px] opacity-100 [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)] dark:opacity-40" />
+    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,color-mix(in_oklch,var(--comcode-magenta)_12%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklch,var(--comcode-magenta)_12%,transparent)_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)] bg-[size:45px_45px] opacity-100 dark:opacity-40" />
   );
 }
 

@@ -464,7 +464,7 @@ func TestPublicPageCompanyBrandingLock(t *testing.T) {
 	svc, _, _ := newPublicPageService(t)
 	brand := &model.AccountBranding{
 		Theme: "elegant_serif", LayoutMode: "minimal", PrimaryColor: "#112233",
-		LogoURL: "/api/v1/storage/stream/accounts/a/media/logo.png",
+		LogoURL:  "/api/v1/storage/stream/accounts/a/media/logo.png",
 		CoverURL: "/api/v1/storage/stream/accounts/a/media/cover.png",
 	}
 	svc.SetAccountThemes(stubBranding{1: brand})
@@ -671,7 +671,7 @@ func TestDowngradeRendersBasicVisuals(t *testing.T) {
 	off := false
 	page, err := svc.UpdatePublicPage(ctx, owner, prof.UUID, model.UpdatePublicPageInput{
 		LeadCapture: &off,
-		Theme: ptr("glass"), Background: model.OptionalUUID{Set: true, Value: &animated},
+		Theme:       ptr("glass"), Background: model.OptionalUUID{Set: true, Value: &animated},
 	})
 	if err != nil || page.Theme != "glass" || page.BackgroundUUID == nil || *page.BackgroundUUID != animated {
 		t.Fatalf("kept choice: %+v %v", page, err)

@@ -12,12 +12,16 @@ export type LeadSource = components["schemas"]["LeadSource"];
 export type LeadKind = components["schemas"]["LeadKind"];
 export type LeadFormConfig = components["schemas"]["LeadFormConfig"];
 export type SubmitLeadPayload = components["schemas"]["SubmitLeadRequest"];
-export type ContactExchangePayload = components["schemas"]["ContactExchangeRequest"];
-export type ShareProfileExchangePayload = components["schemas"]["ShareProfileExchangeRequest"];
-export type DeleteExchangePayload = components["schemas"]["DeleteContactExchangeRequest"];
+export type ContactExchangePayload =
+  components["schemas"]["ContactExchangeRequest"];
+export type ShareProfileExchangePayload =
+  components["schemas"]["ShareProfileExchangeRequest"];
+export type DeleteExchangePayload =
+  components["schemas"]["DeleteContactExchangeRequest"];
 
 /** Outcome of a visitor post: `fields` lists API validation details as `field:code`. */
-export type VisitorPostResult = { ok: true } | { ok: false; status: number; fields: string[] };
+export type VisitorPostResult =
+  { ok: true } | { ok: false; status: number; fields: string[] };
 
 export type LeadListParams = {
   limit: number;
@@ -62,7 +66,11 @@ export const leadsService = {
   },
 
   /** Queues an export of the active account's leads (account comes from the session). */
-  requestExport(body: { format: ExportFormat; locale: string; query: Record<string, string> }) {
+  requestExport(body: {
+    format: ExportFormat;
+    locale: string;
+    query: Record<string, string>;
+  }) {
     return platformRequest<ExportJob>("POST", "/v1/leads/export", { body });
   },
 
@@ -71,10 +79,17 @@ export const leadsService = {
   },
 
   async downloadExport(job: ExportJob) {
-    const { blob, filename } = await platformDownloadFile(`/v1/exports/${job.uuid}/download`);
+    const { blob, filename } = await platformDownloadFile(
+      `/v1/exports/${job.uuid}/download`,
+    );
     triggerBrowserDownload(
       blob,
-      filename ?? exportDownloadFilename(job.resource, job.format, new Date(job.created_at)),
+      filename ??
+        exportDownloadFilename(
+          job.resource,
+          job.format,
+          new Date(job.created_at),
+        ),
     );
   },
 };
@@ -103,7 +118,10 @@ export const publicLeadsService = {
   },
 };
 
-async function postVisitor(url: string, body: unknown): Promise<VisitorPostResult> {
+async function postVisitor(
+  url: string,
+  body: unknown,
+): Promise<VisitorPostResult> {
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -113,6 +131,8 @@ async function postVisitor(url: string, body: unknown): Promise<VisitorPostResul
   const payload = (await res.json().catch(() => null)) as {
     error?: { details?: { field?: string; code?: string }[] };
   } | null;
-  const fields = (payload?.error?.details ?? []).map((d) => `${d.field ?? ""}:${d.code ?? ""}`);
+  const fields = (payload?.error?.details ?? []).map(
+    (d) => `${d.field ?? ""}:${d.code ?? ""}`,
+  );
   return { ok: false, status: res.status, fields };
 }

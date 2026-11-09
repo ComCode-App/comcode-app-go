@@ -80,6 +80,7 @@ type CountProfileVerificationsParams struct {
 	Q      string `json:"q"`
 }
 
+// account-lint: cross-account platform /v1/platform/profile-verifications review queue
 func (q *Queries) CountProfileVerifications(ctx context.Context, arg CountProfileVerificationsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countProfileVerifications, arg.Status, arg.Q)
 	var count int64
@@ -148,6 +149,7 @@ LIMIT 1
 
 // TEC-549: verified profile badge requests. Owner-side queries take account_id; platform
 // review queries are unscoped by design (gated by platform.profile_verifications.manage).
+// account-lint: cross-account profile id resolved through GetProfileIDForAccount (account-scoped)
 func (q *Queries) GetLatestProfileVerification(ctx context.Context, profileID int64) (ProfileVerificationRequest, error) {
 	row := q.db.QueryRow(ctx, getLatestProfileVerification, profileID)
 	var i ProfileVerificationRequest
@@ -235,6 +237,7 @@ type GetProfileVerificationRowRow struct {
 	ReviewedByEmail  string             `json:"reviewed_by_email"`
 }
 
+// account-lint: cross-account platform /v1/platform/profile-verifications review queue
 func (q *Queries) GetProfileVerificationRow(ctx context.Context, argUuid uuid.UUID) (GetProfileVerificationRowRow, error) {
 	row := q.db.QueryRow(ctx, getProfileVerificationRow, argUuid)
 	var i GetProfileVerificationRowRow
@@ -275,6 +278,7 @@ SELECT EXISTS (
 )::boolean AS verified
 `
 
+// account-lint: cross-account verified badge of a profile already loaded (public page / owner view)
 func (q *Queries) IsProfileVerified(ctx context.Context, profileID int64) (bool, error) {
 	row := q.db.QueryRow(ctx, isProfileVerified, profileID)
 	var verified bool
@@ -393,6 +397,7 @@ type ListProfileVerificationsRow struct {
 	ReviewedByEmail  string             `json:"reviewed_by_email"`
 }
 
+// account-lint: cross-account platform /v1/platform/profile-verifications review queue
 func (q *Queries) ListProfileVerifications(ctx context.Context, arg ListProfileVerificationsParams) ([]ListProfileVerificationsRow, error) {
 	rows, err := q.db.Query(ctx, listProfileVerifications,
 		arg.Status,
@@ -462,6 +467,7 @@ type ReviewProfileVerificationParams struct {
 	Uuid             uuid.UUID   `json:"uuid"`
 }
 
+// account-lint: cross-account platform /v1/platform/profile-verifications approve/reject
 // Approves or rejects a pending request; no row when it is not pending any more.
 func (q *Queries) ReviewProfileVerification(ctx context.Context, arg ReviewProfileVerificationParams) (ProfileVerificationRequest, error) {
 	row := q.db.QueryRow(ctx, reviewProfileVerification,
@@ -509,6 +515,7 @@ type RevokeProfileVerificationByUUIDParams struct {
 	Uuid            uuid.UUID   `json:"uuid"`
 }
 
+// account-lint: cross-account platform /v1/platform/profile-verifications revoke
 func (q *Queries) RevokeProfileVerificationByUUID(ctx context.Context, arg RevokeProfileVerificationByUUIDParams) (ProfileVerificationRequest, error) {
 	row := q.db.QueryRow(ctx, revokeProfileVerificationByUUID, arg.RevokedByUserID, arg.RevokeReason, arg.Uuid)
 	var i ProfileVerificationRequest
@@ -550,6 +557,7 @@ type RevokeProfileVerificationForProfileParams struct {
 	ProfileID       int64       `json:"profile_id"`
 }
 
+// account-lint: cross-account profile id resolved through GetProfileIDForAccount (account-scoped)
 func (q *Queries) RevokeProfileVerificationForProfile(ctx context.Context, arg RevokeProfileVerificationForProfileParams) (ProfileVerificationRequest, error) {
 	row := q.db.QueryRow(ctx, revokeProfileVerificationForProfile, arg.RevokedByUserID, arg.RevokeReason, arg.ProfileID)
 	var i ProfileVerificationRequest

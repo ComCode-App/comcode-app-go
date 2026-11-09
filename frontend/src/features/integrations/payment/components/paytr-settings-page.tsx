@@ -62,7 +62,11 @@ export function PayTRSettingsPage() {
       appToast.success(t("integrations.payment.toast.saved"));
     },
     onError: (error) => {
-      appToast.error(isApiError(error) ? error.message : t("integrations.payment.toast.failed"));
+      appToast.error(
+        isApiError(error)
+          ? error.message
+          : t("integrations.payment.toast.failed"),
+      );
     },
   });
 
@@ -95,33 +99,51 @@ export function PayTRSettingsPage() {
         >
           {() => (
             <FormLayout>
-              <FormSection title={t("integrations.payment.paytr.section")} columns={2}>
+              <FormSection
+                title={t("integrations.payment.paytr.section")}
+                columns={2}
+              >
                 <PaymentCallbackUrlField provider="paytr" />
                 <AppSwitch
                   name="enabled"
                   label={t("integrations.payment.paytr.enabled")}
                   description={t("integrations.payment.paytr.enabled_hint")}
                   disabled={!canWrite}
-                  className="sm:col-span-2 items-center rounded-lg border p-4"
+                  className="items-center rounded-lg border p-4 sm:col-span-2"
                 />
-                <AppInput name="merchant_id" label={t("integrations.payment.paytr.merchant_id")} disabled={!canWrite} />
+                <AppInput
+                  name="merchant_id"
+                  label={t("integrations.payment.paytr.merchant_id")}
+                  disabled={!canWrite}
+                />
                 <AppInput
                   name="merchant_key"
                   label={t("integrations.payment.paytr.merchant_key")}
                   type="password"
-                  placeholder={data.merchant_key_configured ? t("integrations.payment.secret_configured") : ""}
+                  placeholder={
+                    data.merchant_key_configured
+                      ? t("integrations.payment.secret_configured")
+                      : ""
+                  }
                   disabled={!canWrite}
                 />
                 <AppInput
                   name="merchant_salt"
                   label={t("integrations.payment.paytr.merchant_salt")}
                   type="password"
-                  placeholder={data.merchant_salt_configured ? t("integrations.payment.secret_configured") : ""}
+                  placeholder={
+                    data.merchant_salt_configured
+                      ? t("integrations.payment.secret_configured")
+                      : ""
+                  }
                   disabled={!canWrite}
                 />
               </FormSection>
               <FormActions>
-                <Button type="submit" disabled={!canWrite || saveMutation.isPending}>
+                <Button
+                  type="submit"
+                  disabled={!canWrite || saveMutation.isPending}
+                >
                   {t("form.save")}
                 </Button>
               </FormActions>

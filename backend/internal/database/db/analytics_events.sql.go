@@ -1120,6 +1120,7 @@ type SubjectSourceCountsRow struct {
 // subject's own account. A profile brings its routes (card, canonical, smart link and legacy hash
 // routes) and cards; a route its card; a card its routes. Counts per event type and source come
 // from the daily rollups only.
+// account-lint: cross-account analytics: handler's scopedFilter restricts the subject to the active account; related rows follow the subject's account
 func (q *Queries) SubjectSourceCounts(ctx context.Context, arg SubjectSourceCountsParams) ([]SubjectSourceCountsRow, error) {
 	rows, err := q.db.Query(ctx, subjectSourceCounts,
 		arg.FromDate,

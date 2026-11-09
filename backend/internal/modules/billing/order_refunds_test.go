@@ -67,7 +67,9 @@ func (f *fakeRefunds) requests() []url.Values {
 // fakeStepUp stands in for the step-up grant check of both the refund routes and the orders module.
 type fakeStepUp struct{ valid atomic.Bool }
 
-func (s *fakeStepUp) HasValidGrant(context.Context, uuid.UUID) (bool, error) { return s.valid.Load(), nil }
+func (s *fakeStepUp) HasValidGrant(context.Context, uuid.UUID) (bool, error) {
+	return s.valid.Load(), nil
+}
 
 func (s *fakeStepUp) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

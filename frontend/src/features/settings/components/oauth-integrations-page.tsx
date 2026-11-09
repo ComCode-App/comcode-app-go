@@ -23,29 +23,41 @@ export function OAuthIntegrationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold tracking-tight text-foreground md:text-2xl">
+        <h1 className="text-foreground text-xl font-bold tracking-tight md:text-2xl">
           {t("settings.subnav.oauth_providers")}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-1 text-sm">
           {t("integrations.description")}
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-xl">
-          <TabsTrigger value="google" className="flex items-center gap-2 text-xs">
+        <TabsList className="grid w-full max-w-xl grid-cols-4">
+          <TabsTrigger
+            value="google"
+            className="flex items-center gap-2 text-xs"
+          >
             <GoogleIcon className="size-3.5" />
             Google
           </TabsTrigger>
-          <TabsTrigger value="github" className="flex items-center gap-2 text-xs">
+          <TabsTrigger
+            value="github"
+            className="flex items-center gap-2 text-xs"
+          >
             <GitHubIcon className="size-3.5" />
             GitHub
           </TabsTrigger>
-          <TabsTrigger value="facebook" className="flex items-center gap-2 text-xs">
+          <TabsTrigger
+            value="facebook"
+            className="flex items-center gap-2 text-xs"
+          >
             <FacebookIcon className="size-3.5" />
             Facebook
           </TabsTrigger>
-          <TabsTrigger value="apple" className="flex items-center gap-2 text-xs">
+          <TabsTrigger
+            value="apple"
+            className="flex items-center gap-2 text-xs"
+          >
             <AppleIcon className="size-3.5" />
             Apple
           </TabsTrigger>

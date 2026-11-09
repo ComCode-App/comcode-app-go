@@ -18,6 +18,7 @@ import {
   isPlatformUser,
   isSubscriber,
 } from "@/lib/auth/types";
+import { loginWithNext, safeNextPath } from "@/lib/auth/safe-next";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -45,10 +46,10 @@ function RoleMismatch({ expected, home }: { expected: string; home: string }) {
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <p className="text-muted-foreground text-sm">
-            Bu alan yalnızca <strong>{expected}</strong> erişimi gerektirir.
+            {t("errors.area_requires", { area: expected })}
           </p>
           <Button asChild>
-            <Link href={home}>Devam et</Link>
+            <Link href={home}>{t("errors.continue")}</Link>
           </Button>
         </CardContent>
       </Card>
@@ -65,12 +66,18 @@ export function RouteGuard({ children, mode }: RouteGuardProps) {
     if (!bootstrapped) return;
 
     if (mode === "guest" && isAuthenticated && user) {
-      router.replace(defaultHomeForUser(user));
+      // Same target as the login form: a safe ?next= wins, otherwise the
+      // user's default shell. Without this the guard races the form after
+      // sign-in and drops the deep link.
+      const next = new URLSearchParams(window.location.search).get("next");
+      router.replace(safeNextPath(next, defaultHomeForUser(user)));
       return;
     }
 
     if ((mode === "platform" || mode === "app") && !isAuthenticated) {
-      router.replace(routes.guest.login);
+      // Come back to the same page (query included) after signing in.
+      const { pathname, search } = window.location;
+      router.replace(loginWithNext(routes.guest.login, `${pathname}${search}`));
     }
   }, [bootstrapped, mode, isAuthenticated, user, router]);
 
@@ -79,7 +86,8 @@ export function RouteGuard({ children, mode }: RouteGuardProps) {
   }
 
   if ((mode === "platform" || mode === "app") && !isAuthenticated) {
-    return null;
+    // The effect above is sending the visitor to the login page.
+    return <PageLoader label={t("errors.redirecting_to_login")} />;
   }
 
   if (mode === "platform" && user && !isPlatformUser(user)) {
@@ -94,8 +102,10 @@ export function RouteGuard({ children, mode }: RouteGuardProps) {
   if (mode === "app" && user && !isSubscriber(user)) {
     return (
       <RoleMismatch
-        expected="App"
-        home={isPlatformUser(user) ? routes.platform.home : routes.errors.forbidden}
+        expected={t("errors.area_app")}
+        home={
+          isPlatformUser(user) ? routes.platform.home : routes.errors.forbidden
+        }
       />
     );
   }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/auth/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/auth/repository"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/password"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/rbac"
 	searchadapters "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/searchengine/adapters"
@@ -84,6 +85,9 @@ func (u *AuthUseCase) CreatePlatformUser(ctx context.Context, in model.CreatePla
 	}
 	if in.Status != "active" && in.Status != "disabled" && in.Status != "pending" {
 		return model.PublicUser{}, fmt.Errorf("%w: status must be active, disabled, or pending", ErrInvalidRequest)
+	}
+	if err := u.guardSuperAdminRoleGrant(ctx, in.RoleUUIDs); err != nil {
+		return model.PublicUser{}, err
 	}
 	if _, err := u.repo.FindUserByEmail(ctx, in.Email); err == nil {
 		return model.PublicUser{}, fmt.Errorf("%w: email already registered", ErrConflict)
@@ -162,7 +166,7 @@ func buildAuthMethods(
 	passkeys []model.PasskeyRecord,
 ) []model.UserAuthMethod {
 	out := make([]model.UserAuthMethod, 0, 1+len(oauth)+len(passkeys))
-	if strings.TrimSpace(user.PasswordHash) != "" {
+	if user.PasswordSet && strings.TrimSpace(user.PasswordHash) != "" {
 		linkedAt := user.CreatedAt
 		if linkedAt.IsZero() {
 			linkedAt = time.Now().UTC()
@@ -229,7 +233,13 @@ func (u *AuthUseCase) PatchPlatformUser(
 	if err != nil {
 		return model.PublicUser{}, err
 	}
+	if hasSuperAdmin && !actorIsSuperAdmin(ctx) {
+		return model.PublicUser{}, ErrSuperAdminRequired
+	}
 	if in.RoleUUIDs != nil {
+		if err := u.guardSuperAdminRoleGrant(ctx, *in.RoleUUIDs); err != nil {
+			return model.PublicUser{}, err
+		}
 		roleIDs, err := u.repo.ResolveRoleIDsByUUIDs(ctx, *in.RoleUUIDs)
 		if err != nil {
 			return model.PublicUser{}, err
@@ -294,6 +304,15 @@ func (u *AuthUseCase) SetPlatformUserPassword(ctx context.Context, userUUID uuid
 			return ErrNotFound
 		}
 		return err
+	}
+	if !actorIsSuperAdmin(ctx) {
+		isSA, err := u.repo.UserHasRoleSlug(ctx, user.ID, rbac.RoleSuperAdmin)
+		if err != nil {
+			return err
+		}
+		if isSA {
+			return ErrSuperAdminRequired
+		}
 	}
 	hash, err := passwordHash(newPassword)
 	if err != nil {
@@ -429,22 +448,30 @@ func (u *AuthUseCase) ListPlatformPermissions(ctx context.Context, limit, offset
 }
 
 // CanSubscribeChannel authorizes Centrifugo subscription channels.
+//
+// It is an explicit allowlist: every channel family the backend publishes to
+// is listed here with its ownership check, and anything else is denied.
+//   - system.notifications: super admins only.
+//   - user:{uuid}: only the caller's own canonical user channel.
+//
+// conversation:{uuid}, workspace:{uuid} and any account-scoped channel are
+// denied: nothing publishes to them, and they used to be granted without an
+// ownership check. A future publisher must add its family here together with
+// a membership/ownership check.
 func (u *AuthUseCase) CanSubscribeChannel(
-	ctx context.Context,
+	_ context.Context,
 	userUUID uuid.UUID,
 	isSuperAdmin bool,
 	channel string,
 ) (bool, error) {
-	if channel == realtime.ChannelSystemNotifications {
+	switch {
+	case channel == realtime.ChannelSystemNotifications:
 		return isSuperAdmin, nil
-	}
-	if uid, ok := realtime.ParseUserChannel(channel); ok {
-		return uid == userUUID, nil
-	}
-	if _, ok := realtime.ParseConversationChannel(channel); ok {
+	case userUUID != uuid.Nil && channel == realtime.UserChannel(userUUID):
 		return true, nil
+	default:
+		return false, nil
 	}
-	return false, nil
 }
 
 func passwordHash(raw string) (string, error) {
@@ -470,4 +497,37 @@ func (u *AuthUseCase) deleteRoleSearch(ctx context.Context, id string) {
 		return
 	}
 	u.searchIndexer.EnqueueDelete(ctx, searchadapters.SpecRoles, id)
+}
+
+// actorIsSuperAdmin reports whether the request principal is a super admin. The principal is
+// reloaded from the database on every request (LoadPrincipal), so a revoked super_admin role
+// applies at once. Calls without a principal come from in-process callers (CLI, bootstrap,
+// tests), never from an HTTP route, and are trusted.
+func actorIsSuperAdmin(ctx context.Context) bool {
+	p, ok := authctx.PrincipalFrom(ctx)
+	if !ok {
+		return true
+	}
+	return p.IsSuperAdmin
+}
+
+// guardSuperAdminRoleGrant stops holders of platform.users.write who are not super admins
+// from granting the super_admin role, to others or to themselves.
+func (u *AuthUseCase) guardSuperAdminRoleGrant(ctx context.Context, roleUUIDs []uuid.UUID) error {
+	if len(roleUUIDs) == 0 || actorIsSuperAdmin(ctx) {
+		return nil
+	}
+	for _, roleUUID := range roleUUIDs {
+		role, err := u.repo.GetRoleByUUID(ctx, roleUUID)
+		if err != nil {
+			if errors.Is(err, repository.ErrNotFound) {
+				continue
+			}
+			return err
+		}
+		if role.Slug == rbac.RoleSuperAdmin {
+			return ErrSuperAdminRequired
+		}
+	}
+	return nil
 }

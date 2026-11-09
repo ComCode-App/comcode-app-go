@@ -22,7 +22,10 @@ import { routes } from "@/config/routes";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
-import { useAnalyticsConfig, useUpdateAnalyticsConfig } from "../hooks/use-platform-analytics";
+import {
+  useAnalyticsConfig,
+  useUpdateAnalyticsConfig,
+} from "../hooks/use-platform-analytics";
 import {
   DELIVERY_MODES,
   createAnalyticsConfigSchema,
@@ -31,16 +34,26 @@ import {
 } from "../schemas/analytics-config-form";
 import type { AnalyticsSettings } from "../services/platform-analytics.service";
 
-function ConfigForm({ settings, canWrite }: { settings: AnalyticsSettings; canWrite: boolean }) {
+function ConfigForm({
+  settings,
+  canWrite,
+}: {
+  settings: AnalyticsSettings;
+  canWrite: boolean;
+}) {
   const { t } = useLocale();
   const save = useUpdateAnalyticsConfig();
   const schema = useMemo(() => createAnalyticsConfigSchema(t), [t]);
-  const defaultValues = useMemo(() => settingsToFormValues(settings), [settings]);
+  const defaultValues = useMemo(
+    () => settingsToFormValues(settings),
+    [settings],
+  );
   const disabled = !canWrite || save.isPending;
   // TEC-936: a changed salt period applies from the next UTC day; today keeps the previous one.
   const todayUtc = new Date().toISOString().slice(0, 10);
   const saltPending =
-    settings.ip_hash_salt_rotation_changed_on === todayUtc && settings.ip_hash_salt_rotation_previous_days
+    settings.ip_hash_salt_rotation_changed_on === todayUtc &&
+    settings.ip_hash_salt_rotation_previous_days
       ? settings.ip_hash_salt_rotation_previous_days
       : null;
   const modeLabels: Record<(typeof DELIVERY_MODES)[number], string> = {
@@ -52,10 +65,26 @@ function ConfigForm({ settings, canWrite }: { settings: AnalyticsSettings; canWr
   const sections = useMemo(
     () =>
       createFormSections([
-        { key: "pipeline", label: t("platform_analytics.config.section_pipeline"), icon: Power },
-        { key: "batching", label: t("platform_analytics.config.section_batching"), icon: Gauge },
-        { key: "retention", label: t("platform_analytics.config.section_retention"), icon: Archive },
-        { key: "privacy", label: t("platform_analytics.config.section_privacy"), icon: ShieldCheck },
+        {
+          key: "pipeline",
+          label: t("platform_analytics.config.section_pipeline"),
+          icon: Power,
+        },
+        {
+          key: "batching",
+          label: t("platform_analytics.config.section_batching"),
+          icon: Gauge,
+        },
+        {
+          key: "retention",
+          label: t("platform_analytics.config.section_retention"),
+          icon: Archive,
+        },
+        {
+          key: "privacy",
+          label: t("platform_analytics.config.section_privacy"),
+          icon: ShieldCheck,
+        },
       ]),
     [t],
   );
@@ -89,8 +118,13 @@ function ConfigForm({ settings, canWrite }: { settings: AnalyticsSettings; canWr
             <AppSelect
               name="event_delivery_mode"
               label={t("platform_analytics.config.event_delivery_mode")}
-              description={t("platform_analytics.config.event_delivery_mode_hint")}
-              options={DELIVERY_MODES.map((m) => ({ value: m, label: modeLabels[m] }))}
+              description={t(
+                "platform_analytics.config.event_delivery_mode_hint",
+              )}
+              options={DELIVERY_MODES.map((m) => ({
+                value: m,
+                label: modeLabels[m],
+              }))}
               disabled={disabled}
             />
             <AppInput
@@ -103,7 +137,9 @@ function ConfigForm({ settings, canWrite }: { settings: AnalyticsSettings; canWr
               <AppSwitch
                 name="realtime_enabled"
                 label={t("platform_analytics.config.realtime_enabled")}
-                description={t("platform_analytics.config.realtime_enabled_hint")}
+                description={t(
+                  "platform_analytics.config.realtime_enabled_hint",
+                )}
                 disabled={disabled}
               />
             </div>
@@ -175,7 +211,10 @@ function ConfigForm({ settings, canWrite }: { settings: AnalyticsSettings; canWr
               label={t("platform_analytics.config.ip_hash_salt_rotation_days")}
               description={
                 saltPending
-                  ? t("platform_analytics.config.ip_hash_salt_rotation_pending", { days: saltPending })
+                  ? t(
+                      "platform_analytics.config.ip_hash_salt_rotation_pending",
+                      { days: saltPending },
+                    )
                   : t("platform_analytics.config.ip_hash_salt_rotation_hint")
               }
               disabled={disabled}
@@ -197,7 +236,9 @@ function ConfigForm({ settings, canWrite }: { settings: AnalyticsSettings; canWr
               </Button>
             </FormActions>
           ) : (
-            <p className="text-muted-foreground text-sm">{t("platform_analytics.config.read_only")}</p>
+            <p className="text-muted-foreground text-sm">
+              {t("platform_analytics.config.read_only")}
+            </p>
           )}
         </FormLayout>
       )}
@@ -218,11 +259,17 @@ export function AnalyticsConfigPage() {
       description={t("platform_analytics.config.subtitle")}
       permission={permissions.analytics.read}
       forbiddenFallback={
-        <ErrorState title={t("common.error_forbidden")} description={t("platform_analytics.forbidden")} />
+        <ErrorState
+          title={t("common.error_forbidden")}
+          description={t("platform_analytics.forbidden")}
+        />
       }
       breadcrumbs={[
         { label: t("layout.breadcrumb_home"), href: routes.platform.home },
-        { label: t("layout.nav_platform_analytics"), href: routes.platform.analytics.root },
+        {
+          label: t("layout.nav_platform_analytics"),
+          href: routes.platform.analytics.root,
+        },
         { label: t("platform_analytics.config.title") },
       ]}
     >
@@ -235,7 +282,10 @@ export function AnalyticsConfigPage() {
         />
       ) : null}
       {config.data ? (
-        <ConfigForm settings={config.data} canWrite={can(permissions.analytics.manage)} />
+        <ConfigForm
+          settings={config.data}
+          canWrite={can(permissions.analytics.manage)}
+        />
       ) : null}
     </EntityPage>
   );

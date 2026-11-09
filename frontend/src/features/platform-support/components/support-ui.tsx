@@ -16,11 +16,21 @@ export function useDebouncedQuery() {
   return { input, setInput, q };
 }
 
-export function Field({ label, value, mono }: { label: string; value?: string; mono?: boolean }) {
+export function Field({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value?: string;
+  mono?: boolean;
+}) {
   return (
     <div className="flex min-w-0 gap-2">
       <dt className="text-muted-foreground shrink-0">{label}:</dt>
-      <dd className={cn("truncate", mono && "font-mono text-xs leading-5")}>{value || "—"}</dd>
+      <dd className={cn("truncate", mono && "font-mono text-xs leading-5")}>
+        {value || "—"}
+      </dd>
     </div>
   );
 }

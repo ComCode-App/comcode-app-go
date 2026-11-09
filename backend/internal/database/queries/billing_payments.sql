@@ -4,6 +4,7 @@
 -- order: an online card order payment that paid its order (metadata.order_result = applied; a
 -- session whose money arrived for a closed or already paid order is a refund case, not a receipt).
 -- order_manual: an order marked paid by hand (bank transfer) without an online payment.
+-- account-lint: cross-account NOT EXISTS checks sessions of an order that is already account-scoped
 -- name: ListAccountPaymentHistory :many
 SELECT h.kind, h.uuid, h.provider, h.provider_ref, h.amount_minor, h.currency, h.paid_at,
        h.plan_name, h.billing_interval, h.order_number, h.order_uuid,

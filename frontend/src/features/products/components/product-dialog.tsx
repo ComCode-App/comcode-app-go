@@ -26,11 +26,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Globe, Search, Plus, Trash2, Box, Layers } from "lucide-react";
+import {
+  Sparkles,
+  Globe,
+  Search,
+  Plus,
+  Trash2,
+  Box,
+  Layers,
+} from "lucide-react";
 import { useLocale } from "@/providers/locale-provider";
 
-import { productFormSchema, type ProductFormValues } from "../schemas/product-form";
-import type { ProductDetail, ProductSummary, ProductVariantSummary, UpsertProductPayload } from "../services/products.service";
+import {
+  productFormSchema,
+  type ProductFormValues,
+} from "../schemas/product-form";
+import type {
+  ProductDetail,
+  ProductSummary,
+  ProductVariantSummary,
+  UpsertProductPayload,
+} from "../services/products.service";
 import { useProductMutations } from "../hooks/use-products";
 import { categoriesService } from "@/features/categories/services/categories.service";
 import { categoriesQueryKeys } from "@/features/categories/hooks/query-keys";
@@ -49,12 +65,17 @@ export function ProductDialog({
   product,
 }: ProductDialogProps) {
   const { t } = useLocale();
-  const { createMutation, updateMutation, createVariantMutation, deleteVariantMutation } = useProductMutations();
+  const {
+    createMutation,
+    updateMutation,
+    createVariantMutation,
+    deleteVariantMutation,
+  } = useProductMutations();
   const isEditing = Boolean(product);
   const [studioOpen, setStudioOpen] = useState(false);
-  const [currentViewbox, setCurrentViewbox] = useState<UpsertProductPayload["model_3d_viewbox"]>(
-    (product as ProductDetail)?.model_3d_viewbox || undefined
-  );
+  const [currentViewbox, setCurrentViewbox] = useState<
+    UpsertProductPayload["model_3d_viewbox"]
+  >((product as ProductDetail)?.model_3d_viewbox || undefined);
 
   const [newVariantName, setNewVariantName] = useState("");
   const [newVariantColor, setNewVariantColor] = useState("#000000");
@@ -102,8 +123,14 @@ export function ProductDialog({
     },
   });
 
-  const metaTitleWatch = watch("meta_title") || watch("name") || t("products.placeholders.meta_title");
-  const metaDescWatch = watch("meta_description") || watch("short_description") || t("products.placeholders.meta_description");
+  const metaTitleWatch =
+    watch("meta_title") ||
+    watch("name") ||
+    t("products.placeholders.meta_title");
+  const metaDescWatch =
+    watch("meta_description") ||
+    watch("short_description") ||
+    t("products.placeholders.meta_description");
   const slugWatch = watch("slug") || "product-slug";
 
   useEffect(() => {
@@ -172,7 +199,10 @@ export function ProductDialog({
     };
 
     if (isEditing && product) {
-      await updateMutation.mutateAsync({ uuid: product.uuid, payload: payload as UpsertProductPayload });
+      await updateMutation.mutateAsync({
+        uuid: product.uuid,
+        payload: payload as UpsertProductPayload,
+      });
     } else {
       await createMutation.mutateAsync(payload as UpsertProductPayload);
     }
@@ -197,10 +227,10 @@ export function ProductDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Box className="h-5 w-5 text-primary" />
+              <Box className="text-primary h-5 w-5" />
               {isEditing
                 ? t("products.edit_title")
                 : t("products.create_title")}
@@ -214,25 +244,38 @@ export function ProductDialog({
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Tabs defaultValue="general" className="w-full">
-              <TabsList className="grid grid-cols-4 bg-muted mb-4">
-                <TabsTrigger value="general">{t("products.tabs.general")}</TabsTrigger>
-                <TabsTrigger value="pricing">{t("products.columns.price")} & {t("products.columns.stock")}</TabsTrigger>
+              <TabsList className="bg-muted mb-4 grid grid-cols-4">
+                <TabsTrigger value="general">
+                  {t("products.tabs.general")}
+                </TabsTrigger>
+                <TabsTrigger value="pricing">
+                  {t("products.columns.price")} & {t("products.columns.stock")}
+                </TabsTrigger>
                 <TabsTrigger value="seo" className="flex items-center gap-1">
                   <Globe className="h-3.5 w-3.5" /> {t("products.tabs.seo")}
                 </TabsTrigger>
-                <TabsTrigger value="3d_studio" className="flex items-center gap-1">
-                  <Sparkles className="h-3.5 w-3.5 text-amber-500" /> {t("products.tabs.viewbox")}
+                <TabsTrigger
+                  value="3d_studio"
+                  className="flex items-center gap-1"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />{" "}
+                  {t("products.tabs.viewbox")}
                 </TabsTrigger>
               </TabsList>
 
               {/* TAB 1: GENERAL */}
               <TabsContent value="general" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>{t("products.fields.name")}</Label>
-                    <Input placeholder={t("products.placeholders.name")} {...register("name")} />
+                    <Input
+                      placeholder={t("products.placeholders.name")}
+                      {...register("name")}
+                    />
                     {errors.name && (
-                      <p className="text-xs text-destructive">{errors.name.message}</p>
+                      <p className="text-destructive text-xs">
+                        {errors.name.message}
+                      </p>
                     )}
                   </div>
 
@@ -244,15 +287,27 @@ export function ProductDialog({
                       render={({ field }) => (
                         <Select
                           value={field.value || "none"}
-                          onValueChange={(val) => field.onChange(val === "none" ? null : val)}
+                          onValueChange={(val) =>
+                            field.onChange(val === "none" ? null : val)
+                          }
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder={t("products.placeholders.category")} />
+                            <SelectValue
+                              placeholder={t("products.placeholders.category")}
+                            />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="none">{t("products.placeholders.no_category")}</SelectItem>
-                            {(Array.isArray(categoriesQuery.data) ? categoriesQuery.data : []).map((cat, idx) => (
-                              <SelectItem key={cat.uuid || cat.slug || `cat-${idx}`} value={cat.uuid || `cat-${idx}`}>
+                            <SelectItem value="none">
+                              {t("products.placeholders.no_category")}
+                            </SelectItem>
+                            {(Array.isArray(categoriesQuery.data)
+                              ? categoriesQuery.data
+                              : []
+                            ).map((cat, idx) => (
+                              <SelectItem
+                                key={cat.uuid || cat.slug || `cat-${idx}`}
+                                value={cat.uuid || `cat-${idx}`}
+                              >
                                 {cat.name}
                               </SelectItem>
                             ))}
@@ -263,10 +318,13 @@ export function ProductDialog({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>{t("products.fields.slug")}</Label>
-                    <Input placeholder="comcode-metal-nfc-card" {...register("slug")} />
+                    <Input
+                      placeholder="comcode-metal-nfc-card"
+                      {...register("slug")}
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -275,14 +333,23 @@ export function ProductDialog({
                       name="status"
                       control={control}
                       render={({ field }) => (
-                        <Select value={field.value} onValueChange={field.onChange}>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="active">{t("products.status_active")}</SelectItem>
-                            <SelectItem value="draft">{t("products.status_draft")}</SelectItem>
-                            <SelectItem value="archived">{t("products.status_archived")}</SelectItem>
+                            <SelectItem value="active">
+                              {t("products.status_active")}
+                            </SelectItem>
+                            <SelectItem value="draft">
+                              {t("products.status_draft")}
+                            </SelectItem>
+                            <SelectItem value="archived">
+                              {t("products.status_archived")}
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       )}
@@ -292,7 +359,10 @@ export function ProductDialog({
 
                 <div className="space-y-2">
                   <Label>{t("products.fields.short_description")}</Label>
-                  <Input placeholder={t("products.placeholders.short_description")} {...register("short_description")} />
+                  <Input
+                    placeholder={t("products.placeholders.short_description")}
+                    {...register("short_description")}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -307,10 +377,14 @@ export function ProductDialog({
 
               {/* TAB 2: PRICING & STOCK */}
               <TabsContent value="pricing" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <div className="space-y-2">
                     <Label>{t("products.fields.price")}</Label>
-                    <Input type="number" step="0.01" {...register("base_price")} />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      {...register("base_price")}
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -319,7 +393,10 @@ export function ProductDialog({
                       name="currency"
                       control={control}
                       render={({ field }) => (
-                        <Select value={field.value} onValueChange={field.onChange}>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
@@ -339,7 +416,7 @@ export function ProductDialog({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>{t("products.fields.stock")}</Label>
                     <Input type="number" {...register("stock_quantity")} />
@@ -356,7 +433,7 @@ export function ProductDialog({
                     <Label className="text-sm">
                       {t("products.fields.allow_custom_print")}
                     </Label>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       {t("products.fields.allow_custom_print_sub")}
                     </p>
                   </div>
@@ -375,17 +452,22 @@ export function ProductDialog({
 
               {/* TAB 3: SEO & METADATA */}
               <TabsContent value="seo" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-3">
                     <div className="space-y-2">
                       <Label>{t("products.seo.meta_title")}</Label>
-                      <Input placeholder={t("products.placeholders.meta_title")} {...register("meta_title")} />
+                      <Input
+                        placeholder={t("products.placeholders.meta_title")}
+                        {...register("meta_title")}
+                      />
                     </div>
 
                     <div className="space-y-2">
                       <Label>{t("products.seo.meta_description")}</Label>
                       <Textarea
-                        placeholder={t("products.placeholders.meta_description")}
+                        placeholder={t(
+                          "products.placeholders.meta_description",
+                        )}
                         rows={3}
                         {...register("meta_description")}
                       />
@@ -393,39 +475,50 @@ export function ProductDialog({
 
                     <div className="space-y-2">
                       <Label>{t("products.seo.meta_keywords")}</Label>
-                      <Input placeholder="nfc card, smart business card, digital profile" {...register("meta_keywords")} />
+                      <Input
+                        placeholder="nfc card, smart business card, digital profile"
+                        {...register("meta_keywords")}
+                      />
                     </div>
                   </div>
 
                   {/* Live Google & Social Snippet Preview */}
                   <div className="space-y-3">
-                    <Label className="text-xs font-semibold flex items-center gap-1.5 text-muted-foreground">
-                      <Search className="h-3.5 w-3.5" /> {t("products.seo.preview_google")}
+                    <Label className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold">
+                      <Search className="h-3.5 w-3.5" />{" "}
+                      {t("products.seo.preview_google")}
                     </Label>
-                    <div className="p-3.5 rounded-xl border bg-card/60 shadow-xs space-y-1 text-left">
-                      <div className="text-[11px] text-muted-foreground font-mono flex items-center gap-1">
+                    <div className="bg-card/60 space-y-1 rounded-xl border p-3.5 text-left shadow-xs">
+                      <div className="text-muted-foreground flex items-center gap-1 font-mono text-[11px]">
                         <Globe className="h-3 w-3 text-emerald-500" />
                         https://comcode.app/products/{slugWatch}
                       </div>
-                      <div className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer line-clamp-1">
+                      <div className="line-clamp-1 cursor-pointer text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
                         {metaTitleWatch}
                       </div>
-                      <div className="text-xs text-muted-foreground line-clamp-2">
+                      <div className="text-muted-foreground line-clamp-2 text-xs">
                         {metaDescWatch}
                       </div>
                     </div>
 
-                    <Label className="text-xs font-semibold flex items-center gap-1.5 text-muted-foreground pt-1">
-                      <Layers className="h-3.5 w-3.5" /> {t("products.seo.preview_og")}
+                    <Label className="text-muted-foreground flex items-center gap-1.5 pt-1 text-xs font-semibold">
+                      <Layers className="h-3.5 w-3.5" />{" "}
+                      {t("products.seo.preview_og")}
                     </Label>
-                    <div className="rounded-xl border overflow-hidden bg-card/80 text-left">
-                      <div className="h-24 bg-gradient-to-r from-zinc-900 to-zinc-800 flex items-center justify-center text-zinc-400 text-xs font-mono">
+                    <div className="bg-card/80 overflow-hidden rounded-xl border text-left">
+                      <div className="flex h-24 items-center justify-center bg-gradient-to-r from-zinc-900 to-zinc-800 font-mono text-xs text-zinc-400">
                         [OG Image Preview]
                       </div>
                       <div className="p-2.5">
-                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">comcode.app</div>
-                        <div className="text-xs font-semibold text-foreground line-clamp-1">{metaTitleWatch}</div>
-                        <div className="text-[11px] text-muted-foreground line-clamp-1">{metaDescWatch}</div>
+                        <div className="text-muted-foreground font-mono text-[10px] tracking-wider uppercase">
+                          comcode.app
+                        </div>
+                        <div className="text-foreground line-clamp-1 text-xs font-semibold">
+                          {metaTitleWatch}
+                        </div>
+                        <div className="text-muted-foreground line-clamp-1 text-[11px]">
+                          {metaDescWatch}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -435,76 +528,96 @@ export function ProductDialog({
               {/* TAB 4: 3D STUDIO & VARIANTS */}
               <TabsContent value="3d_studio" className="space-y-4">
                 {isEditing && product ? (
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
                     {/* 3D Preview Box */}
-                    <div className="md:col-span-6 space-y-2">
+                    <div className="space-y-2 md:col-span-6">
                       <div className="flex items-center justify-between">
-                        <Label className="text-xs font-semibold">{t("products.stage.bounded_preview")}</Label>
+                        <Label className="text-xs font-semibold">
+                          {t("products.stage.bounded_preview")}
+                        </Label>
                         <Button
                           type="button"
                           size="sm"
                           variant="outline"
-                          className="h-7 text-xs border-amber-500/40 text-amber-500 hover:bg-amber-500/10"
+                          className="h-7 border-amber-500/40 text-xs text-amber-500 hover:bg-amber-500/10"
                           onClick={() => setStudioOpen(true)}
                         >
-                          <Sparkles className="h-3.5 w-3.5 mr-1" /> {t("products.stage.open_studio")}
+                          <Sparkles className="mr-1 h-3.5 w-3.5" />{" "}
+                          {t("products.stage.open_studio")}
                         </Button>
                       </div>
                       <Bounded3DStage
                         modelUrl={product.model_3d_file_url}
                         usdzUrl={product.model_3d_usdz_url}
                         viewbox={currentViewbox}
-                        className="w-full h-56 rounded-xl"
+                        className="h-56 w-full rounded-xl"
                       />
                     </div>
 
                     {/* Variants Management */}
-                    <div className="md:col-span-6 space-y-3">
-                      <Label className="text-xs font-semibold">{t("products.variants.title")}</Label>
+                    <div className="space-y-3 md:col-span-6">
+                      <Label className="text-xs font-semibold">
+                        {t("products.variants.title")}
+                      </Label>
 
                       {/* Existing variants */}
-                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                        {((product as ProductDetail).variants || []).map((v: ProductVariantSummary) => (
-                          <div
-                            key={v.uuid}
-                            className="flex items-center justify-between p-2 rounded-lg border bg-muted/40 text-xs"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="h-4 w-4 rounded-full border shadow-xs"
-                                style={{ backgroundColor: v.color_code || "#000" }}
-                              />
-                              <span className="font-medium">{v.name}</span>
-                              <Badge variant="outline" className="text-[10px]">{v.material}</Badge>
+                      <div className="max-h-40 space-y-2 overflow-y-auto pr-1">
+                        {((product as ProductDetail).variants || []).map(
+                          (v: ProductVariantSummary) => (
+                            <div
+                              key={v.uuid}
+                              className="bg-muted/40 flex items-center justify-between rounded-lg border p-2 text-xs"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="h-4 w-4 rounded-full border shadow-xs"
+                                  style={{
+                                    backgroundColor: v.color_code || "#000",
+                                  }}
+                                />
+                                <span className="font-medium">{v.name}</span>
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px]"
+                                >
+                                  {v.material}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-2 font-mono">
+                                <span>+{v.price_delta}</span>
+                                <span className="text-muted-foreground">
+                                  {v.stock_quantity}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive h-6 w-6"
+                                  onClick={() =>
+                                    deleteVariantMutation.mutate({
+                                      productUuid: product.uuid,
+                                      variantUuid: v.uuid,
+                                    })
+                                  }
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 font-mono">
-                              <span>+{v.price_delta}</span>
-                              <span className="text-muted-foreground">{v.stock_quantity}</span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-destructive"
-                                onClick={() =>
-                                  deleteVariantMutation.mutate({
-                                    productUuid: product.uuid,
-                                    variantUuid: v.uuid,
-                                  })
-                                }
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
+                          ),
+                        )}
                       </div>
 
                       {/* Add new variant quick inline */}
-                      <div className="p-2.5 rounded-lg border border-dashed bg-card/50 space-y-2 text-xs">
-                        <span className="font-medium text-foreground">{t("products.variants.title")}</span>
+                      <div className="bg-card/50 space-y-2 rounded-lg border border-dashed p-2.5 text-xs">
+                        <span className="text-foreground font-medium">
+                          {t("products.variants.title")}
+                        </span>
                         <div className="grid grid-cols-2 gap-2">
                           <Input
-                            placeholder={t("products.placeholders.variant_name")}
+                            placeholder={t(
+                              "products.placeholders.variant_name",
+                            )}
                             className="h-7 text-xs"
                             value={newVariantName}
                             onChange={(e) => setNewVariantName(e.target.value)}
@@ -512,16 +625,22 @@ export function ProductDialog({
                           <div className="flex items-center gap-1.5">
                             <input
                               type="color"
-                              className="h-7 w-8 rounded border p-0.5 cursor-pointer"
+                              className="h-7 w-8 cursor-pointer rounded border p-0.5"
                               value={newVariantColor}
-                              onChange={(e) => setNewVariantColor(e.target.value)}
+                              onChange={(e) =>
+                                setNewVariantColor(e.target.value)
+                              }
                             />
                             <Input
-                              placeholder={t("products.placeholders.price_delta")}
+                              placeholder={t(
+                                "products.placeholders.price_delta",
+                              )}
                               type="number"
                               className="h-7 text-xs"
                               value={newVariantDelta}
-                              onChange={(e) => setNewVariantDelta(Number(e.target.value))}
+                              onChange={(e) =>
+                                setNewVariantDelta(Number(e.target.value))
+                              }
                             />
                           </div>
                         </div>
@@ -529,19 +648,24 @@ export function ProductDialog({
                           type="button"
                           size="sm"
                           variant="secondary"
-                          className="w-full h-7 text-xs"
+                          className="h-7 w-full text-xs"
                           onClick={handleAddVariant}
-                          disabled={!newVariantName || createVariantMutation.isPending}
+                          disabled={
+                            !newVariantName || createVariantMutation.isPending
+                          }
                         >
-                          <Plus className="h-3.5 w-3.5 mr-1" /> {t("products.variants.save_btn")}
+                          <Plus className="mr-1 h-3.5 w-3.5" />{" "}
+                          {t("products.variants.save_btn")}
                         </Button>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8 border border-dashed rounded-xl text-muted-foreground text-xs space-y-1">
-                    <Sparkles className="h-6 w-6 mx-auto text-amber-500 mb-1" />
-                    <p className="font-medium text-foreground">{t("products.variants.hint_heading")}</p>
+                  <div className="text-muted-foreground space-y-1 rounded-xl border border-dashed py-8 text-center text-xs">
+                    <Sparkles className="mx-auto mb-1 h-6 w-6 text-amber-500" />
+                    <p className="text-foreground font-medium">
+                      {t("products.variants.hint_heading")}
+                    </p>
                     <p>{t("products.variants.hint_desc")}</p>
                   </div>
                 )}

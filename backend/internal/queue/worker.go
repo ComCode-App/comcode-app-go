@@ -47,21 +47,21 @@ type DeliverWebhookFunc func(ctx context.Context, deliveryID int64) error
 
 // Worker processes Asynq tasks.
 type Worker struct {
-	server        *asynq.Server
-	mux           *asynq.ServeMux
-	log           *slog.Logger
-	deliver       DeliverNotificationFunc
-	processExport ProcessExportFunc
-	processImport ProcessImportFunc
-	processBulk   ProcessBulkFunc
-	processSearchUpsert ProcessSearchUpsertFunc
-	processSearchDelete ProcessSearchDeleteFunc
-	processSearchReindex ProcessSearchReindexFunc
+	server                *asynq.Server
+	mux                   *asynq.ServeMux
+	log                   *slog.Logger
+	deliver               DeliverNotificationFunc
+	processExport         ProcessExportFunc
+	processImport         ProcessImportFunc
+	processBulk           ProcessBulkFunc
+	processSearchUpsert   ProcessSearchUpsertFunc
+	processSearchDelete   ProcessSearchDeleteFunc
+	processSearchReindex  ProcessSearchReindexFunc
 	processAnalyticsEvent ProcessAnalyticsEventFunc
 	processAnalyticsMaint ProcessAnalyticsMaintenanceFunc
 	processGeoIPUpdate    ProcessGeoIPUpdateFunc
-	purgeLogs     PurgeLogsFunc
-	deliverWebhook DeliverWebhookFunc
+	purgeLogs             PurgeLogsFunc
+	deliverWebhook        DeliverWebhookFunc
 }
 
 // NewWorker builds a worker that handles known task types.

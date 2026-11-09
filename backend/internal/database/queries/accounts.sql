@@ -1,3 +1,4 @@
+-- account-lint: cross-account session: the user's own personal account membership
 -- name: GetPersonalAccountMembership :one
 SELECT a.id, a.uuid, a.type, a.name, a.slug, a.status, m.role
 FROM accounts a
@@ -11,6 +12,7 @@ JOIN account_members m ON m.account_id = a.id
 WHERE a.id = sqlc.arg(account_id)
   AND m.user_id = sqlc.arg(user_id);
 
+-- account-lint: cross-account session: the caller's own membership (m.user_id), used to switch / verify the acc claim
 -- name: GetAccountMembershipByUUID :one
 SELECT a.id, a.uuid, a.type, a.name, a.slug, a.status, m.role
 FROM accounts a
@@ -18,6 +20,7 @@ JOIN account_members m ON m.account_id = a.id
 WHERE a.uuid = sqlc.arg(account_uuid)
   AND m.user_id = sqlc.arg(user_id);
 
+-- account-lint: cross-account session: every account the user belongs to (m.user_id)
 -- name: ListAccountMembershipsForUser :many
 SELECT a.id, a.uuid, a.type, a.name, a.slug, a.status, m.role
 FROM accounts a
@@ -34,6 +37,7 @@ FROM accounts a
 JOIN users u ON u.id = a.personal_user_id
 WHERE u.uuid = $1;
 
+-- account-lint: cross-account platform /v1/platform/accounts: any account by uuid (platform.accounts.*)
 -- name: GetAccountByUUID :one
 SELECT a.*,
        (SELECT COUNT(*) FROM account_members m WHERE m.account_id = a.id)::int AS member_count
@@ -46,6 +50,7 @@ SELECT a.*,
 FROM accounts a
 WHERE a.id = $1;
 
+-- account-lint: cross-account platform /v1/platform/accounts list
 -- name: ListAccountsFiltered :many
 SELECT a.*,
        (SELECT COUNT(*) FROM account_members m WHERE m.account_id = a.id)::int AS member_count
@@ -106,5 +111,11 @@ WHERE account_id = sqlc.arg(account_id)
 
 -- name: GetActiveUserIDByEmail :one
 SELECT id FROM users
+WHERE email = LOWER(TRIM(sqlc.arg(email)::text))
+  AND deleted_at IS NULL;
+
+-- name: GetUserForMembershipByEmail :one
+-- TEC-1104: only a verified address may be added to a company directly; others get an invite.
+SELECT id, (email_verified_at IS NOT NULL)::bool AS email_verified FROM users
 WHERE email = LOWER(TRIM(sqlc.arg(email)::text))
   AND deleted_at IS NULL;

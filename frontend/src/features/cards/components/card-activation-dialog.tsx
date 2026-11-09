@@ -4,7 +4,13 @@ import React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { CreditCard, Sparkles, KeyRound, CheckCircle2, User } from "lucide-react";
+import {
+  CreditCard,
+  Sparkles,
+  KeyRound,
+  CheckCircle2,
+  User,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +32,10 @@ import {
 import { useLocale } from "@/providers/locale-provider";
 import { profilesService } from "@/features/profiles/services/profiles.service";
 import { useCardMutations } from "../hooks/use-cards";
-import { cardActivationSchema, type CardActivationFormValues } from "../schemas/card-form";
+import {
+  cardActivationSchema,
+  type CardActivationFormValues,
+} from "../schemas/card-form";
 
 interface CardActivationDialogProps {
   open: boolean;
@@ -82,8 +91,8 @@ export function CardActivationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-2">
-            <Sparkles className="w-5 h-5" />
+          <div className="bg-primary/10 text-primary mb-2 flex h-10 w-10 items-center justify-center rounded-full">
+            <Sparkles className="h-5 w-5" />
           </div>
           <DialogTitle>{t("cards.activation.title")}</DialogTitle>
           <DialogDescription>
@@ -94,20 +103,25 @@ export function CardActivationDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           {/* Activation Code */}
           <div className="space-y-2">
-            <Label htmlFor="activation_code" className="flex items-center gap-1.5">
-              <KeyRound className="w-4 h-4 text-primary" />
+            <Label
+              htmlFor="activation_code"
+              className="flex items-center gap-1.5"
+            >
+              <KeyRound className="text-primary h-4 w-4" />
               {t("cards.activation.code_label")}
             </Label>
             <Input
               id="activation_code"
               placeholder={t("cards.activation.code_placeholder")}
-              className="font-mono uppercase tracking-widest text-center text-lg h-12"
+              className="h-12 text-center font-mono text-lg tracking-widest uppercase"
               {...register("activation_code")}
             />
             {errors.activation_code && (
-              <p className="text-xs text-destructive">{errors.activation_code.message}</p>
+              <p className="text-destructive text-xs">
+                {errors.activation_code.message}
+              </p>
             )}
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-muted-foreground text-[11px]">
               {t("cards.activation.code_hint")}
             </p>
           </div>
@@ -115,7 +129,7 @@ export function CardActivationDialog({
           {/* Card Label / Name */}
           <div className="space-y-2">
             <Label htmlFor="name" className="flex items-center gap-1.5">
-              <CreditCard className="w-4 h-4 text-muted-foreground" />
+              <CreditCard className="text-muted-foreground h-4 w-4" />
               {t("cards.activation.name_label")}
             </Label>
             <Input
@@ -128,7 +142,7 @@ export function CardActivationDialog({
           {/* Connect to Profile */}
           <div className="space-y-2">
             <Label className="flex items-center gap-1.5">
-              <User className="w-4 h-4 text-muted-foreground" />
+              <User className="text-muted-foreground h-4 w-4" />
               {t("cards.activation.profile_label")}
             </Label>
             <Controller
@@ -137,10 +151,16 @@ export function CardActivationDialog({
               render={({ field }) => (
                 <Select
                   value={field.value || "none"}
-                  onValueChange={(val) => field.onChange(val === "none" ? null : val)}
+                  onValueChange={(val) =>
+                    field.onChange(val === "none" ? null : val)
+                  }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder={t("cards.activation.select_profile_placeholder")} />
+                    <SelectValue
+                      placeholder={t(
+                        "cards.activation.select_profile_placeholder",
+                      )}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">
@@ -148,7 +168,9 @@ export function CardActivationDialog({
                     </SelectItem>
                     {(profilesData?.items || []).map((prof) => (
                       <SelectItem key={prof.uuid} value={prof.uuid}>
-                        {prof.title || `${prof.first_name} ${prof.last_name}`.trim() || prof.uuid}
+                        {prof.title ||
+                          `${prof.first_name} ${prof.last_name}`.trim() ||
+                          prof.uuid}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -170,7 +192,7 @@ export function CardActivationDialog({
               disabled={isSubmitting || activateMutation.isPending}
               className="gap-2"
             >
-              <CheckCircle2 className="w-4 h-4" />
+              <CheckCircle2 className="h-4 w-4" />
               {isSubmitting || activateMutation.isPending
                 ? t("cards.activation.activating")
                 : t("cards.activation.submit_btn")}

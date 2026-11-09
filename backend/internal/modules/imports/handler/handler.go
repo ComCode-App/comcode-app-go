@@ -13,6 +13,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/apiquery"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/response"
 	"github.com/google/uuid"
@@ -66,15 +67,14 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request, resource string
 	h.uploadFor(w, r, resource, 0)
 }
 
+// maxImportBytes caps an import file; the body is capped before it is read.
+const maxImportBytes = 10 << 20
+
 func (h *Handler) uploadFor(w http.ResponseWriter, r *http.Request, resource string, accountID int64) {
 	p := authctx.MustPrincipal(r.Context())
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
-		return
-	}
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "file is required")
+	file, header, ok := upload.FormFile(w, r, maxImportBytes, "file")
+	defer upload.Cleanup(r)
+	if !ok {
 		return
 	}
 	defer func() { _ = file.Close() }()

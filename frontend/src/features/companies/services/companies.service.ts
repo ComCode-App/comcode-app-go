@@ -52,20 +52,32 @@ export const companiesService = {
   },
 
   async get(uuid: string) {
-    return platformRequest<CompanyDetail>("GET", `/v1/platform/accounts/${uuid}`);
+    return platformRequest<CompanyDetail>(
+      "GET",
+      `/v1/platform/accounts/${uuid}`,
+    );
   },
 
   async create(body: { name: string; slug?: string; owner_user_uuid: string }) {
-    return platformRequest<CompanyDetail>("POST", "/v1/platform/accounts", { body });
-  },
-
-  async update(uuid: string, body: { name?: string; status?: string }) {
-    return platformRequest<CompanyDetail>("PATCH", `/v1/platform/accounts/${uuid}`, {
+    return platformRequest<CompanyDetail>("POST", "/v1/platform/accounts", {
       body,
     });
   },
 
-  async addMember(companyUUID: string, body: { user_uuid: string; role: string }) {
+  async update(uuid: string, body: { name?: string; status?: string }) {
+    return platformRequest<CompanyDetail>(
+      "PATCH",
+      `/v1/platform/accounts/${uuid}`,
+      {
+        body,
+      },
+    );
+  },
+
+  async addMember(
+    companyUUID: string,
+    body: { user_uuid: string; role: string },
+  ) {
     return platformRequest<CompanyMember>(
       "POST",
       `/v1/platform/accounts/${companyUUID}/members`,

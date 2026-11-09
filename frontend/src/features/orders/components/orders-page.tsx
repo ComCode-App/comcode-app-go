@@ -18,10 +18,7 @@ import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { useLocale } from "@/providers/locale-provider";
 
-import {
-  ordersService,
-  type OrderSummary,
-} from "../services/orders.service";
+import { ordersService, type OrderSummary } from "../services/orders.service";
 import { ordersQueryKeys } from "../hooks/query-keys";
 import { getOrdersColumns } from "./orders-columns";
 import { OrderKPICards } from "./order-kpi-cards";
@@ -31,7 +28,9 @@ import { Users } from "lucide-react";
 
 export function OrdersPage() {
   const { t } = useLocale();
-  const [selectedOrderUuid, setSelectedOrderUuid] = useState<string | null>(null);
+  const [selectedOrderUuid, setSelectedOrderUuid] = useState<string | null>(
+    null,
+  );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
 
@@ -95,13 +94,16 @@ export function OrdersPage() {
       ]}
       actions={
         <div className="flex items-center gap-2">
-          <Button onClick={() => setBulkDialogOpen(true)} className="bg-primary hover:bg-primary/90">
+          <Button
+            onClick={() => setBulkDialogOpen(true)}
+            className="bg-primary hover:bg-primary/90"
+          >
             <Users className="mr-2 h-4 w-4" />
             {t("orders.create_bulk_order_btn")}
           </Button>
           <Button asChild variant="outline">
             <Link href={routes.platform.ordersPipeline}>
-              <Kanban className="mr-2 h-4 w-4 text-primary" />
+              <Kanban className="text-primary mr-2 h-4 w-4" />
               {t("orders.pipeline_button")}
             </Link>
           </Button>

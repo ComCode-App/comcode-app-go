@@ -1,6 +1,14 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
-import { leadsService, type LeadListParams } from "@/features/leads/services/leads.service";
+import {
+  leadsService,
+  type LeadListParams,
+} from "@/features/leads/services/leads.service";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 

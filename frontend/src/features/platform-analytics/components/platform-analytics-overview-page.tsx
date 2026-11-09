@@ -6,7 +6,12 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { AppChart, BarList } from "@/components/charts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/common/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/common/card";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import { EntityPage } from "@/components/entity";
@@ -14,13 +19,19 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
-import { eventTypeLabel, subjectTypeLabel } from "@/features/analytics/lib/event-labels";
+import {
+  eventTypeLabel,
+  subjectTypeLabel,
+} from "@/features/analytics/lib/event-labels";
 import { datetime } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
 import { platformAnalyticsKeys } from "../hooks/query-keys";
-import { useAnalyticsConfig, useEventDefinitions } from "../hooks/use-platform-analytics";
+import {
+  useAnalyticsConfig,
+  useEventDefinitions,
+} from "../hooks/use-platform-analytics";
 import { dayStartIso, daysAgo } from "../lib/time-range";
 import { platformAnalyticsService } from "../services/platform-analytics.service";
 
@@ -42,12 +53,16 @@ const DELIVERY_MODES = new Set(["async", "sync", "hybrid"]);
 
 /** `async` → "Async (kuyruk)"; unknown modes are shown as-is. */
 function deliveryModeLabel(t: (key: string) => string, mode: string) {
-  return DELIVERY_MODES.has(mode) ? t(`platform_analytics.config.mode_${mode}`) : mode;
+  return DELIVERY_MODES.has(mode)
+    ? t(`platform_analytics.config.mode_${mode}`)
+    : mode;
 }
 
 function eventsHref(params: Record<string, string>) {
   const qs = new URLSearchParams(params).toString();
-  return qs ? `${routes.platform.analytics.events}?${qs}` : routes.platform.analytics.events;
+  return qs
+    ? `${routes.platform.analytics.events}?${qs}`
+    : routes.platform.analytics.events;
 }
 
 function Kpi({
@@ -66,15 +81,21 @@ function Kpi({
   const body = (
     <>
       <CardHeader className="pb-1">
-        <CardTitle className="text-muted-foreground text-sm font-medium">{label}</CardTitle>
+        <CardTitle className="text-muted-foreground text-sm font-medium">
+          {label}
+        </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
         {loading ? (
           <Skeleton className="h-8 w-20" />
         ) : (
-          <p className="text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
+          <p className="text-2xl font-semibold tracking-tight tabular-nums">
+            {value}
+          </p>
         )}
-        {hint ? <p className="text-muted-foreground mt-1 text-xs">{hint}</p> : null}
+        {hint ? (
+          <p className="text-muted-foreground mt-1 text-xs">{hint}</p>
+        ) : null}
       </CardContent>
     </>
   );
@@ -136,14 +157,20 @@ export function PlatformAnalyticsOverviewPage() {
   const chartData = useMemo(
     () =>
       (ov?.daily ?? []).slice(-CHART_DAYS).map((d) => ({
-        label: new Date(`${d.date}T00:00:00`).toLocaleDateString(locale, { day: "2-digit", month: "short" }),
+        label: new Date(`${d.date}T00:00:00`).toLocaleDateString(locale, {
+          day: "2-digit",
+          month: "short",
+        }),
         events: d.count,
       })),
     [ov, locale],
   );
 
   const defs = useMemo(() => definitions.data?.items ?? [], [definitions.data]);
-  const defNames = useMemo(() => new Map(defs.map((d) => [d.key, d.name])), [defs]);
+  const defNames = useMemo(
+    () => new Map(defs.map((d) => [d.key, d.name])),
+    [defs],
+  );
   const enabledDefs = defs.filter((d) => d.enabled).length;
   const publicDefs = defs.filter((d) => d.is_public).length;
   const cfg = config.data;
@@ -154,7 +181,10 @@ export function PlatformAnalyticsOverviewPage() {
       description={t("platform_analytics.overview.subtitle")}
       permission={permissions.analytics.read}
       forbiddenFallback={
-        <ErrorState title={t("common.error_forbidden")} description={t("platform_analytics.forbidden")} />
+        <ErrorState
+          title={t("common.error_forbidden")}
+          description={t("platform_analytics.forbidden")}
+        />
       }
       breadcrumbs={[
         { label: t("layout.breadcrumb_home"), href: routes.platform.home },
@@ -181,25 +211,37 @@ export function PlatformAnalyticsOverviewPage() {
     >
       {cfg ? (
         <div className="bg-card flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-4 py-3 text-sm">
-          <span className="font-medium">{t("platform_analytics.overview.pipeline")}</span>
+          <span className="font-medium">
+            {t("platform_analytics.overview.pipeline")}
+          </span>
           <StatusChip
-            label={cfg.enabled ? t("platform_analytics.overview.pipeline_on") : t("platform_analytics.overview.pipeline_off")}
+            label={
+              cfg.enabled
+                ? t("platform_analytics.overview.pipeline_on")
+                : t("platform_analytics.overview.pipeline_off")
+            }
             tone={cfg.enabled ? "success" : "danger"}
           />
           <span className="text-muted-foreground">
             {t("platform_analytics.config.event_delivery_mode")}:{" "}
             <span className="text-foreground">
-              {cfg.event_delivery_mode ? deliveryModeLabel(t, cfg.event_delivery_mode) : "—"}
+              {cfg.event_delivery_mode
+                ? deliveryModeLabel(t, cfg.event_delivery_mode)
+                : "—"}
             </span>
           </span>
           <span className="text-muted-foreground">
             {t("platform_analytics.config.realtime_enabled")}:{" "}
-            <span className="text-foreground">{cfg.realtime_enabled ? t("common.yes") : t("common.no")}</span>
+            <span className="text-foreground">
+              {cfg.realtime_enabled ? t("common.yes") : t("common.no")}
+            </span>
           </span>
           <span className="text-muted-foreground">
             {t("platform_analytics.overview.raw_retention")}:{" "}
             <span className="text-foreground tabular-nums">
-              {t("platform_analytics.definitions.days", { count: cfg.raw_event_retention_days ?? 0 })}
+              {t("platform_analytics.definitions.days", {
+                count: cfg.raw_event_retention_days ?? 0,
+              })}
             </span>
           </span>
           <Link
@@ -244,7 +286,9 @@ export function PlatformAnalyticsOverviewPage() {
           <Kpi
             label={t("platform_analytics.overview.kpi_definitions")}
             value={`${fmt.format(enabledDefs)} / ${fmt.format(defs.length)}`}
-            hint={t("platform_analytics.overview.kpi_definitions_hint", { public: publicDefs })}
+            hint={t("platform_analytics.overview.kpi_definitions_hint", {
+              public: publicDefs,
+            })}
             loading={definitions.isLoading}
             href={routes.platform.analytics.definitions}
           />
@@ -275,7 +319,12 @@ export function PlatformAnalyticsOverviewPage() {
             title={t("platform_analytics.overview.chart_title")}
             description={t("platform_analytics.overview.chart_hint")}
             data={chartData}
-            config={{ events: { label: t("platform_analytics.overview.series_events"), color: "var(--chart-1)" } }}
+            config={{
+              events: {
+                label: t("platform_analytics.overview.series_events"),
+                color: "var(--chart-1)",
+              },
+            }}
             categoryKey="label"
             showLegend={false}
             height={260}
@@ -287,7 +336,9 @@ export function PlatformAnalyticsOverviewPage() {
 
         <Card className="shadow-none lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-            <CardTitle className="text-sm font-semibold">{t("platform_analytics.overview.recent")}</CardTitle>
+            <CardTitle className="text-sm font-semibold">
+              {t("platform_analytics.overview.recent")}
+            </CardTitle>
             <Link
               href={routes.platform.analytics.events}
               className="text-primary inline-flex items-center gap-1 text-xs font-medium hover:underline"
@@ -304,11 +355,16 @@ export function PlatformAnalyticsOverviewPage() {
                 ))}
               </div>
             ) : (recent.data?.items ?? []).length === 0 ? (
-              <p className="text-muted-foreground text-sm">{t("platform_analytics.overview.no_data")}</p>
+              <p className="text-muted-foreground text-sm">
+                {t("platform_analytics.overview.no_data")}
+              </p>
             ) : (
               <ul className="divide-y">
                 {(recent.data?.items ?? []).map((e) => (
-                  <li key={e.uuid} className="flex items-center justify-between gap-3 py-2">
+                  <li
+                    key={e.uuid}
+                    className="flex items-center justify-between gap-3 py-2"
+                  >
                     <div className="min-w-0">
                       <Link
                         href={eventsHref({ event_type: e.type })}
@@ -318,11 +374,17 @@ export function PlatformAnalyticsOverviewPage() {
                         {eventTypeLabel(t, e.type, defNames.get(e.type))}
                       </Link>
                       <p className="text-muted-foreground truncate text-xs">
-                        <span className="font-mono">{e.type}</span> · {subjectTypeLabel(t, e.subject.type)} ·{" "}
-                        {[e.context?.city, e.context?.country_code].filter(Boolean).join(", ") || "—"}
+                        <span className="font-mono">{e.type}</span> ·{" "}
+                        {subjectTypeLabel(t, e.subject.type)} ·{" "}
+                        {[e.context?.city, e.context?.country_code]
+                          .filter(Boolean)
+                          .join(", ") || "—"}
                       </p>
                     </div>
-                    <time className="text-muted-foreground shrink-0 text-xs tabular-nums" dateTime={e.occurred_at}>
+                    <time
+                      className="text-muted-foreground shrink-0 text-xs tabular-nums"
+                      dateTime={e.occurred_at}
+                    >
                       {datetime(e.occurred_at, "dd.MM HH:mm", locale)}
                     </time>
                   </li>
@@ -336,14 +398,20 @@ export function PlatformAnalyticsOverviewPage() {
       {/* Top 10 event types of the 30-day window, from the hourly rollups (TEC-953). */}
       <Card className="shadow-none">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">{t("platform_analytics.overview.top_event_types")}</CardTitle>
-          <p className="text-muted-foreground text-xs">{t("platform_analytics.overview.top_event_types_hint")}</p>
+          <CardTitle className="text-sm font-semibold">
+            {t("platform_analytics.overview.top_event_types")}
+          </CardTitle>
+          <p className="text-muted-foreground text-xs">
+            {t("platform_analytics.overview.top_event_types_hint")}
+          </p>
         </CardHeader>
         <CardContent className="pt-0">
           {dailyLoading ? (
             <Skeleton className="h-40 w-full" />
           ) : (ov?.top_event_types ?? []).length === 0 ? (
-            <p className="text-muted-foreground text-sm">{t("platform_analytics.overview.no_data")}</p>
+            <p className="text-muted-foreground text-sm">
+              {t("platform_analytics.overview.no_data")}
+            </p>
           ) : (
             <BarList
               items={(ov?.top_event_types ?? []).map((e) => ({

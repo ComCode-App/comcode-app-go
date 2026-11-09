@@ -101,6 +101,7 @@ LIMIT sqlc.arg(limit_count)::int;
 -- subject's own account. A profile brings its routes (card, canonical, smart link and legacy hash
 -- routes) and cards; a route its card; a card its routes. Counts per event type and source come
 -- from the daily rollups only.
+-- account-lint: cross-account analytics: handler's scopedFilter restricts the subject to the active account; related rows follow the subject's account
 -- name: SubjectSourceCounts :many
 WITH root_profile AS (
     SELECT p.id, p.account_id FROM profiles p

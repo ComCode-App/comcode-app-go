@@ -6,7 +6,13 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +24,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { backgroundKeys, backgroundsService } from "@/features/background-studio/services/backgrounds.service";
+import {
+  backgroundKeys,
+  backgroundsService,
+} from "@/features/background-studio/services/backgrounds.service";
 import { useBankAccounts } from "@/features/bank-accounts";
 import {
   PremiumLockIcon,
@@ -35,7 +44,11 @@ import {
   type PublicPageSettings,
   profilesService,
 } from "@/features/profiles/services/profiles.service";
-import { RouteQrDialog, routeQrKeys, routeQrService } from "@/features/route-qr";
+import {
+  RouteQrDialog,
+  routeQrKeys,
+  routeQrService,
+} from "@/features/route-qr";
 import { isApiError } from "@/lib/api";
 import { canManageAccount } from "@/lib/auth/types";
 import { useAuth } from "@/providers/auth-provider";
@@ -43,10 +56,20 @@ import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 import { appToast } from "@/providers/toast-provider";
 
-const MODULES: PublicModule[] = ["bio", "contacts", "social_links", "addresses", "bank_accounts"];
+const MODULES: PublicModule[] = [
+  "bio",
+  "contacts",
+  "social_links",
+  "addresses",
+  "bank_accounts",
+];
 
 /** Owner settings for comcode.../{username}: address, on/off, sections and published banks. */
-export function ProfilePublicPageCard({ profileUuid }: { profileUuid: string }) {
+export function ProfilePublicPageCard({
+  profileUuid,
+}: {
+  profileUuid: string;
+}) {
   const pageQuery = useQuery({
     queryKey: profilesKeys.publicPage(profileUuid),
     queryFn: () => profilesService.getPublicPage(profileUuid),
@@ -54,33 +77,57 @@ export function ProfilePublicPageCard({ profileUuid }: { profileUuid: string }) 
   const page = pageQuery.data;
   if (!page) return null;
   // Remount on every saved state so the form starts from the server's values.
-  return <PublicPageForm key={JSON.stringify(page)} profileUuid={profileUuid} page={page} />;
+  return (
+    <PublicPageForm
+      key={JSON.stringify(page)}
+      profileUuid={profileUuid}
+      page={page}
+    />
+  );
 }
 
-function PublicPageForm({ profileUuid, page }: { profileUuid: string; page: PublicPageSettings }) {
+function PublicPageForm({
+  profileUuid,
+  page,
+}: {
+  profileUuid: string;
+  page: PublicPageSettings;
+}) {
   const { t } = useLocale();
   const { user } = useAuth();
   const canEdit = canManageAccount(user);
   const queryClient = useQueryClient();
   const banksQuery = useBankAccounts();
-  const backgroundsQuery = useQuery({ queryKey: backgroundKeys.list, queryFn: backgroundsService.list });
+  const backgroundsQuery = useQuery({
+    queryKey: backgroundKeys.list,
+    queryFn: backgroundsService.list,
+  });
 
   const [username, setUsername] = useState(page.username);
   const [enabled, setEnabled] = useState(page.enabled);
   const [modules, setModules] = useState<PublicModule[]>(page.visible_modules);
   const [banks, setBanks] = useState<string[]>(page.bank_account_uuids);
   const [usernameError, setUsernameError] = useState<string | null>(null);
-  const [background, setBackground] = useState<string | null>(page.background_uuid ?? null);
-  const [leadCapture, setLeadCapture] = useState(page.lead_capture_enabled ?? false);
-  const [exchange, setExchange] = useState(page.contact_exchange_enabled ?? false);
+  const [background, setBackground] = useState<string | null>(
+    page.background_uuid ?? null,
+  );
+  const [leadCapture, setLeadCapture] = useState(
+    page.lead_capture_enabled ?? false,
+  );
+  const [exchange, setExchange] = useState(
+    page.contact_exchange_enabled ?? false,
+  );
   const [theme, setTheme] = useState<ThemeId | "">(page.theme ?? "");
-  const [layoutMode, setLayoutMode] = useState<LayoutMode | "">(page.layout_mode ?? "");
+  const [layoutMode, setLayoutMode] = useState<LayoutMode | "">(
+    page.layout_mode ?? "",
+  );
   const [qrOpen, setQrOpen] = useState(false);
   // Animated backgrounds need design.premium (TEC-947); a stored one stays selectable.
   const allowPremium = useDesignPremium();
   const backgrounds = backgroundsQuery.data ?? [];
   const selectedBackground = backgrounds.find((b) => b.uuid === background);
-  const hasLockedBackground = !allowPremium && backgrounds.some((b) => b.premium);
+  const hasLockedBackground =
+    !allowPremium && backgrounds.some((b) => b.premium);
   const canReadRoutes = usePermission().can(permissions.routes.appRead);
   // The QR of a public page encodes its canonical /{username} route identity.
   const canonicalRoute = useQuery({
@@ -106,20 +153,32 @@ function PublicPageForm({ profileUuid, page }: { profileUuid: string; page: Publ
       setUsernameError(null);
       queryClient.setQueryData(profilesKeys.publicPage(profileUuid), page);
       void queryClient.invalidateQueries({ queryKey: profilesKeys.lists() });
-      void queryClient.invalidateQueries({ queryKey: profilesKeys.detail(profileUuid) });
+      void queryClient.invalidateQueries({
+        queryKey: profilesKeys.detail(profileUuid),
+      });
       appToast.success(t("profiles.public_page.saved"));
     },
     meta: { silentErrors: true },
     onError: (err) => {
-      if (isApiError(err) && err.status === 409) setUsernameError(t("profiles.public_page.username_taken"));
-      else if (isApiError(err) && err.status === 400) setUsernameError(err.message);
-      else appToast.error(isApiError(err) ? err.message : t("common.error_generic"));
+      if (isApiError(err) && err.status === 409)
+        setUsernameError(t("profiles.public_page.username_taken"));
+      else if (isApiError(err) && err.status === 400)
+        setUsernameError(err.message);
+      else
+        appToast.error(
+          isApiError(err) ? err.message : t("common.error_generic"),
+        );
     },
   });
 
-  const publicUrl = typeof window === "undefined" ? `/${page.username}` : `${window.location.origin}/${page.username}`;
+  const publicUrl =
+    typeof window === "undefined"
+      ? `/${page.username}`
+      : `${window.location.origin}/${page.username}`;
   const toggle = <T,>(list: T[], value: T, on: boolean) =>
-    on ? Array.from(new Set([...list, value])) : list.filter((v) => v !== value);
+    on
+      ? Array.from(new Set([...list, value]))
+      : list.filter((v) => v !== value);
   const dirty =
     username.trim().toLowerCase() !== page.username ||
     enabled !== page.enabled ||
@@ -151,20 +210,36 @@ function PublicPageForm({ profileUuid, page }: { profileUuid: string; page: Publ
               onClick={() =>
                 void navigator.clipboard
                   .writeText(publicUrl)
-                  .then(() => appToast.success(t("profiles.public_page.link_copied")))
+                  .then(() =>
+                    appToast.success(t("profiles.public_page.link_copied")),
+                  )
               }
             >
               <Copy className="size-4" />
               {t("profiles.public_page.copy_link")}
             </Button>
             {canonicalRoute.data ? (
-              <Button type="button" variant="outline" size="sm" onClick={() => setQrOpen(true)}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setQrOpen(true)}
+              >
                 <QrCode className="size-4" />
                 {t("routes.qr.open")}
               </Button>
             ) : null}
-            <Button asChild variant="outline" size="sm" disabled={!page.enabled}>
-              <a href={`/${page.username}`} target="_blank" rel="noopener noreferrer">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              disabled={!page.enabled}
+            >
+              <a
+                href={`/${page.username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <ExternalLink className="size-4" />
                 {t("profiles.public_page.open")}
               </a>
@@ -181,13 +256,21 @@ function PublicPageForm({ profileUuid, page }: { profileUuid: string; page: Publ
           fileStem={page.username}
         />
 
-        {!canEdit ? <p className="text-muted-foreground text-sm">{t("profiles.public_page.read_only")}</p> : null}
+        {!canEdit ? (
+          <p className="text-muted-foreground text-sm">
+            {t("profiles.public_page.read_only")}
+          </p>
+        ) : null}
 
         <fieldset disabled={!canEdit || save.isPending} className="space-y-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <Label htmlFor="public-page-enabled">{t("profiles.public_page.enabled")}</Label>
-              <p className="text-muted-foreground mt-1 text-xs">{t("profiles.public_page.disabled_hint")}</p>
+              <Label htmlFor="public-page-enabled">
+                {t("profiles.public_page.enabled")}
+              </Label>
+              <p className="text-muted-foreground mt-1 text-xs">
+                {t("profiles.public_page.disabled_hint")}
+              </p>
             </div>
             <Switch
               id="public-page-enabled"
@@ -199,8 +282,12 @@ function PublicPageForm({ profileUuid, page }: { profileUuid: string; page: Publ
 
           <div className="flex items-start justify-between gap-4">
             <div>
-              <Label htmlFor="public-page-lead-capture">{t("profiles.public_page.lead_capture")}</Label>
-              <p className="text-muted-foreground mt-1 text-xs">{t("profiles.public_page.lead_capture_hint")}</p>
+              <Label htmlFor="public-page-lead-capture">
+                {t("profiles.public_page.lead_capture")}
+              </Label>
+              <p className="text-muted-foreground mt-1 text-xs">
+                {t("profiles.public_page.lead_capture_hint")}
+              </p>
             </div>
             <Switch
               id="public-page-lead-capture"
@@ -212,8 +299,12 @@ function PublicPageForm({ profileUuid, page }: { profileUuid: string; page: Publ
 
           <div className="flex items-start justify-between gap-4">
             <div>
-              <Label htmlFor="public-page-exchange">{t("profiles.public_page.contact_exchange")}</Label>
-              <p className="text-muted-foreground mt-1 text-xs">{t("profiles.public_page.contact_exchange_hint")}</p>
+              <Label htmlFor="public-page-exchange">
+                {t("profiles.public_page.contact_exchange")}
+              </Label>
+              <p className="text-muted-foreground mt-1 text-xs">
+                {t("profiles.public_page.contact_exchange_hint")}
+              </p>
             </div>
             <Switch
               id="public-page-exchange"
@@ -224,9 +315,13 @@ function PublicPageForm({ profileUuid, page }: { profileUuid: string; page: Publ
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="public-page-username">{t("profiles.public_page.username")}</Label>
+            <Label htmlFor="public-page-username">
+              {t("profiles.public_page.username")}
+            </Label>
             <div className="flex items-center">
-              <span className="text-muted-foreground bg-muted rounded-l-md border border-r-0 px-3 py-2 text-sm">/</span>
+              <span className="text-muted-foreground bg-muted rounded-l-md border border-r-0 px-3 py-2 text-sm">
+                /
+              </span>
               <Input
                 id="public-page-username"
                 value={username}
@@ -241,7 +336,13 @@ function PublicPageForm({ profileUuid, page }: { profileUuid: string; page: Publ
                 aria-invalid={Boolean(usernameError)}
               />
             </div>
-            <p className={usernameError ? "text-destructive text-xs" : "text-muted-foreground text-xs"}>
+            <p
+              className={
+                usernameError
+                  ? "text-destructive text-xs"
+                  : "text-muted-foreground text-xs"
+              }
+            >
               {usernameError ?? t("profiles.public_page.username_hint")}
             </p>
           </div>
@@ -256,27 +357,39 @@ function PublicPageForm({ profileUuid, page }: { profileUuid: string; page: Publ
           />
           {page.branding_locked ? (
             // TEC-946: the company look overrides this profile's theme, layout and cover.
-            <p className="text-muted-foreground -mt-2 text-xs">{t("profiles.public_page.branding_locked")}</p>
+            <p className="text-muted-foreground -mt-2 text-xs">
+              {t("profiles.public_page.branding_locked")}
+            </p>
           ) : null}
 
           <div className="grid gap-1.5">
             <Label>{t("profiles.public_page.background")}</Label>
             <Select
               value={background ?? "default"}
-              onValueChange={(value) => setBackground(value === "default" ? null : value)}
+              onValueChange={(value) =>
+                setBackground(value === "default" ? null : value)
+              }
               disabled={!canEdit || save.isPending}
             >
               <SelectTrigger className="w-full sm:w-80">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="default">{t("profiles.public_page.background_default")}</SelectItem>
+                <SelectItem value="default">
+                  {t("profiles.public_page.background_default")}
+                </SelectItem>
                 {backgrounds.map((b) => {
                   const locked = b.premium && !allowPremium;
                   return (
-                    <SelectItem key={b.uuid} value={b.uuid} disabled={locked && b.uuid !== page.background_uuid}>
+                    <SelectItem
+                      key={b.uuid}
+                      value={b.uuid}
+                      disabled={locked && b.uuid !== page.background_uuid}
+                    >
                       {b.name}
-                      {b.is_preset ? ` · ${t("background_studio.saved.preset")}` : ""}
+                      {b.is_preset
+                        ? ` · ${t("background_studio.saved.preset")}`
+                        : ""}
                       {locked ? <PremiumLockIcon /> : null}
                     </SelectItem>
                   );
@@ -285,7 +398,10 @@ function PublicPageForm({ profileUuid, page }: { profileUuid: string; page: Publ
             </Select>
             <p className="text-muted-foreground text-xs">
               {t("profiles.public_page.background_hint")}{" "}
-              <Link href={routes.app.backgroundStudio.root} className="text-primary hover:underline">
+              <Link
+                href={routes.app.backgroundStudio.root}
+                className="text-primary hover:underline"
+              >
                 {t("profiles.public_page.background_studio_link")}
               </Link>
             </p>
@@ -298,13 +414,17 @@ function PublicPageForm({ profileUuid, page }: { profileUuid: string; page: Publ
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium">{t("profiles.public_page.modules")}</p>
+            <p className="text-sm font-medium">
+              {t("profiles.public_page.modules")}
+            </p>
             <div className="grid gap-2 sm:grid-cols-2">
               {MODULES.map((m) => (
                 <label key={m} className="flex items-center gap-2 text-sm">
                   <Checkbox
                     checked={modules.includes(m)}
-                    onCheckedChange={(on) => setModules((list) => toggle(list, m, on === true))}
+                    onCheckedChange={(on) =>
+                      setModules((list) => toggle(list, m, on === true))
+                    }
                     disabled={!canEdit || save.isPending}
                   />
                   {t(`profiles.public_page.module.${m}`)}
@@ -315,21 +435,34 @@ function PublicPageForm({ profileUuid, page }: { profileUuid: string; page: Publ
 
           {modules.includes("bank_accounts") ? (
             <div className="space-y-2">
-              <p className="text-sm font-medium">{t("profiles.public_page.banks")}</p>
-              <p className="text-muted-foreground text-xs">{t("profiles.public_page.banks_hint")}</p>
+              <p className="text-sm font-medium">
+                {t("profiles.public_page.banks")}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {t("profiles.public_page.banks_hint")}
+              </p>
               {banksQuery.data && banksQuery.data.length === 0 ? (
-                <p className="text-muted-foreground text-sm">{t("profiles.public_page.banks_empty")}</p>
+                <p className="text-muted-foreground text-sm">
+                  {t("profiles.public_page.banks_empty")}
+                </p>
               ) : null}
               <div className="space-y-2">
                 {(banksQuery.data ?? []).map((b) => (
-                  <label key={b.uuid} className="flex items-center gap-3 rounded-md border p-2 text-sm">
+                  <label
+                    key={b.uuid}
+                    className="flex items-center gap-3 rounded-md border p-2 text-sm"
+                  >
                     <Checkbox
                       checked={banks.includes(b.uuid)}
-                      onCheckedChange={(on) => setBanks((list) => toggle(list, b.uuid, on === true))}
+                      onCheckedChange={(on) =>
+                        setBanks((list) => toggle(list, b.uuid, on === true))
+                      }
                       disabled={!canEdit || save.isPending}
                     />
                     <span className="min-w-0">
-                      <span className="block truncate font-medium">{b.bank_name || b.title || b.account_holder}</span>
+                      <span className="block truncate font-medium">
+                        {b.bank_name || b.title || b.account_holder}
+                      </span>
                       <span className="text-muted-foreground block truncate font-mono text-xs">
                         {b.formatted_iban || b.iban}
                       </span>
@@ -342,7 +475,11 @@ function PublicPageForm({ profileUuid, page }: { profileUuid: string; page: Publ
 
           {canEdit ? (
             <div className="flex justify-end">
-              <Button type="button" onClick={() => save.mutate()} disabled={!dirty || save.isPending}>
+              <Button
+                type="button"
+                onClick={() => save.mutate()}
+                disabled={!dirty || save.isPending}
+              >
                 {t("profiles.public_page.save")}
               </Button>
             </div>

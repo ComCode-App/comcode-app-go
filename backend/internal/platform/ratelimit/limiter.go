@@ -34,6 +34,11 @@ const (
 	passcodeIPPathFailures = 5
 	passcodeIPFailures     = 20
 	passcodePathFailures   = 50
+	// Invite links (TEC-1104): the token is a bearer secret. A person opens their link a few
+	// times; the limits only stop scripted guessing.
+	invitePreviewIPLimit  = 60
+	inviteAcceptUserLimit = 10
+	inviteAcceptIPLimit   = 30
 )
 
 // Limiter is a Redis INCR + TTL rate limiter. Redis errors fail open.
@@ -51,9 +56,14 @@ func New(rdb *redis.Client, appEnv string) *Limiter {
 	return &Limiter{rdb: rdb, env: env}
 }
 
-// AllowLogin limits password login attempts per IP + email.
+// AllowLogin limits password login attempts per IP + email, per IP and per email (TEC-1101).
 func (l *Limiter) AllowLogin(ctx context.Context, ip, email string) (bool, time.Duration) {
-	return l.allow(ctx, "login", ip+"|"+strings.ToLower(strings.TrimSpace(email)), loginLimit)
+	email = normEmail(email)
+	return l.allowAll(ctx,
+		counter{"login", ip + "|" + email, loginLimit},
+		counter{"login_ip", ip, loginIPLimit},
+		counter{"login_email", email, loginEmailLimit},
+	)
 }
 
 // AllowRegister limits self-registration per IP.
@@ -61,14 +71,22 @@ func (l *Limiter) AllowRegister(ctx context.Context, ip string) (bool, time.Dura
 	return l.allow(ctx, "register", ip, registerLimit)
 }
 
-// AllowForgotPassword limits reset emails per IP + email.
+// AllowForgotPassword limits reset emails per IP + email, per IP and per email (TEC-1101).
 func (l *Limiter) AllowForgotPassword(ctx context.Context, ip, email string) (bool, time.Duration) {
-	return l.allow(ctx, "forgot", ip+"|"+strings.ToLower(strings.TrimSpace(email)), forgotLimit)
+	email = normEmail(email)
+	return l.allowAll(ctx,
+		counter{"forgot", ip + "|" + email, forgotLimit},
+		counter{"forgot_ip", ip, forgotIPLimit},
+		counter{"forgot_email", email, forgotEmailLimit},
+	)
 }
 
-// AllowResetPassword limits reset submissions per IP.
-func (l *Limiter) AllowResetPassword(ctx context.Context, ip string) (bool, time.Duration) {
-	return l.allow(ctx, "reset", ip, resetLimit)
+// AllowResetPassword limits reset submissions per IP and per email (TEC-1101).
+func (l *Limiter) AllowResetPassword(ctx context.Context, ip, email string) (bool, time.Duration) {
+	return l.allowAll(ctx,
+		counter{"reset", ip, resetLimit},
+		counter{"reset_email", normEmail(email), resetEmailLimit},
+	)
 }
 
 // AllowCardActivation limits card activation attempts per user and per client IP.
@@ -92,6 +110,19 @@ func (l *Limiter) AllowLeadSubmit(ctx context.Context, ip string) (bool, time.Du
 // AllowQRPreview limits server-rendered QR previews per user.
 func (l *Limiter) AllowQRPreview(ctx context.Context, userID string) (bool, time.Duration) {
 	return l.allow(ctx, "qr_preview", userID, qrPreviewUserLimit)
+}
+
+// AllowInvitePreview limits public invite lookups (GET /v1/invites/{token}) per client IP.
+func (l *Limiter) AllowInvitePreview(ctx context.Context, ip string) (bool, time.Duration) {
+	return l.allow(ctx, "invite_preview", ip, invitePreviewIPLimit)
+}
+
+// AllowInviteAccept limits invite accepts per user and per client IP.
+func (l *Limiter) AllowInviteAccept(ctx context.Context, userID, ip string) (bool, time.Duration) {
+	if ok, retry := l.allow(ctx, "invite_accept", userID, inviteAcceptUserLimit); !ok {
+		return false, retry
+	}
+	return l.allow(ctx, "invite_accept_ip", ip, inviteAcceptIPLimit)
 }
 
 // SmartLinkPasscodeAllowed reports whether a visitor may still try a passcode on a smart link.
@@ -143,6 +174,10 @@ func (l *Limiter) below(ctx context.Context, action, subject string, limit int) 
 }
 
 func (l *Limiter) allow(ctx context.Context, action, subject string, limit int) (bool, time.Duration) {
+	return l.allowWindow(ctx, action, subject, limit, defaultWindow)
+}
+
+func (l *Limiter) allowWindow(ctx context.Context, action, subject string, limit int, window time.Duration) (bool, time.Duration) {
 	if l == nil || l.rdb == nil || strings.TrimSpace(subject) == "" || strings.TrimSpace(subject) == "|" {
 		return true, 0
 	}
@@ -152,12 +187,12 @@ func (l *Limiter) allow(ctx context.Context, action, subject string, limit int) 
 		return true, 0
 	}
 	if n == 1 {
-		_ = l.rdb.Expire(ctx, key, defaultWindow).Err()
+		_ = l.rdb.Expire(ctx, key, window).Err()
 	}
 	if n > int64(limit) {
 		ttl, ttlErr := l.rdb.TTL(ctx, key).Result()
 		if ttlErr != nil || ttl < 0 {
-			ttl = defaultWindow
+			ttl = window
 		}
 		return false, ttl
 	}

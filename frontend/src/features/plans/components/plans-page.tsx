@@ -107,7 +107,8 @@ export function PlansPage() {
 
   const meta = metaQuery.data as ResourceMeta | undefined;
   const bulkActions = useMemo(
-    () => resolveBulkActionsWithIcons("platform.plans", meta?.bulk_actions ?? []),
+    () =>
+      resolveBulkActionsWithIcons("platform.plans", meta?.bulk_actions ?? []),
     [meta?.bulk_actions],
   );
 

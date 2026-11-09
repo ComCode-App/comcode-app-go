@@ -10,7 +10,13 @@ import { fileURLToPath } from "node:url";
 
 const src = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const ENTRIES = ["app/layout.tsx", "app/[username]", "app/c", "app/s", "app/kvkk"];
+const ENTRIES = [
+  "app/layout.tsx",
+  "app/[username]",
+  "app/c",
+  "app/s",
+  "app/kvkk",
+];
 
 const FORBIDDEN = [
   "providers/app-providers",
@@ -33,10 +39,17 @@ const FORBIDDEN = [
 function resolveLocal(spec, fromFile) {
   let base;
   if (spec.startsWith("@/")) base = path.join(src, spec.slice(2));
-  else if (spec.startsWith(".")) base = path.resolve(path.dirname(fromFile), spec);
+  else if (spec.startsWith("."))
+    base = path.resolve(path.dirname(fromFile), spec);
   else return null;
-  for (const candidate of [base, ...[".ts", ".tsx", ".js", ".mjs"].map((e) => base + e), path.join(base, "index.ts"), path.join(base, "index.tsx")]) {
-    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+  for (const candidate of [
+    base,
+    ...[".ts", ".tsx", ".js", ".mjs"].map((e) => base + e),
+    path.join(base, "index.ts"),
+    path.join(base, "index.tsx"),
+  ]) {
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile())
+      return candidate;
   }
   return null;
 }
@@ -48,7 +61,8 @@ function entryFiles() {
     if (fs.statSync(abs).isFile()) out.push(abs);
     else {
       for (const f of fs.readdirSync(abs, { recursive: true })) {
-        if (/\.(ts|tsx)$/.test(f) && !/\.test\./.test(f)) out.push(path.join(abs, f));
+        if (/\.(ts|tsx)$/.test(f) && !/\.test\./.test(f))
+          out.push(path.join(abs, f));
       }
     }
   }
@@ -66,11 +80,14 @@ function walk() {
     if (!/\.(ts|tsx|js|mjs)$/.test(file)) continue;
     const code = fs.readFileSync(file, "utf8");
     // `import type` is erased at build time and never ships.
-    for (const m of code.matchAll(/^\s*(?:import|export)\s+(?!type\s)(?:[^"';]*?\sfrom\s+)?["']([^"']+)["']/gm)) {
+    for (const m of code.matchAll(
+      /^\s*(?:import|export)\s+(?!type\s)(?:[^"';]*?\sfrom\s+)?["']([^"']+)["']/gm,
+    )) {
       const spec = m[1];
       const local = resolveLocal(spec, file);
       if (local) stack.push(local);
-      else if (!spec.startsWith(".") && !spec.startsWith("@/")) packages.add(spec);
+      else if (!spec.startsWith(".") && !spec.startsWith("@/"))
+        packages.add(spec);
     }
   }
   return { files: [...seen], packages: [...packages] };
@@ -81,16 +98,29 @@ const rel = (f) => path.relative(src, f).split(path.sep).join("/");
 
 test("visitor pages do not import panel-only providers or libraries", () => {
   const hits = [
-    ...files.map(rel).filter((f) => FORBIDDEN.some((x) => f.replace(/\.(ts|tsx)$/, "") === x)),
-    ...packages.filter((p) => FORBIDDEN.some((x) => p === x || p.startsWith(`${x}/`))),
+    ...files
+      .map(rel)
+      .filter((f) => FORBIDDEN.some((x) => f.replace(/\.(ts|tsx)$/, "") === x)),
+    ...packages.filter((p) =>
+      FORBIDDEN.some((x) => p === x || p.startsWith(`${x}/`)),
+    ),
   ];
-  assert.deepEqual(hits, [], `visitor import graph reaches: ${hits.join(", ")}`);
+  assert.deepEqual(
+    hits,
+    [],
+    `visitor import graph reaches: ${hits.join(", ")}`,
+  );
 });
 
 test("visitor pages only use i18n namespaces loaded on visitor pages", () => {
-  const messages = fs.readFileSync(path.join(src, "lib/i18n/messages.ts"), "utf8");
+  const messages = fs.readFileSync(
+    path.join(src, "lib/i18n/messages.ts"),
+    "utf8",
+  );
   const block = messages.match(/tr:\s*\{([\s\S]*?)\},\s*\n\s*en:\s*\{/)[1];
-  const publicNs = new Set([...block.matchAll(/^\s*([a-z][a-z0-9_]*)\s*:/gm)].map((m) => m[1]));
+  const publicNs = new Set(
+    [...block.matchAll(/^\s*([a-z][a-z0-9_]*)\s*:/gm)].map((m) => m[1]),
+  );
   const missing = new Set();
   for (const file of files) {
     if (!/\.(ts|tsx)$/.test(file)) continue;
@@ -99,5 +129,9 @@ test("visitor pages only use i18n namespaces loaded on visitor pages", () => {
       if (!publicNs.has(m[1])) missing.add(`${m[1]} (${rel(file)})`);
     }
   }
-  assert.deepEqual([...missing], [], `namespaces not in lib/i18n/messages.ts: ${[...missing].join(", ")}`);
+  assert.deepEqual(
+    [...missing],
+    [],
+    `namespaces not in lib/i18n/messages.ts: ${[...missing].join(", ")}`,
+  );
 });

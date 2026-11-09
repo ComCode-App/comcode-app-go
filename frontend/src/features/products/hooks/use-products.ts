@@ -3,7 +3,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useLocale } from "@/providers/locale-provider";
-import { productsService, type UpsertProductPayload, type UpsertVariantPayload } from "../services/products.service";
+import {
+  productsService,
+  type UpsertProductPayload,
+  type UpsertVariantPayload,
+} from "../services/products.service";
 import { productsQueryKeys } from "./query-keys";
 
 export function useProductMutations() {
@@ -15,7 +19,8 @@ export function useProductMutations() {
   };
 
   const createMutation = useMutation({
-    mutationFn: (payload: UpsertProductPayload) => productsService.create(payload),
+    mutationFn: (payload: UpsertProductPayload) =>
+      productsService.create(payload),
     onSuccess: () => {
       toast.success(t("products.created_success"));
       invalidate();
@@ -26,8 +31,13 @@ export function useProductMutations() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ uuid, payload }: { uuid: string; payload: UpsertProductPayload }) =>
-      productsService.update(uuid, payload),
+    mutationFn: ({
+      uuid,
+      payload,
+    }: {
+      uuid: string;
+      payload: UpsertProductPayload;
+    }) => productsService.update(uuid, payload),
     onSuccess: () => {
       toast.success(t("products.updated_success"));
       invalidate();
@@ -49,12 +59,21 @@ export function useProductMutations() {
   });
 
   const createVariantMutation = useMutation({
-    mutationFn: ({ productUuid, payload }: { productUuid: string; payload: UpsertVariantPayload }) =>
-      productsService.createVariant(productUuid, payload),
+    mutationFn: ({
+      productUuid,
+      payload,
+    }: {
+      productUuid: string;
+      payload: UpsertVariantPayload;
+    }) => productsService.createVariant(productUuid, payload),
     onSuccess: (_, variables) => {
       toast.success(t("products.variant_created"));
-      queryClient.invalidateQueries({ queryKey: productsQueryKeys.variants(variables.productUuid) });
-      queryClient.invalidateQueries({ queryKey: productsQueryKeys.detail(variables.productUuid) });
+      queryClient.invalidateQueries({
+        queryKey: productsQueryKeys.variants(variables.productUuid),
+      });
+      queryClient.invalidateQueries({
+        queryKey: productsQueryKeys.detail(variables.productUuid),
+      });
     },
     onError: (err: Error) => {
       toast.error(err?.message || t("products.error_variant_creating"));
@@ -62,12 +81,21 @@ export function useProductMutations() {
   });
 
   const deleteVariantMutation = useMutation({
-    mutationFn: ({ productUuid, variantUuid }: { productUuid: string; variantUuid: string }) =>
-      productsService.deleteVariant(productUuid, variantUuid),
+    mutationFn: ({
+      productUuid,
+      variantUuid,
+    }: {
+      productUuid: string;
+      variantUuid: string;
+    }) => productsService.deleteVariant(productUuid, variantUuid),
     onSuccess: (_, variables) => {
       toast.success(t("products.variant_deleted"));
-      queryClient.invalidateQueries({ queryKey: productsQueryKeys.variants(variables.productUuid) });
-      queryClient.invalidateQueries({ queryKey: productsQueryKeys.detail(variables.productUuid) });
+      queryClient.invalidateQueries({
+        queryKey: productsQueryKeys.variants(variables.productUuid),
+      });
+      queryClient.invalidateQueries({
+        queryKey: productsQueryKeys.detail(variables.productUuid),
+      });
     },
     onError: (err: Error) => {
       toast.error(err?.message || t("products.error_variant_deleting"));

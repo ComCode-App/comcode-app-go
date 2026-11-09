@@ -55,7 +55,9 @@ export function AccountProfilePage({ shell }: { shell: AccountShell }) {
       await authService.requestEmailVerify(user?.email);
       toast.success(t("auth.verify.request_success"));
     } catch (error) {
-      if (isApiError(error)) {
+      if (isApiError(error) && error.code === "RATE_LIMITED") {
+        toast.error(t("auth.rate_limited"));
+      } else if (isApiError(error)) {
         toast.error(error.message || t("common.error_generic"));
       } else {
         toast.error(t("common.error_generic"));
@@ -155,11 +157,14 @@ export function AccountProfilePage({ shell }: { shell: AccountShell }) {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3 lg:items-start">
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start xl:grid-cols-3">
         <Card className="shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Fingerprint className="text-muted-foreground size-5" aria-hidden />
+              <Fingerprint
+                className="text-muted-foreground size-5"
+                aria-hidden
+              />
               {t("auth.passkey.title")}
             </CardTitle>
             <CardHint>{t("auth.passkey.description")}</CardHint>
@@ -172,7 +177,10 @@ export function AccountProfilePage({ shell }: { shell: AccountShell }) {
         <Card className="shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <ShieldCheck className="text-muted-foreground size-5" aria-hidden />
+              <ShieldCheck
+                className="text-muted-foreground size-5"
+                aria-hidden
+              />
               {t("auth.totp.title")}
             </CardTitle>
             <CardHint>{t("auth.totp.description")}</CardHint>

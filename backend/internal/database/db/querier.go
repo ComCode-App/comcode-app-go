@@ -18,6 +18,7 @@ type Querier interface {
 	AccountOwnsRoute(ctx context.Context, arg AccountOwnsRouteParams) (bool, error)
 	// ActivateCardByCode moves an unactivated card into the activating account and activates its
 	// reserved card route in the same statement, so the card resolves as soon as it is activated.
+	// account-lint: cross-account card activation: the activation code is the credential; moves the card into the active account
 	ActivateCardByCode(ctx context.Context, arg ActivateCardByCodeParams) (ActivateCardByCodeRow, error)
 	AddAccountMember(ctx context.Context, arg AddAccountMemberParams) error
 	// Records leads of the month unlocked after a plan upgrade.
@@ -32,17 +33,20 @@ type Querier interface {
 	CancelActiveAccountSubscriptions(ctx context.Context, accountID int64) error
 	CancelPendingProfileVerification(ctx context.Context, arg CancelPendingProfileVerificationParams) (ProfileVerificationRequest, error)
 	CheckBankSlugExists(ctx context.Context, arg CheckBankSlugExistsParams) (bool, error)
+	// account-lint: cross-account route paths are globally unique
 	// A deleted or renamed smart link keeps its old path for 30 days (TEC-559/558, architecture
 	// decision #4) so nobody can take over a link that is still printed or shared. Platform staff
 	// can release that hold early (TEC-950, quarantine_released_at).
 	CheckPathExists(ctx context.Context, arg CheckPathExistsParams) (bool, error)
 	CheckProductCategorySlugExists(ctx context.Context, arg CheckProductCategorySlugExistsParams) (bool, error)
 	CheckProductSlugExists(ctx context.Context, arg CheckProductSlugExistsParams) (bool, error)
+	// account-lint: cross-account smart codes are globally unique
 	CheckSmartCodeExists(ctx context.Context, arg CheckSmartCodeExistsParams) (bool, error)
 	CheckSocialPlatformSlugExists(ctx context.Context, arg CheckSocialPlatformSlugExistsParams) (bool, error)
 	ClaimOutboxEvents(ctx context.Context, arg ClaimOutboxEventsParams) ([]OutboxEvent, error)
 	// Claims a delivery for one attempt: only a pending/failed row whose retry time has come. A task
 	// that fires early or twice gets no row and does nothing.
+	// account-lint: cross-account webhook delivery worker
 	ClaimWebhookDelivery(ctx context.Context, id int64) (int64, error)
 	ClearAppSettingsLogo(ctx context.Context) (AppSetting, error)
 	// Empties avatar and/or cover (the profile upsert keeps media on an empty value); used to roll
@@ -81,8 +85,11 @@ type Querier interface {
 	// (the URL is the storage public URL or the stream path of the key).
 	CompanyMediaProfileUse(ctx context.Context, arg CompanyMediaProfileUseParams) ([]CompanyMediaProfileUseRow, error)
 	CompanyMemberHasOfficeScope(ctx context.Context, arg CompanyMemberHasOfficeScopeParams) (bool, error)
+	// account-lint: cross-account payment provider callback: session found by merchant oid / provider token
 	CompleteCheckoutSession(ctx context.Context, arg CompleteCheckoutSessionParams) (PaymentCheckoutSession, error)
+	// account-lint: cross-account payment provider callback: session found by merchant oid / provider token
 	CompleteOrderPaymentSession(ctx context.Context, arg CompleteOrderPaymentSessionParams) (OrderPaymentSession, error)
+	// account-lint: cross-account payment provider callback: session found by merchant oid / provider token
 	CompletePaymentCardSession(ctx context.Context, argUuid uuid.UUID) (PaymentCardSession, error)
 	ConfirmUserTOTP(ctx context.Context, arg ConfirmUserTOTPParams) (UserTotp, error)
 	ConsumeOTP(ctx context.Context, id int64) error
@@ -97,13 +104,16 @@ type Querier interface {
 	CountAccountSmartLinksUsage(ctx context.Context, accountID int64) (int64, error)
 	CountAccountsFiltered(ctx context.Context, arg CountAccountsFilteredParams) (int64, error)
 	CountActivityEvents(ctx context.Context, arg CountActivityEventsParams) (int64, error)
+	// account-lint: cross-account platform /v1/platform/bulk admin list
 	CountAllBulkJobs(ctx context.Context) (int64, error)
 	CountAllExportJobs(ctx context.Context) (int64, error)
+	// account-lint: cross-account platform /v1/platform/imports admin list
 	CountAllImportJobs(ctx context.Context) (int64, error)
 	CountAppLogs(ctx context.Context, arg CountAppLogsParams) (int64, error)
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
 	CountBanks(ctx context.Context, arg CountBanksParams) (int64, error)
 	CountBulkJobsForAccount(ctx context.Context, arg CountBulkJobsForAccountParams) (int64, error)
+	// account-lint: cross-account platform /v1/platform/bulk: the caller's own jobs (actor_id)
 	CountBulkJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountCompanyAssetCards(ctx context.Context, arg CountCompanyAssetCardsParams) (int64, error)
 	CountCompanyAssetOrders(ctx context.Context, arg CountCompanyAssetOrdersParams) (int64, error)
@@ -117,16 +127,19 @@ type Querier interface {
 	CountEventsFilteredCapped(ctx context.Context, arg CountEventsFilteredCappedParams) (int64, error)
 	CountExportJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountImportJobsForAccount(ctx context.Context, arg CountImportJobsForAccountParams) (int64, error)
+	// account-lint: cross-account platform /v1/platform/imports: the caller's own jobs (actor_id)
 	CountImportJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountNotificationsForUser(ctx context.Context, arg CountNotificationsForUserParams) (int64, error)
 	CountOrders(ctx context.Context, arg CountOrdersParams) (int64, error)
 	CountOutboxByStatus(ctx context.Context, status string) (int64, error)
+	// account-lint: cross-account backlog cap per endpoint: endpoint row already loaded for the event (account-scoped dispatch)
 	CountPendingWebhookDeliveries(ctx context.Context, endpointID int64) (int64, error)
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountPlans(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error)
 	CountProductCategories(ctx context.Context, arg CountProductCategoriesParams) (int64, error)
 	CountProducts(ctx context.Context, arg CountProductsParams) (int64, error)
+	// account-lint: cross-account platform /v1/platform/profile-verifications review queue
 	CountProfileVerifications(ctx context.Context, arg CountProfileVerificationsParams) (int64, error)
 	CountProfilesByAccountID(ctx context.Context, arg CountProfilesByAccountIDParams) (int64, error)
 	CountRoles(ctx context.Context, q_ pgtype.Text) (int64, error)
@@ -138,6 +151,7 @@ type Querier interface {
 	CountStructureAssignments(ctx context.Context, arg CountStructureAssignmentsParams) (int64, error)
 	CountStructureGroups(ctx context.Context, arg CountStructureGroupsParams) (int64, error)
 	CountStructureOffices(ctx context.Context, arg CountStructureOfficesParams) (int64, error)
+	// account-lint: cross-account platform /v1/platform/subscriptions
 	CountSubscriptions(ctx context.Context, arg CountSubscriptionsParams) (int64, error)
 	CountUnreadInappForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
@@ -215,6 +229,7 @@ type Querier interface {
 	DeleteLogPurgeRule(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteOAuthAccountByProviderAccount(ctx context.Context, arg DeleteOAuthAccountByProviderAccountParams) error
 	DeleteOAuthAccountByUserProvider(ctx context.Context, arg DeleteOAuthAccountByUserProviderParams) error
+	// account-lint: cross-account platform /v1/platform/orders (platform.orders.write)
 	DeleteOrder(ctx context.Context, argUuid uuid.UUID) error
 	DeletePaymentSavedCard(ctx context.Context, arg DeletePaymentSavedCardParams) error
 	DeletePlan(ctx context.Context, argUuid uuid.UUID) error
@@ -241,6 +256,7 @@ type Querier interface {
 	DeleteStructureOffice(ctx context.Context, arg DeleteStructureOfficeParams) (int64, error)
 	DeleteUserBankAccount(ctx context.Context, arg DeleteUserBankAccountParams) error
 	DeleteUserTOTP(ctx context.Context, userID int64) error
+	// account-lint: cross-account visitor "delete my data" link: the signed token is checked before
 	// KVKK "delete my data" link of the visitor copy email (TEC-940). Only exchanges; the token is
 	// checked before. Deleting the row is what makes the link single use.
 	DeleteVisitorExchange(ctx context.Context, argUuid uuid.UUID) (int64, error)
@@ -250,26 +266,34 @@ type Querier interface {
 	DistinctVisitorsPerDay(ctx context.Context, arg DistinctVisitorsPerDayParams) ([]DistinctVisitorsPerDayRow, error)
 	DistinctVisitorsPerHour(ctx context.Context, arg DistinctVisitorsPerHourParams) ([]DistinctVisitorsPerHourRow, error)
 	ExtensionExists(ctx context.Context, extname string) (bool, error)
+	// account-lint: cross-account payment provider callback / init failure: session id from that flow
 	FailCheckoutSession(ctx context.Context, arg FailCheckoutSessionParams) (PaymentCheckoutSession, error)
+	// account-lint: cross-account payment provider callback / init failure: session id from that flow
 	FailOrderPaymentSession(ctx context.Context, arg FailOrderPaymentSessionParams) (OrderPaymentSession, error)
+	// account-lint: cross-account payment provider callback / init failure: session id from that flow
 	FailPaymentCardSession(ctx context.Context, argUuid uuid.UUID) (PaymentCardSession, error)
 	FindActiveUserByEmail(ctx context.Context, email string) (FindActiveUserByEmailRow, error)
 	FindCompanyGroupsByName(ctx context.Context, arg FindCompanyGroupsByNameParams) ([]FindCompanyGroupsByNameRow, error)
 	FindCompanyOfficesByName(ctx context.Context, arg FindCompanyOfficesByNameParams) ([]uuid.UUID, error)
+	// account-lint: cross-account renewal worker / plan change: attempt id from a claim made in that flow
 	FinishSubscriptionPaymentAttempt(ctx context.Context, arg FinishSubscriptionPaymentAttemptParams) error
 	GetAccountActivePaymentSubscription(ctx context.Context, accountID int64) (GetAccountActivePaymentSubscriptionRow, error)
 	GetAccountBranding(ctx context.Context, accountID int64) (GetAccountBrandingRow, error)
 	GetAccountByID(ctx context.Context, id int64) (GetAccountByIDRow, error)
+	// account-lint: cross-account platform /v1/platform/accounts: any account by uuid (platform.accounts.*)
 	GetAccountByUUID(ctx context.Context, argUuid uuid.UUID) (GetAccountByUUIDRow, error)
 	GetAccountCardByUUID(ctx context.Context, arg GetAccountCardByUUIDParams) (GetAccountCardByUUIDRow, error)
 	GetAccountIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	GetAccountInvite(ctx context.Context, arg GetAccountInviteParams) (GetAccountInviteRow, error)
+	// account-lint: cross-account public invite preview/accept: the token hash is the credential
 	// The link holder's view: not account-scoped, the token is the credential.
 	GetAccountInviteByTokenHash(ctx context.Context, tokenHash []byte) (GetAccountInviteByTokenHashRow, error)
+	// account-lint: cross-account sender_username shows the public canonical route of the sender's profile (another account, exchange)
 	GetAccountLead(ctx context.Context, arg GetAccountLeadParams) (GetAccountLeadRow, error)
 	GetAccountMemberByUserUUID(ctx context.Context, arg GetAccountMemberByUserUUIDParams) (GetAccountMemberByUserUUIDRow, error)
 	GetAccountMemberIDByUser(ctx context.Context, arg GetAccountMemberIDByUserParams) (GetAccountMemberIDByUserRow, error)
 	GetAccountMembershipByID(ctx context.Context, arg GetAccountMembershipByIDParams) (GetAccountMembershipByIDRow, error)
+	// account-lint: cross-account session: the caller's own membership (m.user_id), used to switch / verify the acc claim
 	GetAccountMembershipByUUID(ctx context.Context, arg GetAccountMembershipByUUIDParams) (GetAccountMembershipByUUIDRow, error)
 	GetActiveOTPByEmailType(ctx context.Context, arg GetActiveOTPByEmailTypeParams) (OtpCode, error)
 	GetActiveRefreshFamily(ctx context.Context, arg GetActiveRefreshFamilyParams) (RefreshToken, error)
@@ -278,25 +302,34 @@ type Querier interface {
 	GetAnalyticsSettings(ctx context.Context) (AnalyticsSetting, error)
 	GetAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (AppLog, error)
 	GetAppSettings(ctx context.Context) (AppSetting, error)
+	// account-lint: cross-account public asset upload link: the token is the credential
 	GetAssetRequestByToken(ctx context.Context, token string) (GetAssetRequestByTokenRow, error)
 	GetAssetRequestByUUID(ctx context.Context, argUuid uuid.UUID) (OrderAssetRequest, error)
 	GetAuthSettings(ctx context.Context) (GetAuthSettingsRow, error)
+	// account-lint: cross-account thumbnail key read before a scoped delete (DeleteAccountBackground / platform DeleteBackgroundPreset); used only when that delete hits
 	GetBackgroundThumbnailKey(ctx context.Context, argUuid uuid.UUID) (pgtype.Text, error)
 	// A background an account may use: its own or a preset.
 	GetBackgroundVisibleToAccount(ctx context.Context, arg GetBackgroundVisibleToAccountParams) (GetBackgroundVisibleToAccountRow, error)
 	GetBankByCode(ctx context.Context, code string) (Bank, error)
 	GetBankBySlug(ctx context.Context, slug string) (Bank, error)
 	GetBankByUUID(ctx context.Context, argUuid uuid.UUID) (Bank, error)
+	// account-lint: cross-account bulk worker: job id from the queue
 	GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error)
+	// account-lint: cross-account usecase checks JobAccess.allows (account + actor) or platform admin/actor
 	GetBulkJobByUUID(ctx context.Context, argUuid uuid.UUID) (BulkJob, error)
 	// Public profile pages (/{username}): canonical_profile routes + profile bank account picks.
+	// account-lint: cross-account public profile page resolver
 	// Any canonical route (active, locked or retired) whose profile and account are still live.
 	GetCanonicalRouteByPath(ctx context.Context, path string) (GetCanonicalRouteByPathRow, error)
+	// account-lint: cross-account card activation: the activation code is the credential
 	GetCardByActivationCode(ctx context.Context, activationCode pgtype.Text) (NfcCard, error)
+	// account-lint: cross-account public smart link resolver (/c/{code})
 	GetCardBySmartCode(ctx context.Context, smartCode string) (GetCardBySmartCodeRow, error)
-	GetCardByUUIDAdmin(ctx context.Context, argUuid uuid.UUID) (GetCardByUUIDAdminRow, error)
+	// account-lint: cross-account payment provider callback: merchant oid is the provider's reference
 	GetCheckoutSessionByMerchantOID(ctx context.Context, merchantOid string) (GetCheckoutSessionByMerchantOIDRow, error)
+	// account-lint: cross-account payment provider callback: provider token is the reference
 	GetCheckoutSessionByProviderToken(ctx context.Context, providerToken pgtype.Text) (GetCheckoutSessionByProviderTokenRow, error)
+	// account-lint: cross-account usecase checks row.AccountID against the active account (404 otherwise)
 	GetCheckoutSessionByUUID(ctx context.Context, argUuid uuid.UUID) (GetCheckoutSessionByUUIDRow, error)
 	GetCompanyAssetCardForUpdate(ctx context.Context, arg GetCompanyAssetCardForUpdateParams) (GetCompanyAssetCardForUpdateRow, error)
 	GetCompanyMedia(ctx context.Context, arg GetCompanyMediaParams) (GetCompanyMediaRow, error)
@@ -322,21 +355,27 @@ type Querier interface {
 	GetGeoIPSettings(ctx context.Context) (GeoipSetting, error)
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
 	GetHourlyAggregates(ctx context.Context, arg GetHourlyAggregatesParams) ([]EventAggregatesHourly, error)
+	// account-lint: cross-account import worker / Confirm: job id from an owned job (getOwned) or the queue
 	GetImportJobByID(ctx context.Context, id int64) (ImportJob, error)
+	// account-lint: cross-account usecase getOwned checks account + actor; platform GetJob checks admin/actor
 	GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
 	// TEC-549: verified profile badge requests. Owner-side queries take account_id; platform
 	// review queries are unscoped by design (gated by platform.profile_verifications.manage).
+	// account-lint: cross-account profile id resolved through GetProfileIDForAccount (account-scoped)
 	GetLatestProfileVerification(ctx context.Context, profileID int64) (ProfileVerificationRequest, error)
 	// Lead capture (TEC-552) and contact exchange (TEC-567). App reads are always scoped by account_id
 	// and by the viewer (TEC-940): owners and admins of the account see every lead, any other member
 	// only leads that came to their own employee profile (company_member_profiles) or to a card that
 	// points at it. The role is read live from account_members, so an unknown viewer sees nothing.
 	// The viewer condition is repeated in each read because sqlc cannot share it.
+	// account-lint: cross-account public lead form: resolves a public route by path
 	// The route a visitor submits through, with what decides whether its form is on. A card route
 	// follows its card's current profile.
 	GetLeadCaptureRouteByPath(ctx context.Context, path string) (GetLeadCaptureRouteByPathRow, error)
+	// account-lint: cross-account visitor copy email: profile id comes from the stored lead
 	// Display name of the profile an exchange went to, for the visitor copy email (TEC-940).
 	GetLeadProfileName(ctx context.Context, arg GetLeadProfileNameParams) (string, error)
+	// account-lint: cross-account profile id from a profile already resolved for the account (or the public resolver)
 	GetLiveCanonicalRouteForProfile(ctx context.Context, profileID pgtype.Int8) (GetLiveCanonicalRouteForProfileRow, error)
 	GetLogPurgeRuleByUUID(ctx context.Context, argUuid uuid.UUID) (LogPurgeRule, error)
 	// Monthly quotas (TEC-941). period is the first day of the calendar month in Europe/Istanbul,
@@ -348,20 +387,34 @@ type Querier interface {
 	GetOAuthAccountByProviderAccount(ctx context.Context, arg GetOAuthAccountByProviderAccountParams) (GetOAuthAccountByProviderAccountRow, error)
 	GetOAuthAccountByUserProvider(ctx context.Context, arg GetOAuthAccountByUserProviderParams) (GetOAuthAccountByUserProviderRow, error)
 	GetOAuthProviderSettings(ctx context.Context, provider string) (OauthProviderSetting, error)
+	// account-lint: cross-account platform order lookup by number (platform.orders.read)
 	GetOrderByOrderNumber(ctx context.Context, orderNumber string) (GetOrderByOrderNumberRow, error)
+	// account-lint: cross-account platform orders; app GET /v1/orders/{uuid} goes through GetForAccount, which checks AccountID
 	GetOrderByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrderByUUIDRow, error)
+	// account-lint: cross-account platform order provisioning (platform.orders.write)
 	GetOrderItemByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrderItemByUUIDRow, error)
+	// account-lint: cross-account usecase checks target.AccountID against the active account
 	GetOrderPaymentAmount(ctx context.Context, argUuid uuid.UUID) (GetOrderPaymentAmountRow, error)
+	// account-lint: cross-account platform order refunds (platform.orders.write + step-up)
 	GetOrderPaymentRefundByIdempotencyKey(ctx context.Context, idempotencyKey string) (OrderPaymentRefund, error)
+	// account-lint: cross-account platform order refunds (platform.orders.*)
 	GetOrderPaymentRefundByUUID(ctx context.Context, argUuid uuid.UUID) (OrderPaymentRefund, error)
+	// account-lint: cross-account platform order refunds (platform.orders.*)
 	GetOrderPaymentSessionByID(ctx context.Context, id int64) (OrderPaymentSession, error)
+	// account-lint: cross-account payment provider callback: merchant oid is the provider's reference
 	GetOrderPaymentSessionByMerchantOID(ctx context.Context, merchantOid string) (OrderPaymentSession, error)
+	// account-lint: cross-account payment provider callback: provider token is the reference
 	GetOrderPaymentSessionByProviderToken(ctx context.Context, providerToken pgtype.Text) (OrderPaymentSession, error)
+	// account-lint: cross-account usecase checks row.AccountID against the active account (404 otherwise)
 	GetOrderPaymentSessionByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrderPaymentSessionByUUIDRow, error)
+	// account-lint: cross-account platform order KPIs
 	GetOrderStats(ctx context.Context) (GetOrderStatsRow, error)
 	GetOrderStatusNotification(ctx context.Context, arg GetOrderStatusNotificationParams) (Notification, error)
+	// account-lint: cross-account payment provider callback: merchant oid is the provider's reference
 	GetPaymentCardSessionByMerchantOID(ctx context.Context, merchantOid string) (PaymentCardSession, error)
+	// account-lint: cross-account payment provider callback: provider token is the reference
 	GetPaymentCardSessionByProviderToken(ctx context.Context, providerToken pgtype.Text) (PaymentCardSession, error)
+	// account-lint: cross-account usecase checks row.AccountID against the active account (404 otherwise)
 	GetPaymentCardSessionByUUID(ctx context.Context, argUuid uuid.UUID) (PaymentCardSession, error)
 	GetPaymentProviderCustomer(ctx context.Context, arg GetPaymentProviderCustomerParams) (PaymentProviderCustomer, error)
 	GetPaymentProviderSettings(ctx context.Context, provider PaymentProvider) (PaymentProviderSetting, error)
@@ -370,6 +423,7 @@ type Querier interface {
 	GetPendingAccountInviteByEmail(ctx context.Context, arg GetPendingAccountInviteByEmailParams) (GetPendingAccountInviteByEmailRow, error)
 	GetPermissionBySlug(ctx context.Context, slug string) (Permission, error)
 	GetPersonalAccountIDByUserUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	// account-lint: cross-account session: the user's own personal account membership
 	GetPersonalAccountMembership(ctx context.Context, personalUserID pgtype.Int8) (GetPersonalAccountMembershipRow, error)
 	GetPlanByID(ctx context.Context, id int64) (Plan, error)
 	GetPlanBySlug(ctx context.Context, slug string) (Plan, error)
@@ -381,9 +435,9 @@ type Querier interface {
 	GetProductCategoryBySlug(ctx context.Context, slug string) (ProductCategory, error)
 	GetProductCategoryByUUID(ctx context.Context, argUuid uuid.UUID) (ProductCategory, error)
 	GetProductVariantByUUID(ctx context.Context, argUuid uuid.UUID) (ProductVariant, error)
-	GetProfileByUUID(ctx context.Context, argUuid uuid.UUID) (Profile, error)
 	GetProfileByUUIDForAccount(ctx context.Context, arg GetProfileByUUIDForAccountParams) (Profile, error)
 	GetProfileIDForAccount(ctx context.Context, arg GetProfileIDForAccountParams) (GetProfileIDForAccountRow, error)
+	// account-lint: cross-account platform /v1/platform/profile-verifications review queue
 	GetProfileVerificationRow(ctx context.Context, argUuid uuid.UUID) (GetProfileVerificationRowRow, error)
 	// Background shown on a public page: the owner account's or a preset.
 	GetPublicBackgroundForAccount(ctx context.Context, arg GetPublicBackgroundForAccountParams) (GetPublicBackgroundForAccountRow, error)
@@ -391,10 +445,14 @@ type Querier interface {
 	GetRoleByID(ctx context.Context, id int64) (Role, error)
 	GetRoleBySlug(ctx context.Context, slug string) (Role, error)
 	GetRoleByUUID(ctx context.Context, argUuid uuid.UUID) (Role, error)
+	// account-lint: cross-account card id comes from an account-scoped card (no app caller takes it from input)
 	GetRouteByCardID(ctx context.Context, cardID pgtype.Int8) (Route, error)
+	// account-lint: cross-account public route resolver (/{path}); paths are globally unique
 	// A card route follows its card's current profile; other routes use their own.
 	GetRouteByPath(ctx context.Context, path string) (GetRouteByPathRow, error)
+	// account-lint: cross-account public path lookup: paths are globally unique
 	GetRouteByPathAnyType(ctx context.Context, path string) (GetRouteByPathAnyTypeRow, error)
+	// account-lint: cross-account usecase checks route.AccountID against the active account (404 otherwise)
 	GetRouteByUUID(ctx context.Context, argUuid uuid.UUID) (GetRouteByUUIDRow, error)
 	GetRouteQR(ctx context.Context, arg GetRouteQRParams) (GetRouteQRRow, error)
 	GetSectorAdmin(ctx context.Context, argUuid uuid.UUID) (Sector, error)
@@ -410,6 +468,7 @@ type Querier interface {
 	GetStructureAssignment(ctx context.Context, arg GetStructureAssignmentParams) (GetStructureAssignmentRow, error)
 	GetStructureGroup(ctx context.Context, arg GetStructureGroupParams) (GetStructureGroupRow, error)
 	GetStructureOffice(ctx context.Context, arg GetStructureOfficeParams) (CompanyOffice, error)
+	// account-lint: cross-account platform /v1/platform/subscriptions
 	GetSubscriptionByUUID(ctx context.Context, argUuid uuid.UUID) (GetSubscriptionByUUIDRow, error)
 	GetTemplateByCodeChannelLang(ctx context.Context, arg GetTemplateByCodeChannelLangParams) (NotificationTemplate, error)
 	GetTopEventTypes(ctx context.Context, arg GetTopEventTypesParams) ([]GetTopEventTypesRow, error)
@@ -418,20 +477,23 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id int64) (User, error)
 	GetUserByUUID(ctx context.Context, argUuid uuid.UUID) (User, error)
 	GetUserForInvite(ctx context.Context, id int64) (GetUserForInviteRow, error)
+	// TEC-1104: only a verified address may be added to a company directly; others get an invite.
+	GetUserForMembershipByEmail(ctx context.Context, email string) (GetUserForMembershipByEmailRow, error)
 	GetUserIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	GetUserTOTPByUserID(ctx context.Context, userID int64) (UserTotp, error)
 	GetValidRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) (WebauthnCredential, error)
 	GetWebAuthnCredentialByUUID(ctx context.Context, arg GetWebAuthnCredentialByUUIDParams) (WebauthnCredential, error)
+	// account-lint: cross-account webhook delivery worker: delivery id from the queue
 	GetWebhookDeliveryByID(ctx context.Context, id int64) (GetWebhookDeliveryByIDRow, error)
 	GetWebhookDeliveryByUUID(ctx context.Context, arg GetWebhookDeliveryByUUIDParams) (WebhookDelivery, error)
-	GetWebhookEndpointByID(ctx context.Context, id int64) (WebhookEndpoint, error)
 	GetWebhookEndpointByUUID(ctx context.Context, arg GetWebhookEndpointByUUIDParams) (WebhookEndpoint, error)
 	// Takes one unlocked slot of the month while the limit allows it (-1 = no cap). The row exists:
 	// IncrementMonthlyUsage runs first. One affected row means the lead stays unlocked.
 	GrantMonthlyUnlock(ctx context.Context, arg GrantMonthlyUnlockParams) (int64, error)
 	// Locked leads (TEC-941): received over the monthly quota. Unlocking is one-way.
 	HasLockedLeads(ctx context.Context, accountID int64) (bool, error)
+	// account-lint: cross-account subscription id from the account's own subscription (LockAccountPaymentSubscription) or the renewal worker
 	HasUnresolvedSubscriptionCharge(ctx context.Context, subscriptionID int64) (bool, error)
 	IncrementMonthlyUsage(ctx context.Context, arg IncrementMonthlyUsageParams) (int64, error)
 	IncrementOTPAttempts(ctx context.Context, id int64) (OtpCode, error)
@@ -454,17 +516,22 @@ type Querier interface {
 	InsertUserRole(ctx context.Context, arg InsertUserRoleParams) error
 	InvalidateActiveOTPs(ctx context.Context, arg InvalidateActiveOTPsParams) error
 	IsEventProcessed(ctx context.Context, arg IsEventProcessedParams) (bool, error)
+	// account-lint: cross-account verified badge of a profile already loaded (public page / owner view)
 	IsProfileVerified(ctx context.Context, profileID int64) (bool, error)
+	// account-lint: cross-account NOT EXISTS mirrors the global unique keys (member_id, profile_id); the insert itself is scoped
 	// Links the invite's profile to the member unless either side is already linked.
 	LinkInvitedMemberProfile(ctx context.Context, arg LinkInvitedMemberProfileParams) (int64, error)
 	ListAccountBankAccountIDsByUUID(ctx context.Context, arg ListAccountBankAccountIDsByUUIDParams) ([]ListAccountBankAccountIDsByUUIDRow, error)
+	// account-lint: cross-account card-route subquery is keyed by this account's card id (display only)
 	ListAccountCards(ctx context.Context, arg ListAccountCardsParams) ([]ListAccountCardsRow, error)
 	// status: pending (open, not expired), expired (open, past expires_at), accepted, revoked;
 	// NULL lists open invites (pending and expired).
 	ListAccountInvites(ctx context.Context, arg ListAccountInvitesParams) ([]ListAccountInvitesRow, error)
+	// account-lint: cross-account sender_username shows the public canonical route of the sender's profile (another account, exchange)
 	// A locked lead (TEC-941) matches q only on company: its name, email and phone are masked.
 	ListAccountLeads(ctx context.Context, arg ListAccountLeadsParams) ([]ListAccountLeadsRow, error)
 	ListAccountMembers(ctx context.Context, accountID int64) ([]ListAccountMembersRow, error)
+	// account-lint: cross-account session: every account the user belongs to (m.user_id)
 	ListAccountMembershipsForUser(ctx context.Context, userID int64) ([]ListAccountMembershipsForUserRow, error)
 	// Payment history of an account (TEC-590): every successful charge, whichever table recorded it.
 	// subscription_checkout: the first payment of a hosted checkout (payment_checkout_sessions).
@@ -472,7 +539,9 @@ type Querier interface {
 	// order: an online card order payment that paid its order (metadata.order_result = applied; a
 	// session whose money arrived for a closed or already paid order is a refund case, not a receipt).
 	// order_manual: an order marked paid by hand (bank transfer) without an online payment.
+	// account-lint: cross-account NOT EXISTS checks sessions of an order that is already account-scoped
 	ListAccountPaymentHistory(ctx context.Context, arg ListAccountPaymentHistoryParams) ([]ListAccountPaymentHistoryRow, error)
+	// account-lint: cross-account platform /v1/platform/accounts list
 	ListAccountsFiltered(ctx context.Context, arg ListAccountsFilteredParams) ([]ListAccountsFilteredRow, error)
 	ListActiveBanks(ctx context.Context) ([]Bank, error)
 	ListActivePaidPlans(ctx context.Context) ([]Plan, error)
@@ -483,16 +552,20 @@ type Querier interface {
 	ListActiveSocialPlatforms(ctx context.Context) ([]SocialPlatform, error)
 	ListActiveWebhookEndpointsForEvent(ctx context.Context, arg ListActiveWebhookEndpointsForEventParams) ([]WebhookEndpoint, error)
 	ListActivityEvents(ctx context.Context, arg ListActivityEventsParams) ([]ActivityEvent, error)
+	// account-lint: cross-account platform /v1/platform/bulk admin list
 	ListAllBulkJobs(ctx context.Context, arg ListAllBulkJobsParams) ([]BulkJob, error)
 	ListAllExportJobs(ctx context.Context, arg ListAllExportJobsParams) ([]ExportJob, error)
+	// account-lint: cross-account platform /v1/platform/imports admin list
 	ListAllImportJobs(ctx context.Context, arg ListAllImportJobsParams) ([]ImportJob, error)
 	ListAllPermissionSlugs(ctx context.Context) ([]string, error)
 	ListAppLogSources(ctx context.Context) ([]string, error)
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
+	ListAppReleases(ctx context.Context, rowLimit int32) ([]AppRelease, error)
 	ListBackgroundPresets(ctx context.Context) ([]ListBackgroundPresetsRow, error)
 	// Background Studio designs (account-owned) and platform presets (account_id IS NULL).
 	// Account's own designs first, then platform presets.
 	ListBackgroundsForAccount(ctx context.Context, accountID int64) ([]ListBackgroundsForAccountRow, error)
+	// account-lint: cross-account startup backfill worker, all accounts
 	// Designs saved before thumbnails existed (videos have none by design).
 	ListBackgroundsWithoutThumbnail(ctx context.Context, maxRows int32) ([]ListBackgroundsWithoutThumbnailRow, error)
 	ListBanks(ctx context.Context, arg ListBanksParams) ([]Bank, error)
@@ -500,7 +573,9 @@ type Querier interface {
 	ListBulkChangesForJob(ctx context.Context, jobID int64) ([]BulkChange, error)
 	// App job history of one account; a non-nil actor_id limits it to that actor's jobs.
 	ListBulkJobsForAccount(ctx context.Context, arg ListBulkJobsForAccountParams) ([]BulkJob, error)
+	// account-lint: cross-account platform /v1/platform/bulk: the caller's own jobs (actor_id)
 	ListBulkJobsForActor(ctx context.Context, arg ListBulkJobsForActorParams) ([]BulkJob, error)
+	// account-lint: cross-account search index builder: documents carry account_id and searches filter on it
 	ListCardsForSearch(ctx context.Context, argUuid pgtype.UUID) ([]ListCardsForSearchRow, error)
 	ListCompaniesForSearch(ctx context.Context, argUuid pgtype.UUID) ([]ListCompaniesForSearchRow, error)
 	// Company employee assets: account_id and live actor scope are always required.
@@ -513,6 +588,7 @@ type Querier interface {
 	ListCompanyMedia(ctx context.Context, arg ListCompanyMediaParams) ([]ListCompanyMediaRow, error)
 	ListCompanyMemberProfiles(ctx context.Context, arg ListCompanyMemberProfilesParams) ([]ListCompanyMemberProfilesRow, error)
 	// Worker-only unscoped discovery. Manual/legacy subscriptions are deliberately excluded.
+	// account-lint: cross-account renewal worker, all accounts
 	ListDuePaymentSubscriptions(ctx context.Context, nowAt pgtype.Timestamptz) ([]int64, error)
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListEventDefinitions(ctx context.Context, arg ListEventDefinitionsParams) ([]EventDefinition, error)
@@ -522,25 +598,33 @@ type Querier interface {
 	ListImportChangesForJob(ctx context.Context, jobID int64) ([]ImportChange, error)
 	// App import history of one account for one actor.
 	ListImportJobsForAccount(ctx context.Context, arg ListImportJobsForAccountParams) ([]ImportJob, error)
+	// account-lint: cross-account platform /v1/platform/imports: the caller's own jobs (actor_id)
 	ListImportJobsForActor(ctx context.Context, arg ListImportJobsForActorParams) ([]ImportJob, error)
 	// Owners and admins of an account hear about new leads.
 	ListLeadNotifyUserIDs(ctx context.Context, accountID int64) ([]int64, error)
 	ListLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
+	// The user inbox is in-app only (TEC-1099): email rows hold security codes and links
+	// meant for the mailbox, so they are never served back to the account owner.
 	ListNotificationsForUser(ctx context.Context, arg ListNotificationsForUserParams) ([]Notification, error)
 	ListOAuthAccountsByUserID(ctx context.Context, userID int64) ([]ListOAuthAccountsByUserIDRow, error)
 	ListOAuthAccountsForUserIDs(ctx context.Context, userIds []int64) ([]ListOAuthAccountsForUserIDsRow, error)
 	ListOAuthProviderSettings(ctx context.Context) ([]OauthProviderSetting, error)
 	ListOrderAssetRequests(ctx context.Context, orderID int64) ([]ListOrderAssetRequestsRow, error)
+	// account-lint: cross-account items of an order already loaded through a platform route or GetForAccount
 	ListOrderItemsByOrderID(ctx context.Context, orderID int64) ([]ListOrderItemsByOrderIDRow, error)
+	// account-lint: cross-account platform production manifest (platform.orders.read + step-up)
 	// Production manifest (TEC-581): one row per provisioned card of an order, including the
 	// activation code. Platform-only; callers gate it behind platform.orders.read + step-up.
 	ListOrderManifest(ctx context.Context, argUuid uuid.UUID) ([]ListOrderManifestRow, error)
+	// account-lint: cross-account platform order refunds (platform.orders.read)
 	ListOrderPaymentRefunds(ctx context.Context, orderID int64) ([]ListOrderPaymentRefundsRow, error)
 	// TEC-935: refunds of online card order payments through the payment provider.
+	// account-lint: cross-account platform order refunds (platform.orders.read)
 	ListOrderPaymentsForRefund(ctx context.Context, orderID int64) ([]ListOrderPaymentsForRefundRow, error)
 	ListOrders(ctx context.Context, arg ListOrdersParams) ([]ListOrdersRow, error)
 	// Cmd+K search sources (TEC-595). Platform-wide by design: the specs are gated by platform.*
 	// permissions and link to platform pages; app users never see them.
+	// account-lint: cross-account search index builder: documents carry account_id and searches filter on it
 	ListOrdersForSearch(ctx context.Context, argUuid pgtype.UUID) ([]ListOrdersForSearchRow, error)
 	ListPaymentProviderSettings(ctx context.Context) ([]PaymentProviderSetting, error)
 	ListPaymentSavedCardsByAccount(ctx context.Context, accountID int64) ([]PaymentSavedCard, error)
@@ -559,6 +643,7 @@ type Querier interface {
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]ListProductsRow, error)
 	ListProductsForSearch(ctx context.Context, argUuid pgtype.UUID) ([]ListProductsForSearchRow, error)
 	ListProfileAddresses(ctx context.Context, profileID int64) ([]ProfileAddress, error)
+	// account-lint: cross-account public profile page: bank accounts linked to the profile
 	// Selected, active bank accounts of a profile with their bank's display data.
 	ListProfileBankAccountsPublic(ctx context.Context, profileID int64) ([]ListProfileBankAccountsPublicRow, error)
 	ListProfileContactDetails(ctx context.Context, profileID int64) ([]ProfileContactDetail, error)
@@ -566,11 +651,14 @@ type Querier interface {
 	ListProfileTranslations(ctx context.Context, profileID int64) ([]ProfileTranslation, error)
 	// Owners and admins of the profile's account hear about review outcomes.
 	ListProfileVerificationNotifyUserIDs(ctx context.Context, accountID int64) ([]int64, error)
+	// account-lint: cross-account platform /v1/platform/profile-verifications review queue
 	ListProfileVerifications(ctx context.Context, arg ListProfileVerificationsParams) ([]ListProfileVerificationsRow, error)
+	// account-lint: cross-account canonical-route subquery is keyed by this account's profile id (display only)
 	ListProfilesByAccountID(ctx context.Context, arg ListProfilesByAccountIDParams) ([]ListProfilesByAccountIDRow, error)
 	// Account-scoped app specs (TEC-951). Each row carries its account_id; the search index stores
 	// it as a filterable attribute and app queries always filter on the caller's active account.
 	// Activation codes and passcodes are never selected.
+	// account-lint: cross-account search index builder: documents carry account_id and searches filter on it
 	ListProfilesForSearch(ctx context.Context, argUuid pgtype.UUID) ([]ListProfilesForSearchRow, error)
 	ListPushSubscriptionsByUser(ctx context.Context, userID int64) ([]PushSubscription, error)
 	ListRolePermissionSlugsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]string, error)
@@ -584,6 +672,7 @@ type Querier interface {
 	ListSocialPlatforms(ctx context.Context, arg ListSocialPlatformsParams) ([]SocialPlatform, error)
 	// Deliveries whose task was lost (Redis down at enqueue, worker crash): due for a while and
 	// never attempted since.
+	// account-lint: cross-account webhook delivery worker
 	ListStaleWebhookDeliveries(ctx context.Context) ([]ListStaleWebhookDeliveriesRow, error)
 	ListStorageActivity(ctx context.Context, arg ListStorageActivityParams) ([]ListStorageActivityRow, error)
 	ListStorageLinksByKey(ctx context.Context, objectKey string) ([]StorageLink, error)
@@ -602,6 +691,7 @@ type Querier interface {
 	ListStructureOffices(ctx context.Context, arg ListStructureOfficesParams) ([]CompanyOffice, error)
 	ListStructureScopes(ctx context.Context, arg ListStructureScopesParams) ([]uuid.UUID, error)
 	ListStuckProcessingNotificationIDs(ctx context.Context, staleMinutes int32) ([]int64, error)
+	// account-lint: cross-account platform /v1/platform/subscriptions
 	ListSubscriptionsFiltered(ctx context.Context, arg ListSubscriptionsFilteredParams) ([]ListSubscriptionsFilteredRow, error)
 	ListUserBankAccounts(ctx context.Context, accountID int64) ([]ListUserBankAccountsRow, error)
 	ListUserRoleSlugs(ctx context.Context, userID int64) ([]string, error)
@@ -615,38 +705,55 @@ type Querier interface {
 	ListWebhookDeliveries(ctx context.Context, arg ListWebhookDeliveriesParams) ([]ListWebhookDeliveriesRow, error)
 	// Outbound webhooks (TEC-603). Endpoint reads and writes are scoped to the account.
 	ListWebhookEndpoints(ctx context.Context, accountID int64) ([]WebhookEndpoint, error)
+	// account-lint: cross-account invite accept: id and token hash come from GetAccountInviteByTokenHash
 	// Re-reads the invite under lock; a resend in between changed the token, so the old one misses.
 	LockAccountInvite(ctx context.Context, arg LockAccountInviteParams) (LockAccountInviteRow, error)
 	LockAccountPaymentSubscription(ctx context.Context, accountID int64) (Subscription, error)
 	LockBillingAccount(ctx context.Context, id int64) (int64, error)
+	// account-lint: cross-account payment provider callback: session id from the verified callback
 	LockCheckoutSession(ctx context.Context, merchantOid string) (PaymentCheckoutSession, error)
 	// Activation may move a card to a new account without moving its purchase order.
 	// Follow only the active account's owned card; never accept an arbitrary foreign order ID.
 	LockCompanyAssetOrder(ctx context.Context, arg LockCompanyAssetOrderParams) (LockCompanyAssetOrderRow, error)
 	LockCompanyAssetRoute(ctx context.Context, arg LockCompanyAssetRouteParams) (LockCompanyAssetRouteRow, error)
+	// account-lint: cross-account provider payment/refund apply: order id from a verified session
 	LockOrderForPayment(ctx context.Context, id int64) (LockOrderForPaymentRow, error)
 	// Locks the order row so the from_status written to order_status_history (TEC-944) is the
 	// status the transition actually replaced.
+	// account-lint: cross-account platform order status change (platform.orders.write)
 	LockOrderForStatusChange(ctx context.Context, argUuid uuid.UUID) (LockOrderForStatusChangeRow, error)
+	// account-lint: cross-account platform order refunds (platform.orders.write)
 	LockOrderPaymentRefund(ctx context.Context, id int64) (OrderPaymentRefund, error)
+	// account-lint: cross-account order checkout flow: session id from that flow (callback or the account's own start)
 	LockOrderPaymentSession(ctx context.Context, merchantOid string) (OrderPaymentSession, error)
+	// account-lint: cross-account platform order refunds (platform.orders.write)
 	LockOrderPaymentSessionByID(ctx context.Context, id int64) (OrderPaymentSession, error)
+	// account-lint: cross-account renewal worker / plan change: subscription id from a claim made in that flow
 	LockRenewalSubscription(ctx context.Context, id int64) (Subscription, error)
 	LockStructureAccount(ctx context.Context, id int64) (int64, error)
+	// account-lint: cross-account invite accept: id comes from the token lookup, inside the locked tx
 	MarkAccountInviteAccepted(ctx context.Context, arg MarkAccountInviteAcceptedParams) (int64, error)
 	MarkAccountLeadRead(ctx context.Context, arg MarkAccountLeadReadParams) (int64, error)
 	MarkAllNotificationsReadForUser(ctx context.Context, userID pgtype.Int8) (int64, error)
+	// account-lint: cross-account bulk worker: job id from the queue
 	MarkBulkJobCompleted(ctx context.Context, arg MarkBulkJobCompletedParams) (BulkJob, error)
+	// account-lint: cross-account bulk worker: job id from the queue
 	MarkBulkJobFailed(ctx context.Context, arg MarkBulkJobFailedParams) (BulkJob, error)
+	// account-lint: cross-account bulk worker: job id from the queue
 	MarkBulkJobProcessing(ctx context.Context, id int64) (BulkJob, error)
+	// account-lint: cross-account bulk rollback: job already checked by JobAccess.allows
 	MarkBulkJobRolledBack(ctx context.Context, arg MarkBulkJobRolledBackParams) (BulkJob, error)
 	MarkEventProcessed(ctx context.Context, arg MarkEventProcessedParams) error
 	MarkExportJobCompleted(ctx context.Context, arg MarkExportJobCompletedParams) (ExportJob, error)
 	MarkExportJobFailed(ctx context.Context, arg MarkExportJobFailedParams) (ExportJob, error)
 	MarkExportJobProcessing(ctx context.Context, id int64) (ExportJob, error)
+	// account-lint: cross-account import worker: job id from the queue
 	MarkImportJobApplied(ctx context.Context, arg MarkImportJobAppliedParams) (ImportJob, error)
+	// account-lint: cross-account import worker: job id from the queue
 	MarkImportJobApplying(ctx context.Context, id int64) (ImportJob, error)
+	// account-lint: cross-account import worker: job id from the queue
 	MarkImportJobFailed(ctx context.Context, arg MarkImportJobFailedParams) (ImportJob, error)
+	// account-lint: cross-account import rollback: job already checked by getOwned
 	MarkImportJobRolledBack(ctx context.Context, id int64) (ImportJob, error)
 	MarkLogPurgeRuleRun(ctx context.Context, arg MarkLogPurgeRuleRunParams) (LogPurgeRule, error)
 	MarkNotificationFailed(ctx context.Context, arg MarkNotificationFailedParams) (Notification, error)
@@ -657,27 +764,38 @@ type Querier interface {
 	// (inconsistent types deduced for parameter $2).
 	MarkNotificationSent(ctx context.Context, arg MarkNotificationSentParams) (Notification, error)
 	MarkOrderNotificationDispatched(ctx context.Context, arg MarkOrderNotificationDispatchedParams) error
+	// account-lint: cross-account platform order refunds (platform.orders.write)
 	MarkOrderPaymentRefundFailed(ctx context.Context, arg MarkOrderPaymentRefundFailedParams) (OrderPaymentRefund, error)
+	// account-lint: cross-account platform order refunds (platform.orders.write)
 	MarkOrderPaymentRefundSucceeded(ctx context.Context, arg MarkOrderPaymentRefundSucceededParams) (OrderPaymentRefund, error)
 	MarkOutboxFailed(ctx context.Context, arg MarkOutboxFailedParams) error
 	MarkOutboxPublished(ctx context.Context, id int64) error
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
+	// OAuth sign-up / user import stores a random hash; the user never chose a password.
+	MarkUserPasswordUnset(ctx context.Context, id int64) error
 	// TEC-953: one row per visitor and hour feeds the platform unique visitor KPI.
 	MarkVisitorHour(ctx context.Context, arg MarkVisitorHourParams) error
+	// account-lint: cross-account subscription id from the account's own subscription (LockAccountPaymentSubscription)
 	NextUpgradeAttempt(ctx context.Context, arg NextUpgradeAttemptParams) (int32, error)
 	PingDB(ctx context.Context) (int32, error)
 	// Platform-wide event volume per local calendar day (TEC-859), read from the hourly rollups so
 	// days follow the viewer's time zone. Never touches the raw events partitions.
 	PlatformEventCountsByLocalDay(ctx context.Context, arg PlatformEventCountsByLocalDayParams) ([]PlatformEventCountsByLocalDayRow, error)
+	// account-lint: cross-account platform support tools (platform.* permission)
 	PlatformGetCard(ctx context.Context, argUuid uuid.UUID) (PlatformGetCardRow, error)
+	// account-lint: cross-account platform support tools (platform.* permission)
 	// The profile a card is reassigned to, with the user who will own the card: the profile's user,
 	// or the account owner for profiles without one (legacy/company profiles).
 	PlatformGetProfileForCard(ctx context.Context, argUuid uuid.UUID) (PlatformGetProfileForCardRow, error)
+	// account-lint: cross-account platform support tools (platform.* permission)
 	PlatformGetRouteIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	// account-lint: cross-account platform support tools (platform.* permission)
 	// A card route follows its card's current profile; other routes use their own.
 	PlatformGetRoutes(ctx context.Context, ids []int64) ([]PlatformGetRoutesRow, error)
+	// account-lint: cross-account platform support tools (platform.* permission)
 	PlatformListRouteHistory(ctx context.Context, routeIds []int64) ([]PlatformListRouteHistoryRow, error)
 	// Provisioned cards start as 'unactivated' and become 'active' when the customer activates them.
+	// account-lint: cross-account platform overview dashboard, all accounts
 	PlatformOverviewCards(ctx context.Context) (PlatformOverviewCardsRow, error)
 	// Conversion funnel (TEC-944) of the orders opened in [since, until), read from
 	// order_status_history. A stage counts as reached when the order ever entered that status or a
@@ -685,6 +803,7 @@ type Querier interface {
 	// → delivered). Stage times are averaged from the order's creation to the first recorded entry;
 	// backfilled rows (from_status NULL, migration 000058) count as reached but carry no timing.
 	// Bounded by the period: idx_orders_created_at, then idx_order_status_history_order per order.
+	// account-lint: cross-account platform overview dashboard, all accounts
 	PlatformOverviewConversionFunnel(ctx context.Context, arg PlatformOverviewConversionFunnelParams) (PlatformOverviewConversionFunnelRow, error)
 	// Event volume per hour bucket since the window start (hourly aggregates).
 	PlatformOverviewEventsByHour(ctx context.Context, since pgtype.Timestamptz) ([]PlatformOverviewEventsByHourRow, error)
@@ -692,32 +811,43 @@ type Querier interface {
 	// MRR: active subscriptions (online payment and manual alike) on recurring plans, the yearly
 	// price spread over 12 months. Free and lifetime plans have no recurring revenue and are left
 	// out. past_due subscriptions are not MRR; they are summed separately as at-risk MRR (TEC-944).
+	// account-lint: cross-account platform overview dashboard, all accounts
 	PlatformOverviewMRR(ctx context.Context) ([]PlatformOverviewMRRRow, error)
 	// Orders created since the window start, grouped by their current status.
+	// account-lint: cross-account platform overview dashboard, all accounts
 	PlatformOverviewOrderStatusCounts(ctx context.Context, since pgtype.Timestamptz) ([]PlatformOverviewOrderStatusCountsRow, error)
 	// A profile is published when it has a live (active) username route.
+	// account-lint: cross-account platform overview dashboard, all accounts
 	PlatformOverviewProfiles(ctx context.Context) (PlatformOverviewProfilesRow, error)
+	// account-lint: cross-account platform overview dashboard, all accounts
 	PlatformOverviewSubscriptionCounts(ctx context.Context, since pgtype.Timestamptz) (PlatformOverviewSubscriptionCountsRow, error)
 	// Most viewed live profiles from the daily aggregates (public profile page views).
+	// account-lint: cross-account platform overview dashboard, all accounts
 	PlatformOverviewTopProfiles(ctx context.Context, arg PlatformOverviewTopProfilesParams) ([]PlatformOverviewTopProfilesRow, error)
 	// Platform overview KPIs (TEC-594). Platform-wide by design: no account scope. Callers gate
 	// them behind platform.overview.read. Analytics numbers read the aggregate tables only, never
 	// the raw events partitions.
 	PlatformOverviewUsers(ctx context.Context, since pgtype.Timestamptz) (PlatformOverviewUsersRow, error)
+	// account-lint: cross-account platform support tools: moves a card between accounts on purpose
 	// The card and its card route move to the profile, its account and owner in one statement. The
 	// printed identity (smart_code, card_uid, path) does not change.
 	PlatformReassignCard(ctx context.Context, arg PlatformReassignCardParams) (int64, error)
+	// account-lint: cross-account platform support tools (platform.* permission)
 	// Ends the 30-day hold of deleted smart links on this path (TEC-559 hold, TEC-950 release).
 	PlatformReleaseDeletedRoutePath(ctx context.Context, path string) ([]uuid.UUID, error)
+	// account-lint: cross-account platform support tools (platform.* permission)
 	// Ends the 30-day hold a smart link rename left on its old path (TEC-558 hold, TEC-950 release).
 	PlatformReleaseRenamedPath(ctx context.Context, path string) ([]uuid.UUID, error)
+	// account-lint: cross-account platform support tools (platform.* permission)
 	// One card's version of RetireOrderCardRoutes (TEC-585): its route becomes retired ("card
 	// deactivated", the path is never handed out again) and an unused activation code is cleared.
 	PlatformRetireCard(ctx context.Context, cardID pgtype.Int8) ([]string, error)
 	// Platform card and route support screens (TEC-950). These are platform queries: they are not
 	// scoped to an account and are only reachable behind platform.cards.* / platform.routes.*.
+	// account-lint: cross-account platform support tools (platform.* permission)
 	// Prefix match on smart code, card UID (system serial) or a migrated card's legacy serial.
 	PlatformSearchCards(ctx context.Context, arg PlatformSearchCardsParams) ([]PlatformSearchCardsRow, error)
+	// account-lint: cross-account platform support tools (platform.* permission)
 	// Path search over every route, deleted smart links included (they hold their path for 30 days),
 	// plus routes whose renamed-away old path matches.
 	PlatformSearchRoutes(ctx context.Context, arg PlatformSearchRoutesParams) ([]int64, error)
@@ -726,9 +856,12 @@ type Querier interface {
 	// Platform-wide distinct visitors (TEC-953) for today, the last 7 and the last 30 local days,
 	// from the hourly visitor rollup. Windows end at to_before.
 	PlatformUniqueVisitors(ctx context.Context, arg PlatformUniqueVisitorsParams) (PlatformUniqueVisitorsRow, error)
+	// account-lint: cross-account webhook retention worker
 	PruneWebhookDeliveries(ctx context.Context, before pgtype.Timestamptz) (int64, error)
 	PutRouteQR(ctx context.Context, arg PutRouteQRParams) (int64, error)
+	// account-lint: cross-account import confirm: job already checked by getOwned
 	QueueImportJob(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
+	// account-lint: cross-account webhook delivery worker
 	RecordWebhookDeliveryAttempt(ctx context.Context, arg RecordWebhookDeliveryAttemptParams) (WebhookDelivery, error)
 	RemoveAccountMember(ctx context.Context, arg RemoveAccountMemberParams) (int64, error)
 	RemoveUserRoleBySlug(ctx context.Context, arg RemoveUserRoleBySlugParams) error
@@ -736,20 +869,30 @@ type Querier interface {
 	RenewAccountInvite(ctx context.Context, arg RenewAccountInviteParams) (int64, error)
 	RenewalCard(ctx context.Context, arg RenewalCardParams) (RenewalCardRow, error)
 	ReplaceUserRoles(ctx context.Context, userID int64) error
+	// account-lint: cross-account resend: delivery id from GetWebhookDeliveryByUUID (account-scoped)
 	ResetWebhookDelivery(ctx context.Context, id int64) (WebhookDelivery, error)
+	// account-lint: cross-account route id from LiveRoute of the account's own profile
 	RetireCanonicalRoute(ctx context.Context, id int64) error
+	// account-lint: cross-account platform cancel/refund: retires the cards of that order
 	// Cancelled/refunded orders (TEC-585): the order's card routes become retired, which the
 	// resolver shows as "card deactivated". Paths are never released for reuse. Unused activation
 	// codes are cleared so nobody can still claim those cards.
 	RetireOrderCardRoutes(ctx context.Context, orderID pgtype.Int8) ([]RetireOrderCardRoutesRow, error)
+	// account-lint: cross-account platform order refunds (platform.orders.write)
 	RetryOrderPaymentRefund(ctx context.Context, arg RetryOrderPaymentRefundParams) (OrderPaymentRefund, error)
+	// account-lint: cross-account platform /v1/platform/profile-verifications approve/reject
 	// Approves or rejects a pending request; no row when it is not pending any more.
 	ReviewProfileVerification(ctx context.Context, arg ReviewProfileVerificationParams) (ProfileVerificationRequest, error)
+	// account-lint: cross-account route id is a retired route of the same profile (PathOwner check)
 	ReviveCanonicalRoute(ctx context.Context, arg ReviveCanonicalRouteParams) error
 	RevokeAccountInvite(ctx context.Context, arg RevokeAccountInviteParams) (int64, error)
 	RevokeAllRefreshTokensForUser(ctx context.Context, userID int64) error
+	// TEC-1104: a removed member's open invites to the account stop working too.
+	RevokeOpenAccountInvitesForUser(ctx context.Context, arg RevokeOpenAccountInvitesForUserParams) (int64, error)
 	RevokeOtherRefreshFamiliesForUser(ctx context.Context, arg RevokeOtherRefreshFamiliesForUserParams) error
+	// account-lint: cross-account platform /v1/platform/profile-verifications revoke
 	RevokeProfileVerificationByUUID(ctx context.Context, arg RevokeProfileVerificationByUUIDParams) (ProfileVerificationRequest, error)
+	// account-lint: cross-account profile id resolved through GetProfileIDForAccount (account-scoped)
 	RevokeProfileVerificationForProfile(ctx context.Context, arg RevokeProfileVerificationForProfileParams) (ProfileVerificationRequest, error)
 	// RevokeRefreshFamilyByHash revokes every live token in the family of the given token (logout).
 	RevokeRefreshFamilyByHash(ctx context.Context, tokenHash string) error
@@ -761,12 +904,15 @@ type Querier interface {
 	// successor in the same family (no window without an active row).
 	RotateRefreshTokenByHash(ctx context.Context, arg RotateRefreshTokenByHashParams) (RefreshToken, error)
 	RotateWebhookEndpointSecret(ctx context.Context, arg RotateWebhookEndpointSecretParams) (WebhookEndpoint, error)
+	// account-lint: cross-account renewal worker
 	SaveRenewalSubscription(ctx context.Context, arg SaveRenewalSubscriptionParams) error
 	SetAccountInviteProfile(ctx context.Context, arg SetAccountInviteProfileParams) (int64, error)
 	SetAppSettingsLogo(ctx context.Context, logoObjectKey pgtype.Text) (AppSetting, error)
+	// account-lint: cross-account thumbnail writer: uuid comes from a design just saved through a scoped query (or the backfill worker)
 	// Stores the key of a freshly rendered thumbnail (TEC-599). The document must still be the one
 	// rendered, so a thumbnail never lands on a newer edit.
 	SetBackgroundThumbnail(ctx context.Context, arg SetBackgroundThumbnailParams) (int64, error)
+	// account-lint: cross-account route id from LiveRoute of the account's own profile
 	SetCanonicalRouteState(ctx context.Context, arg SetCanonicalRouteStateParams) error
 	SetCompanyAssetCardActive(ctx context.Context, arg SetCompanyAssetCardActiveParams) error
 	SetCompanyMemberProfile(ctx context.Context, arg SetCompanyMemberProfileParams) (int64, error)
@@ -782,10 +928,13 @@ type Querier interface {
 	// subject's own account. A profile brings its routes (card, canonical, smart link and legacy hash
 	// routes) and cards; a route its card; a card its routes. Counts per event type and source come
 	// from the daily rollups only.
+	// account-lint: cross-account analytics: handler's scopedFilter restricts the subject to the active account; related rows follow the subject's account
 	SubjectSourceCounts(ctx context.Context, arg SubjectSourceCountsParams) ([]SubjectSourceCountsRow, error)
+	// account-lint: cross-account platform order refunds (platform.orders.*)
 	SumOrderPaymentRefunds(ctx context.Context, sessionID int64) (SumOrderPaymentRefundsRow, error)
 	ToggleActiveUserBankAccount(ctx context.Context, arg ToggleActiveUserBankAccountParams) (UserBankAccount, error)
 	ToggleCardLock(ctx context.Context, arg ToggleCardLockParams) (bool, error)
+	// account-lint: cross-account webhook delivery worker: endpoint of the delivery being sent
 	TouchWebhookEndpointDelivery(ctx context.Context, arg TouchWebhookEndpointDeliveryParams) error
 	// A new month unlocks every lead locked in an earlier month.
 	UnlockLeadsBefore(ctx context.Context, arg UnlockLeadsBeforeParams) (int64, error)
@@ -802,25 +951,36 @@ type Querier interface {
 	UpdateBank(ctx context.Context, arg UpdateBankParams) (Bank, error)
 	UpdateBankIcon(ctx context.Context, arg UpdateBankIconParams) (Bank, error)
 	UpdateCard(ctx context.Context, arg UpdateCardParams) (NfcCard, error)
+	// account-lint: cross-account checkout start: session id from the row just inserted for this account
 	UpdateCheckoutSessionInit(ctx context.Context, arg UpdateCheckoutSessionInitParams) (PaymentCheckoutSession, error)
 	UpdateErrorTrackingSettings(ctx context.Context, arg UpdateErrorTrackingSettingsParams) (ErrorTrackingSetting, error)
 	UpdateEventDefinition(ctx context.Context, arg UpdateEventDefinitionParams) (EventDefinition, error)
 	UpdateGeoIPSettings(ctx context.Context, arg UpdateGeoIPSettingsParams) (GeoipSetting, error)
 	UpdateGeoIPStatus(ctx context.Context, arg UpdateGeoIPStatusParams) (GeoipSetting, error)
 	UpdateGitHubAppSettings(ctx context.Context, arg UpdateGitHubAppSettingsParams) (GithubAppSetting, error)
+	// account-lint: cross-account import upload: job id from the row just inserted for this account
 	UpdateImportJobFileKey(ctx context.Context, arg UpdateImportJobFileKeyParams) (ImportJob, error)
+	// account-lint: cross-account import mapping: job already checked by getOwned
 	UpdateImportJobMapping(ctx context.Context, arg UpdateImportJobMappingParams) (ImportJob, error)
+	// account-lint: cross-account import preview: job already checked by getOwned
 	UpdateImportJobPreview(ctx context.Context, arg UpdateImportJobPreviewParams) (ImportJob, error)
 	UpdateLogPurgeRule(ctx context.Context, arg UpdateLogPurgeRuleParams) (LogPurgeRule, error)
 	UpdateOAuthProviderSettings(ctx context.Context, arg UpdateOAuthProviderSettingsParams) (OauthProviderSetting, error)
+	// account-lint: cross-account platform /v1/platform/orders (platform.orders.write)
 	UpdateOrderFulfillmentStatus(ctx context.Context, arg UpdateOrderFulfillmentStatusParams) (Order, error)
 	UpdateOrderItemFulfillment(ctx context.Context, arg UpdateOrderItemFulfillmentParams) (OrderItem, error)
 	UpdateOrderItemProvisioning(ctx context.Context, arg UpdateOrderItemProvisioningParams) (OrderItem, error)
+	// account-lint: cross-account platform /v1/platform/orders (platform.orders.write)
 	UpdateOrderNotes(ctx context.Context, arg UpdateOrderNotesParams) (Order, error)
+	// account-lint: cross-account order checkout start: session id from the row just inserted for this account
 	UpdateOrderPaymentSessionInit(ctx context.Context, arg UpdateOrderPaymentSessionInitParams) (OrderPaymentSession, error)
+	// account-lint: cross-account platform order payment / provider callback apply
 	UpdateOrderPaymentStatus(ctx context.Context, arg UpdateOrderPaymentStatusParams) (Order, error)
+	// account-lint: cross-account platform /v1/platform/orders (platform.orders.write)
 	UpdateOrderShipping(ctx context.Context, arg UpdateOrderShippingParams) (Order, error)
+	// account-lint: cross-account platform order status / provider callback apply
 	UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (Order, error)
+	// account-lint: cross-account add-card start: session id from the row just inserted for this account
 	UpdatePaymentCardSessionInit(ctx context.Context, arg UpdatePaymentCardSessionInitParams) (PaymentCardSession, error)
 	UpdatePaymentProviderSettings(ctx context.Context, arg UpdatePaymentProviderSettingsParams) (PaymentProviderSetting, error)
 	UpdatePaymentSettings(ctx context.Context, arg UpdatePaymentSettingsParams) (PaymentSetting, error)
@@ -838,6 +998,7 @@ type Querier interface {
 	UpdateStepupSettings(ctx context.Context, arg UpdateStepupSettingsParams) (StepupSetting, error)
 	UpdateStructureGroup(ctx context.Context, arg UpdateStructureGroupParams) (CompanyGroup, error)
 	UpdateStructureOffice(ctx context.Context, arg UpdateStructureOfficeParams) (CompanyOffice, error)
+	// account-lint: cross-account platform /v1/platform/subscriptions
 	UpdateSubscription(ctx context.Context, arg UpdateSubscriptionParams) (Subscription, error)
 	UpdateUserBankAccount(ctx context.Context, arg UpdateUserBankAccountParams) (UserBankAccount, error)
 	UpdateUserBankAccountOrder(ctx context.Context, arg UpdateUserBankAccountOrderParams) error
@@ -853,6 +1014,9 @@ type Querier interface {
 	UpdateWebAuthnCredentialName(ctx context.Context, arg UpdateWebAuthnCredentialNameParams) (WebauthnCredential, error)
 	UpdateWebhookEndpoint(ctx context.Context, arg UpdateWebhookEndpointParams) (WebhookEndpoint, error)
 	UpsertAccountBranding(ctx context.Context, arg UpsertAccountBrandingParams) error
+	// Deploy provenance (TEC-1094). One row per (version, git_commit); the server upserts it on
+	// every boot (internal/platform/release.RecordBoot).
+	UpsertAppRelease(ctx context.Context, arg UpsertAppReleaseParams) (AppRelease, error)
 	UpsertDailyAggregate(ctx context.Context, arg UpsertDailyAggregateParams) (EventAggregatesDaily, error)
 	UpsertHourlyAggregate(ctx context.Context, arg UpsertHourlyAggregateParams) (EventAggregatesHourly, error)
 	UpsertNotificationPreferences(ctx context.Context, arg UpsertNotificationPreferencesParams) (NotificationPreference, error)
