@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/auth/model"
@@ -349,19 +350,26 @@ func (u *AuthUseCase) Login(ctx context.Context, email, rawPassword, totpCode st
 	user, err := u.repo.FindUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
+			// Spend the same Argon2 work as a real check so response timing does not
+			// reveal which emails are registered (TEC-1101).
+			burnPasswordVerify(rawPassword)
 			return model.Tokens{}, ErrInvalidCredentials
 		}
 		return model.Tokens{}, err
 	}
-	if user.Status == "disabled" {
-		return model.Tokens{}, ErrUserDisabled
+	// Verify the password before revealing account state (disabled, suspended), so
+	// the state cannot be probed without the credential.
+	ok, err := password.Verify(user.PasswordHash, rawPassword)
+	if err != nil {
+		// Unusable stored hash: still spend the work, then answer like a wrong password.
+		burnPasswordVerify(rawPassword)
+		return model.Tokens{}, ErrInvalidCredentials
+	}
+	if !ok {
+		return model.Tokens{}, ErrInvalidCredentials
 	}
 	if user.Status != "active" {
 		return model.Tokens{}, ErrUserDisabled
-	}
-	ok, err := password.Verify(user.PasswordHash, rawPassword)
-	if err != nil || !ok {
-		return model.Tokens{}, ErrInvalidCredentials
 	}
 
 	hasTOTP, err := u.UserHasEnabledTOTP(ctx, user.ID)
@@ -603,6 +611,22 @@ func (u *AuthUseCase) issueAccessForSession(ctx context.Context, user model.User
 		TokenType: "Bearer", ExpiresIn: int64(accessExp.Sub(u.now().UTC()).Seconds()),
 		RefreshExpiresAt: refreshExp,
 	}, nil
+}
+
+var (
+	dummyHashOnce sync.Once
+	dummyHash     string
+)
+
+// burnPasswordVerify runs an Argon2 verification (same parameters as real hashes)
+// against a throwaway hash computed once, so unknown emails cost as much as wrong passwords.
+func burnPasswordVerify(raw string) {
+	dummyHashOnce.Do(func() {
+		dummyHash, _ = password.HashSecret("timing-equalizer")
+	})
+	if dummyHash != "" {
+		_, _ = password.Verify(dummyHash, raw)
+	}
 }
 
 func newOpaqueToken() (string, error) {

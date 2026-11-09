@@ -80,12 +80,16 @@ Redis INCR, 15-minute window, fail-open if Redis is down. `429 RATE_LIMITED` + `
 
 | Endpoint | Key | Max |
 |----------|-----|-----|
-| Login | IP + email | 10 |
+| Login | IP + email, IP, email | 10, 50, 30 |
 | Register | IP | 5 |
-| Forgot password | IP + email | 5 |
-| Reset password | IP | 10 |
+| Forgot password | IP + email, IP, email | 5, 20, 5 |
+| Reset password | IP, email | 10, 10 |
+| Verification email request (`/auth/email/verify-request`) | user, IP | 5, 20 |
+| Verify email (`/auth/email/verify`) | IP, email | 10, 10 |
 | Card activation | user, and client IP | 10, 30 |
 | Public analytics events (`POST /v1/events`) | client IP | 600 |
+
+Login and forgot-password keep a per-email cap across IPs so a botnet cannot guess one account's password from many addresses; it is higher than the IP + email cap, so locking a person out takes many requests and only lasts until the window ends (password reset and passkey sign-in are not affected).
 
 "IP" is the end user's address, resolved once per request by `internal/platform/clientip`:
 
@@ -93,6 +97,12 @@ Redis INCR, 15-minute window, fail-open if Redis is down. `429 RATE_LIMITED` + `
 - Go honours `X-Forwarded-For` only when the direct peer is in `TRUSTED_PROXIES` (default: loopback + private ranges). It walks the chain right to left and takes the first address that is not a trusted proxy; the client-supplied prefix is ignored.
 - From any other peer the socket address is used, so a spoofed header cannot bypass the limits.
 - The middleware rewrites `RemoteAddr`; use `clientip.String(r)` / `clientip.IP(r)` and never read `X-Forwarded-For` in handlers.
+
+## Account enumeration (TEC-1101)
+
+- Login verifies the password first. An unknown email runs an Argon2 check against a dummy hash (computed once, same parameters), so it costs as much as a wrong password, and both return the same `401 INVALID_CREDENTIALS` "Email or password is incorrect". A disabled or suspended account is reported (`403`) only after the correct password; 2FA (`MFA_REQUIRED`, `INVALID_MFA_CODE`, `MFA_NOT_ENROLLED`) also follows a correct password.
+- `POST /v1/auth/password/forgot` always answers `accepted`; `POST /v1/auth/password/reset` and `POST /v1/auth/email/verify` answer an unknown email like a wrong code.
+- `POST /v1/auth/email/verify-request` only mails the caller's own address. An `email` field naming another address is ignored with the same `accepted` response.
 
 ## Security emails
 

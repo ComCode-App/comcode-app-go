@@ -76,7 +76,9 @@ export interface paths {
         put?: never;
         /**
          * Login
-         * @description Authenticates with email/password and returns a token pair.
+         * @description Authenticates with email/password and returns a token pair. An unknown email and a wrong
+         *     password get the same `401 INVALID_CREDENTIALS`; a disabled account is reported (403) only
+         *     after the correct password. Rate limited per IP + email, per IP and per email.
          */
         post: operations["postAuthLogin"];
         delete?: never;
@@ -967,7 +969,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Request email verification OTP */
+        /**
+         * Request email verification OTP
+         * @description Sends a verification code to the caller's own email address. An `email` that differs from the caller's address is ignored with the same accepted response. Rate limited per user and per client IP.
+         */
         post: operations["postAuthEmailVerifyRequest"];
         delete?: never;
         options?: never;
@@ -984,7 +989,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Verify email with OTP */
+        /**
+         * Verify email with OTP
+         * @description Rate limited per client IP and per email.
+         */
         post: operations["postAuthEmailVerify"];
         delete?: never;
         options?: never;
@@ -13806,7 +13814,10 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
-                    /** Format: email */
+                    /**
+                     * Format: email
+                     * @description Optional; must be the caller's own address, any other value sends nothing.
+                     */
                     email?: string;
                 };
             };
@@ -13822,6 +13833,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -13848,6 +13860,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
         };
     };
