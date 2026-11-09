@@ -49,6 +49,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/mail"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/metrics"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/outbox"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/release"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/routecache"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/searchengine"
 	searchadapters "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/searchengine/adapters"
@@ -65,6 +66,8 @@ func main() {
 	}
 
 	log := logging.New(cfg.Log.Level, cfg.Log.Format)
+	// Baked release (TEC-1094) names Sentry events unless SENTRY_RELEASE overrides it.
+	cfg.Observe.SentryRelease = release.SentryRelease(cfg.Observe.SentryRelease)
 	if !cfg.Queue.Enabled {
 		log.Error("queue_disabled")
 		os.Exit(1)

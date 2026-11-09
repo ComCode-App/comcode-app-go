@@ -560,6 +560,7 @@ type Querier interface {
 	ListAllPermissionSlugs(ctx context.Context) ([]string, error)
 	ListAppLogSources(ctx context.Context) ([]string, error)
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
+	ListAppReleases(ctx context.Context, rowLimit int32) ([]AppRelease, error)
 	ListBackgroundPresets(ctx context.Context) ([]ListBackgroundPresetsRow, error)
 	// Background Studio designs (account-owned) and platform presets (account_id IS NULL).
 	// Account's own designs first, then platform presets.
@@ -1013,6 +1014,9 @@ type Querier interface {
 	UpdateWebAuthnCredentialName(ctx context.Context, arg UpdateWebAuthnCredentialNameParams) (WebauthnCredential, error)
 	UpdateWebhookEndpoint(ctx context.Context, arg UpdateWebhookEndpointParams) (WebhookEndpoint, error)
 	UpsertAccountBranding(ctx context.Context, arg UpsertAccountBrandingParams) error
+	// Deploy provenance (TEC-1094). One row per (version, git_commit); the server upserts it on
+	// every boot (internal/platform/release.RecordBoot).
+	UpsertAppRelease(ctx context.Context, arg UpsertAppReleaseParams) (AppRelease, error)
 	UpsertDailyAggregate(ctx context.Context, arg UpsertDailyAggregateParams) (EventAggregatesDaily, error)
 	UpsertHourlyAggregate(ctx context.Context, arg UpsertHourlyAggregateParams) (EventAggregatesHourly, error)
 	UpsertNotificationPreferences(ctx context.Context, arg UpsertNotificationPreferencesParams) (NotificationPreference, error)

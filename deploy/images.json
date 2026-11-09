@@ -1,5 +1,5 @@
 {
-  "_comment": "Build-context images for this app. CI (the image-build job in .github/workflows/ci.yml) iterates `images` as a matrix, so it is never hardcoded to backend+frontend: add an entry here to build a new container automatically. `service` is the image name suffix (GHCR publishing is added in TEC-1094); compose.prod.yml uses the same contexts via BACKEND_IMAGE / FRONTEND_IMAGE.",
+  "_comment": "Build-context images for this app. CI (the image-build job in .github/workflows/ci.yml) iterates `images` as a matrix, so it is never hardcoded to backend+frontend: add an entry here to build a new container automatically. `service` is the image name suffix: on a push to main publish-images pushes ghcr.io/<owner>/<repo>-<service> (lowercased) as :main, :sha-<short> and :v0.N (docs/DEVELOPMENT.md, Releases); compose.prod.yml uses the same contexts via BACKEND_IMAGE / FRONTEND_IMAGE.",
   "images": [
     { "service": "backend", "context": "backend", "dockerfile": "Dockerfile" },
     { "service": "frontend", "context": "frontend", "dockerfile": "Dockerfile" }
