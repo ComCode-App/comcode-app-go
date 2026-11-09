@@ -2575,6 +2575,7 @@ type User struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+	PasswordSet     bool               `json:"password_set"`
 }
 
 type UserBankAccount struct {

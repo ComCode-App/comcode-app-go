@@ -565,6 +565,8 @@ func writeUsecaseError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Error(w, r, http.StatusInternalServerError, response.CodePasswordResetFailed, "Password reset failed")
 	case errors.Is(err, usecase.ErrUserDisabled):
 		response.Forbidden(w, r, "User is disabled")
+	case errors.Is(err, usecase.ErrLastSignInMethod):
+		response.Conflict(w, r, response.CodeLastSignInMethod, "Set a password or add another sign-in method before removing the last one")
 	case errors.Is(err, usecase.ErrLastSuperAdmin):
 		response.Conflict(w, r, response.CodeConflict, "Cannot demote the last super admin")
 	case errors.Is(err, usecase.ErrSystemRole):

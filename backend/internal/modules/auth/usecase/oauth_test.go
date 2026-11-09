@@ -27,6 +27,31 @@ func testOAuthBox(t *testing.T) *crypto.SecretBox {
 type oauthMemRepo struct {
 	memRepo
 	accounts []model.OAuthAccountRecord
+	passkeys []model.PasskeyRecord
+}
+
+func (r *oauthMemRepo) ListPasskeysByUserID(_ context.Context, userID int64) ([]model.PasskeyRecord, error) {
+	out := make([]model.PasskeyRecord, 0)
+	for _, row := range r.passkeys {
+		if row.UserID == userID {
+			out = append(out, row)
+		}
+	}
+	return out, nil
+}
+
+func (r *oauthMemRepo) DeletePasskeyByUUID(_ context.Context, userUUID, passkeyUUID uuid.UUID) error {
+	user, ok := r.byUUID[userUUID]
+	if !ok {
+		return repository.ErrNotFound
+	}
+	for i, row := range r.passkeys {
+		if row.UserID == user.ID && row.UUID == passkeyUUID {
+			r.passkeys = append(r.passkeys[:i], r.passkeys[i+1:]...)
+			return nil
+		}
+	}
+	return repository.ErrNotFound
 }
 
 func (r *oauthMemRepo) GetOAuthAccountByProviderAccount(_ context.Context, provider, providerAccountID string) (model.OAuthAccountRecord, error) {
