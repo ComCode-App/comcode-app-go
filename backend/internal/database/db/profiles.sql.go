@@ -51,6 +51,29 @@ func (q *Queries) CountProfilesByAccountID(ctx context.Context, arg CountProfile
 	return column_1, err
 }
 
+const countStorageKeyReferences = `-- name: CountStorageKeyReferences :one
+SELECT (
+    (SELECT COUNT(*) FROM profiles p
+      WHERE p.deleted_at IS NULL
+        AND (p.avatar_url = $1::text
+          OR right(p.avatar_url, length($1::text) + 1) = '/' || $1::text
+          OR p.cover_url = $1::text
+          OR right(p.cover_url, length($1::text) + 1) = '/' || $1::text))
+  + (SELECT COUNT(*) FROM company_media m WHERE m.object_key = $1::text)
+  + (SELECT COUNT(*) FROM backgrounds b WHERE b.thumbnail_key = $1::text)
+)::bigint AS refs
+`
+
+// account-lint: cross-account media cleanup worker (TEC-1176): a storage object may be referenced from any account, so the reference check counts rows everywhere and returns only the count
+// Live rows that still point at an object key: profile avatar/cover URLs (bare key, stream path or
+// public URL ending in "/{key}"), company media library files and Background Studio thumbnails.
+func (q *Queries) CountStorageKeyReferences(ctx context.Context, objectKey string) (int64, error) {
+	row := q.db.QueryRow(ctx, countStorageKeyReferences, objectKey)
+	var refs int64
+	err := row.Scan(&refs)
+	return refs, err
+}
+
 const createProfile = `-- name: CreateProfile :one
 INSERT INTO profiles (
     account_id,
@@ -774,6 +797,20 @@ func (q *Queries) ListProfilesByAccountID(ctx context.Context, arg ListProfilesB
 		return nil, err
 	}
 	return items, nil
+}
+
+const profileIsLive = `-- name: ProfileIsLive :one
+SELECT EXISTS (
+    SELECT 1 FROM profiles WHERE uuid = $1 AND deleted_at IS NULL
+)::boolean AS live
+`
+
+// account-lint: cross-account media cleanup worker (TEC-1176): only says whether a profile uuid is still live; returns no row data
+func (q *Queries) ProfileIsLive(ctx context.Context, argUuid uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, profileIsLive, argUuid)
+	var live bool
+	err := row.Scan(&live)
+	return live, err
 }
 
 const setPrimaryProfileByUUID = `-- name: SetPrimaryProfileByUUID :exec

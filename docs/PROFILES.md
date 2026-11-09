@@ -36,7 +36,8 @@ gender, avatar/cover URLs, `is_primary`, and the full lists `translations`, `add
 - **Update replaces the lists**: translations, addresses, contacts and social links are deleted and re-created from the payload. Omit one and it is gone.
 - Setting `is_primary` clears the flag on the account's other profiles; `POST /{uuid}/primary` does the same on its own. One primary profile per account.
 - `completion_rate` (0-100) is computed on the server on every write; see [Completion score](#completion-score-and-suggestions-tec-549).
-- Delete is a soft delete (`deleted_at`); cached vCards are removed and the route cache is invalidated. A deleted profile stops counting towards `profiles.max`.
+- Delete is a soft delete (`deleted_at`); the route cache is invalidated. A deleted profile stops counting towards `profiles.max`. The username route is not changed.
+- Media cleanup (TEC-1176, KVKK): after the delete commits, the profile's objects are deleted from object storage, because the bucket serves anonymous GETs. Every profile delete goes through `Service.Delete` (owner route and the employee import rollback), so all paths are covered. See [Media](#media).
 
 ## Completion score and suggestions (TEC-549)
 
@@ -108,6 +109,10 @@ UI `features/profiles/components/profile-verification-card.tsx` (owner) and
 - Avatar and cover are uploaded as multipart (`avatar` / `cover` fields; the form is parsed with a 5 MB limit) to `POST /v1/profiles/{uuid}/avatar|cover`; the API stores the object under the profile's prefix and writes the URL. The browser never builds storage keys.
 - `avatar_url` / `cover_url` in an upsert payload are validated: empty, a staged temp avatar (`tmp/avatars/…`, produced by the vCard import), or media under this profile's own prefix. Anything else is 400. On create/update a staged avatar is copied to the permanent key and the temp object deleted.
 - The vCard embeds the profile's own avatar read from object storage (capped size); it never fetches remote URLs.
+- Deleted profiles (TEC-1176): `Service.Delete` collects the keys the row points at (avatar, cover, cached vCards) before the delete and, after it commits, schedules `app:profiles:media_cleanup` on the `maintenance` queue (10 retries, 30 s delay so a late vCard cache write is caught, one task per profile). With `QUEUE_ENABLED=false`, or if the enqueue fails, it runs inline, best effort. Code: `profiles/usecase/media_cleanup.go`.
+  - Deleted: every object under `profiles/{uuid}/` (avatar, cover, old extensions, vCards, copied company logos, legacy media) and a staged `tmp/avatars/` object the row still pointed at.
+  - Kept: company media library files (`accounts/{uuid}/media/`, owned by the company) and any key a live row still references (`CountStorageKeyReferences`: another profile's avatar/cover, `company_media`, background thumbnails). A later run deletes it once the reference is gone.
+  - The job skips a profile that is still live and is idempotent (objects already gone are fine). Failures are logged with the request id and the profile uuid (no personal data), make Asynq retry, and never undo the delete.
 
 ## vCard
 

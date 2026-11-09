@@ -224,3 +224,24 @@ INSERT INTO profile_social_links (
     $1, $2, $3, $4, $5, $6, $7, $8
 )
 RETURNING *;
+
+-- account-lint: cross-account media cleanup worker (TEC-1176): only says whether a profile uuid is still live; returns no row data
+-- name: ProfileIsLive :one
+SELECT EXISTS (
+    SELECT 1 FROM profiles WHERE uuid = sqlc.arg(uuid) AND deleted_at IS NULL
+)::boolean AS live;
+
+-- account-lint: cross-account media cleanup worker (TEC-1176): a storage object may be referenced from any account, so the reference check counts rows everywhere and returns only the count
+-- name: CountStorageKeyReferences :one
+-- Live rows that still point at an object key: profile avatar/cover URLs (bare key, stream path or
+-- public URL ending in "/{key}"), company media library files and Background Studio thumbnails.
+SELECT (
+    (SELECT COUNT(*) FROM profiles p
+      WHERE p.deleted_at IS NULL
+        AND (p.avatar_url = sqlc.arg(object_key)::text
+          OR right(p.avatar_url, length(sqlc.arg(object_key)::text) + 1) = '/' || sqlc.arg(object_key)::text
+          OR p.cover_url = sqlc.arg(object_key)::text
+          OR right(p.cover_url, length(sqlc.arg(object_key)::text) + 1) = '/' || sqlc.arg(object_key)::text))
+  + (SELECT COUNT(*) FROM company_media m WHERE m.object_key = sqlc.arg(object_key)::text)
+  + (SELECT COUNT(*) FROM backgrounds b WHERE b.thumbnail_key = sqlc.arg(object_key)::text)
+)::bigint AS refs;

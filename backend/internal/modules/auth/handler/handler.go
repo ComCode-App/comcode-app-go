@@ -569,6 +569,8 @@ func writeUsecaseError(w http.ResponseWriter, r *http.Request, err error) {
 		response.BadRequest(w, r, response.CodeValidationError, "Authenticator is not enabled")
 	case errors.Is(err, usecase.ErrInvalidResetCode):
 		response.BadRequest(w, r, response.CodeInvalidResetCode, "Reset code is invalid or expired")
+	case errors.Is(err, usecase.ErrInvalidEmailCode):
+		response.BadRequest(w, r, response.CodeInvalidEmailCode, "Sign-in code is invalid or expired")
 	case errors.Is(err, usecase.ErrInvalidVerifyCode):
 		response.BadRequest(w, r, response.CodeInvalidVerifyCode, "Verification code is invalid or expired")
 	case errors.Is(err, usecase.ErrPasswordResetFail):

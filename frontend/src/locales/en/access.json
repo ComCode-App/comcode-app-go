@@ -12,7 +12,7 @@
   "form.totp_enabled": "Allow authenticator verification",
   "form.totp_enabled_hint": "Users with 2FA enabled can confirm sensitive actions with an authenticator code.",
   "form.password_login_totp_required": "Require 2FA for password sign-in",
-  "form.password_login_totp_required_hint": "When enabled, users must set up an authenticator before they can sign in with email and password. Passkey and OAuth sign-in are not affected.",
+  "form.password_login_totp_required_hint": "When enabled, users must set up an authenticator before they can sign in with email and password or with an email code. Passkey and OAuth sign-in are not affected.",
   "form.save": "Save settings",
   "toast.saved": "Access settings saved",
   "toast.failed": "Could not save access settings",

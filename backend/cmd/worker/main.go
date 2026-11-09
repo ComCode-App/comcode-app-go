@@ -219,10 +219,14 @@ func main() {
 	// Outbound webhooks (TEC-603): the worker sends deliveries and schedules its own retries.
 	queueClient := queue.NewClient(cfg.Redis)
 	defer func() { _ = queueClient.Close() }()
+	// Deleted profiles' media cleanup (TEC-1176): import rollbacks delete profiles here too.
+	profileMediaCleaner := profilesusecase.NewMediaCleaner(store, queries, queueClient, log)
+	profilesSvc.SetMediaCleaner(profileMediaCleaner)
 	webhooksSvc := webhooksusecase.New(queries, secretBox, queueClient, log).
 		AllowInsecure(cfg.App.Env == "development" || cfg.App.Env == "test")
 	worker := queue.NewWorker(cfg, log, notifSvc.Deliver).
 		WithWebhooks(webhooksSvc.Deliver).
+		WithProfileMediaCleanup(profileMediaCleaner.Process).
 		WithExport(exportSvc.ProcessExport).
 		WithImport(importSvc.ProcessImport).
 		WithBulk(bulkSvc.ProcessBulk).

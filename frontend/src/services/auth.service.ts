@@ -104,6 +104,16 @@ export const authService = {
     );
   },
 
+  /** Emails a sign-in (or sign-up) code; the answer is the same for every email (TEC-1121). */
+  async requestEmailCode(email: string) {
+    return unwrap<StatusPayload>(
+      await apiClient.POST("/v1/auth/email-code/request", {
+        body: { email },
+      }),
+      { silent: true },
+    );
+  },
+
   async forgotPassword(body: ForgotPasswordRequest) {
     return unwrap<StatusPayload>(
       await apiClient.POST("/v1/auth/password/forgot", { body }),

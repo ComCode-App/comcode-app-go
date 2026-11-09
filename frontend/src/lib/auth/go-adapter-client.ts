@@ -279,3 +279,21 @@ export async function loginWithPassword(
   });
   return unwrap<GoTokensPayload>(result);
 }
+
+/** Email one-time code sign-in (TEC-1121); same MFA_REQUIRED round-trip as password login. */
+export async function loginWithEmailCode(
+  email: string,
+  code: string,
+  totpCode?: string,
+) {
+  const result = await fetchUpstream("auth/email-code/verify", {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email,
+      code,
+      ...(totpCode ? { totp_code: totpCode } : {}),
+    }),
+  });
+  return unwrap<GoTokensPayload>(result);
+}

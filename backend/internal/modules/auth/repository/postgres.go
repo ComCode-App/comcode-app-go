@@ -557,8 +557,17 @@ func (r *Postgres) IncrementOTPAttempts(ctx context.Context, id int64) (attempts
 	return row.AttemptCount, row.MaxAttempts, nil
 }
 
+// ConsumeOTP marks the code used. It returns ErrNotFound when the code was already
+// consumed (a concurrent verify won), which keeps codes strictly single-use.
 func (r *Postgres) ConsumeOTP(ctx context.Context, id int64) error {
-	return r.q.ConsumeOTP(ctx, id)
+	n, err := r.q.ConsumeOTP(ctx, id)
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (r *Postgres) ListUsersFiltered(ctx context.Context, limit, offset int32, q, status, roleSlug string) ([]model.User, int64, error) {

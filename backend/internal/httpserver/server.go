@@ -388,6 +388,13 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	profileVerificationsSvc.SetFrontendURL(cfg.Auth.FrontendURL)
 	profilesSvc.SetVerifications(profileVerificationsSvc)
 	profilesSvc.SetSearchIndexer(searchIndexer)
+	// A deleted profile's media leaves object storage too (TEC-1176, KVKK): queued on the
+	// maintenance queue, inline when the queue is off.
+	var profileMediaCleaner *profilesusecase.MediaCleaner
+	if deps.Storage != nil {
+		profileMediaCleaner = profilesusecase.NewMediaCleaner(deps.Storage, deps.Queries, deps.Queue, log)
+		profilesSvc.SetMediaCleaner(profileMediaCleaner)
+	}
 	// Employee profiles of company accounts (TEC-573): bulk and import adapters write through
 	// the profiles service.
 	companyBulk := companyprofilesusecase.NewBulkAdapter(deps.Queries, profilesSvc, deps.Storage, companyBrandingSvc)
@@ -452,6 +459,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 				_, err := geoSvc.UpdateNow(ctx)
 				return err
 			})
+		if profileMediaCleaner != nil {
+			s.worker.WithProfileMediaCleanup(profileMediaCleaner.Process)
+		}
 		if searchIndexer != nil {
 			s.worker.WithSearch(
 				searchIndexer.ProcessUpsert,
