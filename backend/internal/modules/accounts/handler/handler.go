@@ -101,13 +101,26 @@ func (h *Handler) AddMember(w http.ResponseWriter, r *http.Request) {
 	if err := decodeJSON(w, r, &in); err != nil {
 		return
 	}
-	m, err := h.svc.AddMember(r.Context(), p, in.Email, in.Role)
+	res, err := h.svc.AddMember(r.Context(), p, in.Email, in.Role)
 	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
+	if res.Invite != nil {
+		// The address is not verified (or has no user): an invite went out instead (TEC-1104).
+		h.record(r, "accounts.invite_created", p.Account.UUID, map[string]any{"invite_uuid": res.Invite.UUID.String(), "role": res.Invite.Role})
+		response.JSON(w, r, http.StatusAccepted, AddMemberInvited{Status: "invited", Invite: *res.Invite})
+		return
+	}
+	m := res.Member
 	h.record(r, "accounts.member_added", p.Account.UUID, map[string]any{"user_uuid": m.UserUUID.String(), "role": m.Role})
 	response.JSON(w, r, http.StatusCreated, m)
+}
+
+// AddMemberInvited is the 202 body of POST /v1/account/members when an invite was sent instead.
+type AddMemberInvited struct {
+	Status string         `json:"status"`
+	Invite usecase.Invite `json:"invite"`
 }
 
 func (h *Handler) ChangeRole(w http.ResponseWriter, r *http.Request) {

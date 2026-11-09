@@ -98,6 +98,7 @@
   "row_errors.too_long": "çok uzun",
   "row_errors.invalid_email": "geçersiz e-posta adresi",
   "row_errors.user_not_found": "bu e-postayla kayıtlı kullanıcı yok",
+  "row_errors.user_not_verified": "e-posta adresi henüz doğrulanmamış",
   "row_errors.office_not_found": "bu adla bir ofis yok",
   "row_errors.office_ambiguous": "bu adı taşıyan birden fazla ofis var",
   "row_errors.group_not_found": "bu adla bir grup yok",

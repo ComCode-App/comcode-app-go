@@ -1526,8 +1526,8 @@ export interface paths {
         get: operations["listActiveAccountMembers"];
         put?: never;
         /**
-         * Add an existing user to the active company account
-         * @description Owners may add any role; admins may add admins and members. Personal accounts cannot have other members (400); an existing membership returns 409.
+         * Add a user to the active company account (or invite the address)
+         * @description Owners may add any role; admins may add admins and members. Personal accounts cannot have other members (400); an existing membership returns 409. Only a user whose email is verified is added directly (201). For an unverified user or an address without a user an email invite is sent instead (202, needs `app.account_invites.write`; an open invite for the address is 409), so only the mailbox owner can join (TEC-1104).
          */
         post: operations["addActiveAccountMember"];
         delete?: never;
@@ -1548,7 +1548,7 @@ export interface paths {
         post?: never;
         /**
          * Remove a member or leave the account
-         * @description Any member may leave; removing others needs owner/admin, removing an owner needs an owner. The last owner cannot leave (409).
+         * @description Any member may leave; removing others needs owner/admin, removing an owner needs an owner. The last owner cannot leave (409). The person's open invites to the account are revoked.
          */
         delete: operations["removeActiveAccountMember"];
         options?: never;
@@ -1633,7 +1633,7 @@ export interface paths {
         };
         /**
          * Describe an invite link
-         * @description Public; the token is the credential. `user_exists` tells the page whether to offer login or sign-up.
+         * @description Public; the token is the credential. `user_exists` tells the page whether to offer login or sign-up. Rate-limited per client IP (429); responses carry `Referrer-Policy: no-referrer`.
          */
         get: operations["previewInvite"];
         put?: never;
@@ -1655,7 +1655,7 @@ export interface paths {
         put?: never;
         /**
          * Accept an invite as the signed-in user
-         * @description The user's email must be the invited address (403 `INVITE_EMAIL_MISMATCH`). The user joins the account with the invited role (an existing member keeps theirs). A profile the employee import created for the invite becomes the member's employee profile and the member is placed in its office/group. Expired: 410 `INVITE_EXPIRED`; accepted or revoked: 409 `INVITE_CLOSED`; suspended account: 403.
+         * @description The user's email must be the invited address (403 `INVITE_EMAIL_MISMATCH`). The user joins the account with the invited role (an existing member keeps theirs). A profile the employee import created for the invite becomes the member's employee profile and the member is placed in its office/group. Expired: 410 `INVITE_EXPIRED`; accepted or revoked: 409 `INVITE_CLOSED`; suspended account: 403; while impersonating: 403 `INVITE_IMPERSONATION`. Rate-limited per user and client IP (429); responses carry `Referrer-Policy: no-referrer`.
          */
         post: operations["acceptInvite"];
         delete?: never;
@@ -8020,6 +8020,16 @@ export interface components {
             /** @constant */
             success: true;
             data: components["schemas"]["AccountInvite"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAccountMemberInvited: {
+            /** @constant */
+            success: true;
+            data: {
+                /** @enum {string} */
+                status: "invited";
+                invite: components["schemas"]["AccountInvite"];
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeAccountInvitePage: {
@@ -14740,6 +14750,15 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeAccountMember"];
                 };
             };
+            /** @description The address is not verified (or has no user); an invite was sent instead */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAccountMemberInvited"];
+                };
+            };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
@@ -14947,6 +14966,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     acceptInvite: {
@@ -14982,6 +15002,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getPlatformAccountsMeta: {

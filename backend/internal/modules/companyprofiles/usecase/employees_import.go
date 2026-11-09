@@ -19,7 +19,8 @@ import (
 // ImportAdapter imports employees into the active company account (model.ResourceCompanyEmployees).
 // A row names a person by email. A registered user becomes a member (role member) if needed, is
 // placed in the named office/group, and gets a linked employee profile that is created or
-// updated (name, surname, title, work email and phone). An email without a user (TEC-945) gets
+// updated (name, surname, title, work email and phone). An email without a user (TEC-945), or
+// whose user has not verified it and is not a member yet (TEC-1104), gets
 // the profile at once in the company account and an email invite carrying it and the office/group;
 // accepting the invite links the profile to the new member. Owners/admins only. Import-only.
 type ImportAdapter struct {
@@ -77,8 +78,8 @@ func (a *ImportAdapter) SampleRows() []map[string]any {
 	}
 }
 
-// Row errors are stable codes (required, too_long, invalid_email, user_not_found (only without
-// an inviter),
+// Row errors are stable codes (required, too_long, invalid_email, user_not_found and
+// user_not_verified (only without an inviter),
 // office_not_found, office_ambiguous, group_not_found, group_ambiguous, group_other_office,
 // not_allowed) that the UI translates.
 
@@ -141,6 +142,21 @@ func (a *ImportAdapter) plan(ctx context.Context, ac actor, row map[string]any) 
 	}
 	var current db.GetStructureAssignmentRow
 	user, err := a.q.FindActiveUserByEmail(ctx, r.email)
+	if err == nil && !user.EmailVerified {
+		// TEC-1104: an unverified address may belong to someone who registered another person's
+		// email, so it is not added directly. It is invited like an unknown address; only the
+		// mailbox owner can accept. A user who already is a member stays a member row.
+		if _, merr := a.q.GetCompanyMemberByUserID(ctx, db.GetCompanyMemberByUserIDParams{AccountID: ac.accountID, UserID: user.ID}); errors.Is(merr, pgx.ErrNoRows) {
+			if a.invites == nil {
+				bad("email", "user_not_verified")
+				return r, errs
+			}
+			err = pgx.ErrNoRows
+		} else if merr != nil {
+			bad("email", merr.Error())
+			return r, errs
+		}
+	}
 	switch {
 	case errors.Is(err, pgx.ErrNoRows) && a.invites != nil:
 		r.invite = true

@@ -34,6 +34,11 @@ const (
 	passcodeIPPathFailures = 5
 	passcodeIPFailures     = 20
 	passcodePathFailures   = 50
+	// Invite links (TEC-1104): the token is a bearer secret. A person opens their link a few
+	// times; the limits only stop scripted guessing.
+	invitePreviewIPLimit  = 60
+	inviteAcceptUserLimit = 10
+	inviteAcceptIPLimit   = 30
 )
 
 // Limiter is a Redis INCR + TTL rate limiter. Redis errors fail open.
@@ -92,6 +97,19 @@ func (l *Limiter) AllowLeadSubmit(ctx context.Context, ip string) (bool, time.Du
 // AllowQRPreview limits server-rendered QR previews per user.
 func (l *Limiter) AllowQRPreview(ctx context.Context, userID string) (bool, time.Duration) {
 	return l.allow(ctx, "qr_preview", userID, qrPreviewUserLimit)
+}
+
+// AllowInvitePreview limits public invite lookups (GET /v1/invites/{token}) per client IP.
+func (l *Limiter) AllowInvitePreview(ctx context.Context, ip string) (bool, time.Duration) {
+	return l.allow(ctx, "invite_preview", ip, invitePreviewIPLimit)
+}
+
+// AllowInviteAccept limits invite accepts per user and per client IP.
+func (l *Limiter) AllowInviteAccept(ctx context.Context, userID, ip string) (bool, time.Duration) {
+	if ok, retry := l.allow(ctx, "invite_accept", userID, inviteAcceptUserLimit); !ok {
+		return false, retry
+	}
+	return l.allow(ctx, "invite_accept_ip", ip, inviteAcceptIPLimit)
 }
 
 // SmartLinkPasscodeAllowed reports whether a visitor may still try a passcode on a smart link.
