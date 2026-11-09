@@ -26,9 +26,13 @@
 ## scripts/check-env-sync.sh fails when the Go backend reads a key that is
 ## neither a managed key nor @unmanaged here, or when an @unmanaged key is no
 ## longer read. compose.prod.yml-only knobs (COMPOSE_PROJECT_NAME, APP_NETWORK_NAME,
-## *_VOLUME_NAME) keep their compose defaults; .env.example documents them.
+## *_VOLUME_NAME, IMAGE_PULL_POLICY) keep their compose defaults; .env.example documents them.
 
-@version 1
+@version 2
+
+## v2 (TEC-1095): compose.prod.yml builds the image names from IMAGE_REPO / IMAGE_TAG.
+@remove BACKEND_IMAGE 2
+@remove FRONTEND_IMAGE 2
 
 @norotate APP_ENCRYPTION_KEY
 @norotate DB_PASSWORD
@@ -61,14 +65,12 @@ APP_URL | ask:{AUTH_URL}
 # Unique per app on a host: names containers, volumes and the app network.
 # Plain Docker host only (Dokploy creates it): docker network create dokploy-network
 NAME_PREFIX | ask:{APP_LABEL}
-# Container images: <IMAGE_REPO>-backend:<IMAGE_TAG> and <IMAGE_REPO>-frontend:<IMAGE_TAG>
-# (GHCR, lowercase). IMAGE_TAG is main (latest build), v0.N or sha-<short> to pin a deploy.
-# compose.prod.yml still reads BACKEND_IMAGE / FRONTEND_IMAGE: when you change
-# IMAGE_REPO or IMAGE_TAG, change those two as well (prod-env.sh check reports a mismatch).
+# Container images, pulled from GHCR (never built on the server): compose.prod.yml runs
+# <IMAGE_REPO>-backend:<IMAGE_TAG> (migrate, backend, worker) and <IMAGE_REPO>-frontend:<IMAGE_TAG>.
+# IMAGE_REPO is lowercase, without a tag. IMAGE_TAG is main (newest build), or v0.N /
+# sha-<short> to pin or roll back a deploy.
 IMAGE_REPO | ask:ghcr.io/comcode-app/comcode-app-go
 IMAGE_TAG | const:main
-BACKEND_IMAGE | derive:{IMAGE_REPO}-backend:{IMAGE_TAG}
-FRONTEND_IMAGE | derive:{IMAGE_REPO}-frontend:{IMAGE_TAG}
 
 # --- Public URLs ---
 AUTH_URL | derive:{APP_URL}

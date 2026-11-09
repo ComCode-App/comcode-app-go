@@ -46,7 +46,7 @@ Compose-only knobs (`COMPOSE_PROJECT_NAME`, `APP_NETWORK_NAME`, `*_VOLUME_NAME`)
 
 ### What the schema covers (v1)
 
-- **Identity:** `APP_URL` (asked), `NAME_PREFIX` (default: first host label), `IMAGE_REPO` (default `ghcr.io/comcode-app/comcode-app-go`), `IMAGE_TAG` (`main`), and `BACKEND_IMAGE` / `FRONTEND_IMAGE` derived as `{IMAGE_REPO}-backend:{IMAGE_TAG}` / `-frontend:{IMAGE_TAG}`. `IMAGE_REPO`/`IMAGE_TAG` are for the GHCR work (TEC-1094/1095); until `compose.prod.yml` reads them directly it reads the two derived names, and `check` reports a drift between them.
+- **Identity:** `APP_URL` (asked), `NAME_PREFIX` (default: first host label), `IMAGE_REPO` (default `ghcr.io/comcode-app/comcode-app-go`), `IMAGE_TAG` (`main`, or `v0.N` / `sha-<short>` to pin). `compose.prod.yml` builds the image names itself (`${IMAGE_REPO}-backend:${IMAGE_TAG}`, `-frontend:${IMAGE_TAG}`) and pulls them. Schema v2 (TEC-1095) removed the derived `BACKEND_IMAGE` / `FRONTEND_IMAGE` keys (`@remove`): `upgrade` comments them out of a v1 file. `IMAGE_PULL_POLICY` is a compose-only knob (default `always`), not a schema key.
 - **Public URLs:** `AUTH_URL`, `PUBLIC_FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `CENTRIFUGO_ALLOWED_ORIGINS` (= `APP_URL`), `AUTH_WEBAUTHN_RP_ID` (= host), `CENTRIFUGO_WS_URL` (asked, default `wss://realtime.<host>/connection/websocket`), `NEXT_PUBLIC_CENTRIFUGO_URL`, `STORAGE_PUBLIC_BASE_URL` (asked, default `https://media.<host>/<S3_BUCKET>`, the SeaweedFS media domain).
 - **Secrets:** `DB_PASSWORD`, `REDIS_PASSWORD`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `AUTH_SECRET`, `AUTH_ADAPTER_SECRET`, `APP_ENCRYPTION_KEY`, `CENTRIFUGO_API_KEY`, `CENTRIFUGO_TOKEN_HMAC_SECRET`, `MEILI_MASTER_KEY`, the VAPID pair. All alphanumeric/hex/base64, so they survive the SeaweedFS identity heredoc in `compose.prod.yml`.
 - **Mail:** `MAIL_FROM` (derived), `MAIL_FROM_NAME`, `SMTP_*`.
@@ -60,7 +60,7 @@ bash 4.3+ and openssl, no network. Make targets: `prod-env-init`, `prod-env-upgr
 
 - **`init`**: asks `APP_URL` and offers the defaults above, derives every URL, generates every secret, writes `.env.server` with mode 600 and stamps `ENV_SCHEMA_VERSION`. Refuses to overwrite an existing file.
 - **`upgrade`**: keeps every existing value verbatim, applies `@rename`/`@remove` in version order, fills only missing (or blank, for non-`empty` rules) keys, re-stamps the version, backs up to `<file>.bak`. Idempotent. `--rotate K1,K2` regenerates named secrets after a confirmation (VAPID as a pair) and refuses `@norotate` keys.
-- **`check`**: read-only; exits 1 on a version gap, missing or blank keys, renamed/removed keys still present, an invalid `ask:` value, `BACKEND_IMAGE`/`FRONTEND_IMAGE` that drift from `IMAGE_REPO`/`IMAGE_TAG`, and secrets still holding their `.env.example` value.
+- **`check`**: read-only; exits 1 on a version gap, missing or blank keys, renamed/removed keys still present, an invalid `ask:` value, and secrets still holding their `.env.example` value.
 - **`example`**: renders `.env.server.example` (secrets blank, values for `https://app.example.com`, a "generated, do not edit" header). Deterministic.
 
 Secret values are never printed. `.gitignore` ignores `.env.server` and `.env.server.*` (backups and temp files hold live secrets) except `.env.server.example`.

@@ -15,7 +15,7 @@
 #   --yes            no prompts: accept defaults, confirm --rotate
 #
 # init asks for APP_URL (and offers defaults for the rest: NAME_PREFIX, IMAGE_REPO,
-# the realtime and media URLs), derives every URL and image and generates every
+# the realtime and media URLs), derives every URL and generates every
 # secret. upgrade keeps every existing value: it applies schema renames/removals,
 # fills only missing keys and re-stamps ENV_SCHEMA_VERSION, backing the old file
 # up to <file>.bak. Secret values are never printed.
@@ -596,18 +596,6 @@ cmd_check() {
       [[ $op == rename ]] && problems+=("renamed: $a is now $b (schema v$ver)")
       [[ $op == remove ]] && problems+=("removed: $a is no longer used (schema v$ver)")
     done < <(printf '%s\n' "${MIGRATIONS[@]}" | sort -s -n -k1,1)
-  fi
-  # compose.prod.yml still reads BACKEND_IMAGE / FRONTEND_IMAGE; keep them on
-  # IMAGE_REPO / IMAGE_TAG so the move to IMAGE_* in compose changes nothing.
-  if [[ -n ${RULE[IMAGE_REPO]+x} && -n ${RULE[IMAGE_TAG]+x} && -n ${VAL[IMAGE_REPO]:-} && -n ${VAL[IMAGE_TAG]:-} ]]; then
-    local svc want
-    for key in BACKEND_IMAGE FRONTEND_IMAGE; do
-      [[ -n ${RULE[$key]+x} && -n ${VAL[$key]:-} ]] || continue
-      svc=${key%%_*}
-      want=${VAL[IMAGE_REPO]}-${svc,,}:${VAL[IMAGE_TAG]}
-      [[ ${VAL[$key]} == "$want" ]] ||
-        problems+=("image: $key=${VAL[$key]} does not match IMAGE_REPO/IMAGE_TAG (expected $want)")
-    done
   fi
   if [[ -f $DEV_EXAMPLE && $FILE != "$DEV_EXAMPLE" ]]; then
     local line

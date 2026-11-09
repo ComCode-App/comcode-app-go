@@ -1,0 +1,30 @@
+# Local build override for compose.prod.yml: builds the app images on this host
+# instead of pulling them from GHCR. Production (Dokploy) never uses this file.
+#
+#   make prod-build-local   # docker compose -f compose.prod.yml -f compose.build.yml build
+#   make prod-up-local      # … up -d --build
+#
+# The images are tagged <NAME_PREFIX>-backend:local / <NAME_PREFIX>-frontend:local so a
+# local build never shadows a GHCR tag. migrate, backend and worker share the backend
+# image; the build contexts match deploy/images.json.
+
+x-backend-build: &backend-build
+  image: ${NAME_PREFIX:-app}-backend:local
+  pull_policy: build
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+
+services:
+  migrate:
+    <<: *backend-build
+  backend:
+    <<: *backend-build
+  worker:
+    <<: *backend-build
+  frontend:
+    image: ${NAME_PREFIX:-app}-frontend:local
+    pull_policy: build
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile

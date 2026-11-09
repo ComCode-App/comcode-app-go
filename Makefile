@@ -19,7 +19,7 @@ endef
 FRONTEND_PORT ?= 3000
 
 .PHONY: infra infra-down infra-logs infra-ps migrate-up backend-dev frontend-dev local-dev \
-	free-dev-ports prod-env-init prod-env-upgrade prod-env-check env-check compose-env-check prod-config prod-up prod-down tools create-super-admin search-reindex seed check-i18n
+	free-dev-ports prod-env-init prod-env-upgrade prod-env-check env-check compose-env-check prod-config prod-up prod-build-local prod-up-local prod-down tools create-super-admin search-reindex seed check-i18n
 
 infra:
 	@if [ -n "$(ENV_FILE)" ]; then \
@@ -162,8 +162,19 @@ compose-env-check:
 prod-config:
 	docker compose --env-file $(PROD_ENV_FILE) -f compose.prod.yml config
 
+# Prebuilt images: CI publishes them to GHCR and the server pulls
+# <IMAGE_REPO>-<service>:<IMAGE_TAG> (pull_policy from IMAGE_PULL_POLICY, default
+# always). Nothing is built on the host.
 prod-up:
-	docker compose --env-file $(PROD_ENV_FILE) -f compose.prod.yml up -d --build
+	docker compose --env-file $(PROD_ENV_FILE) -f compose.prod.yml up -d
+
+# Local smoke test of the prod stack with images built on this machine
+# (compose.build.yml tags them <NAME_PREFIX>-backend:local / -frontend:local).
+prod-build-local:
+	docker compose --env-file $(PROD_ENV_FILE) -f compose.prod.yml -f compose.build.yml build
+
+prod-up-local:
+	docker compose --env-file $(PROD_ENV_FILE) -f compose.prod.yml -f compose.build.yml up -d --build
 
 prod-down:
 	docker compose --env-file $(PROD_ENV_FILE) -f compose.prod.yml down
