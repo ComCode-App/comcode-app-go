@@ -19,10 +19,11 @@ const REWRITE = {
   "@/lib/server/upstream": "./upstream.mjs",
   "@/lib/server/bff-guard": "./bff-guard.mjs",
   "@/lib/server/refresh-single-flight": "./refresh-single-flight.mjs",
+  "@/lib/observability/redact": "./redact.mjs",
 };
 
-function transpile(name) {
-  let { outputText } = ts.transpileModule(fs.readFileSync(path.join(here, `${name}.ts`), "utf8"), {
+function transpile(name, dir = here) {
+  let { outputText } = ts.transpileModule(fs.readFileSync(path.join(dir, `${name}.ts`), "utf8"), {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
   });
   for (const [from, to] of Object.entries(REWRITE)) {
@@ -33,6 +34,7 @@ function transpile(name) {
 transpile("bff-proxy");
 transpile("bff-guard");
 transpile("refresh-single-flight");
+transpile("redact", path.join(here, "..", "observability"));
 
 // --- stubs -----------------------------------------------------------------
 fs.writeFileSync(
@@ -230,6 +232,45 @@ test("an unreachable API becomes a 502 envelope, other errors a 500 envelope", a
   const res2 = await proxy.handleProxyRequest(["profiles"], browser("profiles"));
   assert.equal(res2.status, 500);
   assert.equal((await res2.json()).error.code, "INTERNAL_ERROR");
+});
+
+test("a request the browser cancelled is answered 499, not a 500 envelope", async () => {
+  const controller = new AbortController();
+  state.handler = async () => {
+    controller.abort();
+    throw new DOMException("The operation was aborted.", "AbortError");
+  };
+  const req = new Request(`${APP}/api/v1/profiles`, { headers: { host: "app.comcode.test" }, signal: controller.signal });
+  const logged = { error: 0, info: 0 };
+  const orig = { error: console.error, info: console.info };
+  console.error = () => (logged.error += 1);
+  console.info = () => (logged.info += 1);
+  try {
+    const res = await proxy.handleProxyRequest(["profiles"], req);
+    assert.equal(res.status, 499);
+  } finally {
+    Object.assign(console, orig);
+  }
+  assert.equal(logged.error, 0, "a client cancel is not an error");
+  assert.equal(logged.info, 1);
+});
+
+test("logged proxy errors are redacted", async () => {
+  state.handler = async () => {
+    throw new Error("failed for user ali@example.com with Bearer abc.def");
+  };
+  const lines = [];
+  const orig = console.error;
+  console.error = (...a) => lines.push(a.join(" "));
+  try {
+    const res = await proxy.handleProxyRequest(["profiles"], browser("profiles"));
+    assert.equal(res.status, 500);
+  } finally {
+    console.error = orig;
+  }
+  assert.equal(lines.length, 1);
+  assert.ok(!lines[0].includes("ali@example.com"), lines[0]);
+  assert.ok(!lines[0].includes("abc.def"), lines[0]);
 });
 
 // --- request bodies --------------------------------------------------------

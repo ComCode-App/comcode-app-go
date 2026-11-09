@@ -88,9 +88,28 @@ Error tracking (`SENTRY_DSN`, which works with Sentry or GlitchTip) and Promethe
 
 ## Production / Dokploy
 
-1. Create the external network once: `docker network create dokploy-network`
-2. `cp .env.example .env.server` and replace every secret (`${VAR:?…}` is required)
+1. Create the external network once (plain Docker host only; Dokploy creates it): `docker network create dokploy-network`
+2. `make prod-env-init` generates `.env.server` from `deploy/env/schema` (see Environment file below). Never start from a copy of `.env.example`.
 3. `make prod-config` then `make prod-up`
+
+### Environment file
+
+The production env is generated from `deploy/env/schema`; `.env.server.example` is that schema rendered (`scripts/prod-env.sh example`), never hand-edited. Design: [design/env-core.md](./design/env-core.md). Needs bash 4.3+ and openssl (macOS: `brew install bash`).
+
+1. `make prod-env-init` asks for `APP_URL` (the frontend origin, e.g. `https://comcode.technowide.software`) and offers defaults for `NAME_PREFIX` (first host label), `IMAGE_REPO` (`ghcr.io/comcode-app/comcode-app-go`), the realtime URL (`wss://realtime.<host>/connection/websocket`) and the media URL (`https://media.<host>/<S3_BUCKET>`). It derives every other URL (`AUTH_URL`, `PUBLIC_FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `AUTH_WEBAUTHN_RP_ID`, …), generates every secret and the VAPID pair, and writes `.env.server` (mode 600, git-ignored). Non-interactive: `make prod-env-init ARGS="--set APP_URL=https://app.example.com --yes"`.
+2. Fill `SMTP_*` in `.env.server`. Everything under "Optional tuning" may stay blank: a blank value keeps the default from `compose.prod.yml` / `backend/internal/config`. iyzico, PayTR, GeoIP (MaxMind), analytics and the error-tracking DSNs are configured in the admin panel, not in env.
+3. `make prod-config` then `make prod-up`. On Dokploy, paste the file into the compose app's environment and add the domains below.
+
+Images: `IMAGE_REPO` + `IMAGE_TAG` (`main`, `v0.N` or `sha-<short>`) name the backend and frontend images. `compose.prod.yml` still reads `BACKEND_IMAGE` / `FRONTEND_IMAGE`, which `init` derives from them; change all of them together (`make prod-env-check` reports a mismatch).
+
+Keep the generated file as the master copy (password manager or the server) and run the commands below on it; values edited only in the Dokploy UI are invisible to `check`.
+
+| Task | Command |
+|---|---|
+| After pulling a schema change | `make prod-env-upgrade`: keeps every value, applies renames/removals, fills only new keys, re-stamps `ENV_SCHEMA_VERSION`, backup in `.env.server.bak` |
+| Verify a file | `make prod-env-check`: exits 1 on a schema-version gap, missing or blank keys, image names that drift from `IMAGE_REPO`/`IMAGE_TAG`, or secrets still holding `.env.example` values |
+| Rotate a secret on purpose | `scripts/prod-env.sh upgrade --rotate JWT_REFRESH_SECRET` (confirmation; restart the stack). Refuses `APP_ENCRYPTION_KEY` (encrypted data becomes unreadable) and `DB_PASSWORD` (Postgres keeps it in its volume: `ALTER USER` first, then edit the file) |
+| Older hand-made `.env.server` | `make prod-env-upgrade` (`APP_URL` defaults to the file's `AUTH_URL`), then `make prod-env-check`, then rotate every secret it reports as insecure. Rotation is never automatic |
 
 ### Required secrets (boot guard)
 
@@ -106,7 +125,7 @@ Error tracking (`SENTRY_DSN`, which works with Sentry or GlitchTip) and Promethe
 | `CENTRIFUGO_API_KEY` / `CENTRIFUGO_TOKEN_HMAC_SECRET` | 16 / 32 | `CENTRIFUGO_ENABLED=true` |
 | `MEILI_MASTER_KEY` | 16 | `SEARCH_ENABLED=true` |
 
-Generate each one with `openssl rand -base64 32` (`openssl rand -hex 16` for `DB_PASSWORD` / `REDIS_PASSWORD` if a tool chokes on `/+=`). The list lives in one table, `guardedSecrets` in `backend/internal/config/guard.go`. iyzico and PayTR credentials are not env vars: they are stored in the database, encrypted with `APP_ENCRYPTION_KEY`.
+`make prod-env-init` generates all of them (long enough for every minimum). The list lives in one table, `guardedSecrets` in `backend/internal/config/guard.go`; `schema_test.go` fails when a `secret:` key of `deploy/env/schema` has no row there (or a row has no schema key, or the generated length is below the minimum). iyzico and PayTR credentials are not env vars: they are stored in the database, encrypted with `APP_ENCRYPTION_KEY`.
 
 `compose.prod.yml` now requires `APP_ENCRYPTION_KEY` (`${APP_ENCRYPTION_KEY:?…}`). Before, an empty value made the backend fall back to the public example key.
 
@@ -139,7 +158,7 @@ Dokploy → the compose app → **Domains**: pick the service and the **containe
 - Driver check against a live store: `STORAGE_IT_ENDPOINT=http://127.0.0.1:8333 S3_ACCESS_KEY=… S3_SECRET_KEY=… S3_BUCKET=… go test ./internal/platform/storage -run TestS3CompatibleBackend`.
 - Moving from MinIO: there is no prod data. Locally, copy objects with any S3 client (`rclone sync minio:bucket seaweed:bucket`) or start fresh; the old `*-minio` volume can be removed.
 
-`APP_ENCRYPTION_KEY` (32-byte, raw or base64) encrypts OAuth, GitHub App, TOTP, payment and webhook secrets at rest. Generate: `openssl rand -base64 32`. The backend refuses to start outside development with the example key (see Required secrets).
+`APP_ENCRYPTION_KEY` (32-byte, raw or base64) encrypts OAuth, GitHub App, TOTP, payment and webhook secrets at rest. `make prod-env-init` generates it; never rotate it once data is stored. The backend refuses to start outside development with the example key (see Required secrets).
 
 ## CI
 
@@ -151,6 +170,7 @@ Job graph:
 changes ─┬─ backend ─────┐
          ├─ frontend ────┤
          ├─ e2e ─────────┤
+         ├─ env ─────────┤
          ├─ image-build ─┼─ ci (single required check)
          ├─ mobile ──────┤
          └─ mobile-release
@@ -163,14 +183,13 @@ auto-pr (disabled)
 | `backend` | `backend/**` | `sqlc generate` + generated code must be committed, golangci-lint (pinned v2), Postgres integration tests with coverage in the job summary, Redocly OpenAPI lint, `scripts/openapi_routes.py`. |
 | `frontend` | `frontend/**` or `backend/**` (contracts) | install, typecheck, lint, unit tests, `scripts/check-i18n.mjs`. |
 | `e2e` | backend or frontend change, `scripts/e2e.sh`, `compose.local.yml`, `.env.example` | Playwright smoke suite via `scripts/e2e.sh`; report and stack logs uploaded on failure. |
+| `env` | `deploy/env/**`, `compose*.yml`, `.env.example`, `.env.server.example`, `Makefile`, the env scripts, `backend/internal/config/**`, or a backend diff line with an env read | `make env-check` (no Docker daemon needed): `.env.server.example` matches the schema, `.env.example` has every schema key, every backend env read is in the schema, `scripts/prod-env.test.sh`, and `scripts/check-compose-env.sh` (+ its tests): every backend env read reaches the backend/worker containers or has a decision in `deploy/env/compose-env.allow`. See [design/env-core.md](./design/env-core.md). |
 | `image-build` | app or infra change, not on `main` | Builds every image in `deploy/images.json` with buildx, no push. GHCR publishing on `main` comes with TEC-1094. |
 | `mobile`, `mobile-release` | only when the repo variable `MOBILE_ENABLED` is `true` (and `mobile/**` / backend changed) | Expo checks and EAS release; ComCode has no `mobile/` yet. Enable under Settings → Secrets and variables → Actions → Variables. |
 | `ci` | always | Fails if any needed job failed or was cancelled; skipped jobs (path-filtered or mobile gated off) pass. Make this the required status check. |
 | `auto-pr` | never (`if: false`) | Ported from the boilerplate but off: in ComCode all work goes through PRs into `cc-collective-branch` and the owner merges to `main` by hand. |
 
 Caches (all remote, GitHub Actions cache): Go modules and build cache (`setup-go`, keyed on `backend/go.sum`), pnpm store (`setup-node` `cache: pnpm`, keyed on `frontend/pnpm-lock.yaml`), golangci-lint, Playwright browsers, and buildx layers (`type=gha`, one scope per image).
-
-The env-core checks (`env` job) are added with TEC-1092.
 
 ### Postgres integration tests
 
