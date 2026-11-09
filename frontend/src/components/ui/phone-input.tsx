@@ -78,7 +78,7 @@ function PhoneInput({
     >
       <BasePhoneInput.default
         className={cn(
-          "flex items-stretch w-full rounded-xl shadow-xs transition-all",
+          "flex w-full items-stretch rounded-xl shadow-xs transition-all",
           props["aria-invalid"] &&
             "[&_*[data-slot=combobox-trigger]]:border-destructive [&_*[data-slot=combobox-trigger]]:ring-destructive/50",
           className,
@@ -105,7 +105,7 @@ function InputComponent({
   return (
     <input
       className={cn(
-        "flex-1 bg-background text-foreground border border-input rounded-e-xl rounded-s-none px-3.5 py-2 text-sm font-medium transition-colors outline-none placeholder:text-muted-foreground focus:z-10 focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50",
+        "bg-background text-foreground border-input placeholder:text-muted-foreground focus:border-primary focus:ring-primary flex-1 rounded-s-none rounded-e-xl border px-3.5 py-2 text-sm font-medium transition-colors outline-none focus:z-10 focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50",
         variant === "sm" && "h-8 text-xs",
         variant === "default" && "h-10 text-sm",
         variant === "lg" && "h-11 text-base",
@@ -116,7 +116,10 @@ function InputComponent({
   );
 }
 
-type CountryEntry = { label: string; value: BasePhoneInput.Country | undefined };
+type CountryEntry = {
+  label: string;
+  value: BasePhoneInput.Country | undefined;
+};
 
 type CountrySelectProps = {
   disabled?: boolean;
@@ -157,7 +160,7 @@ function CountrySelect({
             type="button"
             variant="outline"
             className={cn(
-              "rounded-s-xl rounded-e-none border-input border-e-0 bg-muted/20 hover:bg-muted/40 text-foreground px-3 leading-none focus:z-10 flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow-none",
+              "border-input bg-muted/20 hover:bg-muted/40 text-foreground flex shrink-0 items-center justify-center gap-1.5 rounded-s-xl rounded-e-none border-e-0 px-3 leading-none shadow-none transition-colors focus:z-10",
               variant === "sm" && "h-8 px-2",
               variant === "default" && "h-10 px-3",
               variant === "lg" && "h-11 px-4",
@@ -177,7 +180,7 @@ function CountrySelect({
       />
       <ComboboxContent
         className={cn(
-          "w-72 *:data-[slot=input-group]:bg-transparent shadow-lg border-border",
+          "border-border w-72 shadow-lg *:data-[slot=input-group]:bg-transparent",
           popupClassName,
         )}
       >
@@ -189,7 +192,7 @@ function CountrySelect({
           className="border-input focus-visible:border-border rounded-none border-0 px-3 py-2 text-sm shadow-none ring-0! outline-none! focus-visible:ring-0"
         />
         <ComboboxSeparator />
-        <ComboboxEmpty className="px-4 py-3 text-xs text-muted-foreground">
+        <ComboboxEmpty className="text-muted-foreground px-4 py-3 text-xs">
           No country found.
         </ComboboxEmpty>
         <ComboboxList>
@@ -201,7 +204,7 @@ function CountrySelect({
                     <ComboboxItem
                       key={item.value}
                       value={item.value}
-                      className="flex items-center gap-2.5 px-3 py-2 text-xs cursor-pointer hover:bg-muted/60"
+                      className="hover:bg-muted/60 flex cursor-pointer items-center gap-2.5 px-3 py-2 text-xs"
                     >
                       <FlagComponent
                         country={item.value}
@@ -229,7 +232,7 @@ function FlagComponent({ country, countryName }: BasePhoneInput.FlagProps) {
   const Flag = country ? flags[country] : null;
 
   return (
-    <span className="flex h-4 w-5 items-center justify-center overflow-hidden rounded-[3px] shadow-xs shrink-0">
+    <span className="flex h-4 w-5 shrink-0 items-center justify-center overflow-hidden rounded-[3px] shadow-xs">
       {Flag ? (
         <Flag title={countryName} />
       ) : (

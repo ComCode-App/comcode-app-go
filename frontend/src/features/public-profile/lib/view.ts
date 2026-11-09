@@ -5,7 +5,10 @@ export type PublicContact = PublicProfile["contacts"][number];
 export type PublicAddress = PublicProfile["addresses"][number];
 
 /** Translation for `lang` (?lang=), else the primary locale, else the default one. */
-export function pickTranslation(profile: PublicProfile, lang?: string | null): PublicTranslation | undefined {
+export function pickTranslation(
+  profile: PublicProfile,
+  lang?: string | null,
+): PublicTranslation | undefined {
   const list = profile.translations;
   return (
     list.find((t) => t.locale === lang) ??
@@ -17,7 +20,10 @@ export function pickTranslation(profile: PublicProfile, lang?: string | null): P
 
 export function displayName(t?: PublicTranslation): string {
   if (!t) return "";
-  return [t.prefix, t.first_name, t.middle_name, t.last_name, t.suffix].filter(Boolean).join(" ").trim();
+  return [t.prefix, t.first_name, t.middle_name, t.last_name, t.suffix]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
 }
 
 /** "Title · Company" line under the name. */
@@ -65,7 +71,9 @@ export function contactEvent(c: PublicContact): string | null {
 
 export function addressLines(a: PublicAddress): string[] {
   const cityLine = [a.postal_code, a.city, a.region].filter(Boolean).join(" ");
-  return [a.street, a.extended, cityLine, a.country].filter((l): l is string => Boolean(l && l.trim()));
+  return [a.street, a.extended, cityLine, a.country].filter((l): l is string =>
+    Boolean(l && l.trim()),
+  );
 }
 
 export function mapsHref(a: PublicAddress): string {
@@ -74,5 +82,8 @@ export function mapsHref(a: PublicAddress): string {
 
 /** "TR33 0006 1005 ..." grouping for readability; copy uses the raw value. */
 export function formatIban(iban: string): string {
-  return iban.replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim();
+  return iban
+    .replace(/\s+/g, "")
+    .replace(/(.{4})/g, "$1 ")
+    .trim();
 }

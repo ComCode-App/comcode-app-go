@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/database/db"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/socialplatforms/model"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/database/db"
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/socialplatforms/model"
 )
 
 type PostgresRepository struct {

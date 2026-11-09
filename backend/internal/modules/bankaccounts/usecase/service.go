@@ -5,18 +5,18 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/bankaccounts/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/bankaccounts/repository"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/iban"
+	"github.com/google/uuid"
 )
 
 var (
-	ErrNotFound            = errors.New("bank account not found")
+	ErrNotFound              = errors.New("bank account not found")
 	ErrAccountHolderRequired = errors.New("account holder is required")
-	ErrInvalidIBAN         = errors.New("invalid IBAN format or checksum")
-	ErrForbidden           = errors.New("account role cannot modify bank accounts")
+	ErrInvalidIBAN           = errors.New("invalid IBAN format or checksum")
+	ErrForbidden             = errors.New("account role cannot modify bank accounts")
 )
 
 // Bank accounts belong to the active account. Reads are open to every member; writes need an

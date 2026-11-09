@@ -18,27 +18,56 @@ export function StaffHome() {
   const { can } = usePermission();
 
   const links = [
-    { key: "orders_pipeline", href: routes.platform.ordersPipeline, visible: can(permissions.orders.read) },
-    { key: "orders", href: routes.platform.orders, visible: can(permissions.orders.read) },
+    {
+      key: "orders_pipeline",
+      href: routes.platform.ordersPipeline,
+      visible: can(permissions.orders.read),
+    },
+    {
+      key: "orders",
+      href: routes.platform.orders,
+      visible: can(permissions.orders.read),
+    },
     {
       key: "profile_verifications",
       href: routes.platform.profileVerifications,
       visible: can(permissions.profileVerifications.manage),
     },
-    { key: "products", href: routes.platform.products, visible: can(permissions.products.read) },
-    { key: "subscriptions", href: routes.platform.settings.subscriptions, visible: can(permissions.subscriptions.read) },
-    { key: "analytics", href: routes.platform.analytics.root, visible: can(permissions.analytics.read) },
+    {
+      key: "products",
+      href: routes.platform.products,
+      visible: can(permissions.products.read),
+    },
+    {
+      key: "subscriptions",
+      href: routes.platform.settings.subscriptions,
+      visible: can(permissions.subscriptions.read),
+    },
+    {
+      key: "analytics",
+      href: routes.platform.analytics.root,
+      visible: can(permissions.analytics.read),
+    },
   ].filter((link) => link.visible);
 
   return (
     <EmptyState
       title={t("dashboard.staff.title")}
-      description={links.length ? t("dashboard.staff.description") : t("dashboard.staff.none")}
+      description={
+        links.length
+          ? t("dashboard.staff.description")
+          : t("dashboard.staff.none")
+      }
       action={
         links.length ? (
           <div className="flex flex-wrap justify-center gap-2">
             {links.map((link, i) => (
-              <Button key={link.key} asChild size="sm" variant={i === 0 ? "default" : "outline"}>
+              <Button
+                key={link.key}
+                asChild
+                size="sm"
+                variant={i === 0 ? "default" : "outline"}
+              >
                 <Link href={link.href}>{t(`dashboard.staff.${link.key}`)}</Link>
               </Button>
             ))}

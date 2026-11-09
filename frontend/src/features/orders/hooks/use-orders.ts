@@ -33,8 +33,15 @@ export function useOrderMutations() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ uuid, status, note }: { uuid: string; status: OrderStatus; note?: string }) =>
-      ordersService.updateStatus(uuid, status, note),
+    mutationFn: ({
+      uuid,
+      status,
+      note,
+    }: {
+      uuid: string;
+      status: OrderStatus;
+      note?: string;
+    }) => ordersService.updateStatus(uuid, status, note),
     onSuccess: () => {
       toast.success(t("orders.status_updated"));
       invalidate();
@@ -45,8 +52,13 @@ export function useOrderMutations() {
   });
 
   const updateShippingMutation = useMutation({
-    mutationFn: ({ uuid, payload }: { uuid: string; payload: UpdateShippingPayload }) =>
-      ordersService.updateShipping(uuid, payload),
+    mutationFn: ({
+      uuid,
+      payload,
+    }: {
+      uuid: string;
+      payload: UpdateShippingPayload;
+    }) => ordersService.updateShipping(uuid, payload),
     onSuccess: () => {
       toast.success(t("orders.shipping_updated"));
       invalidate();
@@ -69,11 +81,18 @@ export function useOrderMutations() {
   });
 
   const createAssetRequestMutation = useMutation({
-    mutationFn: ({ orderUuid, payload }: { orderUuid: string; payload: CreateAssetRequestPayload }) =>
-      ordersService.createAssetRequest(orderUuid, payload),
+    mutationFn: ({
+      orderUuid,
+      payload,
+    }: {
+      orderUuid: string;
+      payload: CreateAssetRequestPayload;
+    }) => ordersService.createAssetRequest(orderUuid, payload),
     onSuccess: (_, variables) => {
       toast.success(t("orders.asset_requested"));
-      queryClient.invalidateQueries({ queryKey: ordersQueryKeys.detail(variables.orderUuid) });
+      queryClient.invalidateQueries({
+        queryKey: ordersQueryKeys.detail(variables.orderUuid),
+      });
       invalidate();
     },
     onError: (err: Error) => {
@@ -93,7 +112,9 @@ export function useOrderMutations() {
     }) => ordersService.reviewAssetRequest(orderUuid, assetUuid, payload),
     onSuccess: (_, variables) => {
       toast.success(t("orders.asset_reviewed"));
-      queryClient.invalidateQueries({ queryKey: ordersQueryKeys.detail(variables.orderUuid) });
+      queryClient.invalidateQueries({
+        queryKey: ordersQueryKeys.detail(variables.orderUuid),
+      });
       invalidate();
     },
     onError: (err: Error) => {
@@ -114,11 +135,18 @@ export function useOrderMutations() {
   });
 
   const provisionItemMutation = useMutation({
-    mutationFn: ({ orderUuid, itemUuid }: { orderUuid: string; itemUuid: string }) =>
-      ordersService.provisionItem(orderUuid, itemUuid),
+    mutationFn: ({
+      orderUuid,
+      itemUuid,
+    }: {
+      orderUuid: string;
+      itemUuid: string;
+    }) => ordersService.provisionItem(orderUuid, itemUuid),
     onSuccess: (_, vars) => {
       toast.success(t("orders.item_provision_success"));
-      queryClient.invalidateQueries({ queryKey: ordersQueryKeys.detail(vars.orderUuid) });
+      queryClient.invalidateQueries({
+        queryKey: ordersQueryKeys.detail(vars.orderUuid),
+      });
       invalidate();
     },
     onError: (err: Error) => {
@@ -135,10 +163,13 @@ export function useOrderMutations() {
       orderUuid: string;
       itemUuids: string[];
       fulfillmentStatus: string;
-    }) => ordersService.bulkUpdateItems(orderUuid, itemUuids, fulfillmentStatus),
+    }) =>
+      ordersService.bulkUpdateItems(orderUuid, itemUuids, fulfillmentStatus),
     onSuccess: (_, vars) => {
       toast.success(t("orders.bulk_update_items_success"));
-      queryClient.invalidateQueries({ queryKey: ordersQueryKeys.detail(vars.orderUuid) });
+      queryClient.invalidateQueries({
+        queryKey: ordersQueryKeys.detail(vars.orderUuid),
+      });
       invalidate();
     },
     onError: (err: Error) => {
@@ -155,16 +186,21 @@ export function useOrderMutations() {
       uuid: string;
       paymentStatus: string;
       paymentReference?: string;
-    }) => ordersService.updatePaymentStatus(uuid, paymentStatus, paymentReference),
+    }) =>
+      ordersService.updatePaymentStatus(uuid, paymentStatus, paymentReference),
     onSuccess: (_, vars) => {
       toast.success(t("orders.payment_status_updated"));
-      queryClient.invalidateQueries({ queryKey: ordersQueryKeys.detail(vars.uuid) });
+      queryClient.invalidateQueries({
+        queryKey: ordersQueryKeys.detail(vars.uuid),
+      });
       invalidate();
     },
     onError: (err: Error, vars) => {
       toast.error(err?.message || t("orders.error_updating"));
       // A failed provider refund (TEC-935) is listed on the order; show it.
-      queryClient.invalidateQueries({ queryKey: ordersQueryKeys.detail(vars.uuid) });
+      queryClient.invalidateQueries({
+        queryKey: ordersQueryKeys.detail(vars.uuid),
+      });
     },
   });
 
@@ -178,7 +214,9 @@ export function useOrderMutations() {
     }) => ordersService.updateFulfillmentStatus(uuid, fulfillmentStatus),
     onSuccess: (_, vars) => {
       toast.success(t("orders.fulfillment_status_updated"));
-      queryClient.invalidateQueries({ queryKey: ordersQueryKeys.detail(vars.uuid) });
+      queryClient.invalidateQueries({
+        queryKey: ordersQueryKeys.detail(vars.uuid),
+      });
       invalidate();
     },
     onError: (err: Error) => {

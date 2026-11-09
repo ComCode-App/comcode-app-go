@@ -16,12 +16,7 @@ const PLATFORM_JOBS = "/v1/platform/imports";
 
 /** Job routes take `base`: platform jobs by default, `/v1/company/imports` for company imports. */
 export const importsService = {
-  async upload(
-    path: string,
-    file: File,
-    format: ImportFormat,
-    locale: string,
-  ) {
+  async upload(path: string, file: File, format: ImportFormat, locale: string) {
     const form = new FormData();
     form.append("file", file);
     form.append("format", format);
@@ -35,7 +30,10 @@ export const importsService = {
 
   async updateMapping(
     uuid: string,
-    body: { mapping: Record<string, string>; defaults?: Record<string, string> },
+    body: {
+      mapping: Record<string, string>;
+      defaults?: Record<string, string>;
+    },
     base = PLATFORM_JOBS,
   ) {
     return platformRequest<ImportJob>("PATCH", `${base}/${uuid}/mapping`, {

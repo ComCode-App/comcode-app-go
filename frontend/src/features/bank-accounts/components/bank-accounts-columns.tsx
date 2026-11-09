@@ -25,13 +25,19 @@ interface ColumnOptions {
   onSetPrimary: (account: UserBankAccountSummary) => void;
 }
 
-function BankLogoCell({ item, t }: { item: UserBankAccountSummary; t: (k: string) => string }) {
+function BankLogoCell({
+  item,
+  t,
+}: {
+  item: UserBankAccountSummary;
+  t: (k: string) => string;
+}) {
   const [error, setError] = useState(false);
 
   return (
     <div className="flex items-center gap-3">
       <div
-        className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden shadow-xs"
+        className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl text-xs font-bold text-white shadow-xs"
         style={{ backgroundColor: item.bank_brand_color || "#1e3a8a" }}
       >
         {item.bank_icon_url && !error ? (
@@ -40,14 +46,14 @@ function BankLogoCell({ item, t }: { item: UserBankAccountSummary; t: (k: string
             src={item.bank_icon_url}
             alt={item.bank_name || "Bank"}
             onError={() => setError(true)}
-            className="w-full h-full object-contain p-1"
+            className="h-full w-full object-contain p-1"
           />
         ) : (
-          <Landmark className="w-4 h-4 text-white" />
+          <Landmark className="h-4 w-4 text-white" />
         )}
       </div>
       <div>
-        <div className="font-semibold text-sm text-foreground flex items-center gap-1.5">
+        <div className="text-foreground flex items-center gap-1.5 text-sm font-semibold">
           <span>{item.bank_name || t("bank_accounts.unknown_bank")}</span>
           {item.is_primary && (
             <Badge
@@ -60,11 +66,11 @@ function BankLogoCell({ item, t }: { item: UserBankAccountSummary; t: (k: string
           )}
         </div>
         {item.title ? (
-          <div className="text-xs text-muted-foreground font-medium">
+          <div className="text-muted-foreground text-xs font-medium">
             {item.title}
           </div>
         ) : item.bank_code ? (
-          <div className="text-xs text-muted-foreground font-mono">
+          <div className="text-muted-foreground font-mono text-xs">
             EFT: {item.bank_code}
           </div>
         ) : null}
@@ -85,7 +91,7 @@ function IbanCell({ iban, t }: { iban: string; t: (k: string) => string }) {
 
   return (
     <div className="flex items-center gap-1.5">
-      <span className="font-mono text-xs font-medium tracking-wide bg-muted/60 px-2 py-1 rounded">
+      <span className="bg-muted/60 rounded px-2 py-1 font-mono text-xs font-medium tracking-wide">
         {iban}
       </span>
       <TooltipProvider delayDuration={200}>
@@ -94,7 +100,7 @@ function IbanCell({ iban, t }: { iban: string; t: (k: string) => string }) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
+              className="text-muted-foreground hover:text-foreground h-7 w-7 shrink-0"
               onClick={handleCopy}
             >
               {copied ? (
@@ -106,7 +112,9 @@ function IbanCell({ iban, t }: { iban: string; t: (k: string) => string }) {
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top">
-            <p className="text-xs">{copied ? t("common.copied") : t("common.copy")}</p>
+            <p className="text-xs">
+              {copied ? t("common.copied") : t("common.copy")}
+            </p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -135,11 +143,11 @@ export function getBankAccountsColumns({
       enableSorting: true,
       cell: ({ row }) => (
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-foreground">
+          <span className="text-foreground text-sm font-medium">
             {row.original.account_holder}
           </span>
           {row.original.branch_code && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               {t("bank_accounts.branch")}: {row.original.branch_code}
             </span>
           )}
@@ -175,7 +183,7 @@ export function getBankAccountsColumns({
               onCheckedChange={() => onToggleActive(item)}
               className="scale-85"
             />
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               {item.is_active ? t("common.active") : t("common.inactive")}
             </span>
           </div>
@@ -200,15 +208,19 @@ export function getBankAccountsColumns({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10"
+                      className="text-muted-foreground h-8 w-8 hover:bg-amber-500/10 hover:text-amber-500"
                       onClick={() => onSetPrimary(item)}
                     >
                       <Star className="h-4 w-4" />
-                      <span className="sr-only">{t("bank_accounts.actions.set_primary")}</span>
+                      <span className="sr-only">
+                        {t("bank_accounts.actions.set_primary")}
+                      </span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top">
-                    <p className="text-xs">{t("bank_accounts.actions.set_primary")}</p>
+                    <p className="text-xs">
+                      {t("bank_accounts.actions.set_primary")}
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -218,7 +230,7 @@ export function getBankAccountsColumns({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    className="text-muted-foreground hover:text-foreground h-8 w-8"
                     onClick={() => onEdit(item)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -235,7 +247,7 @@ export function getBankAccountsColumns({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8"
                     onClick={() =>
                       onDelete(
                         item.uuid,

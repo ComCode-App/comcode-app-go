@@ -61,13 +61,16 @@ function formatUptime(seconds: number): string {
   return parts.join(" ");
 }
 
-function getStatusBadge(status: ServiceHealthStatus, t: (key: string) => string) {
+function getStatusBadge(
+  status: ServiceHealthStatus,
+  t: (key: string) => string,
+) {
   switch (status) {
     case "healthy":
       return (
         <Badge
           variant="outline"
-          className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium"
+          className="border-emerald-500/30 bg-emerald-500/10 font-medium text-emerald-600 dark:text-emerald-400"
         >
           <span className="mr-1.5 size-1.5 rounded-full bg-emerald-500" />
           {t("settings.system.status_healthy")}
@@ -77,7 +80,7 @@ function getStatusBadge(status: ServiceHealthStatus, t: (key: string) => string)
       return (
         <Badge
           variant="outline"
-          className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium"
+          className="border-amber-500/30 bg-amber-500/10 font-medium text-amber-600 dark:text-amber-400"
         >
           <span className="mr-1.5 size-1.5 rounded-full bg-amber-500" />
           {t("settings.system.status_degraded")}
@@ -85,11 +88,8 @@ function getStatusBadge(status: ServiceHealthStatus, t: (key: string) => string)
       );
     case "down":
       return (
-        <Badge
-          variant="danger"
-          className="font-medium"
-        >
-          <span className="mr-1.5 size-1.5 rounded-full bg-destructive animate-pulse" />
+        <Badge variant="danger" className="font-medium">
+          <span className="bg-destructive mr-1.5 size-1.5 animate-pulse rounded-full" />
           {t("settings.system.status_down")}
         </Badge>
       );
@@ -148,7 +148,8 @@ export function SystemOverviewPage() {
 
   const heapAlloc = info.runtime.memory.heap_alloc_bytes;
   const heapSys = info.runtime.memory.heap_sys_bytes;
-  const memoryPercent = heapSys > 0 ? Math.min(100, Math.round((heapAlloc / heapSys) * 100)) : 0;
+  const memoryPercent =
+    heapSys > 0 ? Math.min(100, Math.round((heapAlloc / heapSys) * 100)) : 0;
 
   return (
     <div className="space-y-6">
@@ -156,13 +157,13 @@ export function SystemOverviewPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-foreground md:text-2xl">
+            <h1 className="text-foreground text-xl font-bold tracking-tight md:text-2xl">
               {t("settings.system.title")}
             </h1>
             <Badge
               variant="outline"
               className={cn(
-                "font-semibold uppercase tracking-wider text-[10px]",
+                "text-[10px] font-semibold tracking-wider uppercase",
                 isHealthy
                   ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                   : isDegraded
@@ -172,7 +173,7 @@ export function SystemOverviewPage() {
             >
               <span
                 className={cn("mr-1.5 size-1.5 rounded-full", {
-                  "bg-emerald-500 animate-pulse": isHealthy,
+                  "animate-pulse bg-emerald-500": isHealthy,
                   "bg-amber-500": isDegraded,
                   "bg-rose-500": !isHealthy && !isDegraded,
                 })}
@@ -184,7 +185,7 @@ export function SystemOverviewPage() {
                   : t("settings.system.status_down")}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm">
             {t("settings.system.description")}
           </p>
         </div>
@@ -220,12 +221,12 @@ export function SystemOverviewPage() {
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {/* Card 1: Server Uptime */}
-        <Card className="border-border/60 shadow-xs relative overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <Card className="border-border/60 relative overflow-hidden shadow-xs">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               {t("settings.system.stat_uptime")}
             </CardTitle>
-            <div className="rounded-lg bg-primary/10 p-2 text-primary">
+            <div className="bg-primary/10 text-primary rounded-lg p-2">
               <Clock className="size-4" />
             </div>
           </CardHeader>
@@ -233,7 +234,7 @@ export function SystemOverviewPage() {
             <div className="text-xl font-bold tracking-tight">
               {formatUptime(info.runtime.uptime_seconds)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+            <p className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
               <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
               {t("settings.system.stat_uptime_sub")}
             </p>
@@ -241,9 +242,9 @@ export function SystemOverviewPage() {
         </Card>
 
         {/* Card 2: Go Runtime & CPU */}
-        <Card className="border-border/60 shadow-xs relative overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <Card className="border-border/60 relative overflow-hidden shadow-xs">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               {t("settings.system.stat_runtime")}
             </CardTitle>
             <div className="rounded-lg bg-blue-500/10 p-2 text-blue-600 dark:text-blue-400">
@@ -251,19 +252,20 @@ export function SystemOverviewPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold tracking-tight font-mono">
+            <div className="font-mono text-xl font-bold tracking-tight">
               {info.runtime.go_version}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {info.runtime.num_cpu} {t("settings.system.cores")} • {info.runtime.os}/{info.runtime.arch}
+            <p className="text-muted-foreground mt-1 text-xs">
+              {info.runtime.num_cpu} {t("settings.system.cores")} •{" "}
+              {info.runtime.os}/{info.runtime.arch}
             </p>
           </CardContent>
         </Card>
 
         {/* Card 3: Concurrency & Goroutines */}
-        <Card className="border-border/60 shadow-xs relative overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <Card className="border-border/60 relative overflow-hidden shadow-xs">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               {t("settings.system.stat_goroutines")}
             </CardTitle>
             <div className="rounded-lg bg-purple-500/10 p-2 text-purple-600 dark:text-purple-400">
@@ -271,19 +273,19 @@ export function SystemOverviewPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold tracking-tight font-mono">
+            <div className="font-mono text-xl font-bold tracking-tight">
               {info.runtime.num_goroutine.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-xs">
               {info.runtime.memory.num_gc} {t("settings.system.gc_cycles")}
             </p>
           </CardContent>
         </Card>
 
         {/* Card 4: Memory Heap */}
-        <Card className="border-border/60 shadow-xs relative overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <Card className="border-border/60 relative overflow-hidden shadow-xs">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               {t("settings.system.stat_memory_heap")}
             </CardTitle>
             <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-600 dark:text-emerald-400">
@@ -291,15 +293,17 @@ export function SystemOverviewPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold tracking-tight font-mono">
+            <div className="font-mono text-xl font-bold tracking-tight">
               {formatBytes(info.runtime.memory.heap_alloc_bytes)}
             </div>
             <div className="mt-2">
               <Progress value={memoryPercent} className="h-1.5" />
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1 flex justify-between">
+            <p className="text-muted-foreground mt-1 flex justify-between text-[11px]">
               <span>{t("settings.system.stat_sys_total")}</span>
-              <span className="font-mono">{formatBytes(info.runtime.memory.sys_bytes)}</span>
+              <span className="font-mono">
+                {formatBytes(info.runtime.memory.sys_bytes)}
+              </span>
             </p>
           </CardContent>
         </Card>
@@ -307,13 +311,13 @@ export function SystemOverviewPage() {
 
       {/* Backing Services Health Grid */}
       <div>
-        <h2 className="text-sm font-semibold tracking-tight text-foreground uppercase tracking-wider text-muted-foreground/90 mb-3">
+        <h2 className="text-foreground text-muted-foreground/90 mb-3 text-sm font-semibold tracking-tight tracking-wider uppercase">
           {t("settings.system.section_services")}
         </h2>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {/* PostgreSQL Card */}
-          <Card className="border-border/60 shadow-xs hover:border-border transition-colors">
+          <Card className="border-border/60 hover:border-border shadow-xs transition-colors">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -333,8 +337,10 @@ export function SystemOverviewPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3 text-xs">
-              <div className="flex items-center justify-between py-1 border-b border-border/40">
-                <span className="text-muted-foreground">{t("settings.system.latency")}</span>
+              <div className="border-border/40 flex items-center justify-between border-b py-1">
+                <span className="text-muted-foreground">
+                  {t("settings.system.latency")}
+                </span>
                 <span className="font-mono font-medium">
                   {info.services.database.latency_ms > 0
                     ? `${info.services.database.latency_ms} ms`
@@ -349,13 +355,18 @@ export function SystemOverviewPage() {
                       {t("settings.system.db_pool_utilization")}
                     </span>
                     <span className="font-mono font-semibold">
-                      {dbPool.acquired_conns} / {dbPool.max_conns} ({poolUsagePercent}%)
+                      {dbPool.acquired_conns} / {dbPool.max_conns} (
+                      {poolUsagePercent}%)
                     </span>
                   </div>
                   <Progress value={poolUsagePercent} className="h-2" />
-                  <div className="flex justify-between text-[11px] text-muted-foreground pt-0.5">
-                    <span>{dbPool.idle_conns} {t("settings.system.idle")}</span>
-                    <span>{dbPool.total_conns} {t("settings.system.total_open")}</span>
+                  <div className="text-muted-foreground flex justify-between pt-0.5 text-[11px]">
+                    <span>
+                      {dbPool.idle_conns} {t("settings.system.idle")}
+                    </span>
+                    <span>
+                      {dbPool.total_conns} {t("settings.system.total_open")}
+                    </span>
                   </div>
                 </div>
               )}
@@ -363,7 +374,7 @@ export function SystemOverviewPage() {
           </Card>
 
           {/* Redis Card */}
-          <Card className="border-border/60 shadow-xs hover:border-border transition-colors">
+          <Card className="border-border/60 hover:border-border shadow-xs transition-colors">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -383,8 +394,10 @@ export function SystemOverviewPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3 text-xs">
-              <div className="flex items-center justify-between py-1 border-b border-border/40">
-                <span className="text-muted-foreground">{t("settings.system.latency")}</span>
+              <div className="border-border/40 flex items-center justify-between border-b py-1">
+                <span className="text-muted-foreground">
+                  {t("settings.system.latency")}
+                </span>
                 <span className="font-mono font-medium">
                   {info.services.redis.latency_ms > 0
                     ? `${info.services.redis.latency_ms} ms`
@@ -392,14 +405,18 @@ export function SystemOverviewPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between py-1">
-                <span className="text-muted-foreground">{t("settings.system.role")}</span>
-                <span className="font-medium text-foreground">In-memory Store & Job Queue</span>
+                <span className="text-muted-foreground">
+                  {t("settings.system.role")}
+                </span>
+                <span className="text-foreground font-medium">
+                  In-memory Store & Job Queue
+                </span>
               </div>
             </CardContent>
           </Card>
 
           {/* Storage (S3/SeaweedFS) Card */}
-          <Card className="border-border/60 shadow-xs hover:border-border transition-colors">
+          <Card className="border-border/60 hover:border-border shadow-xs transition-colors">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -419,14 +436,21 @@ export function SystemOverviewPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3 text-xs">
-              <div className="flex items-center justify-between py-1 border-b border-border/40">
-                <span className="text-muted-foreground">{t("settings.system.driver")}</span>
-                <Badge variant="secondary" className="font-mono text-[11px] uppercase">
+              <div className="border-border/40 flex items-center justify-between border-b py-1">
+                <span className="text-muted-foreground">
+                  {t("settings.system.driver")}
+                </span>
+                <Badge
+                  variant="secondary"
+                  className="font-mono text-[11px] uppercase"
+                >
                   {info.services.storage.driver}
                 </Badge>
               </div>
               <div className="flex items-center justify-between py-1">
-                <span className="text-muted-foreground">{t("settings.system.latency")}</span>
+                <span className="text-muted-foreground">
+                  {t("settings.system.latency")}
+                </span>
                 <span className="font-mono font-medium">
                   {info.services.storage.latency_ms > 0
                     ? `${info.services.storage.latency_ms} ms`
@@ -437,7 +461,7 @@ export function SystemOverviewPage() {
           </Card>
 
           {/* Meilisearch Card */}
-          <Card className="border-border/60 shadow-xs hover:border-border transition-colors">
+          <Card className="border-border/60 hover:border-border shadow-xs transition-colors">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -457,8 +481,10 @@ export function SystemOverviewPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3 text-xs">
-              <div className="flex items-center justify-between py-1 border-b border-border/40">
-                <span className="text-muted-foreground">{t("settings.system.status")}</span>
+              <div className="border-border/40 flex items-center justify-between border-b py-1">
+                <span className="text-muted-foreground">
+                  {t("settings.system.status")}
+                </span>
                 <span className="font-medium">
                   {info.environment.search_enabled
                     ? t("settings.system.feature_enabled")
@@ -466,7 +492,9 @@ export function SystemOverviewPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between py-1">
-                <span className="text-muted-foreground">{t("settings.system.latency")}</span>
+                <span className="text-muted-foreground">
+                  {t("settings.system.latency")}
+                </span>
                 <span className="font-mono font-medium">
                   {info.services.meilisearch.latency_ms > 0
                     ? `${info.services.meilisearch.latency_ms} ms`
@@ -482,32 +510,36 @@ export function SystemOverviewPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card className="border-border/60 shadow-xs">
           <CardHeader>
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Cpu className="size-4 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <Cpu className="text-primary size-4" />
               {t("settings.system.section_memory_details")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2.5 text-xs">
-            <div className="flex items-center justify-between py-1.5 border-b border-border/40">
+            <div className="border-border/40 flex items-center justify-between border-b py-1.5">
               <span className="text-muted-foreground">Heap In-Use</span>
               <span className="font-mono font-semibold">
                 {formatBytes(info.runtime.memory.heap_inuse_bytes)}
               </span>
             </div>
-            <div className="flex items-center justify-between py-1.5 border-b border-border/40">
+            <div className="border-border/40 flex items-center justify-between border-b py-1.5">
               <span className="text-muted-foreground">Heap Idle</span>
               <span className="font-mono">
                 {formatBytes(info.runtime.memory.heap_idle_bytes)}
               </span>
             </div>
-            <div className="flex items-center justify-between py-1.5 border-b border-border/40">
-              <span className="text-muted-foreground">Total Cumulative Alloc</span>
+            <div className="border-border/40 flex items-center justify-between border-b py-1.5">
+              <span className="text-muted-foreground">
+                Total Cumulative Alloc
+              </span>
               <span className="font-mono">
                 {formatBytes(info.runtime.memory.total_alloc_bytes)}
               </span>
             </div>
             <div className="flex items-center justify-between py-1.5">
-              <span className="text-muted-foreground">GC (Garbage Collector) Runs</span>
+              <span className="text-muted-foreground">
+                GC (Garbage Collector) Runs
+              </span>
               <span className="font-mono font-semibold">
                 {info.runtime.memory.num_gc.toLocaleString()} cycles
               </span>
@@ -517,37 +549,52 @@ export function SystemOverviewPage() {
 
         <Card className="border-border/60 shadow-xs">
           <CardHeader>
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Radio className="size-4 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <Radio className="text-primary size-4" />
               {t("settings.system.section_subsystems")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2.5 text-xs">
-            <div className="flex items-center justify-between py-1.5 border-b border-border/40">
-              <span className="text-muted-foreground">Centrifugo Realtime WebSocket</span>
-              <Badge variant={info.environment.centrifugo_enabled ? "outline" : "secondary"}>
+            <div className="border-border/40 flex items-center justify-between border-b py-1.5">
+              <span className="text-muted-foreground">
+                Centrifugo Realtime WebSocket
+              </span>
+              <Badge
+                variant={
+                  info.environment.centrifugo_enabled ? "outline" : "secondary"
+                }
+              >
                 {info.environment.centrifugo_enabled
                   ? t("settings.system.feature_active")
                   : t("settings.system.feature_disabled")}
               </Badge>
             </div>
-            <div className="flex items-center justify-between py-1.5 border-b border-border/40">
+            <div className="border-border/40 flex items-center justify-between border-b py-1.5">
               <span className="text-muted-foreground">Web Push VAPID</span>
-              <Badge variant={info.environment.vapid_enabled ? "outline" : "secondary"}>
+              <Badge
+                variant={
+                  info.environment.vapid_enabled ? "outline" : "secondary"
+                }
+              >
                 {info.environment.vapid_enabled
                   ? t("settings.system.feature_active")
                   : t("settings.system.feature_disabled")}
               </Badge>
             </div>
-            <div className="flex items-center justify-between py-1.5 border-b border-border/40">
+            <div className="border-border/40 flex items-center justify-between border-b py-1.5">
               <span className="text-muted-foreground">Log Level</span>
-              <Badge variant="secondary" className="font-mono uppercase text-[10px]">
+              <Badge
+                variant="secondary"
+                className="font-mono text-[10px] uppercase"
+              >
                 {info.environment.log_level || "INFO"}
               </Badge>
             </div>
             <div className="flex items-center justify-between py-1.5">
-              <span className="text-muted-foreground">Server UTC Timestamp</span>
-              <span className="font-mono text-muted-foreground">
+              <span className="text-muted-foreground">
+                Server UTC Timestamp
+              </span>
+              <span className="text-muted-foreground font-mono">
                 {new Date(info.runtime.server_time).toISOString()}
               </span>
             </div>

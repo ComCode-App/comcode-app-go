@@ -81,8 +81,8 @@ Kronolojik sıra (boilerplate `git log --reverse` sırası). Issue sütunu, işi
 | `8d7202f` | 2026-10-14 | Port edilen auth/push kodunu marka-nötr yap | ATLA | Düzeltilen dosyalar ComCode'da yok; native/QR port edilirse bu sonraki hal alınır. |  |
 | `7f9b992` | 2026-10-14 | CI: yeşil feature branch için auto PR + merge | PORT edildi (TEC-1093) | `auto-pr` işi devre dışı (`if: false`/değişken) eklenecek; pnpm 11 pin'i atla. `auto-pr` `if: false` ile kapalı. | [TEC-1093](https://linear.app/technowide-furkan/issue/TEC-1093) |
 | `e9fc3e0` | 2026-10-14 | Deploy: uygulama başına özel ağ | ZATEN VAR (kısmi), `stop_grace_period` port edildi (TEC-1095) | `app` ağı ve prefix'li isimler var; backend hâlâ `dokploy-network`'te, healthcheck `/readyz`, `stop_grace_period` yok. Backend `dokploy-network`'te ve `/readyz` healthcheck bilinçli olarak aynı kaldı. | [TEC-1095](https://linear.app/technowide-furkan/issue/TEC-1095) |
-| `5da990f` | 2026-10-14 | Backend: kalan dosyaları gofmt | PORT | `gofmt -l` ~74 dosya listeliyor; format hook'undan önce tek mekanik commit. | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
-| `9f687d7` | 2026-10-14 | Repo düzeyi Claude Code kurulumu | PORT | `CLAUDE.md`, `.mcp.json`, hooks, reviewer, `verify-changes`/`db-migration` skill'leri yok; `.claude/settings.json` attribution bloğu korunarak. | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
+| `5da990f` | 2026-10-14 | Backend: kalan dosyaları gofmt | PORT edildi (TEC-1112) | `gofmt -l` ~74 dosya listeliyor; format hook'undan önce tek mekanik commit. | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
+| `9f687d7` | 2026-10-14 | Repo düzeyi Claude Code kurulumu | PORT edildi (TEC-1112) | `CLAUDE.md`, `.mcp.json`, hooks, reviewer, `verify-changes`/`db-migration` skill'leri yok; `.claude/settings.json` attribution bloğu korunarak. Reviewer `comcode-reviewer` adıyla; hook kaydı (`hooks` bloğu) `.claude/settings.json`'a sahip tarafından eklenir. | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
 | `14c7755` | 2026-10-14 | Tenant core tasarım çalışması | ATLA | Tenant core port edilmez; uyarlanabilir fikirler TEC-1107 ve TEC-1114'te. |  |
 | `8eb1350` | 2026-10-14 | orgctx sözleşmesi ve tenant yanıt kodları | ATLA | Tenant core; karşılığı `authctx` `Principal.Account`. |  |
 | `015d793` | 2026-10-14 | RequireOrganization / RequireTenantPermission | ATLA | Tenant core; üyelik `LoadPrincipal` içinde doğrulanıyor. |  |
@@ -90,14 +90,14 @@ Kronolojik sıra (boilerplate `git log --reverse` sırası). Issue sütunu, işi
 | `3b7d830` | 2026-10-14 | TENANCY_* config | ATLA | Tenant core bayrakları. |  |
 | `cf0dc7e` | 2026-10-14 | GET /v1/tenant/context | ATLA | Karşılığı `/v1/account`, `/v1/auth/me`. |  |
 | `423d4a3` | 2026-10-14 | BFF: X-Organization iletimi | ATLA | Tenant core; ComCode BFF zaten header allowlist kullanıyor. |  |
-| `704b3a6` | 2026-10-14 | Sistem tanılama API'si | ZATEN VAR (kısmi) | Kaynak ComCode (`settings/usecase/system.go`). Küçük fark: sürücü adı sabit `"s3"`, Cmd+K rol linki 404. | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
-| `f4ecb7c` | 2026-10-14 | /platform/settings System Settings kabuğu | ZATEN VAR | Kaynak ComCode (`app/(shell)/(platform)/platform/settings/`). | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
-| `52ca5f5` | 2026-10-14 | Frontend: kalan dosyaları prettier | PORT | `format:check` CI'da çalışmıyor; hook'tan önce `pnpm format` tek commit. | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
+| `704b3a6` | 2026-10-14 | Sistem tanılama API'si | ZATEN VAR (kısmi), eksik kısım port edildi (TEC-1112) | Kaynak ComCode (`settings/usecase/system.go`). Küçük fark: sürücü adı sabit `"s3"`, Cmd+K rol linki 404. | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
+| `f4ecb7c` | 2026-10-14 | /platform/settings System Settings kabuğu | ZATEN VAR | Kaynak ComCode (`app/(shell)/(platform)/platform/settings/`). Skill ve dokümanlardaki eski `/platform/access`, `/platform/integrations/*` yolları TEC-1112 ile güncellendi. | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
+| `52ca5f5` | 2026-10-14 | Frontend: kalan dosyaları prettier | PORT edildi (TEC-1112) | `format:check` CI'da çalışmıyor; hook'tan önce `pnpm format` tek commit. | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
 | `4f63d95` | 2026-10-14 | Tenant core şeması ve sqlc | ATLA | Organizations şeması alınmaz; sorgu lint fikri 1a5b5db satırında. |  |
 | `2a72917` | 2026-10-14 | Organizations modülü, /me üyelikleri | ATLA | Karşılığı `modules/accounts`, `/v1/auth/me` `accounts[]`. |  |
 | `45cc26e` | 2026-10-14 | Platform organizations API dokümanı | ATLA | Tenant core OpenAPI; ComCode'da `/v1/platform/accounts/*`. |  |
 | `0b109cf` | 2026-10-14 | Tenant core faz 1 bağlantısı, RBAC seed düzeltmesi | ATLA | Seed düzeltmesi tenant rol scope'una özgü. |  |
-| `7a76aec` | 2026-11-03 | Frontend: Node 22.13+ zorunlu | ZATEN VAR (kısmi) | pnpm 10 kullanılıyor; yalnız `.nvmrc` (20) ile Dockerfile (22) tutarsızlığı giderilecek. | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
+| `7a76aec` | 2026-11-03 | Frontend: Node 22.13+ zorunlu | ZATEN VAR (kısmi), eksik kısım port edildi (TEC-1112) | pnpm 10 kullanılıyor; yalnız `.nvmrc` (20) ile Dockerfile (22) tutarsızlığı giderilecek. | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
 | `7dfb448` | 2026-11-03 | Organizations i18n etiketleri | ATLA | Yalnız organizations anahtarları. |  |
 | `62b72ad` | 2026-11-03 | Slug: Türkçe harfleri ASCII'ye katla | PORT edildi (TEC-1111) | `platform/slug/slug.go` Türkçe harfleri siliyor ("Çağrı Şirketi" → "a-r-irketi"); mevcut slug'lar yeniden yazılmaz. | [TEC-1111](https://linear.app/technowide-furkan/issue/TEC-1111) |
 | `2c0ed87` | 2026-11-03 | Storage: upload gövdesini MaxBytesReader ile sınırla | PORT edildi (TEC-1097) | `storage/handler` `ParseMultipartForm(512<<20)` öncesi limit yok; kimliksiz `POST /v1/orders/assets/upload` dahil. | [TEC-1097](https://linear.app/technowide-furkan/issue/TEC-1097) |
@@ -128,7 +128,7 @@ Kronolojik sıra (boilerplate `git log --reverse` sırası). Issue sütunu, işi
 | `02e6ee9` | 2026-10-16 | Web push: Notification izni yalnız API varsa | ZATEN VAR | `use-web-push-sync.ts`, `lib/web-push/register.ts` zaten kontrol ediyor. |  |
 | `43a0cb4` | 2026-11-03 | Compose: STORAGE_MAX_BYTES varsayılanı config.go'da | PORT edildi (TEC-1092) | Compose'da `STORAGE_MAX_BYTES` hiç yok; `${STORAGE_MAX_BYTES:-}` eklenecek. | [TEC-1092](https://linear.app/technowide-furkan/issue/TEC-1092) |
 | `156af6a` | 2026-11-03 | /t/{slug} organizasyon kabuğu | PORT (kısmi) edildi (TEC-1103) | Tenant kabuğu atla; yalnız ortak `next-path` (backslash/kontrol karakteri) ve RouteGuard `?next=` parçası. | [TEC-1103](https://linear.app/technowide-furkan/issue/TEC-1103) |
-| `57244d8` | 2026-11-03 | Playwright MCP çıktısını ignore et | PORT | 9f687d7 ile `.mcp.json`/Playwright MCP gelince tek satır `.gitignore`. | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
+| `57244d8` | 2026-11-03 | Playwright MCP çıktısını ignore et | PORT edildi (TEC-1112) | 9f687d7 ile `.mcp.json`/Playwright MCP gelince tek satır `.gitignore`. | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
 | `8fdc26f` | 2026-11-03 | /me üyelikleri yalnız tenancy açıkken | ATLA | Tenant core'a özgü. |  |
 | `917a4f2` | 2026-11-03 | Her API hatası bir kez toast | PORT edildi (TEC-1110) | `unwrap()` ve QueryCache `onError` aynı hatayı iki kez emit ediyor; WeakSet ile tek emit. | [TEC-1110](https://linear.app/technowide-furkan/issue/TEC-1110) |
 | `e5856d4` | 2026-11-03 | Organizasyon yönetim UI | ATLA | Tenant core; şirketler `platform.companies.*` ile yönetiliyor. |  |
@@ -182,7 +182,7 @@ Kronolojik sıra (boilerplate `git log --reverse` sırası). Issue sütunu, işi
 | ATLA | 26 |
 | **Toplam** | **105** |
 
-Sayılar ilk karara göredir; "edildi" eki bir durumdur, kararı değiştirmez. 2026-11-09 itibarıyla `cc-collective-branch`'e birleşmiş PR'larla 53 satır port edildi olarak işaretli.
+Sayılar ilk karara göredir; "edildi" eki bir durumdur, kararı değiştirmez. 2026-11-09 itibarıyla `cc-collective-branch`'e birleşmiş PR'larla 59 satır port edildi olarak işaretli (TEC-1112 dahil).
 
 **ZATEN VAR notu.** ComCode, boilerplate'in bu aralıkta eklediği bazı şeyleri zaten kendisi taşıyordu (bir kısmı boilerplate'e ComCode'dan geçti):
 

@@ -51,19 +51,28 @@ function normalize(raw: unknown): PublicBackground | null {
   if (!isRecord(raw)) return null;
   const params = isRecord(raw.params) ? raw.params : {};
   // Legacy shader-only documents have no `kind`.
-  const kind = raw.kind ?? (typeof raw.shaderType === "string" ? "shader" : undefined);
+  const kind =
+    raw.kind ?? (typeof raw.shaderType === "string" ? "shader" : undefined);
   switch (kind) {
     case "solid":
-      return { kind: "solid", color: typeof params.color === "string" ? params.color : "#0f172a" };
+      return {
+        kind: "solid",
+        color: typeof params.color === "string" ? params.color : "#0f172a",
+      };
     case "gradient": {
       const colors = Array.isArray(params.colors)
         ? params.colors.filter((c): c is string => typeof c === "string")
         : [];
-      const stops = (colors.length >= 2 ? colors : ["#e0eaff", "#241d9a"]).join(", ");
+      const stops = (colors.length >= 2 ? colors : ["#e0eaff", "#241d9a"]).join(
+        ", ",
+      );
       const angle = typeof params.angle === "number" ? params.angle : 135;
       return {
         kind: "gradient",
-        css: params.type === "radial" ? `radial-gradient(circle at center, ${stops})` : `linear-gradient(${angle}deg, ${stops})`,
+        css:
+          params.type === "radial"
+            ? `radial-gradient(circle at center, ${stops})`
+            : `linear-gradient(${angle}deg, ${stops})`,
       };
     }
     case "video":
@@ -72,7 +81,10 @@ function normalize(raw: unknown): PublicBackground | null {
         kind: "video",
         src: params.src,
         poster: typeof params.poster === "string" ? params.poster : undefined,
-        objectFit: params.objectFit === "contain" || params.objectFit === "fill" ? params.objectFit : "cover",
+        objectFit:
+          params.objectFit === "contain" || params.objectFit === "fill"
+            ? params.objectFit
+            : "cover",
         autoplay: params.autoplay !== false,
         loop: params.loop !== false,
         muted: params.muted !== false,
@@ -99,17 +111,39 @@ export function PublicProfileBackground({
   if (!bg) return null;
   switch (bg.kind) {
     case "solid":
-      return <div aria-hidden className={LAYER} style={{ backgroundColor: bg.color }} />;
+      return (
+        <div
+          aria-hidden
+          className={LAYER}
+          style={{ backgroundColor: bg.color }}
+        />
+      );
     case "gradient":
-      return <div aria-hidden className={LAYER} style={{ backgroundImage: bg.css }} />;
+      return (
+        <div
+          aria-hidden
+          className={LAYER}
+          style={{ backgroundImage: bg.css }}
+        />
+      );
     case "video":
       return <VideoBackground bg={bg} />;
     case "shader":
-      return <ShaderBackground shaderType={bg.shaderType} params={bg.params} thumbnailUrl={thumbnailUrl} />;
+      return (
+        <ShaderBackground
+          shaderType={bg.shaderType}
+          params={bg.params}
+          thumbnailUrl={thumbnailUrl}
+        />
+      );
   }
 }
 
-function VideoBackground({ bg }: { bg: Extract<PublicBackground, { kind: "video" }> }) {
+function VideoBackground({
+  bg,
+}: {
+  bg: Extract<PublicBackground, { kind: "video" }>;
+}) {
   const reduceMotion = usePrefersReducedMotion();
   // Data saver / weak devices get the poster only (SSR + hydration render the poster too).
   const constrained = useConstrainedDevice();
@@ -131,7 +165,12 @@ function VideoBackground({ bg }: { bg: Extract<PublicBackground, { kind: "video"
         />
       ) : bg.poster ? (
         // eslint-disable-next-line @next/next/no-img-element -- API-owned media URL, decorative
-        <img src={bg.poster} alt="" className="h-full w-full" style={{ objectFit: bg.objectFit }} />
+        <img
+          src={bg.poster}
+          alt=""
+          className="h-full w-full"
+          style={{ objectFit: bg.objectFit }}
+        />
       ) : null}
     </div>
   );
@@ -156,10 +195,21 @@ function ShaderBackground({
 
   return (
     <div ref={ref} aria-hidden className={LAYER} style={fallback}>
-      {capable ? <LazyShader shaderType={shaderType} params={params} paused={reduceMotion || !onScreen} /> : null}
+      {capable ? (
+        <LazyShader
+          shaderType={shaderType}
+          params={params}
+          paused={reduceMotion || !onScreen}
+        />
+      ) : null}
       {thumbnail ? (
         // eslint-disable-next-line @next/next/no-img-element -- API-owned media URL, decorative
-        <img src={thumbnail} alt="" decoding="async" className="h-full w-full object-cover" />
+        <img
+          src={thumbnail}
+          alt=""
+          decoding="async"
+          className="h-full w-full object-cover"
+        />
       ) : null}
     </div>
   );

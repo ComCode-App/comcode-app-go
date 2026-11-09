@@ -52,10 +52,10 @@ export const categoriesService = {
   },
 
   async listActive(): Promise<CategorySummary[]> {
-    const res = await platformRequest<{ data?: CategorySummary[]; items?: CategorySummary[] } | CategorySummary[]>(
-      "GET",
-      "/v1/platform/categories/active",
-    );
+    const res = await platformRequest<
+      | { data?: CategorySummary[]; items?: CategorySummary[] }
+      | CategorySummary[]
+    >("GET", "/v1/platform/categories/active");
     if (Array.isArray(res)) return res;
     if (Array.isArray(res?.data)) return res.data;
     if (Array.isArray(res?.items)) return res.items;
@@ -70,11 +70,9 @@ export const categoriesService = {
   },
 
   async create(payload: UpsertCategoryPayload) {
-    return platformRequest<CategoryDetail>(
-      "POST",
-      "/v1/platform/categories",
-      { body: payload },
-    );
+    return platformRequest<CategoryDetail>("POST", "/v1/platform/categories", {
+      body: payload,
+    });
   },
 
   async update(uuid: string, payload: UpsertCategoryPayload) {
@@ -93,9 +91,6 @@ export const categoriesService = {
   },
 
   async meta() {
-    return platformRequest<ResourceMeta>(
-      "GET",
-      "/v1/platform/categories/meta",
-    );
+    return platformRequest<ResourceMeta>("GET", "/v1/platform/categories/meta");
   },
 };

@@ -23,7 +23,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
-import { eventTypeLabel, subjectTypeLabel } from "@/features/analytics/lib/event-labels";
+import {
+  eventTypeLabel,
+  subjectTypeLabel,
+} from "@/features/analytics/lib/event-labels";
 import { datetime } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
@@ -39,7 +42,14 @@ import {
 import { RawEventDrawer } from "./raw-event-drawer";
 
 /** URL ⇄ filter keys. `from` / `to` are local `yyyy-MM-dd` days. */
-const FILTER_KEYS = ["event_type", "subject_type", "subject_id", "country", "from", "to"] as const;
+const FILTER_KEYS = [
+  "event_type",
+  "subject_type",
+  "subject_id",
+  "country",
+  "from",
+  "to",
+] as const;
 type FilterKey = (typeof FILTER_KEYS)[number];
 type Filters = Partial<Record<FilterKey, string>>;
 
@@ -70,7 +80,9 @@ export function RawEventsPage() {
 
   // A bare visit starts on the last 7 days so the default view stays small and recent. Once the user applies filters (even none) the URL is the only source.
   const [defaultFrom, setDefaultFrom] = useState<string | undefined>(() =>
-    searchParams.toString() === "" ? daysAgo(DEFAULT_WINDOW_DAYS - 1) : undefined,
+    searchParams.toString() === ""
+      ? daysAgo(DEFAULT_WINDOW_DAYS - 1)
+      : undefined,
   );
 
   // Applied filters live in the URL so KPI tiles and definitions can deep-link here.
@@ -84,7 +96,10 @@ export function RawEventsPage() {
     return out;
   }, [defaultFrom, searchParams]);
 
-  const listState = useServerListState({ initialPageSize: 20, initialSort: "" });
+  const listState = useServerListState({
+    initialPageSize: 20,
+    initialSort: "",
+  });
   const { setPagination } = listState;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [draft, setDraft] = useState<EntityFilterValues>({});
@@ -109,7 +124,10 @@ export function RawEventsPage() {
     () => new Map((definitions.data?.items ?? []).map((d) => [d.key, d.name])),
     [definitions.data],
   );
-  const typeLabel = useCallback((type: string) => eventTypeLabel(t, type, defNames.get(type)), [defNames, t]);
+  const typeLabel = useCallback(
+    (type: string) => eventTypeLabel(t, type, defNames.get(type)),
+    [defNames, t],
+  );
 
   const params = useMemo<RawEventParams>(
     () => ({
@@ -140,7 +158,10 @@ export function RawEventsPage() {
             key: "event_type",
             labelKey: "platform_analytics.events.fields.type",
             variant: "select",
-            options: defs.map((d) => ({ value: d.key, label: `${typeLabel(d.key)} (${d.key})` })),
+            options: defs.map((d) => ({
+              value: d.key,
+              label: `${typeLabel(d.key)} (${d.key})`,
+            })),
           }
         : {
             key: "event_type",
@@ -152,7 +173,10 @@ export function RawEventsPage() {
         key: "subject_type",
         labelKey: "platform_analytics.events.fields.subject_type",
         variant: "select",
-        options: SUBJECT_TYPES.map((s) => ({ value: s, label: subjectTypeLabel(t, s) })),
+        options: SUBJECT_TYPES.map((s) => ({
+          value: s,
+          label: subjectTypeLabel(t, s),
+        })),
       },
       {
         key: "subject_id",
@@ -166,8 +190,16 @@ export function RawEventsPage() {
         variant: "text",
         placeholderKey: "platform_analytics.events.placeholders.country",
       },
-      { key: "from", labelKey: "platform_analytics.events.filters.from", variant: "date" },
-      { key: "to", labelKey: "platform_analytics.events.filters.to", variant: "date" },
+      {
+        key: "from",
+        labelKey: "platform_analytics.events.filters.from",
+        variant: "date",
+      },
+      {
+        key: "to",
+        labelKey: "platform_analytics.events.filters.to",
+        variant: "date",
+      },
     ];
   }, [definitions.data, t, typeLabel]);
 
@@ -178,7 +210,7 @@ export function RawEventsPage() {
         labelKey: "platform_analytics.events.fields.occurred_at",
         enableSorting: false,
         cell: ({ row }) => (
-          <span className="tabular-nums whitespace-nowrap">
+          <span className="whitespace-nowrap tabular-nums">
             {datetime(row.original.occurred_at, "dd.MM.yyyy HH:mm:ss", locale)}
           </span>
         ),
@@ -190,8 +222,12 @@ export function RawEventsPage() {
         gridPrimary: true,
         cell: ({ row }) => (
           <div className="min-w-0">
-            <div className="truncate text-sm font-medium">{typeLabel(row.original.type)}</div>
-            <div className="text-muted-foreground truncate font-mono text-xs">{row.original.type}</div>
+            <div className="truncate text-sm font-medium">
+              {typeLabel(row.original.type)}
+            </div>
+            <div className="text-muted-foreground truncate font-mono text-xs">
+              {row.original.type}
+            </div>
           </div>
         ),
       }),
@@ -205,7 +241,10 @@ export function RawEventsPage() {
             <Badge variant="outline" title={row.original.subject.type}>
               {subjectTypeLabel(t, row.original.subject.type)}
             </Badge>
-            <span className="text-muted-foreground truncate font-mono text-xs" title={row.original.subject.id}>
+            <span
+              className="text-muted-foreground truncate font-mono text-xs"
+              title={row.original.subject.id}
+            >
               {row.original.subject.id}
             </span>
           </div>
@@ -229,7 +268,9 @@ export function RawEventsPage() {
         enableSorting: false,
         cell: ({ row }) => {
           const c = row.original.context ?? {};
-          const text = [c.device_type, c.browser, c.os].filter(Boolean).join(" · ");
+          const text = [c.device_type, c.browser, c.os]
+            .filter(Boolean)
+            .join(" · ");
           return text || <span className="text-muted-foreground">—</span>;
         },
       }),
@@ -239,7 +280,9 @@ export function RawEventsPage() {
         enableSorting: false,
         defaultHidden: true,
         cell: ({ row }) => (
-          <span className="font-mono text-xs">{row.original.session_id || "—"}</span>
+          <span className="font-mono text-xs">
+            {row.original.session_id || "—"}
+          </span>
         ),
       }),
       createColumn<RawEvent>({
@@ -283,7 +326,11 @@ export function RawEventsPage() {
     to: t("platform_analytics.events.chip.to"),
   };
   const chipValue = (k: FilterKey, v: string) =>
-    k === "event_type" ? typeLabel(v) : k === "subject_type" ? subjectTypeLabel(t, v) : v;
+    k === "event_type"
+      ? typeLabel(v)
+      : k === "subject_type"
+        ? subjectTypeLabel(t, v)
+        : v;
   const chips = FILTER_KEYS.filter((k) => applied[k]).map((k) => ({
     key: k,
     label: `${chipLabels[k]}: ${chipValue(k, applied[k]!)}`,
@@ -295,20 +342,31 @@ export function RawEventsPage() {
       description={t("platform_analytics.events.subtitle")}
       permission={permissions.analytics.read}
       forbiddenFallback={
-        <ErrorState title={t("common.error_forbidden")} description={t("platform_analytics.forbidden")} />
+        <ErrorState
+          title={t("common.error_forbidden")}
+          description={t("platform_analytics.forbidden")}
+        />
       }
       breadcrumbs={[
         { label: t("layout.breadcrumb_home"), href: routes.platform.home },
-        { label: t("layout.nav_platform_analytics"), href: routes.platform.analytics.root },
+        {
+          label: t("layout.nav_platform_analytics"),
+          href: routes.platform.analytics.root,
+        },
         { label: t("platform_analytics.events.title") },
       ]}
     >
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-muted-foreground text-sm">
           {listQuery.data
-            ? t(totalCapped ? "platform_analytics.events.total_capped" : "platform_analytics.events.total", {
-                count: new Intl.NumberFormat(locale).format(total),
-              })
+            ? t(
+                totalCapped
+                  ? "platform_analytics.events.total_capped"
+                  : "platform_analytics.events.total",
+                {
+                  count: new Intl.NumberFormat(locale).format(total),
+                },
+              )
             : " "}
         </p>
         {chips.map((chip) => (
@@ -318,14 +376,21 @@ export function RawEventsPage() {
               type="button"
               className="hover:bg-muted rounded-sm p-0.5"
               aria-label={t("platform_analytics.events.remove_filter")}
-              onClick={() => applyFilters({ ...applied, [chip.key]: undefined })}
+              onClick={() =>
+                applyFilters({ ...applied, [chip.key]: undefined })
+              }
             >
               <X className="size-3" />
             </button>
           </Badge>
         ))}
         {chips.length > 1 ? (
-          <Button variant="ghost" size="sm" className="h-7" onClick={() => applyFilters({})}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7"
+            onClick={() => applyFilters({})}
+          >
             {t("platform_analytics.events.clear_filters")}
           </Button>
         ) : null}
@@ -360,7 +425,11 @@ export function RawEventsPage() {
               setFiltersOpen(true);
             }}
             filtersActive={activeCount > 0}
-            filtersLabel={activeCount > 0 ? `${t("entity.filters")} (${activeCount})` : t("entity.filters")}
+            filtersLabel={
+              activeCount > 0
+                ? `${t("entity.filters")} (${activeCount})`
+                : t("entity.filters")
+            }
           />
         }
       />
@@ -385,7 +454,11 @@ export function RawEventsPage() {
         }}
         onFilterSubject={(subject) => {
           setSelected(null);
-          applyFilters({ ...applied, subject_type: subject.type, subject_id: subject.id });
+          applyFilters({
+            ...applied,
+            subject_type: subject.type,
+            subject_id: subject.id,
+          });
         }}
       />
     </EntityPage>

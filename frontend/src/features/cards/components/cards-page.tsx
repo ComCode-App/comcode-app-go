@@ -106,18 +106,18 @@ export function CardsPage() {
   return (
     <div className="space-y-6 pb-12">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b">
+      <div className="flex flex-col justify-between gap-4 border-b pb-2 md:flex-row md:items-center">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <CreditCard className="w-6 h-6 text-primary" />
+            <h1 className="text-foreground flex items-center gap-2 text-2xl font-bold tracking-tight">
+              <CreditCard className="text-primary h-6 w-6" />
               {t("cards.page_title")}
             </h1>
             <Badge variant="secondary" className="font-mono text-xs">
               {total} {t("cards.total_count_badge")}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm">
             {t("cards.page_description")}
           </p>
         </div>
@@ -128,7 +128,7 @@ export function CardsPage() {
             className="gap-2"
             onClick={() => setOrderOpen(true)}
           >
-            <ShoppingBag className="w-4 h-4 text-primary" />
+            <ShoppingBag className="text-primary h-4 w-4" />
             {t("cards.order_card_btn")}
           </Button>
 
@@ -138,7 +138,7 @@ export function CardsPage() {
             onClick={() => setActivationOpen(true)}
             disabled={cardQuotaReached}
           >
-            <KeyRound className="w-4 h-4 text-primary" />
+            <KeyRound className="text-primary h-4 w-4" />
             {t("cards.activate_card_btn")}
           </Button>
 
@@ -148,7 +148,7 @@ export function CardsPage() {
             onClick={() => handleOpenSettings(null)}
             disabled={cardQuotaReached}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             {t("cards.create_card_btn")}
           </Button>
         </div>
@@ -157,74 +157,84 @@ export function CardsPage() {
       <QuotaNotice feature="cards.max" />
 
       {/* KPI Overview Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card className="bg-card/60 backdrop-blur-sm">
-          <CardContent className="p-4 flex items-center justify-between">
+          <CardContent className="flex items-center justify-between p-4">
             <div className="space-y-1">
-              <p className="text-xs text-muted-foreground font-medium">{t("cards.kpi.total_cards")}</p>
-              <p className="text-2xl font-bold text-foreground">{total}</p>
+              <p className="text-muted-foreground text-xs font-medium">
+                {t("cards.kpi.total_cards")}
+              </p>
+              <p className="text-foreground text-2xl font-bold">{total}</p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-              <CreditCard className="w-5 h-5" />
+            <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-xl">
+              <CreditCard className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-card/60 backdrop-blur-sm">
-          <CardContent className="p-4 flex items-center justify-between">
+          <CardContent className="flex items-center justify-between p-4">
             <div className="space-y-1">
-              <p className="text-xs text-muted-foreground font-medium">{t("cards.kpi.active_cards")}</p>
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{activeCount}</p>
+              <p className="text-muted-foreground text-xs font-medium">
+                {t("cards.kpi.active_cards")}
+              </p>
+              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                {activeCount}
+              </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <Wifi className="w-5 h-5" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <Wifi className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-card/60 backdrop-blur-sm">
-          <CardContent className="p-4 flex items-center justify-between">
+          <CardContent className="flex items-center justify-between p-4">
             <div className="space-y-1">
-              <p className="text-xs text-muted-foreground font-medium">{t("cards.kpi.locked_cards")}</p>
-              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{lockedCount}</p>
+              <p className="text-muted-foreground text-xs font-medium">
+                {t("cards.kpi.locked_cards")}
+              </p>
+              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                {lockedCount}
+              </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-              <Lock className="w-5 h-5" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <Lock className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filter & View Switcher Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card p-3 rounded-xl border">
+      <div className="bg-card flex flex-col items-center justify-between gap-3 rounded-xl border p-3 sm:flex-row">
         <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder={t("cards.search_placeholder")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-9 text-sm"
+            className="h-9 pl-9 text-sm"
           />
         </div>
 
         <div className="flex items-center gap-2 self-end sm:self-auto">
-          <div className="flex items-center bg-muted/70 p-0.5 rounded-lg border">
+          <div className="bg-muted/70 flex items-center rounded-lg border p-0.5">
             <Button
               size="sm"
               variant={viewMode === "grid" ? "default" : "ghost"}
-              className="h-7 px-2.5 text-xs gap-1.5 rounded-md"
+              className="h-7 gap-1.5 rounded-md px-2.5 text-xs"
               onClick={() => setViewMode("grid")}
             >
-              <LayoutGrid className="w-3.5 h-3.5" />
+              <LayoutGrid className="h-3.5 w-3.5" />
               {t("cards.view_showcase")}
             </Button>
             <Button
               size="sm"
               variant={viewMode === "table" ? "default" : "ghost"}
-              className="h-7 px-2.5 text-xs gap-1.5 rounded-md"
+              className="h-7 gap-1.5 rounded-md px-2.5 text-xs"
               onClick={() => setViewMode("table")}
             >
-              <TableIcon className="w-3.5 h-3.5" />
+              <TableIcon className="h-3.5 w-3.5" />
               {t("cards.view_table")}
             </Button>
           </div>
@@ -233,22 +243,25 @@ export function CardsPage() {
 
       {/* Main Content Area */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 py-8">
+        <div className="grid grid-cols-1 gap-6 py-8 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="aspect-[1.586/1] rounded-2xl bg-muted/40 animate-pulse border" />
+            <div
+              key={i}
+              className="bg-muted/40 aspect-[1.586/1] animate-pulse rounded-2xl border"
+            />
           ))}
         </div>
       ) : cards.length === 0 ? (
         /* Empty State */
-        <div className="flex flex-col items-center justify-center py-16 text-center border rounded-2xl bg-card/40 p-8 space-y-4">
-          <div className="w-16 h-16 rounded-3xl bg-primary/10 text-primary flex items-center justify-center shadow-inner">
-            <Sparkles className="w-8 h-8" />
+        <div className="bg-card/40 flex flex-col items-center justify-center space-y-4 rounded-2xl border p-8 py-16 text-center">
+          <div className="bg-primary/10 text-primary flex h-16 w-16 items-center justify-center rounded-3xl shadow-inner">
+            <Sparkles className="h-8 w-8" />
           </div>
-          <div className="space-y-1 max-w-md">
-            <h3 className="text-lg font-bold text-foreground">
+          <div className="max-w-md space-y-1">
+            <h3 className="text-foreground text-lg font-bold">
               {t("cards.empty_title")}
             </h3>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {t("cards.empty_desc")}
             </p>
           </div>
@@ -259,7 +272,7 @@ export function CardsPage() {
               onClick={() => setActivationOpen(true)}
               disabled={cardQuotaReached}
             >
-              <KeyRound className="w-4 h-4 text-primary" />
+              <KeyRound className="text-primary h-4 w-4" />
               {t("cards.activate_card_btn")}
             </Button>
             <Button
@@ -268,14 +281,14 @@ export function CardsPage() {
               onClick={() => handleOpenSettings(null)}
               disabled={cardQuotaReached}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
               {t("cards.create_card_btn")}
             </Button>
           </div>
         </div>
       ) : viewMode === "grid" ? (
         /* Vitrin Grid View */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {cards.map((card) => (
             <InteractiveNFCCard
               key={card.uuid}
@@ -328,7 +341,11 @@ export function CardsPage() {
             ? selectedCard.route_uuid
             : undefined
         }
-        title={selectedCard ? `${selectedCard.name} · /c/${selectedCard.smart_code}` : ""}
+        title={
+          selectedCard
+            ? `${selectedCard.name} · /c/${selectedCard.smart_code}`
+            : ""
+        }
         open={qrOpen}
         onOpenChange={setQrOpen}
         suggestedLogoProfileUuid={selectedCard?.profile_uuid}

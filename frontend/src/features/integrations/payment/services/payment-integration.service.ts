@@ -21,15 +21,25 @@ export type IyzicoSettings = {
 
 export const paymentIntegrationService = {
   getSettings() {
-    return platformRequest<PaymentSettings>("GET", "/v1/platform/payment/settings");
+    return platformRequest<PaymentSettings>(
+      "GET",
+      "/v1/platform/payment/settings",
+    );
   },
   patchSettings(body: Partial<PaymentSettings>) {
-    return platformRequest<PaymentSettings>("PATCH", "/v1/platform/payment/settings", {
-      body,
-    });
+    return platformRequest<PaymentSettings>(
+      "PATCH",
+      "/v1/platform/payment/settings",
+      {
+        body,
+      },
+    );
   },
   getPayTR() {
-    return platformRequest<PayTRSettings>("GET", "/v1/platform/payment/providers/paytr");
+    return platformRequest<PayTRSettings>(
+      "GET",
+      "/v1/platform/payment/providers/paytr",
+    );
   },
   patchPayTR(body: {
     enabled?: boolean;

@@ -24,11 +24,11 @@ type Service struct {
 	rdb       *redis.Client
 	log       *slog.Logger
 
-	mu        sync.RWMutex
-	db        GeoIPDatabase
-	memCache  *MemoryCache
-	rdCache   *RedisCache
-	settings  Settings
+	mu         sync.RWMutex
+	db         GeoIPDatabase
+	memCache   *MemoryCache
+	rdCache    *RedisCache
+	settings   Settings
 	settingsAt time.Time
 }
 
@@ -280,18 +280,18 @@ func (s *Service) UpdateSettings(ctx context.Context, newSettings Settings) (*Se
 	}
 
 	row, err := s.q.UpdateGeoIPSettings(ctx, db.UpdateGeoIPSettingsParams{
-		Enabled:               pgtype.Bool{Bool: newSettings.Enabled, Valid: true},
-		Provider:              pgtype.Text{String: provider, Valid: true},
-		DatabaseType:          pgtype.Text{String: dbType, Valid: true},
-		DatabasePath:          pgtype.Text{String: dbPath, Valid: true},
-		AutoUpdateEnabled:     pgtype.Bool{Bool: newSettings.AutoUpdateEnabled, Valid: true},
-		UpdateIntervalHours:   pgtype.Int4{Int32: int32(updateInterval), Valid: true},
-		AccountIDEncrypted:    encAcc,
-		LicenseKeyEncrypted:   encLic,
-		DownloadUrlTemplate:   pgtype.Text{String: newSettings.DownloadURLTemplate, Valid: true},
-		CacheEnabled:          pgtype.Bool{Bool: newSettings.CacheEnabled, Valid: true},
-		CacheTtlHours:         pgtype.Int4{Int32: ttlHours, Valid: true},
-		CacheMaxEntries:       pgtype.Int4{Int32: int32(maxEntries), Valid: true},
+		Enabled:             pgtype.Bool{Bool: newSettings.Enabled, Valid: true},
+		Provider:            pgtype.Text{String: provider, Valid: true},
+		DatabaseType:        pgtype.Text{String: dbType, Valid: true},
+		DatabasePath:        pgtype.Text{String: dbPath, Valid: true},
+		AutoUpdateEnabled:   pgtype.Bool{Bool: newSettings.AutoUpdateEnabled, Valid: true},
+		UpdateIntervalHours: pgtype.Int4{Int32: int32(updateInterval), Valid: true},
+		AccountIDEncrypted:  encAcc,
+		LicenseKeyEncrypted: encLic,
+		DownloadUrlTemplate: pgtype.Text{String: newSettings.DownloadURLTemplate, Valid: true},
+		CacheEnabled:        pgtype.Bool{Bool: newSettings.CacheEnabled, Valid: true},
+		CacheTtlHours:       pgtype.Int4{Int32: ttlHours, Valid: true},
+		CacheMaxEntries:     pgtype.Int4{Int32: int32(maxEntries), Valid: true},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("update geoip settings: %w", err)

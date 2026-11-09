@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/clientip"
 	"encoding/json"
 	"errors"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/clientip"
 	"net/http"
 	"strings"
 	"time"

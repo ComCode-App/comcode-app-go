@@ -72,13 +72,11 @@ export function ProfilesPage() {
     [router],
   );
 
-  const handleDownloadVCard = useCallback(
-    async (profile: ProfileSummary) => {
-      const name = `${profile.first_name}_${profile.last_name}`.trim() || "contact";
-      await profilesService.downloadVCard(profile.uuid, name);
-    },
-    [],
-  );
+  const handleDownloadVCard = useCallback(async (profile: ProfileSummary) => {
+    const name =
+      `${profile.first_name}_${profile.last_name}`.trim() || "contact";
+    await profilesService.downloadVCard(profile.uuid, name);
+  }, []);
 
   const handleSetPrimary = useCallback(
     async (profile: ProfileSummary) => {
@@ -89,7 +87,8 @@ export function ProfilesPage() {
 
   const handleDelete = useCallback(
     async (profile: ProfileSummary) => {
-      const fullName = `${profile.first_name} ${profile.last_name}`.trim() || "Profile";
+      const fullName =
+        `${profile.first_name} ${profile.last_name}`.trim() || "Profile";
       const confirmed = await confirmDelete({
         title: t("profiles.delete_title"),
         description: t("profiles.delete_description", {
@@ -110,7 +109,13 @@ export function ProfilesPage() {
       onSetPrimary: (p) => void handleSetPrimary(p),
       onDelete: (p) => void handleDelete(p),
     }),
-    [handleDelete, handleDownloadVCard, handleEdit, handleSetPrimary, handleView],
+    [
+      handleDelete,
+      handleDownloadVCard,
+      handleEdit,
+      handleSetPrimary,
+      handleView,
+    ],
   );
 
   const columns = useProfilesColumns(rowHandlers);

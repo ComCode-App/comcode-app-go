@@ -37,7 +37,10 @@ export function OverviewPage() {
 
   const forbidden = !isPlatform || (isApiError(error) && error.isForbidden);
   const updatedAt = data
-    ? new Date(data.generated_at).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })
+    ? new Date(data.generated_at).toLocaleTimeString(locale, {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
     : null;
 
   return (
@@ -45,11 +48,16 @@ export function OverviewPage() {
       <PageHeader
         title={t("layout.home")}
         description={t("dashboard.description")}
-        breadcrumbs={[{ label: t("layout.breadcrumb_home"), href: routes.platform.home }]}
+        breadcrumbs={[
+          { label: t("layout.breadcrumb_home"), href: routes.platform.home },
+        ]}
       />
 
       {forbidden ? (
-        <EmptyState title={t("common.error_forbidden")} description={t("dashboard.forbidden_description")} />
+        <EmptyState
+          title={t("common.error_forbidden")}
+          description={t("dashboard.forbidden_description")}
+        />
       ) : (
         <div className="space-y-8">
           {!canRead ? (
@@ -57,14 +65,20 @@ export function OverviewPage() {
           ) : error ? (
             <ErrorState
               title={t("common.error_generic")}
-              description={isApiError(error) ? error.message : t("dashboard.error_description")}
+              description={
+                isApiError(error)
+                  ? error.message
+                  : t("dashboard.error_description")
+              }
               onRetry={() => void query.refetch()}
               retryLabel={t("common.retry")}
             />
           ) : (
             <div className="space-y-6">
               {updatedAt ? (
-                <p className="text-muted-foreground text-xs">{t("dashboard.updated_at", { time: updatedAt })}</p>
+                <p className="text-muted-foreground text-xs">
+                  {t("dashboard.updated_at", { time: updatedAt })}
+                </p>
               ) : null}
               <DashboardKpiGrid data={data} loading={loading} />
               <div className="grid gap-6 lg:grid-cols-2">

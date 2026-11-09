@@ -121,7 +121,11 @@
         transparent 1px
       );
     background-size: 48px 48px;
-    mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, black 25%, transparent 100%);
+    mask-image: radial-gradient(
+      ellipse 75% 65% at 50% 45%,
+      black 25%,
+      transparent 100%
+    );
   }
 
   .comcode-glass-card {
@@ -191,11 +195,7 @@
   }
 
   .dark .comcode-topbar {
-    background: color-mix(
-      in oklch,
-      var(--card) 88%,
-      var(--comcode-purple) 12%
-    );
+    background: color-mix(in oklch, var(--card) 88%, var(--comcode-purple) 12%);
     border-bottom-color: color-mix(
       in oklch,
       var(--comcode-accent) 22%,
@@ -224,10 +224,7 @@
 }
 [data-brand] {
   --primary: var(--brand-primary, var(--primary));
-  --primary-foreground: var(
-    --brand-primary-foreground,
-    --primary-foreground
-  );
+  --primary-foreground: var(--brand-primary-foreground, --primary-foreground);
   --accent: var(--brand-accent, var(--accent));
   --radius: var(--brand-radius, var(--radius));
 }
@@ -249,7 +246,8 @@ select:-webkit-autofill:hover,
 select:-webkit-autofill:focus,
 select:-webkit-autofill:active {
   -webkit-text-fill-color: var(--foreground) !important;
-  transition: background-color 5000000s ease-in-out 0s, color 5000000s ease-in-out 0s !important;
+  transition:
+    background-color 5000000s ease-in-out 0s,
+    color 5000000s ease-in-out 0s !important;
   caret-color: var(--foreground) !important;
 }
-

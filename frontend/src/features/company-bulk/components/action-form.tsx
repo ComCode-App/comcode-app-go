@@ -403,14 +403,20 @@ function LogoForm({ state, set }: SubProps) {
           <Label>{t("company_bulk.form.branding_source")}</Label>
           <Select
             value={state.brandingSource}
-            onValueChange={(v) => set({ brandingSource: v as "logo" | "cover" })}
+            onValueChange={(v) =>
+              set({ brandingSource: v as "logo" | "cover" })
+            }
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="logo">{t("company_bulk.form.branding_logo")}</SelectItem>
-              <SelectItem value="cover">{t("company_bulk.form.branding_cover")}</SelectItem>
+              <SelectItem value="logo">
+                {t("company_bulk.form.branding_logo")}
+              </SelectItem>
+              <SelectItem value="cover">
+                {t("company_bulk.form.branding_cover")}
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -485,7 +491,10 @@ function ThemeForm({ state, set }: SubProps) {
       </div>
       <div className="space-y-1.5">
         <Label>{t("company_bulk.form.layout")}</Label>
-        <Select value={state.layout} onValueChange={(layout) => set({ layout })}>
+        <Select
+          value={state.layout}
+          onValueChange={(layout) => set({ layout })}
+        >
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
@@ -510,7 +519,10 @@ function LinksForm({ state, set }: SubProps) {
   const { t } = useLocale();
   const platformsQuery = useActiveSocialPlatformsQuery();
   const platforms = platformsQuery.data ?? [];
-  const update = (i: number, patch: Partial<ActionFormState["links"][number]>) =>
+  const update = (
+    i: number,
+    patch: Partial<ActionFormState["links"][number]>,
+  ) =>
     set({
       links: state.links.map((l, idx) => (idx === i ? { ...l, ...patch } : l)),
     });

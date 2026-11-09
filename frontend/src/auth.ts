@@ -62,13 +62,18 @@ function isProtectedPath(pathname: string) {
   if (pathname === routes.app.root) return true;
   if (pathname.startsWith(`${routes.app.profile.root}`)) return true;
   if (pathname === routes.platform.root) return true;
-  if (pathname.startsWith(`${routes.platform.root}/`) && !isGuestAuthPath(pathname)) {
+  if (
+    pathname.startsWith(`${routes.platform.root}/`) &&
+    !isGuestAuthPath(pathname)
+  ) {
     return true;
   }
   return false;
 }
 
-function isOAuthProvider(provider: string | undefined): provider is OAuthProviderId {
+function isOAuthProvider(
+  provider: string | undefined,
+): provider is OAuthProviderId {
   return (
     provider !== undefined &&
     (OAUTH_PROVIDERS as readonly string[]).includes(provider)
@@ -365,9 +370,7 @@ const authHandlers = NextAuth(async () => ({
         session.user.id = token.sub ?? "";
       }
       (session as { error?: string }).error = token.error as
-        | "PasskeySessionError"
-        | "OAuthSessionError"
-        | undefined;
+        "PasskeySessionError" | "OAuthSessionError" | undefined;
       return session;
     },
   },

@@ -59,8 +59,9 @@ export function BankAccountDialog({
   const isEdit = Boolean(account);
 
   const { data: activeBanks = [] } = useActiveBanks();
-  const { data: accountData, isLoading: isLoadingAccount } =
-    useBankAccount(account?.uuid ?? null);
+  const { data: accountData, isLoading: isLoadingAccount } = useBankAccount(
+    account?.uuid ?? null,
+  );
   const { createMutation, updateMutation } = useBankAccountMutations();
 
   const activeAccount = accountData || account;
@@ -94,8 +95,8 @@ export function BankAccountDialog({
 
   const hasExtraFields = Boolean(
     activeAccount?.title ||
-      activeAccount?.account_number ||
-      activeAccount?.branch_code,
+    activeAccount?.account_number ||
+    activeAccount?.branch_code,
   );
   const [userExpanded, setUserExpanded] = useState<boolean | null>(null);
   const showAdvanced = userExpanded !== null ? userExpanded : hasExtraFields;
@@ -180,7 +181,7 @@ export function BankAccountDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEdit
@@ -193,8 +194,8 @@ export function BankAccountDialog({
         </DialogHeader>
 
         {isLoadingAccount && isEdit ? (
-          <div className="p-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin" />
+          <div className="text-muted-foreground flex items-center justify-center gap-2 p-8 text-sm">
+            <Loader2 className="h-4 w-4 animate-spin" />
             {t("common.loading")}
           </div>
         ) : (
@@ -202,7 +203,7 @@ export function BankAccountDialog({
             {/* Detected Bank Banner */}
             {detectedBank && (
               <div
-                className="p-3 rounded-xl flex items-center justify-between border shadow-2xs transition-all animate-in fade-in slide-in-from-top-1"
+                className="animate-in fade-in slide-in-from-top-1 flex items-center justify-between rounded-xl border p-3 shadow-2xs transition-all"
                 style={{
                   backgroundColor: `${detectedBank.brand_color || "#3b82f6"}12`,
                   borderColor: `${detectedBank.brand_color || "#3b82f6"}30`,
@@ -210,10 +211,9 @@ export function BankAccountDialog({
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden shadow-xs"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl text-xs font-bold text-white shadow-xs"
                     style={{
-                      backgroundColor:
-                        detectedBank.brand_color || "#3b82f6",
+                      backgroundColor: detectedBank.brand_color || "#3b82f6",
                     }}
                   >
                     {detectedBank.icon_url ? (
@@ -221,17 +221,17 @@ export function BankAccountDialog({
                       <img
                         src={detectedBank.icon_url}
                         alt={detectedBank.name}
-                        className="w-full h-full object-contain p-1"
+                        className="h-full w-full object-contain p-1"
                       />
                     ) : (
-                      <Landmark className="w-5 h-5 text-white" />
+                      <Landmark className="h-5 w-5 text-white" />
                     )}
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-foreground">
+                    <div className="text-foreground text-sm font-semibold">
                       {detectedBank.name}
                     </div>
-                    <div className="text-xs text-muted-foreground font-mono">
+                    <div className="text-muted-foreground font-mono text-xs">
                       {detectedBank.bic_swift
                         ? `BIC: ${detectedBank.bic_swift}`
                         : `EFT: ${detectedBank.code}`}
@@ -243,16 +243,20 @@ export function BankAccountDialog({
 
             {/* Primary Form Fields */}
             <div className="space-y-1.5">
-              <Label htmlFor="account-iban">{t("bank_accounts.fields.iban")}</Label>
+              <Label htmlFor="account-iban">
+                {t("bank_accounts.fields.iban")}
+              </Label>
               <Input
                 id="account-iban"
                 placeholder="TR00 0000 0000 0000 0000 0000 00"
                 value={rawIban}
                 onChange={handleIbanChange}
-                className="font-mono uppercase tracking-wider text-sm font-medium"
+                className="font-mono text-sm font-medium tracking-wider uppercase"
               />
               {errors.iban && (
-                <p className="text-xs text-destructive">{errors.iban.message}</p>
+                <p className="text-destructive text-xs">
+                  {errors.iban.message}
+                </p>
               )}
             </div>
 
@@ -266,7 +270,7 @@ export function BankAccountDialog({
                 {...register("account_holder")}
               />
               {errors.account_holder && (
-                <p className="text-xs text-destructive">
+                <p className="text-destructive text-xs">
                   {errors.account_holder.message}
                 </p>
               )}
@@ -279,10 +283,7 @@ export function BankAccountDialog({
                   control={control}
                   name="currency"
                   render={({ field }) => (
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger>
                         <SelectValue placeholder="TRY" />
                       </SelectTrigger>
@@ -300,8 +301,8 @@ export function BankAccountDialog({
 
               <div className="space-y-1.5">
                 <Label>{t("bank_accounts.fields.is_primary")}</Label>
-                <div className="flex items-center justify-between rounded-lg border p-2.5 shadow-2xs h-9">
-                  <span className="text-xs text-muted-foreground">
+                <div className="flex h-9 items-center justify-between rounded-lg border p-2.5 shadow-2xs">
+                  <span className="text-muted-foreground text-xs">
                     {isPrimary ? t("common.yes") : t("common.no")}
                   </span>
                   <Controller
@@ -323,16 +324,16 @@ export function BankAccountDialog({
               <button
                 type="button"
                 onClick={() => setUserExpanded(!showAdvanced)}
-                className="text-xs font-medium text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs font-medium transition-colors"
               >
                 {showAdvanced ? (
                   <>
-                    <ChevronUp className="w-3.5 h-3.5" />
+                    <ChevronUp className="h-3.5 w-3.5" />
                     {t("bank_accounts.hide_details")}
                   </>
                 ) : (
                   <>
-                    <ChevronDown className="w-3.5 h-3.5" />
+                    <ChevronDown className="h-3.5 w-3.5" />
                     {t("bank_accounts.show_details")}
                   </>
                 )}
@@ -340,7 +341,7 @@ export function BankAccountDialog({
             </div>
 
             {showAdvanced && (
-              <div className="space-y-4 pt-2 border-t animate-in fade-in">
+              <div className="animate-in fade-in space-y-4 border-t pt-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="account-title">
                     {t("bank_accounts.fields.title")}
@@ -377,15 +378,15 @@ export function BankAccountDialog({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label>
-                    {t("bank_accounts.fields.bank_override")}
-                  </Label>
+                  <Label>{t("bank_accounts.fields.bank_override")}</Label>
                   <Controller
                     control={control}
                     name="bank_uuid"
                     render={({ field }) => (
                       <Select
-                        value={field.value || (detectedBank ? detectedBank.uuid : "")}
+                        value={
+                          field.value || (detectedBank ? detectedBank.uuid : "")
+                        }
                         onValueChange={field.onChange}
                       >
                         <SelectTrigger>
@@ -407,8 +408,8 @@ export function BankAccountDialog({
 
                 <div className="space-y-1.5">
                   <Label>{t("bank_accounts.fields.is_active")}</Label>
-                  <div className="flex items-center justify-between rounded-lg border p-2.5 shadow-2xs h-9">
-                    <span className="text-xs text-muted-foreground">
+                  <div className="flex h-9 items-center justify-between rounded-lg border p-2.5 shadow-2xs">
+                    <span className="text-muted-foreground text-xs">
                       {isActive ? t("common.active") : t("common.inactive")}
                     </span>
                     <Controller
@@ -435,7 +436,7 @@ export function BankAccountDialog({
                 {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={isSaving}>
-                {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {t("common.save")}
               </Button>
             </DialogFooter>

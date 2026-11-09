@@ -8,26 +8,44 @@ import { useCallback, useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
-import { EntityPage, EntityRowActions, EntityTable, EntityToolbar } from "@/components/entity";
+import {
+  EntityPage,
+  EntityRowActions,
+  EntityTable,
+  EntityToolbar,
+} from "@/components/entity";
 import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
-import { eventCategoryLabel, eventTypeLabel } from "@/features/analytics/lib/event-labels";
+import {
+  eventCategoryLabel,
+  eventTypeLabel,
+} from "@/features/analytics/lib/event-labels";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
-import { useEventDefinitionMutations, useEventDefinitions } from "../hooks/use-platform-analytics";
-import type { EventDefinition, EventDefinitionInput } from "../services/platform-analytics.service";
+import {
+  useEventDefinitionMutations,
+  useEventDefinitions,
+} from "../hooks/use-platform-analytics";
+import type {
+  EventDefinition,
+  EventDefinitionInput,
+} from "../services/platform-analytics.service";
 import { EventDefinitionDialog } from "./event-definition-dialog";
 
 type Flag = "enabled" | "is_public" | "aggregate_enabled";
 
 /** Full input from a stored definition with one flag flipped (PATCH needs key + name). */
-function withFlag(def: EventDefinition, flag: Flag, value: boolean): EventDefinitionInput {
+function withFlag(
+  def: EventDefinition,
+  flag: Flag,
+  value: boolean,
+): EventDefinitionInput {
   return {
     key: def.key,
     name: def.name,
@@ -68,7 +86,9 @@ export function EventDefinitionsPage() {
   const handleDelete = useCallback(
     async (def: EventDefinition) => {
       const ok = await confirmDelete({
-        title: t("platform_analytics.definitions.delete_title", { key: eventTypeLabel(t, def.key, def.name) }),
+        title: t("platform_analytics.definitions.delete_title", {
+          key: eventTypeLabel(t, def.key, def.name),
+        }),
         description: t("platform_analytics.definitions.delete_description"),
       });
       if (ok) remove.mutate(def.id);
@@ -90,7 +110,9 @@ export function EventDefinitionsPage() {
     const flagLabels: Record<Flag, string> = {
       enabled: t("platform_analytics.definitions.fields.enabled"),
       is_public: t("platform_analytics.definitions.fields.is_public"),
-      aggregate_enabled: t("platform_analytics.definitions.fields.aggregate_enabled"),
+      aggregate_enabled: t(
+        "platform_analytics.definitions.fields.aggregate_enabled",
+      ),
     };
     const flagCell = (flag: Flag) =>
       function FlagCell({ row }: { row: { original: EventDefinition } }) {
@@ -100,7 +122,9 @@ export function EventDefinitionsPage() {
             checked={def[flag]}
             disabled={toggle.isPending}
             aria-label={flagLabels[flag]}
-            onCheckedChange={(v) => toggle.mutate({ id: def.id, body: withFlag(def, flag, v) })}
+            onCheckedChange={(v) =>
+              toggle.mutate({ id: def.id, body: withFlag(def, flag, v) })
+            }
           />
         );
       };
@@ -119,7 +143,9 @@ export function EventDefinitionsPage() {
             <div className="truncate text-sm font-medium">
               {eventTypeLabel(t, row.original.key, row.original.name)}
             </div>
-            <div className="text-muted-foreground truncate font-mono text-xs">{row.original.key}</div>
+            <div className="text-muted-foreground truncate font-mono text-xs">
+              {row.original.key}
+            </div>
           </div>
         ),
       }),
@@ -161,7 +187,9 @@ export function EventDefinitionsPage() {
         labelKey: "platform_analytics.definitions.fields.retention_days",
         cell: ({ row }) => (
           <span className="tabular-nums">
-            {t("platform_analytics.definitions.days", { count: row.original.retention_days ?? 0 })}
+            {t("platform_analytics.definitions.days", {
+              count: row.original.retention_days ?? 0,
+            })}
           </span>
         ),
       }),
@@ -173,7 +201,8 @@ export function EventDefinitionsPage() {
         defaultHidden: true,
         cell: ({ row }) => {
           const props = row.original.required_properties ?? [];
-          if (props.length === 0) return <span className="text-muted-foreground">—</span>;
+          if (props.length === 0)
+            return <span className="text-muted-foreground">—</span>;
           return (
             <div className="flex flex-wrap gap-1">
               {props.map((p) => (
@@ -232,11 +261,17 @@ export function EventDefinitionsPage() {
       description={t("platform_analytics.definitions.subtitle")}
       permission={permissions.events.manage}
       forbiddenFallback={
-        <ErrorState title={t("common.error_forbidden")} description={t("platform_analytics.forbidden")} />
+        <ErrorState
+          title={t("common.error_forbidden")}
+          description={t("platform_analytics.forbidden")}
+        />
       }
       breadcrumbs={[
         { label: t("layout.breadcrumb_home"), href: routes.platform.home },
-        { label: t("layout.nav_platform_analytics"), href: routes.platform.analytics.root },
+        {
+          label: t("layout.nav_platform_analytics"),
+          href: routes.platform.analytics.root,
+        },
         { label: t("platform_analytics.definitions.title") },
       ]}
       actions={
@@ -248,8 +283,14 @@ export function EventDefinitionsPage() {
     >
       {listQuery.data ? (
         <p className="text-muted-foreground text-sm">
-          {t("platform_analytics.definitions.summary", { total: items.length, enabled: enabledCount })}{" "}
-          <Link href={routes.platform.analytics.config} className="underline-offset-4 hover:underline">
+          {t("platform_analytics.definitions.summary", {
+            total: items.length,
+            enabled: enabledCount,
+          })}{" "}
+          <Link
+            href={routes.platform.analytics.config}
+            className="underline-offset-4 hover:underline"
+          >
             {t("platform_analytics.definitions.config_link")}
           </Link>
         </p>
@@ -265,7 +306,10 @@ export function EventDefinitionsPage() {
         emptyTitle={t("platform_analytics.definitions.empty_title")}
         emptyDescription={t("platform_analytics.definitions.empty_description")}
         manual={{ filtering: false, sorting: false, pagination: false }}
-        features={{ persistKey: "platform-event-definitions-v1", rowSelection: false }}
+        features={{
+          persistKey: "platform-event-definitions-v1",
+          rowSelection: false,
+        }}
         toolbarExtra={
           <EntityToolbar
             onRefresh={() => void listQuery.refetch()}
@@ -274,7 +318,11 @@ export function EventDefinitionsPage() {
         }
       />
 
-      <EventDefinitionDialog open={dialogOpen} onOpenChange={setDialogOpen} definition={editing} />
+      <EventDefinitionDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        definition={editing}
+      />
     </EntityPage>
   );
 }

@@ -75,7 +75,7 @@ export function BackgroundViewer({
             controls={false}
           />
         ) : (
-          <div className="flex h-full min-h-[240px] items-center justify-center text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex h-full min-h-[240px] items-center justify-center text-sm">
             —
           </div>
         )}
@@ -87,8 +87,11 @@ export function BackgroundViewer({
   const entry = SHADER_REGISTRY[doc.shaderType];
   if (!entry) {
     return (
-      <div className={cn(frameClass, "flex items-center justify-center")} style={style}>
-        <span className="text-sm text-muted-foreground">{doc.shaderType}</span>
+      <div
+        className={cn(frameClass, "flex items-center justify-center")}
+        style={style}
+      >
+        <span className="text-muted-foreground text-sm">{doc.shaderType}</span>
       </div>
     );
   }
@@ -101,7 +104,10 @@ export function BackgroundViewer({
 
   // The palette fallback sits under the canvas: visible while WebGL initialises or if it fails.
   return (
-    <div className={frameClass} style={{ ...shaderFallbackStyle(doc.params), ...style }}>
+    <div
+      className={frameClass}
+      style={{ ...shaderFallbackStyle(doc.params), ...style }}
+    >
       <Component
         {...params}
         style={{ width: "100%", height: "100%", display: "block" }}

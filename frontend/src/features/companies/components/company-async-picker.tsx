@@ -24,25 +24,20 @@ export function CompanyAsyncPicker({
   const { t } = useLocale();
   const [optionCache, setOptionCache] = useState<ComboboxOption[]>([]);
 
-  const loadOptions = useCallback(
-    async (query: string) => {
-      const result = await companiesService.list({
-        limit: 20,
-        offset: 0,
-        q: query.trim() || undefined,
-      });
-      const options = result.items.map(
-        (company): ComboboxOption => ({
-          value: company.uuid,
-          label: company.name,
-          description: company.slug,
-        }),
-      );
-      setOptionCache((prev) => mergeOptions(prev, options));
-      return options;
-    },
-    [],
-  );
+  const loadOptions = useCallback(async (query: string) => {
+    const result = await companiesService.list({
+      limit: 20,
+      offset: 0,
+      q: query.trim() || undefined,
+    });
+    const options = result.items.map((company): ComboboxOption => ({
+      value: company.uuid,
+      label: company.name,
+      description: company.slug,
+    }));
+    setOptionCache((prev) => mergeOptions(prev, options));
+    return options;
+  }, []);
 
   return (
     <AppCombobox

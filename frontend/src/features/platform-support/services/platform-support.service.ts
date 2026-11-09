@@ -3,7 +3,8 @@ import { apiClient, unwrap } from "@/lib/api";
 
 export type SupportCard = components["schemas"]["SupportCard"];
 export type SupportRoute = components["schemas"]["SupportRoute"];
-export type SupportRouteHistoryEntry = components["schemas"]["SupportRouteHistoryEntry"];
+export type SupportRouteHistoryEntry =
+  components["schemas"]["SupportRouteHistoryEntry"];
 export type QuarantineRelease = components["schemas"]["QuarantineRelease"];
 
 /** Platform card and route support screens (TEC-950). Writes need a step-up grant. */
@@ -15,7 +16,9 @@ export const platformSupportService = {
   },
   async retireCard(uuid: string) {
     return unwrap<SupportCard>(
-      await apiClient.POST("/v1/platform/cards/{uuid}/retire", { params: { path: { uuid } } }),
+      await apiClient.POST("/v1/platform/cards/{uuid}/retire", {
+        params: { path: { uuid } },
+      }),
     );
   },
   async reassignCard(uuid: string, profileUuid: string) {
@@ -33,7 +36,9 @@ export const platformSupportService = {
   },
   async releasePath(path: string) {
     return unwrap<QuarantineRelease>(
-      await apiClient.POST("/v1/platform/routes/quarantine/release", { body: { path } }),
+      await apiClient.POST("/v1/platform/routes/quarantine/release", {
+        body: { path },
+      }),
     );
   },
 };

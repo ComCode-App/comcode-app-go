@@ -19,6 +19,9 @@ export function useCompanyAnalyticsAccess() {
     isCompany,
     isAdmin,
     isOfficeManager,
-    canRead: isCompany && (isAdmin || isOfficeManager) && can(permissions.companyAnalytics.read),
+    canRead:
+      isCompany &&
+      (isAdmin || isOfficeManager) &&
+      can(permissions.companyAnalytics.read),
   };
 }

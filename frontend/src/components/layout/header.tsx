@@ -50,12 +50,9 @@ export function Header({
       <div className="relative z-10 flex h-full items-center gap-3 p-4 sm:gap-4">
         <SidebarTrigger
           variant="outline"
-          className="border-border/70 bg-background/50 max-md:scale-125 dark:bg-card/40"
+          className="border-border/70 bg-background/50 dark:bg-card/40 max-md:scale-125"
         />
-        <Separator
-          orientation="vertical"
-          className="bg-border/80 h-6"
-        />
+        <Separator orientation="vertical" className="bg-border/80 h-6" />
         <div className="flex min-w-0 flex-1 items-center">{children}</div>
         <div className="ms-auto flex items-center gap-1">
           <SearchTrigger compact className="md:hidden" />

@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Go 1.22+ (match `backend/go.mod`)
-- Node 20.9+ and pnpm
+- Node 22.13+ (`frontend/.nvmrc`, same as the Docker images) and pnpm 10.15.1
 - Docker + Compose
 - golang-migrate, sqlc, air, golangci-lint, gofumpt — see [backend/TOOLCHAIN.md](../backend/TOOLCHAIN.md)
 

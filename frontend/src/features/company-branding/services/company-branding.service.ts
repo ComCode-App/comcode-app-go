@@ -6,11 +6,17 @@ export type CompanyMedia = components["schemas"]["CompanyMedia"];
 export type CompanyMediaKind = components["schemas"]["CompanyMediaKind"];
 export type CompanyMediaUsage = components["schemas"]["CompanyMediaUsage"];
 export type CompanyBranding = components["schemas"]["CompanyBranding"];
-export type UpdateCompanyBrandingRequest = components["schemas"]["UpdateCompanyBrandingRequest"];
+export type UpdateCompanyBrandingRequest =
+  components["schemas"]["UpdateCompanyBrandingRequest"];
 
 type Page<T> = { items: T[]; total: number; limit: number; offset: number };
 
-export const MEDIA_KINDS: CompanyMediaKind[] = ["logo", "cover", "image", "document"];
+export const MEDIA_KINDS: CompanyMediaKind[] = [
+  "logo",
+  "cover",
+  "image",
+  "document",
+];
 
 export const companyBrandingKeys = {
   all: ["company-branding"] as const,
@@ -33,15 +39,24 @@ export const companyBrandingService = {
     formData.append("file", input.file);
     formData.append("kind", input.kind);
     if (input.name) formData.append("name", input.name);
-    return platformFormRequest<CompanyMedia>("POST", "/v1/company/media", formData);
+    return platformFormRequest<CompanyMedia>(
+      "POST",
+      "/v1/company/media",
+      formData,
+    );
   },
   deleteMedia(uuid: string) {
-    return platformRequest<{ status: string }>("DELETE", `/v1/company/media/${uuid}`);
+    return platformRequest<{ status: string }>(
+      "DELETE",
+      `/v1/company/media/${uuid}`,
+    );
   },
   getBranding() {
     return platformRequest<CompanyBranding>("GET", "/v1/company/branding");
   },
   updateBranding(body: UpdateCompanyBrandingRequest) {
-    return platformRequest<CompanyBranding>("PUT", "/v1/company/branding", { body });
+    return platformRequest<CompanyBranding>("PUT", "/v1/company/branding", {
+      body,
+    });
   },
 };

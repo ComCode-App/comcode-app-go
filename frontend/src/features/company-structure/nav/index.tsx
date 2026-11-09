@@ -1,4 +1,12 @@
-import { BarChart3, Building, Layers, MapPin, Network, Palette, UsersRound } from "lucide-react";
+import {
+  BarChart3,
+  Building,
+  Layers,
+  MapPin,
+  Network,
+  Palette,
+  UsersRound,
+} from "lucide-react";
 
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";

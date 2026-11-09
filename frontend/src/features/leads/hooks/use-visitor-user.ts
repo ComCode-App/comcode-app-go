@@ -12,10 +12,15 @@ import { mapMeToAuthUser, type Me } from "@/lib/auth/types";
  * checks the session lazily, only once `enabled` (e.g. the exchange form is opened).
  * Anonymous visitors resolve to `null` without any API call beyond the session check.
  */
-export function useVisitorUser(enabled: boolean): { user: AuthUser | null; ready: boolean } {
+export function useVisitorUser(enabled: boolean): {
+  user: AuthUser | null;
+  ready: boolean;
+} {
   const storeUser = useAuthStore((s) => s.user);
   const storeBootstrapped = useAuthStore((s) => s.bootstrapped);
-  const [fetched, setFetched] = useState<{ user: AuthUser | null } | null>(null);
+  const [fetched, setFetched] = useState<{ user: AuthUser | null } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!enabled || storeBootstrapped || fetched) return;
@@ -25,7 +30,9 @@ export function useVisitorUser(enabled: boolean): { user: AuthUser | null; ready
       try {
         const session = await fetchSession();
         if (session.authenticated) {
-          const me = await unwrap<Me>(await apiClient.GET("/v1/auth/me"), { silent: true });
+          const me = await unwrap<Me>(await apiClient.GET("/v1/auth/me"), {
+            silent: true,
+          });
           user = mapMeToAuthUser(me);
         }
       } catch {

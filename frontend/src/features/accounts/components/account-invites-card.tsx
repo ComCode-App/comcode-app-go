@@ -44,16 +44,22 @@ export function AccountInvitesCard({ isOwner }: { isOwner: boolean }) {
   const { user } = useAuth();
   const { confirmDelete } = useDialogs();
   const queryClient = useQueryClient();
-  const canRead = Boolean(user?.permissions.includes(Permission.AppAccountInvitesRead));
-  const canWrite = Boolean(user?.permissions.includes(Permission.AppAccountInvitesWrite));
+  const canRead = Boolean(
+    user?.permissions.includes(Permission.AppAccountInvitesRead),
+  );
+  const canWrite = Boolean(
+    user?.permissions.includes(Permission.AppAccountInvitesWrite),
+  );
 
   const invitesQuery = useQuery({
     queryKey: inviteKeys.list,
     queryFn: accountService.invites,
     enabled: canRead,
   });
-  const invalidate = () => void queryClient.invalidateQueries({ queryKey: inviteKeys.list });
-  const onError = (err: unknown) => appToast.error(errorMessage(err, t("common.error_generic")));
+  const invalidate = () =>
+    void queryClient.invalidateQueries({ queryKey: inviteKeys.list });
+  const onError = (err: unknown) =>
+    appToast.error(errorMessage(err, t("common.error_generic")));
 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<AccountRole>("member");
@@ -96,21 +102,29 @@ export function AccountInvitesCard({ isOwner }: { isOwner: boolean }) {
     const confirmed = await confirmDelete({
       title: t("accounts.invites.revoke_title"),
       confirmLabel: t("accounts.invites.revoke"),
-      description: t("accounts.invites.revoke_description", { email: invite.email }),
+      description: t("accounts.invites.revoke_description", {
+        email: invite.email,
+      }),
     });
     if (confirmed) revoke.mutate(invite.uuid);
   };
 
   const formatDate = (value: string) =>
-    new Date(value).toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", { dateStyle: "medium" });
-  const canTouch = (invite: AccountInvite) => canWrite && (isOwner || invite.role !== "owner");
+    new Date(value).toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", {
+      dateStyle: "medium",
+    });
+  const canTouch = (invite: AccountInvite) =>
+    canWrite && (isOwner || invite.role !== "owner");
   const invites = invitesQuery.data?.items ?? [];
 
   return (
     <EntitySectionCard title={t("accounts.invites.title")}>
       <div className="space-y-4">
         {canWrite ? (
-          <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <form
+            onSubmit={onSubmit}
+            className="flex flex-col gap-3 sm:flex-row sm:items-end"
+          >
             <label className="grid flex-1 gap-1.5 text-sm">
               <span className="font-medium">{t("accounts.email")}</span>
               <Input
@@ -123,7 +137,10 @@ export function AccountInvitesCard({ isOwner }: { isOwner: boolean }) {
             </label>
             <label className="grid gap-1.5 text-sm">
               <span className="font-medium">{t("accounts.role")}</span>
-              <Select value={role} onValueChange={(value) => setRole(value as AccountRole)}>
+              <Select
+                value={role}
+                onValueChange={(value) => setRole(value as AccountRole)}
+              >
                 <SelectTrigger className="w-44">
                   <SelectValue />
                 </SelectTrigger>
@@ -141,12 +158,18 @@ export function AccountInvitesCard({ isOwner }: { isOwner: boolean }) {
             </Button>
           </form>
         ) : null}
-        <p className="text-muted-foreground text-xs">{t("accounts.invites.hint")}</p>
+        <p className="text-muted-foreground text-xs">
+          {t("accounts.invites.hint")}
+        </p>
 
-        {invitesQuery.isLoading ? <Loading label={t("common.loading")} /> : null}
+        {invitesQuery.isLoading ? (
+          <Loading label={t("common.loading")} />
+        ) : null}
         {canRead && invitesQuery.data ? (
           invites.length === 0 ? (
-            <p className="text-muted-foreground text-sm">{t("accounts.invites.empty")}</p>
+            <p className="text-muted-foreground text-sm">
+              {t("accounts.invites.empty")}
+            </p>
           ) : (
             <div className="overflow-x-auto rounded-md border">
               <table className="w-full text-sm">
@@ -166,7 +189,10 @@ export function AccountInvitesCard({ isOwner }: { isOwner: boolean }) {
                 </thead>
                 <tbody>
                   {invites.map((invite) => (
-                    <tr key={invite.uuid} className="hover:bg-muted/50 border-b last:border-0">
+                    <tr
+                      key={invite.uuid}
+                      className="hover:bg-muted/50 border-b last:border-0"
+                    >
                       <td className="p-4">
                         <div className="font-medium">{invite.email}</div>
                         <div className="text-muted-foreground text-xs">
@@ -175,15 +201,25 @@ export function AccountInvitesCard({ isOwner }: { isOwner: boolean }) {
                             : invite.invited_by_name}
                         </div>
                       </td>
-                      <td className="p-4">{t(`accounts.roles.${invite.role}`)}</td>
                       <td className="p-4">
-                        <Badge variant={invite.status === "expired" ? "danger" : "secondary"}>
+                        {t(`accounts.roles.${invite.role}`)}
+                      </td>
+                      <td className="p-4">
+                        <Badge
+                          variant={
+                            invite.status === "expired" ? "danger" : "secondary"
+                          }
+                        >
                           {t(`accounts.invites.statuses.${invite.status}`)}
                         </Badge>
                         <div className="text-muted-foreground mt-1 text-xs">
                           {invite.status === "expired"
-                            ? t("accounts.invites.expired_on", { date: formatDate(invite.expires_at) })
-                            : t("accounts.invites.expires_on", { date: formatDate(invite.expires_at) })}
+                            ? t("accounts.invites.expired_on", {
+                                date: formatDate(invite.expires_at),
+                              })
+                            : t("accounts.invites.expires_on", {
+                                date: formatDate(invite.expires_at),
+                              })}
                         </div>
                       </td>
                       <td className="p-4 text-right whitespace-nowrap">

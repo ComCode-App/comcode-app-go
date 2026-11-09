@@ -25,7 +25,7 @@ export function ProfileCompletionBadge({
   };
 
   return (
-    <div className={cn("flex flex-col gap-1 min-w-[90px]", className)}>
+    <div className={cn("flex min-w-[90px] flex-col gap-1", className)}>
       <div className="flex items-center justify-between text-xs">
         <span className="text-muted-foreground font-medium">
           {t("profiles.completion.rate_label")}
@@ -35,10 +35,7 @@ export function ProfileCompletionBadge({
         </span>
       </div>
       {showBar && (
-        <Progress
-          value={clamped}
-          className="h-1.5 w-full bg-muted/60"
-        />
+        <Progress value={clamped} className="bg-muted/60 h-1.5 w-full" />
       )}
     </div>
   );

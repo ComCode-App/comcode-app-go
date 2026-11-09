@@ -36,10 +36,10 @@ export function SearchTrigger({
     <Button
       type="button"
       variant="outline"
-        className={cn(
-          "border-border/70 bg-background/55 text-muted-foreground hidden h-9 w-full max-w-md justify-start gap-2 px-3 font-normal shadow-none backdrop-blur-sm hover:bg-background/75 md:flex dark:bg-card/35 dark:hover:bg-card/50",
-          className,
-        )}
+      className={cn(
+        "border-border/70 bg-background/55 text-muted-foreground hover:bg-background/75 dark:bg-card/35 dark:hover:bg-card/50 hidden h-9 w-full max-w-md justify-start gap-2 px-3 font-normal shadow-none backdrop-blur-sm md:flex",
+        className,
+      )}
       onClick={() => setOpen(true)}
     >
       <Search className="size-4 shrink-0 opacity-60" />

@@ -34,8 +34,13 @@ export function useCardMutations() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ uuid, payload }: { uuid: string; payload: UpsertCardPayload }) =>
-      cardsService.update(uuid, payload),
+    mutationFn: ({
+      uuid,
+      payload,
+    }: {
+      uuid: string;
+      payload: UpsertCardPayload;
+    }) => cardsService.update(uuid, payload),
     onSuccess: () => {
       toast.success(t("cards.updated_success"));
       invalidate();
@@ -61,7 +66,8 @@ export function useCardMutations() {
   });
 
   const activateMutation = useMutation({
-    mutationFn: (payload: ActivateCardPayload) => cardsService.activate(payload),
+    mutationFn: (payload: ActivateCardPayload) =>
+      cardsService.activate(payload),
     onSuccess: () => {
       toast.success(t("cards.activated_success"));
       invalidate();

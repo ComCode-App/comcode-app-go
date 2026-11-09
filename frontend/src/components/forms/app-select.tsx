@@ -51,7 +51,11 @@ export function AppSelect({
         name={name}
         control={control}
         render={({ field }) => (
-          <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
+          <Select
+            value={field.value}
+            onValueChange={field.onChange}
+            disabled={disabled}
+          >
             <SelectTrigger
               id={name}
               aria-invalid={Boolean(error)}

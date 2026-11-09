@@ -2,12 +2,7 @@
 
 import { useMemo } from "react";
 
-import {
-  AppForm,
-  AppInput,
-  AppSwitch,
-  AppTextarea,
-} from "@/components/forms";
+import { AppForm, AppInput, AppSwitch, AppTextarea } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,7 +35,11 @@ type EventDefinitionDialogProps = {
 const FORM_ID = "event-definition-form";
 const CATEGORY_LIST_ID = "event-definition-categories";
 
-export function EventDefinitionDialog({ open, onOpenChange, definition }: EventDefinitionDialogProps) {
+export function EventDefinitionDialog({
+  open,
+  onOpenChange,
+  definition,
+}: EventDefinitionDialogProps) {
   const { t } = useLocale();
   const { create, update } = useEventDefinitionMutations();
   const isEdit = Boolean(definition);
@@ -48,7 +47,10 @@ export function EventDefinitionDialog({ open, onOpenChange, definition }: EventD
 
   const schema = useMemo(() => createEventDefinitionSchema(t), [t]);
   const defaultValues = useMemo<EventDefinitionFormValues>(
-    () => (definition ? definitionToFormValues(definition) : emptyEventDefinitionValues),
+    () =>
+      definition
+        ? definitionToFormValues(definition)
+        : emptyEventDefinitionValues,
     [definition],
   );
 
@@ -71,7 +73,9 @@ export function EventDefinitionDialog({ open, onOpenChange, definition }: EventD
               ? t("platform_analytics.definitions.dialog.edit_title")
               : t("platform_analytics.definitions.dialog.create_title")}
           </DialogTitle>
-          <DialogDescription>{t("platform_analytics.definitions.dialog.description")}</DialogDescription>
+          <DialogDescription>
+            {t("platform_analytics.definitions.dialog.description")}
+          </DialogDescription>
         </DialogHeader>
 
         {open ? (
@@ -136,13 +140,19 @@ export function EventDefinitionDialog({ open, onOpenChange, definition }: EventD
               type="number"
               min={1}
               label={t("platform_analytics.definitions.fields.retention_days")}
-              description={t("platform_analytics.definitions.fields.retention_days_hint")}
+              description={t(
+                "platform_analytics.definitions.fields.retention_days_hint",
+              )}
               disabled={saving}
             />
             <AppInput
               name="required_properties"
-              label={t("platform_analytics.definitions.fields.required_properties")}
-              description={t("platform_analytics.definitions.fields.required_properties_hint")}
+              label={t(
+                "platform_analytics.definitions.fields.required_properties",
+              )}
+              description={t(
+                "platform_analytics.definitions.fields.required_properties_hint",
+              )}
               placeholder="amount, currency"
               autoComplete="off"
               disabled={saving}
@@ -151,19 +161,27 @@ export function EventDefinitionDialog({ open, onOpenChange, definition }: EventD
               <AppSwitch
                 name="enabled"
                 label={t("platform_analytics.definitions.fields.enabled")}
-                description={t("platform_analytics.definitions.fields.enabled_hint")}
+                description={t(
+                  "platform_analytics.definitions.fields.enabled_hint",
+                )}
                 disabled={saving}
               />
               <AppSwitch
                 name="is_public"
                 label={t("platform_analytics.definitions.fields.is_public")}
-                description={t("platform_analytics.definitions.fields.is_public_hint")}
+                description={t(
+                  "platform_analytics.definitions.fields.is_public_hint",
+                )}
                 disabled={saving}
               />
               <AppSwitch
                 name="aggregate_enabled"
-                label={t("platform_analytics.definitions.fields.aggregate_enabled")}
-                description={t("platform_analytics.definitions.fields.aggregate_enabled_hint")}
+                label={t(
+                  "platform_analytics.definitions.fields.aggregate_enabled",
+                )}
+                description={t(
+                  "platform_analytics.definitions.fields.aggregate_enabled_hint",
+                )}
                 disabled={saving}
               />
             </div>
@@ -171,7 +189,12 @@ export function EventDefinitionDialog({ open, onOpenChange, definition }: EventD
         ) : null}
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
             {t("common.cancel")}
           </Button>
           <Button type="submit" form={FORM_ID} disabled={saving}>

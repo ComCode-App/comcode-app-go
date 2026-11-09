@@ -1,3 +1,8 @@
 {
-  "static": ["static-mesh-gradient", "static-radial-gradient", "paper-texture", "image-dithering"]
+  "static": [
+    "static-mesh-gradient",
+    "static-radial-gradient",
+    "paper-texture",
+    "image-dithering"
+  ]
 }

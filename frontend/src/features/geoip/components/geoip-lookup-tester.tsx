@@ -42,16 +42,29 @@ const QUICK_SAMPLES = [
 function isPrivateOrLocalIp(ip?: string | null): boolean {
   if (!ip) return false;
   const clean = ip.trim().toLowerCase();
-  if (clean === "localhost" || clean === "127.0.0.1" || clean === "::1" || clean === "0.0.0.0") {
+  if (
+    clean === "localhost" ||
+    clean === "127.0.0.1" ||
+    clean === "::1" ||
+    clean === "0.0.0.0"
+  ) {
     return true;
   }
-  if (clean.startsWith("10.") || clean.startsWith("192.168.") || clean.startsWith("169.254.")) {
+  if (
+    clean.startsWith("10.") ||
+    clean.startsWith("192.168.") ||
+    clean.startsWith("169.254.")
+  ) {
     return true;
   }
   if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(clean)) {
     return true;
   }
-  if (clean.startsWith("fc00:") || clean.startsWith("fd00:") || clean.startsWith("fe80:")) {
+  if (
+    clean.startsWith("fc00:") ||
+    clean.startsWith("fd00:") ||
+    clean.startsWith("fe80:")
+  ) {
     return true;
   }
   return false;
@@ -60,7 +73,9 @@ function isPrivateOrLocalIp(ip?: string | null): boolean {
 export function GeoIPLookupTester() {
   const { t } = useLocale();
   const [ipInput, setIpInput] = useState("");
-  const [lookupResult, setLookupResult] = useState<GeoIPLookupResult | null>(null);
+  const [lookupResult, setLookupResult] = useState<GeoIPLookupResult | null>(
+    null,
+  );
   const [isDetectingIp, setIsDetectingIp] = useState(false);
 
   const lookupMutation = useMutation({
@@ -68,7 +83,9 @@ export function GeoIPLookupTester() {
     onSuccess: (data) => {
       setLookupResult(data);
       if (data.country_code) {
-        appToast.success(`${data.ip || "IP"}: ${data.country_name || data.country_code}`);
+        appToast.success(
+          `${data.ip || "IP"}: ${data.country_name || data.country_code}`,
+        );
       } else if (isPrivateOrLocalIp(data.ip)) {
         appToast.info(t("geoip.tester.private_ip_note"));
       } else {
@@ -130,7 +147,7 @@ export function GeoIPLookupTester() {
     <Card>
       <CardHeader className="pb-4">
         <div className="flex items-center gap-2">
-          <Network className="size-5 text-primary" />
+          <Network className="text-primary size-5" />
           <CardTitle className="text-lg font-semibold">
             {t("geoip.tester.title")}
           </CardTitle>
@@ -140,9 +157,9 @@ export function GeoIPLookupTester() {
       <CardContent className="space-y-6">
         <div className="space-y-3">
           <Label htmlFor="geoip-test-ip">{t("geoip.tester.input_label")}</Label>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <div className="flex flex-col items-stretch gap-2.5 sm:flex-row sm:items-center">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
                 id="geoip-test-ip"
                 value={ipInput}
@@ -169,7 +186,9 @@ export function GeoIPLookupTester() {
                 ) : (
                   <Sparkles className="mr-1.5 size-3.5 text-amber-500" />
                 )}
-                {isDetectingIp ? t("geoip.tester.detecting_ip") : t("geoip.tester.btn_my_ip")}
+                {isDetectingIp
+                  ? t("geoip.tester.detecting_ip")
+                  : t("geoip.tester.btn_my_ip")}
               </Button>
               <Button
                 type="button"
@@ -189,7 +208,7 @@ export function GeoIPLookupTester() {
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            <span className="text-xs text-muted-foreground mr-1">
+            <span className="text-muted-foreground mr-1 text-xs">
               {t("geoip.tester.quick_samples")}:
             </span>
             {QUICK_SAMPLES.map((sample) => (
@@ -198,7 +217,7 @@ export function GeoIPLookupTester() {
                 variant="secondary"
                 size="sm"
                 type="button"
-                className="h-6 text-xs px-2.5 font-normal"
+                className="h-6 px-2.5 text-xs font-normal"
                 onClick={() => {
                   setIpInput(sample.ip);
                   handleTest(sample.ip);
@@ -211,10 +230,10 @@ export function GeoIPLookupTester() {
         </div>
 
         {lookupResult ? (
-          <div className="rounded-xl border bg-card p-4 shadow-sm space-y-4">
+          <div className="bg-card space-y-4 rounded-xl border p-4 shadow-sm">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2">
-                <Globe2 className="size-4 text-primary" />
+                <Globe2 className="text-primary size-4" />
                 <h4 className="text-sm font-semibold">
                   {t("geoip.tester.result_title")}
                 </h4>
@@ -223,7 +242,9 @@ export function GeoIPLookupTester() {
                 {isPrivateIp ? (
                   <Badge variant="warning">Private / Local Network IP</Badge>
                 ) : null}
-                <Badge variant={lookupResult.country_code ? "success" : "secondary"}>
+                <Badge
+                  variant={lookupResult.country_code ? "success" : "secondary"}
+                >
                   {lookupResult.ip || "Client IP"}
                 </Badge>
               </div>
@@ -231,57 +252,62 @@ export function GeoIPLookupTester() {
 
             {isPrivateIp ? (
               <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
-                <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                <AlertCircle className="mt-0.5 size-4 shrink-0" />
                 <p>{t("geoip.tester.private_ip_note")}</p>
               </div>
             ) : null}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-              <div className="flex items-start gap-2.5 rounded-lg border bg-muted/20 p-3">
-                <MapPin className="size-4 text-emerald-600 mt-0.5" />
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="bg-muted/20 flex items-start gap-2.5 rounded-lg border p-3">
+                <MapPin className="mt-0.5 size-4 text-emerald-600" />
                 <div className="space-y-0.5 overflow-hidden">
-                  <p className="text-xs text-muted-foreground font-medium">
+                  <p className="text-muted-foreground text-xs font-medium">
                     {t("geoip.tester.country")}
                   </p>
-                  <p className="text-sm font-semibold truncate">
-                    {lookupResult.country_name || lookupResult.country_code || "N/A"}{" "}
-                    {lookupResult.country_code ? `(${lookupResult.country_code})` : ""}
+                  <p className="truncate text-sm font-semibold">
+                    {lookupResult.country_name ||
+                      lookupResult.country_code ||
+                      "N/A"}{" "}
+                    {lookupResult.country_code
+                      ? `(${lookupResult.country_code})`
+                      : ""}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-2.5 rounded-lg border bg-muted/20 p-3">
-                <Building2 className="size-4 text-sky-600 mt-0.5" />
+              <div className="bg-muted/20 flex items-start gap-2.5 rounded-lg border p-3">
+                <Building2 className="mt-0.5 size-4 text-sky-600" />
                 <div className="space-y-0.5 overflow-hidden">
-                  <p className="text-xs text-muted-foreground font-medium">
+                  <p className="text-muted-foreground text-xs font-medium">
                     {t("geoip.tester.city")}
                   </p>
-                  <p className="text-sm font-semibold truncate">
+                  <p className="truncate text-sm font-semibold">
                     {lookupResult.city || "N/A"}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-2.5 rounded-lg border bg-muted/20 p-3">
-                <Clock className="size-4 text-amber-600 mt-0.5" />
+              <div className="bg-muted/20 flex items-start gap-2.5 rounded-lg border p-3">
+                <Clock className="mt-0.5 size-4 text-amber-600" />
                 <div className="space-y-0.5 overflow-hidden">
-                  <p className="text-xs text-muted-foreground font-medium">
+                  <p className="text-muted-foreground text-xs font-medium">
                     {t("geoip.tester.timezone")}
                   </p>
-                  <p className="text-sm font-semibold truncate">
+                  <p className="truncate text-sm font-semibold">
                     {lookupResult.timezone || "N/A"}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-2.5 rounded-lg border bg-muted/20 p-3">
-                <Compass className="size-4 text-indigo-600 mt-0.5" />
+              <div className="bg-muted/20 flex items-start gap-2.5 rounded-lg border p-3">
+                <Compass className="mt-0.5 size-4 text-indigo-600" />
                 <div className="space-y-0.5 overflow-hidden">
-                  <p className="text-xs text-muted-foreground font-medium">
+                  <p className="text-muted-foreground text-xs font-medium">
                     {t("geoip.tester.coordinates")}
                   </p>
-                  <p className="text-sm font-semibold truncate">
-                    {lookupResult.latitude != null && lookupResult.longitude != null
+                  <p className="truncate text-sm font-semibold">
+                    {lookupResult.latitude != null &&
+                    lookupResult.longitude != null
                       ? `${lookupResult.latitude.toFixed(4)}, ${lookupResult.longitude.toFixed(4)}`
                       : "N/A"}
                   </p>

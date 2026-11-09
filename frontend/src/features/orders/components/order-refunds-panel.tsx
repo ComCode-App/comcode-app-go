@@ -10,7 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocale } from "@/providers/locale-provider";
 import { useDialogs } from "@/providers/dialog-provider";
-import { ordersService, type OrderRefund, type OrderRefundablePayment } from "../services/orders.service";
+import {
+  ordersService,
+  type OrderRefund,
+  type OrderRefundablePayment,
+} from "../services/orders.service";
 import { ordersQueryKeys } from "../hooks/query-keys";
 
 interface OrderRefundsPanelProps {
@@ -36,14 +40,21 @@ export function OrderRefundsPanel({ orderUuid }: OrderRefundsPanelProps) {
   const money = (minor: number, currency: string) =>
     `${(minor / 100).toLocaleString(locale === "tr" ? "tr-TR" : "en-US", { minimumFractionDigits: 2 })} ${currency}`;
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ordersQueryKeys.detail(orderUuid) });
+  const refresh = () =>
+    queryClient.invalidateQueries({
+      queryKey: ordersQueryKeys.detail(orderUuid),
+    });
   const onError = (err: Error) => {
     toast.error(err?.message || t("orders.refund.error"));
     refresh();
   };
 
   const refundMutation = useMutation({
-    mutationFn: (vars: { payment: OrderRefundablePayment; amountMinor?: number; key: string }) =>
+    mutationFn: (vars: {
+      payment: OrderRefundablePayment;
+      amountMinor?: number;
+      key: string;
+    }) =>
       ordersService.refund(orderUuid, {
         payment_uuid: vars.payment.uuid,
         amount_minor: vars.amountMinor,
@@ -60,7 +71,8 @@ export function OrderRefundsPanel({ orderUuid }: OrderRefundsPanelProps) {
   });
 
   const retryMutation = useMutation({
-    mutationFn: (refund: OrderRefund) => ordersService.retryRefund(orderUuid, refund.uuid),
+    mutationFn: (refund: OrderRefund) =>
+      ordersService.retryRefund(orderUuid, refund.uuid),
     onSuccess: () => {
       toast.success(t("orders.refund.success"));
       refresh();
@@ -69,20 +81,32 @@ export function OrderRefundsPanel({ orderUuid }: OrderRefundsPanelProps) {
   });
 
   if (!data || data.payments.length === 0) {
-    return <p className="text-xs text-muted-foreground">{t("orders.refund.no_online_payment")}</p>;
+    return (
+      <p className="text-muted-foreground text-xs">
+        {t("orders.refund.no_online_payment")}
+      </p>
+    );
   }
 
   const startRefund = async (payment: OrderRefundablePayment) => {
     let amountMinor: number | undefined;
     if (amount.trim() !== "") {
       amountMinor = Math.round(Number(amount.replace(",", ".")) * 100);
-      if (!Number.isFinite(amountMinor) || amountMinor <= 0 || amountMinor > payment.refundable_minor) {
+      if (
+        !Number.isFinite(amountMinor) ||
+        amountMinor <= 0 ||
+        amountMinor > payment.refundable_minor
+      ) {
         toast.error(t("orders.refund.invalid_amount"));
         return;
       }
     }
-    const value = money(amountMinor ?? payment.refundable_minor, payment.currency);
-    const full = amountMinor === undefined || amountMinor === payment.refundable_minor;
+    const value = money(
+      amountMinor ?? payment.refundable_minor,
+      payment.currency,
+    );
+    const full =
+      amountMinor === undefined || amountMinor === payment.refundable_minor;
     const ok = await confirm({
       title: t("orders.refund.confirm_title", { amount: value }),
       description:
@@ -100,31 +124,53 @@ export function OrderRefundsPanel({ orderUuid }: OrderRefundsPanelProps) {
   return (
     <div className="space-y-3">
       {data.payments.map((payment) => (
-        <div key={payment.uuid} className="p-3.5 rounded-xl border text-xs space-y-2 bg-card/60">
+        <div
+          key={payment.uuid}
+          className="bg-card/60 space-y-2 rounded-xl border p-3.5 text-xs"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="font-mono">
-              {payment.provider} · {payment.provider_ref || payment.uuid.slice(0, 8)}
+              {payment.provider} ·{" "}
+              {payment.provider_ref || payment.uuid.slice(0, 8)}
             </span>
-            {!payment.paid_order && <Badge variant="outline">{t("orders.refund.extra_payment")}</Badge>}
+            {!payment.paid_order && (
+              <Badge variant="outline">
+                {t("orders.refund.extra_payment")}
+              </Badge>
+            )}
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <div className="text-muted-foreground">{t("orders.refund.paid")}</div>
-              <div className="font-mono">{money(payment.amount_minor, payment.currency)}</div>
+              <div className="text-muted-foreground">
+                {t("orders.refund.paid")}
+              </div>
+              <div className="font-mono">
+                {money(payment.amount_minor, payment.currency)}
+              </div>
             </div>
             <div>
-              <div className="text-muted-foreground">{t("orders.refund.refunded")}</div>
-              <div className="font-mono">{money(payment.refunded_minor, payment.currency)}</div>
+              <div className="text-muted-foreground">
+                {t("orders.refund.refunded")}
+              </div>
+              <div className="font-mono">
+                {money(payment.refunded_minor, payment.currency)}
+              </div>
             </div>
             <div>
-              <div className="text-muted-foreground">{t("orders.refund.refundable")}</div>
-              <div className="font-mono font-semibold">{money(payment.refundable_minor, payment.currency)}</div>
+              <div className="text-muted-foreground">
+                {t("orders.refund.refundable")}
+              </div>
+              <div className="font-mono font-semibold">
+                {money(payment.refundable_minor, payment.currency)}
+              </div>
             </div>
           </div>
           {payment.refundable_minor > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-[8rem_1fr_auto] items-end gap-2 pt-1">
+            <div className="grid grid-cols-1 items-end gap-2 pt-1 sm:grid-cols-[8rem_1fr_auto]">
               <div className="space-y-1">
-                <Label className="text-[11px]">{t("orders.refund.amount_label")}</Label>
+                <Label className="text-[11px]">
+                  {t("orders.refund.amount_label")}
+                </Label>
                 <Input
                   inputMode="decimal"
                   placeholder={(payment.refundable_minor / 100).toFixed(2)}
@@ -133,8 +179,14 @@ export function OrderRefundsPanel({ orderUuid }: OrderRefundsPanelProps) {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-[11px]">{t("orders.refund.reason_label")}</Label>
-                <Input value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
+                <Label className="text-[11px]">
+                  {t("orders.refund.reason_label")}
+                </Label>
+                <Input
+                  value={reason}
+                  maxLength={500}
+                  onChange={(e) => setReason(e.target.value)}
+                />
               </div>
               <Button
                 size="sm"
@@ -152,31 +204,46 @@ export function OrderRefundsPanel({ orderUuid }: OrderRefundsPanelProps) {
 
       {data.refunds.length > 0 && (
         <div className="space-y-2">
-          <h5 className="text-xs font-semibold">{t("orders.refund.history_heading")}</h5>
+          <h5 className="text-xs font-semibold">
+            {t("orders.refund.history_heading")}
+          </h5>
           {data.refunds.map((refund) => (
-            <div key={refund.uuid} className="p-3 rounded-lg border text-xs space-y-1">
+            <div
+              key={refund.uuid}
+              className="space-y-1 rounded-lg border p-3 text-xs"
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-mono">{money(refund.amount_minor, refund.currency)}</span>
+                <span className="font-mono">
+                  {money(refund.amount_minor, refund.currency)}
+                </span>
                 <Badge
                   variant={
-                    refund.status === "succeeded" ? "success" : refund.status === "failed" ? "danger" : "outline"
+                    refund.status === "succeeded"
+                      ? "success"
+                      : refund.status === "failed"
+                        ? "danger"
+                        : "outline"
                   }
                 >
                   {t(`orders.refund.status_${refund.status}`)}
                 </Badge>
               </div>
               <div className="text-muted-foreground">
-                {new Date(refund.created_at).toLocaleString(locale === "tr" ? "tr-TR" : "en-US")}
-                {refund.attempts > 1 && ` · ${t("orders.refund.attempts", { count: refund.attempts })}`}
+                {new Date(refund.created_at).toLocaleString(
+                  locale === "tr" ? "tr-TR" : "en-US",
+                )}
+                {refund.attempts > 1 &&
+                  ` · ${t("orders.refund.attempts", { count: refund.attempts })}`}
                 {refund.reason && ` · ${refund.reason}`}
               </div>
               {refund.status === "failed" && (
-                <div className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2">
+                <div className="border-destructive/30 bg-destructive/5 flex flex-wrap items-start justify-between gap-2 rounded-md border p-2">
                   <div className="space-y-1">
                     <p className="text-destructive">{refund.error_message}</p>
                     {refund.error_code === "provider_error" && (
                       <p className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                        <AlertTriangle className="h-3.5 w-3.5" /> {t("orders.refund.unknown_outcome_hint")}
+                        <AlertTriangle className="h-3.5 w-3.5" />{" "}
+                        {t("orders.refund.unknown_outcome_hint")}
                       </p>
                     )}
                   </div>
@@ -192,7 +259,9 @@ export function OrderRefundsPanel({ orderUuid }: OrderRefundsPanelProps) {
                 </div>
               )}
               {refund.status === "pending" && (
-                <p className="text-muted-foreground">{t("orders.refund.pending_hint")}</p>
+                <p className="text-muted-foreground">
+                  {t("orders.refund.pending_hint")}
+                </p>
               )}
             </div>
           ))}

@@ -34,16 +34,16 @@ type SubjectSummary struct {
 }
 
 type SubscriptionSummary struct {
-	UUID      uuid.UUID       `json:"uuid"`
-	Status    string          `json:"status"`
-	PlanUUID  uuid.UUID       `json:"plan_uuid"`
-	PlanSlug  string          `json:"plan_slug"`
-	PlanName  string          `json:"plan_name"`
-	Subject   SubjectSummary  `json:"subject"`
-	StartsAt  string          `json:"starts_at"`
-	EndsAt    *string         `json:"ends_at,omitempty"`
-	CreatedAt string          `json:"created_at"`
-	UpdatedAt string          `json:"updated_at"`
+	UUID      uuid.UUID      `json:"uuid"`
+	Status    string         `json:"status"`
+	PlanUUID  uuid.UUID      `json:"plan_uuid"`
+	PlanSlug  string         `json:"plan_slug"`
+	PlanName  string         `json:"plan_name"`
+	Subject   SubjectSummary `json:"subject"`
+	StartsAt  string         `json:"starts_at"`
+	EndsAt    *string        `json:"ends_at,omitempty"`
+	CreatedAt string         `json:"created_at"`
+	UpdatedAt string         `json:"updated_at"`
 }
 
 type CreateSubscriptionInput struct {
@@ -259,9 +259,9 @@ func mapSubscriptionCommon(
 	return SubscriptionSummary{
 		UUID: subUUID, Status: string(status),
 		PlanUUID: planUUID, PlanSlug: planSlug, PlanName: planName,
-		Subject: subject,
-		StartsAt: startsAt.Time.Format(time.RFC3339),
-		EndsAt: ends,
+		Subject:   subject,
+		StartsAt:  startsAt.Time.Format(time.RFC3339),
+		EndsAt:    ends,
 		CreatedAt: createdAt.Time.Format(time.RFC3339),
 		UpdatedAt: updatedAt.Time.Format(time.RFC3339),
 	}

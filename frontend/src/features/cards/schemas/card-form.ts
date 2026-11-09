@@ -3,10 +3,21 @@ import { z } from "zod";
 export const cardFormSchema = z.object({
   name: z.string().min(1, "Kart adı zorunludur").max(150),
   card_uid: z.string().optional(),
-  target_type: z.enum(["profile", "direct_url", "vcard_download", "social_hub"]),
+  target_type: z.enum([
+    "profile",
+    "direct_url",
+    "vcard_download",
+    "social_hub",
+  ]),
   profile_uuid: z.string().nullable().optional(),
   direct_url: z.string().optional(),
-  card_type: z.enum(["physical_nfc", "metal_card", "wood_card", "pvc_card", "digital_only"]),
+  card_type: z.enum([
+    "physical_nfc",
+    "metal_card",
+    "wood_card",
+    "pvc_card",
+    "digital_only",
+  ]),
   material: z.string(),
   color_hex: z.string(),
   is_active: z.boolean(),

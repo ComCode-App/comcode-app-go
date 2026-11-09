@@ -1,22 +1,22 @@
 package handler
 
 import (
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/clientip"
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/clientip"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/cards/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/cards/usecase"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/resourcemeta"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/apiquery"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/response"
+	"github.com/google/uuid"
 )
 
 // ActivationLimiter caps card activation attempts (activation codes are bearer secrets).

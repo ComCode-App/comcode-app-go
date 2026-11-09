@@ -35,13 +35,11 @@ export function PlanAsyncPicker({
       });
       const options = result.items
         .filter((plan) => !activeOnly || plan.is_active)
-        .map(
-          (plan): ComboboxOption => ({
-            value: plan.uuid,
-            label: plan.name,
-            description: plan.slug,
-          }),
-        );
+        .map((plan): ComboboxOption => ({
+          value: plan.uuid,
+          label: plan.name,
+          description: plan.slug,
+        }));
       setOptionCache((prev) => mergeOptions(prev, options));
       return options;
     },

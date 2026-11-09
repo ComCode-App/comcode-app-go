@@ -118,7 +118,6 @@ func (r *PostgresRepository) GetAccountCardByUUID(ctx context.Context, id uuid.U
 		profID = &row.ProfileID.Int64
 	}
 
-
 	detail := &model.CardDetail{
 		ID:                 row.ID,
 		UUID:               row.Uuid,

@@ -38,6 +38,7 @@ type Group struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
 // GroupFilter narrows group lists. OfficeUUID and CompanyWide are mutually exclusive;
 // the zero value lists every group of the account.
 type GroupFilter struct {

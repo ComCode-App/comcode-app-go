@@ -71,7 +71,7 @@ Package: `internal/platform/searchengine`. HTTP: `internal/modules/search`. Skil
 
 ## GitHub OAuth (integrations)
 
-Skill: `.agents/skills/github-integration`. Super-admin settings at `/platform/integrations/github`.
+Skill: `.agents/skills/github-integration`. Super-admin settings on the GitHub tab of `/platform/settings/integrations`.
 
 - Credentials (`client_secret`, private key) encrypted with `APP_ENCRYPTION_KEY` via `internal/platform/crypto`. API never returns plaintext secrets.
 - Users **link** GitHub from profile (`GET/DELETE /v1/auth/identities`). Unlinked GitHub accounts cannot self-register.
@@ -103,7 +103,7 @@ Sensitive mutations can require a fresh password or passkey confirmation even wh
 
 - Backend: `middleware.RequireStepUp` after `Authenticate`. `403` + `STEP_UP_REQUIRED` until grant TTL.
 - Frontend: `StepUpGate` / `useStepUp()` from `@/features/step-up-engine`.
-- Admin TTL/methods: `/platform/access` (`platform.access.read` / `.write`).
+- Admin TTL/methods: `/platform/settings/access` (`platform.access.read` / `.write`).
 
 ## Settings (letterhead)
 

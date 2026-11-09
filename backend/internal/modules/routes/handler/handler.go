@@ -1,14 +1,13 @@
 package handler
 
 import (
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/clientip"
 	"encoding/json"
 	"errors"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/clientip"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
 	"net"
 	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/usecase"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/analytics/ingestion"
@@ -16,6 +15,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/resourcemeta"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/apiquery"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/response"
+	"github.com/google/uuid"
 )
 
 type Handler struct {

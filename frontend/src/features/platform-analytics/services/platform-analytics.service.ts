@@ -2,11 +2,15 @@ import type { components } from "@/generated/api";
 import { apiClient, unwrap } from "@/lib/api";
 
 export type EventDefinition = components["schemas"]["EventDefinition"];
-export type EventDefinitionInput = components["schemas"]["EventDefinitionInput"];
+export type EventDefinitionInput =
+  components["schemas"]["EventDefinitionInput"];
 export type AnalyticsSettings = components["schemas"]["AnalyticsSettings"];
 /** PATCH body: every writable setting (the salt schedule fields are read-only, TEC-936). */
 export type AnalyticsSettingsInput = Required<
-  Omit<AnalyticsSettings, "ip_hash_salt_rotation_previous_days" | "ip_hash_salt_rotation_changed_on">
+  Omit<
+    AnalyticsSettings,
+    "ip_hash_salt_rotation_previous_days" | "ip_hash_salt_rotation_changed_on"
+  >
 >;
 
 export type EventDefinitionFilters = {
@@ -22,7 +26,8 @@ export type RawEvent = components["schemas"]["AnalyticsRawEvent"];
 export type RawEventList = components["schemas"]["AnalyticsRawEventList"];
 
 /** Platform-wide event volume from the hourly rollups (TEC-859). */
-export type PlatformAnalyticsOverview = components["schemas"]["PlatformAnalyticsOverview"];
+export type PlatformAnalyticsOverview =
+  components["schemas"]["PlatformAnalyticsOverview"];
 
 /** Raw event filters; `from` / `to` are RFC 3339 instants (the API ignores anything else). */
 export type RawEventParams = {
@@ -50,7 +55,10 @@ export const platformAnalyticsService = {
         params: { query: clean(filters) },
       }),
     );
-    return { items: data.items ?? [], total: data.total ?? data.items?.length ?? 0 };
+    return {
+      items: data.items ?? [],
+      total: data.total ?? data.items?.length ?? 0,
+    };
   },
 
   async createDefinition(body: EventDefinitionInput) {
@@ -77,7 +85,9 @@ export const platformAnalyticsService = {
   },
 
   async getConfig() {
-    return unwrap<AnalyticsSettings>(await apiClient.GET("/v1/platform/analytics/config"));
+    return unwrap<AnalyticsSettings>(
+      await apiClient.GET("/v1/platform/analytics/config"),
+    );
   },
 
   /** The API writes every field (booleans included), so always send the full settings object. */
@@ -89,7 +99,9 @@ export const platformAnalyticsService = {
 
   async listEvents(params: RawEventParams = {}): Promise<RawEventList> {
     const data = await unwrap<Partial<RawEventList>>(
-      await apiClient.GET("/v1/analytics/events", { params: { query: clean(params) } }),
+      await apiClient.GET("/v1/analytics/events", {
+        params: { query: clean(params) },
+      }),
     );
     return {
       items: data.items ?? [],
@@ -104,7 +116,9 @@ export const platformAnalyticsService = {
   /** KPIs and the daily series bucketed into the viewer's local days (`tz`, IANA name). */
   async getOverview(tz?: string) {
     return unwrap<PlatformAnalyticsOverview>(
-      await apiClient.GET("/v1/platform/analytics/overview", { params: { query: clean({ tz }) } }),
+      await apiClient.GET("/v1/platform/analytics/overview", {
+        params: { query: clean({ tz }) },
+      }),
     );
   },
 };

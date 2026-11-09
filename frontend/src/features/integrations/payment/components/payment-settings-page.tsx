@@ -49,7 +49,11 @@ export function PaymentSettingsPage() {
       appToast.success(t("integrations.payment.toast.saved"));
     },
     onError: (error) => {
-      appToast.error(isApiError(error) ? error.message : t("integrations.payment.toast.failed"));
+      appToast.error(
+        isApiError(error)
+          ? error.message
+          : t("integrations.payment.toast.failed"),
+      );
     },
   });
 
@@ -80,12 +84,18 @@ export function PaymentSettingsPage() {
         >
           {() => (
             <FormLayout>
-              <FormSection title={t("integrations.payment.settings.section")} columns={2}>
+              <FormSection
+                title={t("integrations.payment.settings.section")}
+                columns={2}
+              >
                 <AppSelect
                   name="active_provider"
                   label={t("integrations.payment.settings.active_provider")}
                   options={[
-                    { value: "none", label: t("integrations.payment.providers.none") },
+                    {
+                      value: "none",
+                      label: t("integrations.payment.providers.none"),
+                    },
                     { value: "paytr", label: "PayTR" },
                     { value: "iyzico", label: "Iyzico" },
                   ]}
@@ -98,7 +108,10 @@ export function PaymentSettingsPage() {
                 />
               </FormSection>
               <FormActions>
-                <Button type="submit" disabled={!canWrite || saveMutation.isPending}>
+                <Button
+                  type="submit"
+                  disabled={!canWrite || saveMutation.isPending}
+                >
                   {t("form.save")}
                 </Button>
               </FormActions>

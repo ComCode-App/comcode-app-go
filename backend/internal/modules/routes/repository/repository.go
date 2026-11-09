@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/model"
+	"github.com/google/uuid"
 )
 
 // Repository: List/Update/Delete/GetProfileIDByUUID are scoped to an account; path, uuid and

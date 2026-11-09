@@ -12,10 +12,7 @@ import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { useLocale } from "@/providers/locale-provider";
 
-import {
-  ordersService,
-  type OrderSummary,
-} from "../services/orders.service";
+import { ordersService, type OrderSummary } from "../services/orders.service";
 import { ordersQueryKeys } from "../hooks/query-keys";
 import { OrderKanbanBoard } from "./order-kanban-board";
 import { OrderDetailDialog } from "./order-detail-dialog";
@@ -23,7 +20,9 @@ import { OrderKPICards } from "./order-kpi-cards";
 
 export function OrdersPipelinePage() {
   const { t } = useLocale();
-  const [selectedOrderUuid, setSelectedOrderUuid] = useState<string | null>(null);
+  const [selectedOrderUuid, setSelectedOrderUuid] = useState<string | null>(
+    null,
+  );
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const listQuery = useQuery({

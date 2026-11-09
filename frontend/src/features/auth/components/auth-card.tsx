@@ -18,7 +18,7 @@ export function AuthCard({
 }) {
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <div className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/70 p-6 shadow-2xl shadow-purple-950/10 backdrop-blur-2xl backdrop-saturate-150 ring-1 ring-black/5 dark:border-white/10 dark:bg-black/35 dark:shadow-purple-950/50 dark:ring-white/10">
+      <div className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/70 p-6 shadow-2xl ring-1 shadow-purple-950/10 ring-black/5 backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10 dark:bg-black/35 dark:shadow-purple-950/50 dark:ring-white/10">
         {/* Top edge subtle specular highlight */}
         <div
           aria-hidden
@@ -26,11 +26,11 @@ export function AuthCard({
         />
 
         <div className="mb-6 flex flex-col gap-1.5 text-center">
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+          <h2 className="text-foreground text-xl font-semibold tracking-tight">
             {title}
           </h2>
           {description ? (
-            <p className="text-sm text-muted-foreground">{description}</p>
+            <p className="text-muted-foreground text-sm">{description}</p>
           ) : null}
         </div>
 
@@ -38,12 +38,10 @@ export function AuthCard({
       </div>
 
       {footer ? (
-        <FieldDescription className="px-6 text-center text-xs text-muted-foreground">
+        <FieldDescription className="text-muted-foreground px-6 text-center text-xs">
           {footer}
         </FieldDescription>
       ) : null}
     </div>
   );
 }
-
-

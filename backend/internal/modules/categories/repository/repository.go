@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/categories/model"
+	"github.com/google/uuid"
 )
 
 type Repository interface {

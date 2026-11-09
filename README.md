@@ -38,7 +38,7 @@ Planning lives in **Linear only** (project ComCode). Reference issues as `COM-12
 - **I/O engine** — async CSV/XLSX/PDF/JSON export and import with rollback
 - **Bulk engine** — permission-gated batch mutations with optional undo
 - **Activity + logs** — audit trail and application log viewer with purge rules
-- **Step-up** — password/passkey re-auth on sensitive actions (`/platform/access`)
+- **Step-up** — password/passkey re-auth on sensitive actions (`/platform/settings/access`)
 - **Impersonation** — platform admin can act as another user (`platform.users.impersonate`)
 
 ## Quick start

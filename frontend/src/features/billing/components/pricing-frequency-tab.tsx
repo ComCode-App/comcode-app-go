@@ -23,7 +23,7 @@ export function PricingFrequencyTab({
       type="button"
       onClick={onSelect}
       className={cn(
-        "relative w-fit px-4 py-2 text-sm font-semibold capitalize text-foreground transition-colors",
+        "text-foreground relative w-fit px-4 py-2 text-sm font-semibold capitalize transition-colors",
         saveBadge && "flex items-center justify-center gap-2.5",
       )}
     >
@@ -32,7 +32,7 @@ export function PricingFrequencyTab({
         <motion.span
           layoutId="billing-pricing-frequency"
           transition={{ type: "spring", duration: 0.4 }}
-          className="absolute inset-0 z-0 rounded-full bg-background shadow-sm"
+          className="bg-background absolute inset-0 z-0 rounded-full shadow-sm"
         />
       ) : null}
       {saveBadge ? (

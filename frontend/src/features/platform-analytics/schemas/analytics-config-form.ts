@@ -17,21 +17,33 @@ export function createAnalyticsConfigSchema(t: T) {
     event_delivery_mode: z.enum(DELIVERY_MODES),
     raw_event_retention_days: positiveInt(1),
     aggregate_retention_days: positiveInt(1),
-    queue_name: z.string().trim().min(1, t("platform_analytics.config.validation.queue_required")),
+    queue_name: z
+      .string()
+      .trim()
+      .min(1, t("platform_analytics.config.validation.queue_required")),
     realtime_enabled: z.boolean(),
     batch_size: positiveInt(1),
     batch_flush_interval_ms: positiveInt(1),
     // TEC-936: 1-30 days; a change applies from the next UTC day.
-    ip_hash_salt_rotation_days: positiveInt(1).max(30, t("platform_analytics.config.validation.max", { max: 30 })),
+    ip_hash_salt_rotation_days: positiveInt(1).max(
+      30,
+      t("platform_analytics.config.validation.max", { max: 30 }),
+    ),
     anonymize_ip: z.boolean(),
   });
 }
 
-export type AnalyticsConfigFormValues = z.infer<ReturnType<typeof createAnalyticsConfigSchema>>;
+export type AnalyticsConfigFormValues = z.infer<
+  ReturnType<typeof createAnalyticsConfigSchema>
+>;
 
 /** Fills gaps with the documented defaults (docs/ANALYTICS_CONFIGURATION.md). */
-export function settingsToFormValues(s: AnalyticsSettings): AnalyticsConfigFormValues {
-  const mode = DELIVERY_MODES.includes(s.event_delivery_mode as (typeof DELIVERY_MODES)[number])
+export function settingsToFormValues(
+  s: AnalyticsSettings,
+): AnalyticsConfigFormValues {
+  const mode = DELIVERY_MODES.includes(
+    s.event_delivery_mode as (typeof DELIVERY_MODES)[number],
+  )
     ? (s.event_delivery_mode as (typeof DELIVERY_MODES)[number])
     : "async";
   return {

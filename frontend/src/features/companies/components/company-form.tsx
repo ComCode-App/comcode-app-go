@@ -76,7 +76,10 @@ function CompanyFormFields({
         <Button type="button" variant="outline" onClick={onCancel}>
           {t("form.cancel")}
         </Button>
-        <Button type="submit" disabled={isSubmitting || form.formState.isSubmitting}>
+        <Button
+          type="submit"
+          disabled={isSubmitting || form.formState.isSubmitting}
+        >
           {t("companies.actions.create")}
         </Button>
       </FormActions>

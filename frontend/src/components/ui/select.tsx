@@ -21,7 +21,7 @@ export const SelectTrigger = React.forwardRef<
     type={type ?? "button"}
     data-size={size}
     className={cn(
-      "border-border bg-background focus:ring-ring flex w-full items-center justify-between rounded-xl border px-3.5 py-2 text-sm whitespace-nowrap shadow-xs transition-colors focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-10 data-[size=sm]:h-8",
+      "border-border bg-background focus:ring-ring focus:ring-primary focus:border-primary flex w-full items-center justify-between rounded-xl border px-3.5 py-2 text-sm whitespace-nowrap shadow-xs transition-colors focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-10 data-[size=sm]:h-8",
       className,
     )}
     {...props}

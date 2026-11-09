@@ -97,7 +97,9 @@ function NavGroupView({
   const pathname = usePathname();
   const { isMobile, state } = useSidebar();
   const collapsible = group.collapsible ?? true;
-  const hasActive = resolved.some(({ item }) => isNavItemActive(pathname, item, homeHref));
+  const hasActive = resolved.some(({ item }) =>
+    isNavItemActive(pathname, item, homeHref),
+  );
   const [open, onOpenChange] = useNavGroupOpen(
     catalogId,
     group.id,
@@ -267,7 +269,9 @@ function CollapsedNavGroup({
                   if (isNavBranch(item)) {
                     return (
                       <Fragment key={item.id}>
-                        <DropdownMenuLabel>{t(item.titleKey)}</DropdownMenuLabel>
+                        <DropdownMenuLabel>
+                          {t(item.titleKey)}
+                        </DropdownMenuLabel>
                         {item.items.map((child) => (
                           <NavDropdownItem
                             key={child.id}

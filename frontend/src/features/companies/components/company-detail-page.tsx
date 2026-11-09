@@ -107,7 +107,9 @@ export function CompanyDetailPage({ uuid }: { uuid: string }) {
             title={data.name}
             description={data.slug}
             badges={
-              <Badge variant={data.status === "active" ? "outline" : "secondary"}>
+              <Badge
+                variant={data.status === "active" ? "outline" : "secondary"}
+              >
                 {t(`companies.status.${data.status}`)}
               </Badge>
             }
@@ -155,10 +157,10 @@ export function CompanyDetailPage({ uuid }: { uuid: string }) {
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50 border-b">
                     <tr>
-                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">
+                      <th className="text-muted-foreground h-10 px-4 text-left font-medium">
                         {t("companies.fields.user")}
                       </th>
-                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">
+                      <th className="text-muted-foreground h-10 px-4 text-left font-medium">
                         {t("companies.fields.role")}
                       </th>
                       <th className="h-10 px-4" />
@@ -166,7 +168,10 @@ export function CompanyDetailPage({ uuid }: { uuid: string }) {
                   </thead>
                   <tbody>
                     {data.members.map((member) => (
-                      <tr key={member.user_uuid} className="border-b last:border-0 hover:bg-muted/50">
+                      <tr
+                        key={member.user_uuid}
+                        className="hover:bg-muted/50 border-b last:border-0"
+                      >
                         <td className="p-4">
                           <div className="font-medium">
                             {member.name} {member.surname}
@@ -184,10 +189,16 @@ export function CompanyDetailPage({ uuid }: { uuid: string }) {
                               value={member.role}
                               disabled={changeRole.isPending}
                               onValueChange={(role) =>
-                                changeRole.mutate({ userUuid: member.user_uuid, role })
+                                changeRole.mutate({
+                                  userUuid: member.user_uuid,
+                                  role,
+                                })
                               }
                             >
-                              <SelectTrigger className="h-8 w-36" aria-label={t("companies.fields.role")}>
+                              <SelectTrigger
+                                className="h-8 w-36"
+                                aria-label={t("companies.fields.role")}
+                              >
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -201,7 +212,9 @@ export function CompanyDetailPage({ uuid }: { uuid: string }) {
                           </PermissionGuard>
                         </td>
                         <td className="p-4 text-right">
-                          <PermissionGuard permission={permissions.companies.write}>
+                          <PermissionGuard
+                            permission={permissions.companies.write}
+                          >
                             <Button
                               size="sm"
                               variant="ghost"
@@ -209,12 +222,18 @@ export function CompanyDetailPage({ uuid }: { uuid: string }) {
                               onClick={() =>
                                 void confirmDelete({
                                   title: t("companies.remove_member_title"),
-                                  confirmLabel: t("companies.actions.remove_member"),
-                                  description: t("companies.remove_member_description", {
-                                    name: `${member.name} ${member.surname}`.trim(),
-                                  }),
+                                  confirmLabel: t(
+                                    "companies.actions.remove_member",
+                                  ),
+                                  description: t(
+                                    "companies.remove_member_description",
+                                    {
+                                      name: `${member.name} ${member.surname}`.trim(),
+                                    },
+                                  ),
                                 }).then((confirmed) => {
-                                  if (confirmed) removeMember.mutate(member.user_uuid);
+                                  if (confirmed)
+                                    removeMember.mutate(member.user_uuid);
                                 })
                               }
                             >

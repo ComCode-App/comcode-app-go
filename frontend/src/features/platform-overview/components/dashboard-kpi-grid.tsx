@@ -4,7 +4,11 @@ import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { CLOSED_ORDER_STATUSES } from "@/features/platform-overview/constants";
 import { DashboardStatCard } from "@/features/platform-overview/components/dashboard-stat-card";
-import { formatMoneyMinor, formatPercent, numberFormatter } from "@/features/platform-overview/lib/format";
+import {
+  formatMoneyMinor,
+  formatPercent,
+  numberFormatter,
+} from "@/features/platform-overview/lib/format";
 import type { PlatformOverview } from "@/features/platform-overview/services/overview.service";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
@@ -23,12 +27,16 @@ export function DashboardKpiGrid({ data, loading }: DashboardKpiGridProps) {
 
   const mrr = data?.subscriptions.mrr ?? [];
   const mrrValue = mrr.length
-    ? mrr.map((m) => formatMoneyMinor(m.amount_minor, m.currency, locale)).join(" · ")
+    ? mrr
+        .map((m) => formatMoneyMinor(m.amount_minor, m.currency, locale))
+        .join(" · ")
     : formatMoneyMinor(0, "TRY", locale);
   const paying = mrr.reduce((sum, m) => sum + m.subscriptions, 0);
   const atRisk = data?.subscriptions.at_risk_mrr ?? [];
   const atRiskValue = atRisk.length
-    ? atRisk.map((m) => formatMoneyMinor(m.amount_minor, m.currency, locale)).join(" · ")
+    ? atRisk
+        .map((m) => formatMoneyMinor(m.amount_minor, m.currency, locale))
+        .join(" · ")
     : formatMoneyMinor(0, "TRY", locale);
   const openOrders = (data?.orders.funnel ?? [])
     .filter((s) => !CLOSED_ORDER_STATUSES.includes(s.status))
@@ -45,13 +53,19 @@ export function DashboardKpiGrid({ data, loading }: DashboardKpiGridProps) {
             new: fmt.format(data.users.new_last_30d),
           })
         : undefined,
-      href: can(permissions.users.read) ? routes.platform.users.root : undefined,
+      href: can(permissions.users.read)
+        ? routes.platform.users.root
+        : undefined,
     },
     {
       key: "profiles",
       label: t("dashboard.kpi.profiles"),
       value: n(data?.profiles.total),
-      hint: data ? t("dashboard.kpi.profiles_hint", { published: fmt.format(data.profiles.published) }) : undefined,
+      hint: data
+        ? t("dashboard.kpi.profiles_hint", {
+            published: fmt.format(data.profiles.published),
+          })
+        : undefined,
     },
     {
       key: "activation",
@@ -68,22 +82,34 @@ export function DashboardKpiGrid({ data, loading }: DashboardKpiGridProps) {
       key: "mrr",
       label: t("dashboard.kpi.mrr"),
       value: data ? mrrValue : "—",
-      hint: data ? t("dashboard.kpi.mrr_hint", { count: fmt.format(paying) }) : undefined,
-      href: can(permissions.subscriptions.read) ? routes.platform.settings.subscriptions : undefined,
+      hint: data
+        ? t("dashboard.kpi.mrr_hint", { count: fmt.format(paying) })
+        : undefined,
+      href: can(permissions.subscriptions.read)
+        ? routes.platform.settings.subscriptions
+        : undefined,
     },
     {
       // TEC-944: past_due subscriptions are kept out of MRR and shown on their own.
       key: "at_risk_mrr",
       label: t("dashboard.kpi.at_risk_mrr"),
       value: data ? atRiskValue : "—",
-      hint: data ? t("dashboard.kpi.at_risk_mrr_hint", { count: fmt.format(data.subscriptions.past_due) }) : undefined,
-      href: can(permissions.subscriptions.read) ? routes.platform.settings.subscriptions : undefined,
+      hint: data
+        ? t("dashboard.kpi.at_risk_mrr_hint", {
+            count: fmt.format(data.subscriptions.past_due),
+          })
+        : undefined,
+      href: can(permissions.subscriptions.read)
+        ? routes.platform.settings.subscriptions
+        : undefined,
     },
     {
       key: "orders",
       label: t("dashboard.kpi.orders"),
       value: n(data?.orders.total),
-      hint: data ? t("dashboard.kpi.orders_hint", { active: fmt.format(openOrders) }) : undefined,
+      hint: data
+        ? t("dashboard.kpi.orders_hint", { active: fmt.format(openOrders) })
+        : undefined,
       href: can(permissions.orders.read) ? routes.platform.orders : undefined,
     },
     {

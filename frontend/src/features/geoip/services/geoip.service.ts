@@ -14,11 +14,15 @@ export type GeoIPUpdateResult = {
 
 export const geoipService = {
   async getStatus() {
-    return unwrap<GeoIPStatus>(await apiClient.GET("/v1/platform/geoip/status"));
+    return unwrap<GeoIPStatus>(
+      await apiClient.GET("/v1/platform/geoip/status"),
+    );
   },
 
   async getConfig() {
-    return unwrap<GeoIPSettings>(await apiClient.GET("/v1/platform/geoip/config"));
+    return unwrap<GeoIPSettings>(
+      await apiClient.GET("/v1/platform/geoip/config"),
+    );
   },
 
   async patchConfig(body: GeoIPSettings) {

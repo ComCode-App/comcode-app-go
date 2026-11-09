@@ -1,12 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import {
-  useForm,
-  useFieldArray,
-  Controller,
-  useWatch,
-} from "react-hook-form";
+import { useForm, useFieldArray, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   AlertCircle,
@@ -84,14 +79,16 @@ interface ProfileFormProps {
 }
 
 type TabKey =
-  | "identity"
-  | "media"
-  | "contacts"
-  | "social"
-  | "addresses"
-  | "settings";
+  "identity" | "media" | "contacts" | "social" | "addresses" | "settings";
 
-const TAB_KEYS: readonly TabKey[] = ["identity", "media", "contacts", "social", "addresses", "settings"];
+const TAB_KEYS: readonly TabKey[] = [
+  "identity",
+  "media",
+  "contacts",
+  "social",
+  "addresses",
+  "settings",
+];
 
 function isTabKey(value: string | null | undefined): value is TabKey {
   return Boolean(value) && TAB_KEYS.includes(value as TabKey);
@@ -114,7 +111,9 @@ export function ProfileForm({
   const { t } = useLocale();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<TabKey>(isTabKey(initialTab) ? initialTab : "identity");
+  const [activeTab, setActiveTab] = useState<TabKey>(
+    isTabKey(initialTab) ? initialTab : "identity",
+  );
   // A new ?tab= (a suggestion clicked while the editor is open) switches the tab.
   const [requestedTab, setRequestedTab] = useState(initialTab);
   if (initialTab !== requestedTab) {
@@ -223,45 +222,46 @@ export function ProfileForm({
     },
   });
 
-  const debounceFetchMetadata = useCallback((index: number, url: string) => {
-    if (!url || !url.startsWith("http")) return;
-    const existing = activeDebounceTimers.get(index);
-    if (existing) {
-      clearTimeout(existing);
-    }
-    const timer = setTimeout(async () => {
-      try {
-        setScrapingIndex(index);
-        const meta = await profilesService.fetchLinkMetadata(url);
-        if (meta.title && !form.getValues(`social_links.${index}.label`)) {
-          form.setValue(`social_links.${index}.label`, meta.title, {
-            shouldDirty: true,
-          });
-        }
-        if (meta.icon_url) {
-          form.setValue(`social_links.${index}.icon_url`, meta.icon_url, {
-            shouldDirty: true,
-          });
-        }
-      } catch {
-        // Silently skip if auto-scraping fails during typing
-      } finally {
-        setScrapingIndex(null);
+  const debounceFetchMetadata = useCallback(
+    (index: number, url: string) => {
+      if (!url || !url.startsWith("http")) return;
+      const existing = activeDebounceTimers.get(index);
+      if (existing) {
+        clearTimeout(existing);
       }
-    }, 600);
-    activeDebounceTimers.set(index, timer);
-  }, [form]);
+      const timer = setTimeout(async () => {
+        try {
+          setScrapingIndex(index);
+          const meta = await profilesService.fetchLinkMetadata(url);
+          if (meta.title && !form.getValues(`social_links.${index}.label`)) {
+            form.setValue(`social_links.${index}.label`, meta.title, {
+              shouldDirty: true,
+            });
+          }
+          if (meta.icon_url) {
+            form.setValue(`social_links.${index}.icon_url`, meta.icon_url, {
+              shouldDirty: true,
+            });
+          }
+        } catch {
+          // Silently skip if auto-scraping fails during typing
+        } finally {
+          setScrapingIndex(null);
+        }
+      }, 600);
+      activeDebounceTimers.set(index, timer);
+    },
+    [form],
+  );
 
   const watchedValues = useWatch({ control: form.control });
 
   // Field Arrays
-  const {
-    fields: translationFields,
-    append: appendTranslation,
-  } = useFieldArray({
-    control: form.control,
-    name: "translations",
-  });
+  const { fields: translationFields, append: appendTranslation } =
+    useFieldArray({
+      control: form.control,
+      name: "translations",
+    });
 
   const {
     fields: contactFields,
@@ -314,7 +314,10 @@ export function ProfileForm({
 
       // 1. Identity
       if (options.includeIdentity) {
-        if (options.mergeMode === "replace" || !currentTranslation?.first_name) {
+        if (
+          options.mergeMode === "replace" ||
+          !currentTranslation?.first_name
+        ) {
           form.setValue(
             `translations.${currentTranslationIndex}.first_name`,
             data.first_name || data.display_name || "",
@@ -328,7 +331,10 @@ export function ProfileForm({
             { shouldDirty: true },
           );
         }
-        if (options.mergeMode === "replace" || !currentTranslation?.middle_name) {
+        if (
+          options.mergeMode === "replace" ||
+          !currentTranslation?.middle_name
+        ) {
           form.setValue(
             `translations.${currentTranslationIndex}.middle_name`,
             data.middle_name || "",
@@ -360,14 +366,20 @@ export function ProfileForm({
 
       // 2. Work & Organization
       if (options.includeWork) {
-        if (options.mergeMode === "replace" || !currentTranslation?.company_name) {
+        if (
+          options.mergeMode === "replace" ||
+          !currentTranslation?.company_name
+        ) {
           form.setValue(
             `translations.${currentTranslationIndex}.company_name`,
             data.company_name || "",
             { shouldDirty: true },
           );
         }
-        if (options.mergeMode === "replace" || !currentTranslation?.department) {
+        if (
+          options.mergeMode === "replace" ||
+          !currentTranslation?.department
+        ) {
           form.setValue(
             `translations.${currentTranslationIndex}.department`,
             data.department || "",
@@ -416,11 +428,7 @@ export function ProfileForm({
       const resolvedAvatar = data.avatar_url || data.avatar_data_url;
       if (options.includeAvatar && resolvedAvatar) {
         if (options.mergeMode === "replace" || !form.getValues("avatar_url")) {
-          form.setValue(
-            "avatar_url",
-            resolvedAvatar,
-            { shouldDirty: true },
-          );
+          form.setValue("avatar_url", resolvedAvatar, { shouldDirty: true });
         }
       }
 
@@ -437,12 +445,17 @@ export function ProfileForm({
       }
 
       // 6. Contact Details (Phone & Email)
-      if (options.includeContacts && data.contact_details && data.contact_details.length > 0) {
+      if (
+        options.includeContacts &&
+        data.contact_details &&
+        data.contact_details.length > 0
+      ) {
         if (options.mergeMode === "replace") {
           form.setValue(
             "contact_details",
             data.contact_details.map((c, i) => ({
-              category: c.category as "phone" | "email" | "url" | "whatsapp" | "other",
+              category: c.category as
+                "phone" | "email" | "url" | "whatsapp" | "other",
               type: c.type || "work",
               label: c.label || "",
               value: c.value,
@@ -456,7 +469,8 @@ export function ProfileForm({
           const newItems = data.contact_details
             .filter((c) => !existing.some((ex) => ex.value === c.value))
             .map((c, i) => ({
-              category: c.category as "phone" | "email" | "url" | "whatsapp" | "other",
+              category: c.category as
+                "phone" | "email" | "url" | "whatsapp" | "other",
               type: c.type || "work",
               label: c.label || "",
               value: c.value,
@@ -472,7 +486,11 @@ export function ProfileForm({
       }
 
       // 7. Addresses
-      if (options.includeAddresses && data.addresses && data.addresses.length > 0) {
+      if (
+        options.includeAddresses &&
+        data.addresses &&
+        data.addresses.length > 0
+      ) {
         if (options.mergeMode === "replace") {
           form.setValue(
             "addresses",
@@ -511,7 +529,11 @@ export function ProfileForm({
       }
 
       // 8. Social Links
-      if (options.includeSocials && data.social_links && data.social_links.length > 0) {
+      if (
+        options.includeSocials &&
+        data.social_links &&
+        data.social_links.length > 0
+      ) {
         if (options.mergeMode === "replace") {
           form.setValue(
             "social_links",
@@ -633,7 +655,9 @@ export function ProfileForm({
   const handleFetchLinkMetadata = async (index: number) => {
     const url = form.getValues(`social_links.${index}.url`);
     if (!url || !url.startsWith("http")) {
-      appToast.error(t("profiles.validation.social_url_required", { index: index + 1 }));
+      appToast.error(
+        t("profiles.validation.social_url_required", { index: index + 1 }),
+      );
       return;
     }
 
@@ -792,22 +816,22 @@ export function ProfileForm({
       />
 
       {/* Quick Action Top Bar: VCF Import & Autocomplete */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-muted/40 border border-primary/20 shadow-xs">
+      <div className="from-primary/10 via-primary/5 to-muted/40 border-primary/20 flex flex-col items-start justify-between gap-3 rounded-2xl border bg-gradient-to-r p-3.5 shadow-xs sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0">
-            <Sparkles className="w-4 h-4" />
+          <div className="bg-primary/15 border-primary/30 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border">
+            <Sparkles className="h-4 w-4" />
           </div>
           <div className="space-y-0.5">
-            <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
+            <div className="text-foreground flex items-center gap-1.5 text-xs font-bold">
               <span>{t("profiles.vcard.banner_title")}</span>
               <Badge
                 variant="outline"
-                className="text-[10px] px-1.5 py-0 font-mono text-primary border-primary/30"
+                className="text-primary border-primary/30 px-1.5 py-0 font-mono text-[10px]"
               >
                 .VCF / Apple / Google
               </Badge>
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-muted-foreground text-[11px]">
               {t("profiles.vcard.banner_desc")}
             </p>
           </div>
@@ -818,9 +842,9 @@ export function ProfileForm({
           variant="default"
           size="sm"
           onClick={() => setIsVCardDialogOpen(true)}
-          className="w-full sm:w-auto text-xs font-semibold gap-1.5 shadow-sm rounded-xl shrink-0"
+          className="w-full shrink-0 gap-1.5 rounded-xl text-xs font-semibold shadow-sm sm:w-auto"
         >
-          <UploadCloud className="w-4 h-4" />
+          <UploadCloud className="h-4 w-4" />
           <span>{t("profiles.vcard.banner_button")}</span>
         </Button>
       </div>
@@ -829,26 +853,26 @@ export function ProfileForm({
       {validationErrors.length > 0 && (
         <Alert
           variant="destructive"
-          className="border-destructive/40 bg-destructive/10 text-destructive shadow-sm animate-in fade-in slide-in-from-top-2"
+          className="border-destructive/40 bg-destructive/10 text-destructive animate-in fade-in slide-in-from-top-2 shadow-sm"
         >
           <AlertCircle className="h-5 w-5 shrink-0" />
           <div className="flex-1">
-            <AlertTitle className="font-semibold text-sm">
+            <AlertTitle className="text-sm font-semibold">
               {t("profiles.validation.title", {
                 count: validationErrors.length,
               })}
             </AlertTitle>
-            <AlertDescription className="text-xs mt-1 space-y-1">
+            <AlertDescription className="mt-1 space-y-1 text-xs">
               <p className="text-destructive/90">
                 {t("profiles.validation.desc")}
               </p>
-              <ul className="list-disc list-inside space-y-0.5 mt-2">
+              <ul className="mt-2 list-inside list-disc space-y-0.5">
                 {validationErrors.map((err, i) => (
                   <li key={i}>
                     <button
                       type="button"
                       onClick={() => handleJumpToError(err)}
-                      className="underline font-medium hover:text-foreground transition-colors cursor-pointer text-left"
+                      className="hover:text-foreground cursor-pointer text-left font-medium underline transition-colors"
                     >
                       {err.message}
                     </button>
@@ -862,34 +886,34 @@ export function ProfileForm({
             variant="ghost"
             size="sm"
             onClick={() => setValidationErrors([])}
-            className="h-7 w-7 p-0 text-destructive hover:bg-destructive/20"
+            className="text-destructive hover:bg-destructive/20 h-7 w-7 p-0"
           >
-            <X className="w-4 h-4" />
+            <X className="h-4 w-4" />
           </Button>
         </Alert>
       )}
 
       {/* Main Grid: Form (Left) & Live Preview (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
         {/* Left Column: Horizontally Scrollable Pill Tabs & Form Cards */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="space-y-6 lg:col-span-7">
           {/* Responsive Horizontally Scrollable Pill Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar p-1.5 bg-muted/40 rounded-2xl border border-border/50 shadow-inner">
+          <div className="no-scrollbar bg-muted/40 border-border/50 flex items-center gap-1.5 overflow-x-auto rounded-2xl border p-1.5 shadow-inner">
             <button
               type="button"
               onClick={() => setActiveTab("identity")}
               className={cn(
-                "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shrink-0",
+                "flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all",
                 activeTab === "identity"
-                  ? "bg-background text-foreground shadow-sm border border-border/60"
+                  ? "bg-background text-foreground border-border/60 border shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
               )}
             >
-              <User className="w-4 h-4 text-primary" />
+              <User className="text-primary h-4 w-4" />
               <span>{t("profiles.tabs.identity")}</span>
               <Badge
                 variant="secondary"
-                className="text-[10px] px-1.5 py-0 uppercase font-mono"
+                className="px-1.5 py-0 font-mono text-[10px] uppercase"
               >
                 {translationFields.length}
               </Badge>
@@ -899,13 +923,13 @@ export function ProfileForm({
               type="button"
               onClick={() => setActiveTab("media")}
               className={cn(
-                "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shrink-0",
+                "flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all",
                 activeTab === "media"
-                  ? "bg-background text-foreground shadow-sm border border-border/60"
+                  ? "bg-background text-foreground border-border/60 border shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
               )}
             >
-              <ImageIcon className="w-4 h-4 text-indigo-500" />
+              <ImageIcon className="h-4 w-4 text-indigo-500" />
               <span>{t("profiles.tabs.media")}</span>
             </button>
 
@@ -913,18 +937,18 @@ export function ProfileForm({
               type="button"
               onClick={() => setActiveTab("contacts")}
               className={cn(
-                "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shrink-0",
+                "flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all",
                 activeTab === "contacts"
-                  ? "bg-background text-foreground shadow-sm border border-border/60"
+                  ? "bg-background text-foreground border-border/60 border shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
               )}
             >
-              <Phone className="w-4 h-4 text-emerald-500" />
+              <Phone className="h-4 w-4 text-emerald-500" />
               <span>{t("profiles.tabs.contacts")}</span>
               {contactFields.length > 0 && (
                 <Badge
                   variant="secondary"
-                  className="text-[10px] px-1.5 py-0 font-mono"
+                  className="px-1.5 py-0 font-mono text-[10px]"
                 >
                   {contactFields.length}
                 </Badge>
@@ -935,18 +959,18 @@ export function ProfileForm({
               type="button"
               onClick={() => setActiveTab("social")}
               className={cn(
-                "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shrink-0",
+                "flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all",
                 activeTab === "social"
-                  ? "bg-background text-foreground shadow-sm border border-border/60"
+                  ? "bg-background text-foreground border-border/60 border shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
               )}
             >
-              <Share2 className="w-4 h-4 text-blue-500" />
+              <Share2 className="h-4 w-4 text-blue-500" />
               <span>{t("profiles.tabs.social")}</span>
               {socialFields.length > 0 && (
                 <Badge
                   variant="secondary"
-                  className="text-[10px] px-1.5 py-0 font-mono"
+                  className="px-1.5 py-0 font-mono text-[10px]"
                 >
                   {socialFields.length}
                 </Badge>
@@ -957,18 +981,18 @@ export function ProfileForm({
               type="button"
               onClick={() => setActiveTab("addresses")}
               className={cn(
-                "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shrink-0",
+                "flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all",
                 activeTab === "addresses"
-                  ? "bg-background text-foreground shadow-sm border border-border/60"
+                  ? "bg-background text-foreground border-border/60 border shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
               )}
             >
-              <MapPin className="w-4 h-4 text-rose-500" />
+              <MapPin className="h-4 w-4 text-rose-500" />
               <span>{t("profiles.tabs.addresses")}</span>
               {addressFields.length > 0 && (
                 <Badge
                   variant="secondary"
-                  className="text-[10px] px-1.5 py-0 font-mono"
+                  className="px-1.5 py-0 font-mono text-[10px]"
                 >
                   {addressFields.length}
                 </Badge>
@@ -979,13 +1003,13 @@ export function ProfileForm({
               type="button"
               onClick={() => setActiveTab("settings")}
               className={cn(
-                "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shrink-0",
+                "flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all",
                 activeTab === "settings"
-                  ? "bg-background text-foreground shadow-sm border border-border/60"
+                  ? "bg-background text-foreground border-border/60 border shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
               )}
             >
-              <Sparkles className="w-4 h-4 text-amber-500" />
+              <Sparkles className="h-4 w-4 text-amber-500" />
               <span>{t("profiles.tabs.settings")}</span>
             </button>
           </div>
@@ -994,10 +1018,10 @@ export function ProfileForm({
           {activeTab === "identity" && (
             <Card className="border-border shadow-sm">
               <CardHeader className="pb-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                   <div>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Languages className="w-4 h-4 text-primary" />
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Languages className="text-primary h-4 w-4" />
                       {t("profiles.sections.multi_locale_title")}
                     </CardTitle>
                     <CardDescription className="text-xs">
@@ -1006,13 +1030,13 @@ export function ProfileForm({
                   </div>
 
                   {/* Multi-Language Switcher Pills */}
-                  <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/50">
+                  <div className="bg-muted/60 border-border/50 flex items-center gap-1 rounded-xl border p-1">
                     {hasTr && (
                       <button
                         type="button"
                         onClick={() => setActiveLocale("tr")}
                         className={cn(
-                          "px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5",
+                          "flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold transition-all",
                           activeLocale === "tr"
                             ? "bg-background text-foreground shadow-sm"
                             : "text-muted-foreground hover:text-foreground",
@@ -1022,7 +1046,7 @@ export function ProfileForm({
                         {watchedValues.primary_locale === "tr" && (
                           <Badge
                             variant="secondary"
-                            className="text-[9px] px-1 py-0 uppercase"
+                            className="px-1 py-0 text-[9px] uppercase"
                           >
                             {t("profiles.preview.primary_card")}
                           </Badge>
@@ -1035,7 +1059,7 @@ export function ProfileForm({
                         type="button"
                         onClick={() => setActiveLocale("en")}
                         className={cn(
-                          "px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5",
+                          "flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold transition-all",
                           activeLocale === "en"
                             ? "bg-background text-foreground shadow-sm"
                             : "text-muted-foreground hover:text-foreground",
@@ -1045,7 +1069,7 @@ export function ProfileForm({
                         {watchedValues.primary_locale === "en" && (
                           <Badge
                             variant="secondary"
-                            className="text-[9px] px-1 py-0 uppercase"
+                            className="px-1 py-0 text-[9px] uppercase"
                           >
                             {t("profiles.preview.primary_card")}
                           </Badge>
@@ -1057,9 +1081,9 @@ export function ProfileForm({
                       <button
                         type="button"
                         onClick={() => handleAddLocale("en")}
-                        className="px-2.5 py-1 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors flex items-center gap-1"
+                        className="text-primary hover:bg-primary/10 flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
                       >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="h-3.5 w-3.5" />
                         <span>{t("profiles.actions.add_english")}</span>
                       </button>
                     )}
@@ -1068,9 +1092,9 @@ export function ProfileForm({
                       <button
                         type="button"
                         onClick={() => handleAddLocale("tr")}
-                        className="px-2.5 py-1 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors flex items-center gap-1"
+                        className="text-primary hover:bg-primary/10 flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
                       >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="h-3.5 w-3.5" />
                         <span>{t("profiles.actions.add_turkish")}</span>
                       </button>
                     )}
@@ -1080,15 +1104,16 @@ export function ProfileForm({
 
               <CardContent className="space-y-4 pt-0">
                 {/* Name Fields */}
-                <div className="p-4 rounded-xl bg-muted/20 border border-border/50 space-y-4">
-                  <div className="font-semibold text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5" />
+                <div className="bg-muted/20 border-border/50 space-y-4 rounded-xl border p-4">
+                  <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold tracking-wider uppercase">
+                    <User className="h-3.5 w-3.5" />
                     <span>
-                      {t("profiles.sections.names")} ({activeLocale.toUpperCase()})
+                      {t("profiles.sections.names")} (
+                      {activeLocale.toUpperCase()})
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
                     <div className="sm:col-span-2">
                       <Label className="text-xs">
                         {t("profiles.fields.prefix")}
@@ -1107,7 +1132,9 @@ export function ProfileForm({
                       </Label>
                       <Input
                         id={`field-first_name-${currentTranslationIndex}`}
-                        placeholder={t("profiles.fields.first_name_placeholder")}
+                        placeholder={t(
+                          "profiles.fields.first_name_placeholder",
+                        )}
                         {...form.register(
                           `translations.${currentTranslationIndex}.first_name`,
                         )}
@@ -1126,13 +1153,15 @@ export function ProfileForm({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div>
                       <Label className="text-xs">
                         {t("profiles.fields.middle_name")}
                       </Label>
                       <Input
-                        placeholder={t("profiles.fields.middle_name_placeholder")}
+                        placeholder={t(
+                          "profiles.fields.middle_name_placeholder",
+                        )}
                         {...form.register(
                           `translations.${currentTranslationIndex}.middle_name`,
                         )}
@@ -1164,19 +1193,21 @@ export function ProfileForm({
                 </div>
 
                 {/* Professional Info */}
-                <div className="p-4 rounded-xl bg-muted/20 border border-border/50 space-y-4">
-                  <div className="font-semibold text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Briefcase className="w-3.5 h-3.5" />
+                <div className="bg-muted/20 border-border/50 space-y-4 rounded-xl border p-4">
+                  <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold tracking-wider uppercase">
+                    <Briefcase className="h-3.5 w-3.5" />
                     <span>{t("profiles.sections.work")}</span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <Label className="text-xs">
                         {t("profiles.fields.company_name")}
                       </Label>
                       <Input
-                        placeholder={t("profiles.fields.company_name_placeholder")}
+                        placeholder={t(
+                          "profiles.fields.company_name_placeholder",
+                        )}
                         {...form.register(
                           `translations.${currentTranslationIndex}.company_name`,
                         )}
@@ -1195,13 +1226,15 @@ export function ProfileForm({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <Label className="text-xs">
                         {t("profiles.fields.department")}
                       </Label>
                       <Input
-                        placeholder={t("profiles.fields.department_placeholder")}
+                        placeholder={t(
+                          "profiles.fields.department_placeholder",
+                        )}
                         {...form.register(
                           `translations.${currentTranslationIndex}.department`,
                         )}
@@ -1222,12 +1255,14 @@ export function ProfileForm({
                 </div>
 
                 {/* Bio & Note */}
-                <div className="p-4 rounded-xl bg-muted/20 border border-border/50 space-y-3">
-                  <div className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                <div className="bg-muted/20 border-border/50 space-y-3 rounded-xl border p-4">
+                  <div className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                     {t("profiles.sections.bio_note")}
                   </div>
                   <div>
-                    <Label className="text-xs">{t("profiles.fields.bio")}</Label>
+                    <Label className="text-xs">
+                      {t("profiles.fields.bio")}
+                    </Label>
                     <Textarea
                       placeholder={t("profiles.fields.bio_placeholder")}
                       rows={3}
@@ -1237,7 +1272,9 @@ export function ProfileForm({
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">{t("profiles.fields.note")}</Label>
+                    <Label className="text-xs">
+                      {t("profiles.fields.note")}
+                    </Label>
                     <Textarea
                       placeholder={t("profiles.fields.note_placeholder")}
                       rows={2}
@@ -1255,8 +1292,8 @@ export function ProfileForm({
           {activeTab === "media" && (
             <Card className="border-border shadow-sm">
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <ImageIcon className="w-4 h-4 text-indigo-500" />
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ImageIcon className="h-4 w-4 text-indigo-500" />
                   {t("profiles.sections.media_title")}
                 </CardTitle>
                 <CardDescription className="text-xs">
@@ -1265,8 +1302,8 @@ export function ProfileForm({
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Avatar Uploader Dropzone */}
-                <div className="p-4 rounded-xl border border-dashed border-border bg-muted/20 flex flex-col sm:flex-row items-center gap-5">
-                  <Avatar className="w-24 h-24 rounded-2xl border-2 border-border shadow-sm bg-muted shrink-0">
+                <div className="border-border bg-muted/20 flex flex-col items-center gap-5 rounded-xl border border-dashed p-4 sm:flex-row">
+                  <Avatar className="border-border bg-muted h-24 w-24 shrink-0 rounded-2xl border-2 shadow-sm">
                     {watchedValues.avatar_url ? (
                       <AvatarImage
                         src={watchedValues.avatar_url}
@@ -1275,23 +1312,23 @@ export function ProfileForm({
                       />
                     ) : null}
                     <AvatarFallback className="rounded-2xl text-xl font-bold">
-                      <User className="w-8 h-8 text-muted-foreground" />
+                      <User className="text-muted-foreground h-8 w-8" />
                     </AvatarFallback>
                   </Avatar>
 
-                  <div className="flex-1 text-center sm:text-left space-y-2">
-                    <div className="font-semibold text-sm">
+                  <div className="flex-1 space-y-2 text-center sm:text-left">
+                    <div className="text-sm font-semibold">
                       {t("profiles.fields.avatar")}
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       {t("profiles.fields.avatar_hint")}
                     </p>
-                    <div className="flex items-center gap-2 justify-center sm:justify-start pt-1">
-                      <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold cursor-pointer hover:bg-primary/90 transition-colors shadow-sm">
+                    <div className="flex items-center justify-center gap-2 pt-1 sm:justify-start">
+                      <label className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex cursor-pointer items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-sm transition-colors">
                         {avatarUploading ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <UploadCloud className="w-4 h-4" />
+                          <UploadCloud className="h-4 w-4" />
                         )}
                         <span>
                           {avatarUploading
@@ -1316,7 +1353,7 @@ export function ProfileForm({
                               shouldDirty: true,
                             })
                           }
-                          className="text-xs text-destructive hover:bg-destructive/10"
+                          className="text-destructive hover:bg-destructive/10 text-xs"
                         >
                           {t("profiles.actions.remove")}
                         </Button>
@@ -1326,13 +1363,13 @@ export function ProfileForm({
                 </div>
 
                 {/* Cover Uploader Dropzone */}
-                <div className="p-4 rounded-xl border border-dashed border-border bg-muted/20 space-y-3">
+                <div className="border-border bg-muted/20 space-y-3 rounded-xl border border-dashed p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-semibold text-sm">
+                      <div className="text-sm font-semibold">
                         {t("profiles.fields.cover")}
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         {t("profiles.fields.cover_hint")}
                       </p>
                     </div>
@@ -1344,25 +1381,25 @@ export function ProfileForm({
                         onClick={() =>
                           form.setValue("cover_url", "", { shouldDirty: true })
                         }
-                        className="text-xs text-destructive hover:bg-destructive/10"
+                        className="text-destructive hover:bg-destructive/10 text-xs"
                       >
                         {t("profiles.actions.remove_cover")}
                       </Button>
                     )}
                   </div>
 
-                  <div className="relative h-32 rounded-xl border border-border overflow-hidden bg-muted/40 flex items-center justify-center">
+                  <div className="border-border bg-muted/40 relative flex h-32 items-center justify-center overflow-hidden rounded-xl border">
                     {watchedValues.cover_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={watchedValues.cover_url}
                         alt="Cover preview"
-                        className="w-full h-full object-cover"
+                        className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="text-center space-y-1">
-                        <ImageIcon className="w-8 h-8 text-muted-foreground mx-auto" />
-                        <span className="text-xs text-muted-foreground">
+                      <div className="space-y-1 text-center">
+                        <ImageIcon className="text-muted-foreground mx-auto h-8 w-8" />
+                        <span className="text-muted-foreground text-xs">
                           {t("profiles.fields.cover_hint")}
                         </span>
                       </div>
@@ -1370,11 +1407,11 @@ export function ProfileForm({
                   </div>
 
                   <div className="flex justify-end pt-1">
-                    <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-input bg-background hover:bg-muted text-xs font-semibold cursor-pointer transition-colors shadow-sm">
+                    <label className="border-input bg-background hover:bg-muted inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3.5 py-2 text-xs font-semibold shadow-sm transition-colors">
                       {coverUploading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <UploadCloud className="w-4 h-4" />
+                        <UploadCloud className="h-4 w-4" />
                       )}
                       <span>
                         {coverUploading
@@ -1400,8 +1437,8 @@ export function ProfileForm({
             <Card className="border-border shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between pb-4">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-emerald-500" />
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Phone className="h-4 w-4 text-emerald-500" />
                     {t("profiles.sections.contacts_title")}
                   </CardTitle>
                   <CardDescription className="text-xs">
@@ -1423,15 +1460,15 @@ export function ProfileForm({
                   }
                   className="gap-1.5 text-xs font-semibold"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="h-3.5 w-3.5" />
                   {t("profiles.actions.add_contact")}
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4 pt-0">
                 {contactFields.length === 0 ? (
-                  <div className="text-center py-8 border border-dashed rounded-xl bg-muted/20 space-y-2">
-                    <Phone className="w-8 h-8 text-muted-foreground mx-auto" />
-                    <p className="text-xs text-muted-foreground">
+                  <div className="bg-muted/20 space-y-2 rounded-xl border border-dashed py-8 text-center">
+                    <Phone className="text-muted-foreground mx-auto h-8 w-8" />
+                    <p className="text-muted-foreground text-xs">
                       {t("profiles.empty_contacts")}
                     </p>
                   </div>
@@ -1450,26 +1487,28 @@ export function ProfileForm({
                       <div
                         key={field.id}
                         className={cn(
-                          "p-4 rounded-xl border transition-all space-y-3 relative",
+                          "relative space-y-3 rounded-xl border p-4 transition-all",
                           isPrimary
                             ? "border-primary/50 bg-primary/5 shadow-xs"
                             : "border-border/60 bg-muted/20",
                         )}
                       >
-                        <div className="flex items-center justify-between gap-2 border-b border-border/40 pb-2">
+                        <div className="border-border/40 flex items-center justify-between gap-2 border-b pb-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-muted-foreground">
+                            <span className="text-muted-foreground text-xs font-bold">
                               #{idx + 1}
                             </span>
-                            <span className="text-xs font-semibold text-foreground capitalize">
-                              {t(`profiles.contact.category_${currentCategory}`)}
+                            <span className="text-foreground text-xs font-semibold capitalize">
+                              {t(
+                                `profiles.contact.category_${currentCategory}`,
+                              )}
                             </span>
                             {isPrimary && (
                               <Badge
                                 variant="default"
-                                className="text-[10px] px-2 py-0 gap-1"
+                                className="gap-1 px-2 py-0 text-[10px]"
                               >
-                                <Star className="w-3 h-3 fill-current" />
+                                <Star className="h-3 w-3 fill-current" />
                                 {t("profiles.contact.is_primary")}
                               </Badge>
                             )}
@@ -1479,13 +1518,13 @@ export function ProfileForm({
                             variant="ghost"
                             size="sm"
                             onClick={() => removeContact(idx)}
-                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                            className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
                           <div className="sm:col-span-3">
                             <Label className="text-xs">
                               {t("profiles.contact.category")}
@@ -1608,7 +1647,7 @@ export function ProfileForm({
                         </div>
 
                         {/* Custom Label and Dynamic Radio Selection */}
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
+                        <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-12">
                           <div className="sm:col-span-7">
                             <Label className="text-xs">
                               {t("profiles.contact.label")}
@@ -1621,12 +1660,12 @@ export function ProfileForm({
                             />
                           </div>
 
-                          <div className="sm:col-span-5 flex items-end pb-1.5">
+                          <div className="flex items-end pb-1.5 sm:col-span-5">
                             <button
                               type="button"
                               onClick={() => handleSelectPrimaryContact(idx)}
                               className={cn(
-                                "inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold cursor-pointer transition-all w-full justify-between",
+                                "inline-flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all",
                                 isPrimary
                                   ? "bg-primary text-primary-foreground border-primary shadow-xs"
                                   : "bg-background border-input text-muted-foreground hover:text-foreground hover:bg-muted/50",
@@ -1635,21 +1674,19 @@ export function ProfileForm({
                               <div className="flex items-center gap-2">
                                 <div
                                   className={cn(
-                                    "w-3.5 h-3.5 rounded-full border flex items-center justify-center",
+                                    "flex h-3.5 w-3.5 items-center justify-center rounded-full border",
                                     isPrimary
                                       ? "border-primary-foreground bg-primary-foreground"
                                       : "border-muted-foreground",
                                   )}
                                 >
                                   {isPrimary && (
-                                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                    <div className="bg-primary h-1.5 w-1.5 rounded-full" />
                                   )}
                                 </div>
                                 <span>{t("profiles.contact.is_primary")}</span>
                               </div>
-                              {isPrimary && (
-                                <Check className="w-3.5 h-3.5" />
-                              )}
+                              {isPrimary && <Check className="h-3.5 w-3.5" />}
                             </button>
                           </div>
                         </div>
@@ -1666,8 +1703,8 @@ export function ProfileForm({
             <Card className="border-border shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between pb-4">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Share2 className="w-4 h-4 text-blue-500" />
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Share2 className="h-4 w-4 text-blue-500" />
                     {t("profiles.sections.social_title")}
                   </CardTitle>
                   <CardDescription className="text-xs">
@@ -1690,15 +1727,15 @@ export function ProfileForm({
                   }
                   className="gap-1.5 text-xs font-semibold"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="h-3.5 w-3.5" />
                   {t("profiles.actions.add_social")}
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4 pt-0">
                 {socialFields.length === 0 ? (
-                  <div className="text-center py-8 border border-dashed rounded-xl bg-muted/20 space-y-2">
-                    <Share2 className="w-8 h-8 text-muted-foreground mx-auto" />
-                    <p className="text-xs text-muted-foreground">
+                  <div className="bg-muted/20 space-y-2 rounded-xl border border-dashed py-8 text-center">
+                    <Share2 className="text-muted-foreground mx-auto h-8 w-8" />
+                    <p className="text-muted-foreground text-xs">
                       {t("profiles.empty_social")}
                     </p>
                   </div>
@@ -1708,19 +1745,19 @@ export function ProfileForm({
                     return (
                       <div
                         key={field.id}
-                        className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-3"
+                        className="border-border/60 bg-muted/20 space-y-3 rounded-xl border p-4"
                       >
-                        <div className="flex items-center justify-between gap-2 border-b border-border/40 pb-2">
+                        <div className="border-border/40 flex items-center justify-between gap-2 border-b pb-2">
                           <div className="flex items-center gap-2">
                             {currentSocial?.icon_url ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 src={currentSocial.icon_url}
                                 alt="Icon"
-                                className="w-4 h-4 object-contain"
+                                className="h-4 w-4 object-contain"
                               />
                             ) : (
-                              <Globe className="w-4 h-4 text-muted-foreground" />
+                              <Globe className="text-muted-foreground h-4 w-4" />
                             )}
                             <span className="text-xs font-bold capitalize">
                               {currentSocial?.label ||
@@ -1735,9 +1772,9 @@ export function ProfileForm({
                               size="sm"
                               onClick={() => handleFetchLinkMetadata(idx)}
                               title={t("profiles.actions.fetch_icon")}
-                              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                              className="text-muted-foreground hover:text-foreground h-7 px-2 text-xs"
                             >
-                              <Sparkles className="w-3.5 h-3.5 mr-1 text-primary" />
+                              <Sparkles className="text-primary mr-1 h-3.5 w-3.5" />
                               <span>{t("profiles.actions.fetch_icon")}</span>
                             </Button>
                             <Button
@@ -1745,14 +1782,14 @@ export function ProfileForm({
                               variant="ghost"
                               size="sm"
                               onClick={() => removeSocial(idx)}
-                              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                              className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
                           <div className="sm:col-span-4">
                             <Label className="text-xs">
                               {t("profiles.social.platform")}
@@ -1777,7 +1814,7 @@ export function ProfileForm({
                                         <img
                                           src={p.icon_url}
                                           alt=""
-                                          className="w-3.5 h-3.5 object-contain"
+                                          className="h-3.5 w-3.5 object-contain"
                                         />
                                       ) : null}
                                       <span>{p.name}</span>
@@ -1799,7 +1836,9 @@ export function ProfileForm({
                             <div className="relative">
                               <Input
                                 id={`field-social-url-${idx}`}
-                                placeholder={t("profiles.social.url_placeholder")}
+                                placeholder={t(
+                                  "profiles.social.url_placeholder",
+                                )}
                                 {...form.register(`social_links.${idx}.url`, {
                                   onChange: (e) => {
                                     debounceFetchMetadata(idx, e.target.value);
@@ -1807,15 +1846,15 @@ export function ProfileForm({
                                 })}
                               />
                               {scrapingIndex === idx && (
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                <div className="absolute top-1/2 right-3 -translate-y-1/2">
+                                  <Loader2 className="text-primary h-4 w-4 animate-spin" />
                                 </div>
                               )}
                             </div>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
+                        <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-12">
                           <div className="sm:col-span-6">
                             <Label className="text-xs">
                               {t("profiles.social.label")}
@@ -1827,14 +1866,14 @@ export function ProfileForm({
                               {...form.register(`social_links.${idx}.label`)}
                             />
                           </div>
-                          <div className="sm:col-span-6 flex items-end pb-1">
-                            <label className="flex items-center gap-2 cursor-pointer text-xs font-medium">
+                          <div className="flex items-end pb-1 sm:col-span-6">
+                            <label className="flex cursor-pointer items-center gap-2 text-xs font-medium">
                               <input
                                 type="checkbox"
                                 {...form.register(
                                   `social_links.${idx}.is_active`,
                                 )}
-                                className="rounded border-input text-primary focus:ring-primary"
+                                className="border-input text-primary focus:ring-primary rounded"
                               />
                               <span>{t("profiles.social.is_active")}</span>
                             </label>
@@ -1853,8 +1892,8 @@ export function ProfileForm({
             <Card className="border-border shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between pb-4">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-rose-500" />
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <MapPin className="h-4 w-4 text-rose-500" />
                     {t("profiles.sections.addresses_title")}
                   </CardTitle>
                   <CardDescription className="text-xs">
@@ -1880,15 +1919,15 @@ export function ProfileForm({
                   }
                   className="gap-1.5 text-xs font-semibold"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="h-3.5 w-3.5" />
                   {t("profiles.actions.add_address")}
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4 pt-0">
                 {addressFields.length === 0 ? (
-                  <div className="text-center py-8 border border-dashed rounded-xl bg-muted/20 space-y-2">
-                    <MapPin className="w-8 h-8 text-muted-foreground mx-auto" />
-                    <p className="text-xs text-muted-foreground">
+                  <div className="bg-muted/20 space-y-2 rounded-xl border border-dashed py-8 text-center">
+                    <MapPin className="text-muted-foreground mx-auto h-8 w-8" />
+                    <p className="text-muted-foreground text-xs">
                       {t("profiles.empty_addresses")}
                     </p>
                   </div>
@@ -1902,15 +1941,15 @@ export function ProfileForm({
                       <div
                         key={field.id}
                         className={cn(
-                          "p-4 rounded-xl border transition-all space-y-3",
+                          "space-y-3 rounded-xl border p-4 transition-all",
                           isPrimary
                             ? "border-primary/50 bg-primary/5 shadow-xs"
                             : "border-border/60 bg-muted/20",
                         )}
                       >
-                        <div className="flex items-center justify-between gap-2 border-b border-border/40 pb-2">
+                        <div className="border-border/40 flex items-center justify-between gap-2 border-b pb-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-muted-foreground">
+                            <span className="text-muted-foreground text-xs font-bold">
                               #{idx + 1}
                             </span>
                             <span className="text-xs font-semibold capitalize">
@@ -1921,9 +1960,9 @@ export function ProfileForm({
                             {isPrimary && (
                               <Badge
                                 variant="default"
-                                className="text-[10px] px-2 py-0 gap-1"
+                                className="gap-1 px-2 py-0 text-[10px]"
                               >
-                                <Star className="w-3 h-3 fill-current" />
+                                <Star className="h-3 w-3 fill-current" />
                                 {t("profiles.address.is_primary")}
                               </Badge>
                             )}
@@ -1933,13 +1972,13 @@ export function ProfileForm({
                             variant="ghost"
                             size="sm"
                             onClick={() => removeAddress(idx)}
-                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                            className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <div>
                             <Label className="text-xs">
                               {t("profiles.address.type")}
@@ -1984,7 +2023,7 @@ export function ProfileForm({
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <div>
                             <Label className="text-xs">
                               {t("profiles.address.street")}
@@ -2009,13 +2048,15 @@ export function ProfileForm({
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                           <div>
                             <Label className="text-xs">
                               {t("profiles.address.city")}
                             </Label>
                             <Input
-                              placeholder={t("profiles.address.city_placeholder")}
+                              placeholder={t(
+                                "profiles.address.city_placeholder",
+                              )}
                               {...form.register(`addresses.${idx}.city`)}
                             />
                           </div>
@@ -2043,12 +2084,12 @@ export function ProfileForm({
                           </div>
                         </div>
 
-                        <div className="pt-1 flex justify-end">
+                        <div className="flex justify-end pt-1">
                           <button
                             type="button"
                             onClick={() => handleSelectPrimaryAddress(idx)}
                             className={cn(
-                              "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium cursor-pointer transition-all",
+                              "inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all",
                               isPrimary
                                 ? "bg-primary text-primary-foreground border-primary"
                                 : "bg-background border-input text-muted-foreground hover:text-foreground",
@@ -2056,14 +2097,14 @@ export function ProfileForm({
                           >
                             <div
                               className={cn(
-                                "w-3 h-3 rounded-full border flex items-center justify-center",
+                                "flex h-3 w-3 items-center justify-center rounded-full border",
                                 isPrimary
                                   ? "border-primary-foreground bg-primary-foreground"
                                   : "border-muted-foreground",
                               )}
                             >
                               {isPrimary && (
-                                <div className="w-1 h-1 rounded-full bg-primary" />
+                                <div className="bg-primary h-1 w-1 rounded-full" />
                               )}
                             </div>
                             <span>{t("profiles.address.is_primary")}</span>
@@ -2081,8 +2122,8 @@ export function ProfileForm({
           {activeTab === "settings" && (
             <Card className="border-border shadow-sm">
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
                   {t("profiles.sections.settings_title")}
                 </CardTitle>
                 <CardDescription className="text-xs">
@@ -2114,7 +2155,7 @@ export function ProfileForm({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2">
                   <div>
                     <Label className="text-xs font-semibold">
                       {t("profiles.fields.birthday")}
@@ -2126,7 +2167,9 @@ export function ProfileForm({
                         <DatePicker
                           value={field.value ?? undefined}
                           onChange={(val) => field.onChange(val || null)}
-                          placeholder={t("profiles.fields.birthday_placeholder")}
+                          placeholder={t(
+                            "profiles.fields.birthday_placeholder",
+                          )}
                         />
                       )}
                     />
@@ -2148,12 +2191,12 @@ export function ProfileForm({
                     control={form.control}
                     name="is_primary"
                     render={({ field }) => (
-                      <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/60 bg-muted/20">
+                      <div className="border-border/60 bg-muted/20 flex items-center justify-between rounded-xl border p-3.5">
                         <div className="space-y-0.5">
                           <Label className="text-xs font-bold">
                             {t("profiles.fields.is_primary")}
                           </Label>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-muted-foreground text-[11px]">
                             {t("profiles.fields.is_primary_description")}
                           </p>
                         </div>
@@ -2170,7 +2213,7 @@ export function ProfileForm({
           )}
 
           {/* Form Actions Footer */}
-          <div className="flex items-center justify-between pt-4 border-t border-border">
+          <div className="border-border flex items-center justify-between border-t pt-4">
             <Button
               type="button"
               variant="outline"
@@ -2182,12 +2225,12 @@ export function ProfileForm({
               type="button"
               onClick={handleFormSubmit}
               disabled={isLoading}
-              className="gap-2 min-w-[140px]"
+              className="min-w-[140px] gap-2"
             >
               {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Check className="w-4 h-4" />
+                <Check className="h-4 w-4" />
               )}
               <span>
                 {initialData
@@ -2199,13 +2242,13 @@ export function ProfileForm({
         </div>
 
         {/* Right Column: In-Panel Live Digital Card Preview */}
-        <div className="lg:col-span-5 sticky top-6 space-y-4">
+        <div className="sticky top-6 space-y-4 lg:col-span-5">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
+            <h4 className="text-muted-foreground flex items-center gap-1.5 text-xs font-bold tracking-wider uppercase">
+              <Sparkles className="text-primary h-3.5 w-3.5" />
               {t("profiles.preview.title")}
             </h4>
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-muted-foreground text-[11px]">
               {t("profiles.preview.subtitle")}
             </span>
           </div>

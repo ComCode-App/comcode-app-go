@@ -7,6 +7,8 @@ Planning lives in Linear only (project ComCode); reference issues as COM-123 (fo
 ## Start here
 
 - AGENTS.md — agent entry, skills, hard rules
+- CLAUDE.md — Claude Code setup (edit hooks, MCP servers, reviewer subagent)
+- .agents/skills/verify-changes, .agents/skills/db-migration — checks before a PR, schema changes
 - docs/ARCHITECTURE.md — repo map, shells, request flow
 - docs/TENANCY_AND_ACCESS.md — accounts, roles, entitlement
 - docs/PUBLIC_PROFILES.md — /{username}, usernames, backgrounds, visitor API

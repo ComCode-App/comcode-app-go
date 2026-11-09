@@ -61,8 +61,12 @@ export function SocialPlatformDialog({
 }: SocialPlatformDialogProps) {
   const { t } = useLocale();
   const isEditing = Boolean(platform);
-  const { createMutation, updateMutation, uploadIconMutation, fetchIconMutation } =
-    useSocialPlatformMutations();
+  const {
+    createMutation,
+    updateMutation,
+    uploadIconMutation,
+    fetchIconMutation,
+  } = useSocialPlatformMutations();
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [customIconUrl, setCustomIconUrl] = useState<string | null>(null);
   const [imgError, setImgError] = useState(false);
@@ -183,11 +187,13 @@ export function SocialPlatformDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing
-              ? t("social_platforms.dialog.edit_title", { name: platform?.name || "" })
+              ? t("social_platforms.dialog.edit_title", {
+                  name: platform?.name || "",
+                })
               : t("social_platforms.dialog.create_title")}
           </DialogTitle>
         </DialogHeader>
@@ -199,23 +205,23 @@ export function SocialPlatformDialog({
               {t("social_platforms.dialog.icon_label")}
             </Label>
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl border border-border bg-muted/30 flex items-center justify-center overflow-hidden shrink-0">
+              <div className="border-border bg-muted/30 flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border">
                 {iconPreview && !imgError ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={iconPreview}
                     alt="Icon Preview"
                     onError={() => setImgError(true)}
-                    className="w-10 h-10 object-contain"
+                    className="h-10 w-10 object-contain"
                   />
                 ) : (
-                  <Globe className="w-6 h-6 text-muted-foreground" />
+                  <Globe className="text-muted-foreground h-6 w-6" />
                 )}
               </div>
               <div className="flex-1 space-y-1.5">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <label className="inline-flex items-center gap-2 px-3 py-1.5 border border-input rounded-md text-xs font-medium cursor-pointer hover:bg-muted transition-colors">
-                    <UploadCloud className="w-3.5 h-3.5 text-muted-foreground" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="border-input hover:bg-muted inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors">
+                    <UploadCloud className="text-muted-foreground h-3.5 w-3.5" />
                     <span>{t("social_platforms.actions.upload_file")}</span>
                     <input
                       type="file"
@@ -234,14 +240,14 @@ export function SocialPlatformDialog({
                     className="h-8 gap-1.5 text-xs font-medium"
                   >
                     {isFetchingOG ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
-                      <Sparkles className="w-3.5 h-3.5 text-primary" />
+                      <Sparkles className="text-primary h-3.5 w-3.5" />
                     )}
                     <span>{t("social_platforms.actions.fetch_icon_og")}</span>
                   </Button>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-muted-foreground text-[11px]">
                   {t("social_platforms.dialog.icon_hint")}
                 </p>
               </div>
@@ -249,12 +255,10 @@ export function SocialPlatformDialog({
           </div>
 
           <div>
-            <Label className="text-xs">
-              {t("social_platforms.name")}
-            </Label>
+            <Label className="text-xs">{t("social_platforms.name")}</Label>
             <Input placeholder="e.g. LinkedIn" {...form.register("name")} />
             {form.formState.errors.name && (
-              <p className="text-xs text-destructive mt-1">
+              <p className="text-destructive mt-1 text-xs">
                 {form.formState.errors.name.message}
               </p>
             )}
@@ -262,9 +266,7 @@ export function SocialPlatformDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">
-                {t("social_platforms.slug")}
-              </Label>
+              <Label className="text-xs">{t("social_platforms.slug")}</Label>
               <Input placeholder="e.g. linkedin" {...form.register("slug")} />
             </div>
 
@@ -281,7 +283,9 @@ export function SocialPlatformDialog({
                     defaultValue={field.value}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={t("social_platforms.category")} />
+                      <SelectValue
+                        placeholder={t("social_platforms.category")}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {CATEGORY_KEYS.map((catKey) => (
@@ -304,11 +308,11 @@ export function SocialPlatformDialog({
               placeholder="https://linkedin.com/in/{value}"
               {...form.register("url_pattern")}
             />
-            <p className="text-[11px] text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-[11px]">
               {t("social_platforms.dialog.url_pattern_hint")}
             </p>
             {form.formState.errors.url_pattern && (
-              <p className="text-xs text-destructive mt-1">
+              <p className="text-destructive mt-1 text-xs">
                 {form.formState.errors.url_pattern.message}
               </p>
             )}
@@ -356,7 +360,7 @@ export function SocialPlatformDialog({
                   <Label className="text-xs font-semibold">
                     {t("social_platforms.dialog.is_active_title")}
                   </Label>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-muted-foreground text-[11px]">
                     {t("social_platforms.dialog.is_active_hint")}
                   </p>
                 </div>
@@ -378,7 +382,7 @@ export function SocialPlatformDialog({
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
               ) : null}
               <span>{t("common.save")}</span>
             </Button>

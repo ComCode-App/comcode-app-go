@@ -28,24 +28,22 @@ function PlatformIconCell({ item }: { item: SocialPlatformSummary }) {
 
   return (
     <div className="flex items-center gap-3">
-      <div className="w-9 h-9 rounded-xl border border-border bg-muted/30 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+      <div className="border-border bg-muted/30 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border shadow-xs">
         {item.icon_url && !error ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={item.icon_url}
             alt={item.name}
             onError={() => setError(true)}
-            className="w-5 h-5 object-contain"
+            className="h-5 w-5 object-contain"
           />
         ) : (
-          <Globe className="w-4 h-4 text-muted-foreground" />
+          <Globe className="text-muted-foreground h-4 w-4" />
         )}
       </div>
       <div>
-        <div className="font-semibold text-sm text-foreground">
-          {item.name}
-        </div>
-        <div className="text-xs text-muted-foreground font-mono">
+        <div className="text-foreground text-sm font-semibold">{item.name}</div>
+        <div className="text-muted-foreground font-mono text-xs">
           {item.slug}
         </div>
       </div>
@@ -76,7 +74,7 @@ export function getSocialPlatformsColumns({
         const cat = row.original.category;
         const catKey = `social_platforms.categories.${cat}`;
         return (
-          <Badge variant="outline" className="capitalize text-xs font-normal">
+          <Badge variant="outline" className="text-xs font-normal capitalize">
             {t(catKey)}
           </Badge>
         );
@@ -88,7 +86,7 @@ export function getSocialPlatformsColumns({
       enableSorting: false,
       cell: ({ row }) => {
         return (
-          <span className="font-mono text-xs text-muted-foreground truncate max-w-xs block">
+          <span className="text-muted-foreground block max-w-xs truncate font-mono text-xs">
             {row.original.url_pattern}
           </span>
         );
@@ -99,7 +97,7 @@ export function getSocialPlatformsColumns({
       labelKey: "social_platforms.display_order",
       enableSorting: true,
       cell: ({ row }) => (
-        <span className="text-xs font-semibold text-muted-foreground">
+        <span className="text-muted-foreground text-xs font-semibold">
           {row.original.display_order}
         </span>
       ),
@@ -116,7 +114,7 @@ export function getSocialPlatformsColumns({
               checked={item.is_active}
               onCheckedChange={(checked) => onToggleActive(item, checked)}
             />
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               {item.is_active ? t("common.active") : t("common.inactive")}
             </span>
           </div>
@@ -140,7 +138,7 @@ export function getSocialPlatformsColumns({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                    className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 w-8"
                     onClick={() => onFetchIcon(item)}
                   >
                     <Sparkles className="h-4 w-4" />
@@ -161,7 +159,7 @@ export function getSocialPlatformsColumns({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    className="text-muted-foreground hover:text-foreground h-8 w-8"
                     onClick={() => onEdit(item)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -178,7 +176,7 @@ export function getSocialPlatformsColumns({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8"
                     onClick={() => onDelete(item.uuid)}
                   >
                     <Trash2 className="h-4 w-4" />

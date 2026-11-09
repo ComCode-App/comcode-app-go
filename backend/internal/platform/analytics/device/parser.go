@@ -52,7 +52,7 @@ func (p *RegexParser) Parse(ua string) Info {
 	}
 
 	info := Info{
-		DeviceType: "desktop",
+		DeviceType:  "desktop",
 		DeviceBrand: "Generic",
 	}
 

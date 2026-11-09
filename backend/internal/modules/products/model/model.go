@@ -24,14 +24,14 @@ type OrbitLimits struct {
 }
 
 type Model3DViewbox struct {
-	CameraOrbit      CameraOrbit  `json:"camera_orbit"`
-	FOV              float64      `json:"fov"`
-	AutoRotate       bool         `json:"auto_rotate"`
-	RotationSpeed    float64      `json:"rotation_speed"`
-	StageBounds      StageBounds  `json:"stage_bounds"`
-	OrbitLimits      *OrbitLimits `json:"orbit_limits,omitempty"`
-	EnvironmentPreset string      `json:"environment_preset,omitempty"`
-	BackgroundColor  string       `json:"background_color,omitempty"`
+	CameraOrbit       CameraOrbit  `json:"camera_orbit"`
+	FOV               float64      `json:"fov"`
+	AutoRotate        bool         `json:"auto_rotate"`
+	RotationSpeed     float64      `json:"rotation_speed"`
+	StageBounds       StageBounds  `json:"stage_bounds"`
+	OrbitLimits       *OrbitLimits `json:"orbit_limits,omitempty"`
+	EnvironmentPreset string       `json:"environment_preset,omitempty"`
+	BackgroundColor   string       `json:"background_color,omitempty"`
 }
 
 type ProductVariantSummary struct {
@@ -51,23 +51,23 @@ type ProductVariantSummary struct {
 }
 
 type ProductSummary struct {
-	UUID             string   `json:"uuid"`
-	CategoryName     string   `json:"category_name,omitempty"`
-	CategorySlug     string   `json:"category_slug,omitempty"`
-	Name             string   `json:"name"`
-	Slug             string   `json:"slug"`
-	ShortDescription string   `json:"short_description"`
-	Status           string   `json:"status"`
-	ProductType      string   `json:"product_type"`
-	BasePrice        float64  `json:"base_price"`
-	Currency         string   `json:"currency"`
-	StockQuantity    int      `json:"stock_quantity"`
-	SKU              string   `json:"sku"`
-	AllowCustomPrint bool     `json:"allow_custom_print"`
-	Model3DFileURL   string   `json:"model_3d_file_url"`
-	Model3DUSDZURL   string   `json:"model_3d_usdz_url"`
-	Images           []string `json:"images"`
-	DisplayOrder     int      `json:"display_order"`
+	UUID             string    `json:"uuid"`
+	CategoryName     string    `json:"category_name,omitempty"`
+	CategorySlug     string    `json:"category_slug,omitempty"`
+	Name             string    `json:"name"`
+	Slug             string    `json:"slug"`
+	ShortDescription string    `json:"short_description"`
+	Status           string    `json:"status"`
+	ProductType      string    `json:"product_type"`
+	BasePrice        float64   `json:"base_price"`
+	Currency         string    `json:"currency"`
+	StockQuantity    int       `json:"stock_quantity"`
+	SKU              string    `json:"sku"`
+	AllowCustomPrint bool      `json:"allow_custom_print"`
+	Model3DFileURL   string    `json:"model_3d_file_url"`
+	Model3DUSDZURL   string    `json:"model_3d_usdz_url"`
+	Images           []string  `json:"images"`
+	DisplayOrder     int       `json:"display_order"`
 	CreatedAt        time.Time `json:"created_at"`
 }
 

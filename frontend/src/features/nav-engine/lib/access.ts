@@ -23,7 +23,8 @@ export function isNavEntryVisible(
   >,
   access: AccessFns,
 ): boolean {
-  if (entry.accountType && entry.accountType !== access.accountType) return false;
+  if (entry.accountType && entry.accountType !== access.accountType)
+    return false;
   if (
     entry.accountRoles &&
     (!access.accountRole || !entry.accountRoles.includes(access.accountRole))

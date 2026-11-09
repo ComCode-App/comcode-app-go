@@ -5,12 +5,12 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/categories/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/categories/usecase"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/resourcemeta"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/apiquery"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/response"
+	"github.com/google/uuid"
 )
 
 type Handler struct {

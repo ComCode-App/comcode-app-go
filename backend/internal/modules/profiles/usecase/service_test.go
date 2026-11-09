@@ -1,9 +1,9 @@
 package usecase
 
 import (
-	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
 	"context"
 	"errors"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
 	"io"
 	"strings"
 	"testing"

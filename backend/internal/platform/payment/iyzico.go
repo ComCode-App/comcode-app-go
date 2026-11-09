@@ -66,8 +66,8 @@ func (p *IyzicoProvider) InitCardAdd(ctx context.Context, in CardAddInput) (Chec
 
 type formParams struct {
 	conversationID, sessionUUID, currency, planName, userEmail, userName, userPhone, userAddress, clientIP, callbackURL, cardUserKey string
-	amountMinor                                                                                                                         int64
-	physical                                                                                                                            bool
+	amountMinor                                                                                                                      int64
+	physical                                                                                                                         bool
 }
 
 func (p *IyzicoProvider) initForm(ctx context.Context, in formParams) (CheckoutResult, error) {
@@ -161,16 +161,16 @@ func (p *IyzicoProvider) ChargeSavedCard(ctx context.Context, in SavedCardCharge
 	price := formatTRY(in.AmountMinor)
 	names := splitName(in.UserName)
 	req := &iyzipay.PaymentRequest{
-		Locale:          iyzipay.LocaleTR,
-		ConversationID:  in.MerchantOID,
-		Price:           price,
-		PaidPrice:       price,
-		Currency:        iyzipay.CurrencyTRY,
-		Installment:     1,
-		BasketID:        in.MerchantOID,
-		PaymentChannel:  "WEB",
-		PaymentGroup:    iyzipay.PaymentGroupSubscription,
-		PaymentCard:     &iyzipay.PaymentCard{CardUserKey: &in.UToken, CardToken: &in.CToken},
+		Locale:         iyzipay.LocaleTR,
+		ConversationID: in.MerchantOID,
+		Price:          price,
+		PaidPrice:      price,
+		Currency:       iyzipay.CurrencyTRY,
+		Installment:    1,
+		BasketID:       in.MerchantOID,
+		PaymentChannel: "WEB",
+		PaymentGroup:   iyzipay.PaymentGroupSubscription,
+		PaymentCard:    &iyzipay.PaymentCard{CardUserKey: &in.UToken, CardToken: &in.CToken},
 		Buyer: &iyzipay.Buyer{
 			ID:                  in.MerchantOID,
 			Name:                names.first,

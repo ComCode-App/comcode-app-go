@@ -43,7 +43,13 @@ const ERROR_KEYS: Record<FieldKey, string> = {
 };
 
 /** Visitor lead form on public pages (TEC-552). Posts to the same-origin BFF. */
-export function LeadCaptureForm({ path, consentVersion, via, ownerName, locale }: Props) {
+export function LeadCaptureForm({
+  path,
+  consentVersion,
+  via,
+  ownerName,
+  locale,
+}: Props) {
   const { t } = useLocale();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -61,7 +67,11 @@ export function LeadCaptureForm({ path, consentVersion, via, ownerName, locale }
     if (!email.trim() && !phone.trim()) out.push("contact");
     if (email.trim() && !EMAIL_RE.test(email.trim())) out.push("email");
     const digits = phone.replace(/\D/g, "").length;
-    if (phone.trim() && (!PHONE_RE.test(phone.trim()) || digits < 7 || digits > 15)) out.push("phone");
+    if (
+      phone.trim() &&
+      (!PHONE_RE.test(phone.trim()) || digits < 7 || digits > 15)
+    )
+      out.push("phone");
     if (message.length > MAX_MESSAGE) out.push("message");
     if (!consent) out.push("consent");
     return out;
@@ -108,7 +118,9 @@ export function LeadCaptureForm({ path, consentVersion, via, ownerName, locale }
       <div className="flex flex-col items-center gap-2 py-4 text-center">
         <CheckCircle2 className="size-8 text-emerald-600" />
         <p className="font-medium">{t("leads.form.success_title")}</p>
-        <p className="text-muted-foreground text-sm">{t("leads.form.success_body")}</p>
+        <p className="text-muted-foreground text-sm">
+          {t("leads.form.success_body")}
+        </p>
       </div>
     );
   }
@@ -116,12 +128,16 @@ export function LeadCaptureForm({ path, consentVersion, via, ownerName, locale }
   const has = (k: FieldKey) => errors.includes(k);
   const err = (...keys: FieldKey[]) => {
     const k = keys.find(has);
-    return k ? <p className="text-destructive text-xs">{t(ERROR_KEYS[k])}</p> : null;
+    return k ? (
+      <p className="text-destructive text-xs">{t(ERROR_KEYS[k])}</p>
+    ) : null;
   };
 
   return (
     <form onSubmit={(e) => void submit(e)} noValidate className="space-y-3">
-      <p className="text-muted-foreground text-sm">{t("leads.form.subtitle", { name: ownerName })}</p>
+      <p className="text-muted-foreground text-sm">
+        {t("leads.form.subtitle", { name: ownerName })}
+      </p>
       <div className="grid gap-1.5">
         <Label htmlFor="lead-name">{t("leads.form.name")}</Label>
         <Input
@@ -164,7 +180,13 @@ export function LeadCaptureForm({ path, consentVersion, via, ownerName, locale }
           {err("phone")}
         </div>
       </div>
-      {has("contact") ? err("contact") : <p className="text-muted-foreground text-xs">{t("leads.form.contact_hint")}</p>}
+      {has("contact") ? (
+        err("contact")
+      ) : (
+        <p className="text-muted-foreground text-xs">
+          {t("leads.form.contact_hint")}
+        </p>
+      )}
       <div className="grid gap-1.5">
         <Label htmlFor="lead-message">{t("leads.form.message")}</Label>
         <Textarea
@@ -187,7 +209,9 @@ export function LeadCaptureForm({ path, consentVersion, via, ownerName, locale }
         <span>{t("leads.form.consent_text")}</span>
       </label>
       {err("consent")}
-      {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
+      {formError ? (
+        <p className="text-destructive text-sm">{formError}</p>
+      ) : null}
       <Button type="submit" className="w-full" disabled={sending}>
         <Send className="size-4" />
         {sending ? t("leads.form.sending") : t("leads.form.submit")}
@@ -201,8 +225,15 @@ function serverFieldErrors(fields: string[]): FieldKey[] {
   const out = new Set<FieldKey>();
   for (const f of fields) {
     const [field, code] = f.split(":");
-    if (field === "email" && code === "email_or_phone_required") out.add("contact");
-    else if (field === "name" || field === "email" || field === "phone" || field === "message" || field === "consent") {
+    if (field === "email" && code === "email_or_phone_required")
+      out.add("contact");
+    else if (
+      field === "name" ||
+      field === "email" ||
+      field === "phone" ||
+      field === "message" ||
+      field === "consent"
+    ) {
       out.add(field);
     }
   }

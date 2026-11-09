@@ -76,7 +76,10 @@ function CompanyAddMemberFormFields({
       </FormSection>
 
       <FormActions>
-        <Button type="submit" disabled={isSubmitting || form.formState.isSubmitting}>
+        <Button
+          type="submit"
+          disabled={isSubmitting || form.formState.isSubmitting}
+        >
           {t("companies.add_member")}
         </Button>
       </FormActions>
@@ -99,10 +102,7 @@ export function CompanyAddMemberForm({
   return (
     <AppForm schema={schema} defaultValues={defaultValues} onSubmit={onSubmit}>
       {(form) => (
-        <CompanyAddMemberFormFields
-          form={form}
-          isSubmitting={isSubmitting}
-        />
+        <CompanyAddMemberFormFields form={form} isSubmitting={isSubmitting} />
       )}
     </AppForm>
   );

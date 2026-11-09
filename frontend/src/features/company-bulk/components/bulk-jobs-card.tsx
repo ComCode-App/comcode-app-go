@@ -32,7 +32,9 @@ export function BulkJobsCard() {
           <CardTitle className="text-base">
             {t("company_bulk.jobs.title")}
           </CardTitle>
-          <CardDescription>{t("company_bulk.jobs.description")}</CardDescription>
+          <CardDescription>
+            {t("company_bulk.jobs.description")}
+          </CardDescription>
         </div>
         <Button
           type="button"

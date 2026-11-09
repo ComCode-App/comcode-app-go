@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/categories/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/categories/repository"
+	"github.com/google/uuid"
 )
 
 var (
