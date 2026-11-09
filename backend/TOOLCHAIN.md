@@ -49,16 +49,16 @@ Infra is started from the **repo root**: `make infra` / `make local-dev`.
 
 | Service | URL |
 |---------|-----|
-| API (host) | `http://127.0.0.1:8080` |
-| Scalar | `http://127.0.0.1:8080/docs/` |
-| Health | `http://127.0.0.1:8080/healthz` |
-| Ready | `http://127.0.0.1:8080/readyz` |
+| API (host) | `http://127.0.0.1:58080` |
+| Scalar | `http://127.0.0.1:58080/docs/` |
+| Health | `http://127.0.0.1:58080/healthz` |
+| Ready | `http://127.0.0.1:58080/readyz` |
 | Adminer | `http://127.0.0.1:8081` |
-| SeaweedFS S3 | `http://127.0.0.1:8333` |
+| SeaweedFS S3 | `http://127.0.0.1:58333` |
 | MailHog UI | `http://127.0.0.1:8025` |
 | MailHog SMTP | `127.0.0.1:1025` |
-| Postgres | `127.0.0.1:5432` |
-| Redis | `127.0.0.1:6379` |
+| Postgres | `127.0.0.1:55432` |
+| Redis | `127.0.0.1:56379` |
 | Centrifugo WS | `ws://127.0.0.1:8000/connection/websocket` |
 | Centrifugo API | `http://127.0.0.1:8000/api` |
 

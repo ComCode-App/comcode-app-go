@@ -11,14 +11,14 @@ export const apiConfig = {
 
 /**
  * Server-only upstream (Route Handlers). Do not import from Client Components.
- * `API_URL` must be the Go `/v1` base (e.g. http://127.0.0.1:8080/v1).
+ * `API_URL` must be the Go `/v1` base (e.g. http://127.0.0.1:58080/v1).
  * Paths passed to fetchUpstream are relative to that base (`auth/login` → `/v1/auth/login`).
  */
 export const upstreamConfig = {
   baseUrl: normalizeUpstreamBase(
     process.env.API_URL ??
       process.env.NEXT_PUBLIC_API_URL ??
-      "http://127.0.0.1:8080/v1",
+      "http://127.0.0.1:58080/v1",
   ),
 } as const;
 
