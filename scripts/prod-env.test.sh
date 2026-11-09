@@ -82,7 +82,10 @@ if docker compose version >/dev/null 2>&1; then
   [[ $imgs == *"ghcr.io/acme/demo-backend:main "* && $imgs == *"ghcr.io/acme/demo-frontend:main "* ]] ||
     fail "compose.prod.yml images do not follow IMAGE_REPO / IMAGE_TAG: $imgs"
   sed 's#^IMAGE_TAG=.*#IMAGE_TAG=v0.7#' "$E" >"$T/pinned"
-  docker compose --env-file "$T/pinned" -f "$ROOT/compose.prod.yml" config --images | grep -qxF ghcr.io/acme/demo-frontend:v0.7 ||
+  # Capture first: `cmd | grep -q` under pipefail fails at random when grep
+  # exits on the first match and compose gets SIGPIPE.
+  pinned_imgs=$(docker compose --env-file "$T/pinned" -f "$ROOT/compose.prod.yml" config --images)
+  grep -qxF ghcr.io/acme/demo-frontend:v0.7 <<<"$pinned_imgs" ||
     fail "compose.prod.yml ignores IMAGE_TAG"
   grep -vE '^IMAGE_REPO=' "$E" >"$T/norepo"
   if docker compose --env-file "$T/norepo" -f "$ROOT/compose.prod.yml" config -q 2>"$T/norepo.err"; then
