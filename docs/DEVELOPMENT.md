@@ -143,20 +143,38 @@ Dokploy → the compose app → **Domains**: pick the service and the **containe
 
 ## CI
 
-GitHub-hosted minutes are not used. `.github/workflows/ci.yml` runs on a **self-hosted macOS runner** (`runs-on: [self-hosted, comcode]`) installed on the dev machine as a launchd service.
+`.github/workflows/ci.yml` runs on **GitHub-hosted runners** (`ubuntu-24.04`) on pushes to `main` and `cc-collective-branch`, on every pull request (any base) and on manual runs (`workflow_dispatch`). Feature branches are tested through their pull request. A newer push to the same branch or PR cancels the running one (never on `main`).
 
-| Item | Value |
-|------|-------|
-| Runner dir | `~/actions-runner-comcode` |
-| Labels | `self-hosted`, `macOS`, `ARM64`, `comcode` |
-| Service | `./svc.sh status` / `start` / `stop` (from the runner dir) |
-| Logs | `~/Library/Logs/actions.runner.furkanmeclis-comcode-app-go.*` and `_diag/` |
+Job graph:
 
-Jobs queue while the machine is asleep or the service is stopped. Go module cache and pnpm store persist on the host, so remote caches are disabled.
+```
+changes ─┬─ backend ─────┐
+         ├─ frontend ────┤
+         ├─ e2e ─────────┤
+         ├─ image-build ─┼─ ci (single required check)
+         ├─ mobile ──────┤
+         └─ mobile-release
+auto-pr (disabled)
+```
+
+| Job | Runs when | What |
+|-----|-----------|------|
+| `changes` | always | Path filter (`git diff` against the PR base, the previous push on `cc-collective-branch`, or the merge-base with `main`). Docs, `*.md` and other `.github/*` files trigger nothing; a change to `ci.yml` itself, a push to `main` and a manual run trigger everything. |
+| `backend` | `backend/**` | `sqlc generate` + generated code must be committed, golangci-lint (pinned v2), Postgres integration tests with coverage in the job summary, Redocly OpenAPI lint, `scripts/openapi_routes.py`. |
+| `frontend` | `frontend/**` or `backend/**` (contracts) | install, typecheck, lint, unit tests, `scripts/check-i18n.mjs`. |
+| `e2e` | backend or frontend change, `scripts/e2e.sh`, `compose.local.yml`, `.env.example` | Playwright smoke suite via `scripts/e2e.sh`; report and stack logs uploaded on failure. |
+| `image-build` | app or infra change, not on `main` | Builds every image in `deploy/images.json` with buildx, no push. GHCR publishing on `main` comes with TEC-1094. |
+| `mobile`, `mobile-release` | only when the repo variable `MOBILE_ENABLED` is `true` (and `mobile/**` / backend changed) | Expo checks and EAS release; ComCode has no `mobile/` yet. Enable under Settings → Secrets and variables → Actions → Variables. |
+| `ci` | always | Fails if any needed job failed or was cancelled; skipped jobs (path-filtered or mobile gated off) pass. Make this the required status check. |
+| `auto-pr` | never (`if: false`) | Ported from the boilerplate but off: in ComCode all work goes through PRs into `cc-collective-branch` and the owner merges to `main` by hand. |
+
+Caches (all remote, GitHub Actions cache): Go modules and build cache (`setup-go`, keyed on `backend/go.sum`), pnpm store (`setup-node` `cache: pnpm`, keyed on `frontend/pnpm-lock.yaml`), golangci-lint, Playwright browsers, and buildx layers (`type=gha`, one scope per image).
+
+The env-core checks (`env` job) are added with TEC-1092.
 
 ### Postgres integration tests
 
-Tests that call `pgtest.Open` (`backend/internal/testutil/pgtest`) run only when `TEST_DATABASE_URL` is set and are skipped otherwise. Each test package gets a fresh database cloned from a template that has every migration applied (golang-migrate). The backend job starts a throwaway `postgres:18-alpine` container on `127.0.0.1:56432`, runs `go test -coverpkg=./... -coverprofile=…`, writes the total coverage to the job summary and always removes the container. Locally:
+Tests that call `pgtest.Open` (`backend/internal/testutil/pgtest`) run only when `TEST_DATABASE_URL` is set and are skipped otherwise. Each test package gets a fresh database cloned from a template that has every migration applied (golang-migrate). The backend job runs `postgres:18-alpine` as a job service container (data on tmpfs, `fsync`/`synchronous_commit`/`full_page_writes` off), runs `go test -coverpkg=./... -coverprofile=…` against it and writes the total coverage to the job summary. Locally:
 
 ```sh
 docker run -d --name pg-it -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test -e POSTGRES_DB=test -p 127.0.0.1:56432:5432 postgres:18-alpine
@@ -166,22 +184,11 @@ docker rm -f pg-it
 
 New integration test packages add `func TestMain(m *testing.M) { pgtest.Main(m) }` so the package database is dropped afterwards. Tests in one package share that database: create your own rows with the fixture helpers (`CreateUser`, `CreateProduct`, `CreateCard`) instead of assuming empty tables.
 
-Re-register (e.g. new machine):
-
-```sh
-cd ~/actions-runner-comcode
-./config.sh remove --token "$(gh api -X POST repos/furkanmeclis/comcode-app-go/actions/runners/remove-token --jq .token)"
-./config.sh --unattended --url https://github.com/furkanmeclis/comcode-app-go \
-  --token "$(gh api -X POST repos/furkanmeclis/comcode-app-go/actions/runners/registration-token --jq .token)" \
-  --name "$(scutil --get LocalHostName)-comcode" --labels comcode,macOS,ARM64
-./svc.sh install && ./svc.sh start
-```
-
 ### E2E smoke tests
 
 Playwright tests in `frontend/e2e` cover the critical paths: password login, login with an authenticator (TOTP), profile creation, a subscriber card order, marking it paid in `/platform/orders/pipeline` (which provisions the card), and activating that card from `/cards`.
 
-`scripts/e2e.sh` runs them the way CI's `e2e` job does. It starts Postgres, Redis and SeaweedFS from `compose.local.yml` under its own project name and ports (56433, 56380, 58333), migrates, runs the API on `:58080` and the production Next.js build on `:53000`, then removes everything on exit. It can run next to `make local-dev`. Extra arguments go to `playwright test` (`scripts/e2e.sh auth.spec.ts`). `E2E_SKIP_BUILD=1` reuses the last `pnpm build`. Stack logs land in `frontend/e2e/.state/logs`.
+`scripts/e2e.sh` runs them the way CI's `e2e` job does. It starts Postgres, Redis and SeaweedFS from `compose.local.yml` under its own project name and ports (56433, 56380, 58333), migrates, runs the API on `:58080` and the production Next.js build on `:53000`, then removes everything on exit. It can run next to `make local-dev`. Extra arguments go to `playwright test` (`scripts/e2e.sh auth.spec.ts`). `E2E_SKIP_BUILD=1` reuses the last `pnpm build`. Stack logs land in `frontend/e2e/.state/logs`. With `CI` set on Linux (the GitHub-hosted runner) it installs Chromium with its system libraries (`playwright install --with-deps`).
 
 Against your running dev stack instead:
 
