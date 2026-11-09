@@ -1,0 +1,26 @@
+## Env vars the Go backend reads that compose.prod.yml does not deliver to the
+## backend/worker containers, each with a decision. Read by scripts/check-compose-env.sh.
+##
+##   KEY | omit | reason    deliberately not delivered: the Go default is right for prod
+##   KEY | wire | reason    should be delivered; reported as a warning until it is
+##
+## Any other read-but-undelivered key fails CI: wire it into compose.prod.yml's
+## x-backend-environment block (KEY: ${KEY:-} keeps the Go default when unset),
+## or record a decision here. Stale lines (key no longer read, or an `omit` key
+## that is now delivered) fail too. Every key here is also `@unmanaged` in
+## deploy/env/schema.
+
+# Storage alias and local driver: STORAGE_PUBLIC_BASE_URL is the delivered name.
+S3_PUBLIC_BASE_URL | omit | alias of STORAGE_PUBLIC_BASE_URL, which is delivered
+STORAGE_LOCAL_PATH | omit | only for STORAGE_DRIVER=local, not used by the prod stack
+
+# Fixed by the prod stack.
+CENTRIFUGO_ENABLED | omit | Centrifugo is part of the prod stack (backend depends_on it)
+REDIS_DB | omit | each app has its own Redis; DB 0
+MAIL_DRIVER | omit | only smtp is implemented (the default)
+SMTP_FROM | omit | legacy alias of MAIL_FROM, which is delivered
+
+# One-off tools, not the server/worker processes.
+DATABASE_URL | omit | the migrate service gets its own DSN; cmd/migrate-legacy takes it at exec time
+LEGACY_EXPORT_URL | omit | input to cmd/migrate-legacy (legacy data import), passed at exec time and never stored in the stack env
+LEGACY_EXPORT_TOKEN | omit | input to cmd/migrate-legacy (legacy data import), passed at exec time and never stored in the stack env

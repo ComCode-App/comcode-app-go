@@ -114,6 +114,22 @@ Sensitive mutations can require a fresh password or passkey confirmation even wh
 - Redis keys should use `app:<env>:…` if you add caching.
 - Realtime channels: prefer `user:{user_uuid}`. Issue tokens only through `/v1/realtime/*`.
 
+## Environment variables
+
+`deploy/env/schema` is the source of truth for the production env; CI (`env` job, `make env-check`) keeps the other files in line with it ([design](./design/env-core.md)). Adding a variable:
+
+1. **Read it** in `backend/internal/config/config.go` (or `billing.go`) with a string-literal key (`getEnv("MY_KEY", "default")`); the checks find reads by literal name. `config.go` owns the default.
+2. **Local default** in `.env.example` (local dev never needs a generator).
+3. **Schema**: every key the backend reads must be in `deploy/env/schema`, else `scripts/check-env-sync.sh` fails.
+   - An operator value: add `MY_KEY | <rule>` (`derive:`, `const:`, `secret:…`, `ask:` or `empty`; an optional knob is `empty` under "Optional tuning", with its default in a `#` comment), bump `@version`, then `scripts/prod-env.sh example > .env.server.example`.
+   - Not an operator value (compose fixes it, an alias, a one-off tool input): `@unmanaged MY_KEY <reason>`.
+   - Renaming or dropping a key: `@rename OLD NEW <ver>` / `@remove KEY <ver>`, so `make prod-env-upgrade` migrates deployed files without losing values.
+4. **Deliver it** to the containers: add it to `x-backend-environment` in `compose.prod.yml` (`MY_KEY: ${MY_KEY:-}` keeps the `config.go` default when unset), or record why not in `deploy/env/compose-env.allow` (`omit`, and `@unmanaged` in the schema).
+5. **Secrets**: a `secret:` key needs a row in `guardedSecrets` (`backend/internal/config/guard.go`) with its development value and minimum length, so staging/production refuse it. `schema_test.go` fails until you add it (or exempt it with a reason, like the frontend-only `AUTH_SECRET`). Payment provider credentials are not env vars: they are stored in the database, encrypted with `APP_ENCRYPTION_KEY`.
+6. `make env-check && (cd backend && go test ./internal/config/)`.
+
+Do not edit `.env.server.example` by hand, and never put real values in either example file.
+
 ## What not to bring back
 
 The code base started from an older boilerplate. Do **not** reintroduce:
