@@ -1,0 +1,7 @@
+# actionlint config. The auto-pr job in ci.yml is switched off on purpose with
+# `if: false` (see the comment above that job), which actionlint reports as a
+# constant condition.
+paths:
+  .github/workflows/ci.yml:
+    ignore:
+      - 'constant expression "false" in condition'
