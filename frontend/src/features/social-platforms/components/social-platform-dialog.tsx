@@ -35,6 +35,7 @@ import { useSocialPlatformMutations } from "../hooks/use-social-platforms";
 import { profilesService } from "@/features/profiles/services/profiles.service";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
+import { suppressApiErrorToast } from "@/lib/api";
 
 interface SocialPlatformDialogProps {
   open: boolean;
@@ -126,7 +127,9 @@ export function SocialPlatformDialog({
         } else {
           appToast.error(t("profiles.toasts.metadata_failed"));
         }
-      } catch {
+      } catch (error) {
+        // The metadata-specific text replaces the global API error toast (TEC-1117).
+        suppressApiErrorToast(error);
         appToast.error(t("profiles.toasts.metadata_failed"));
       } finally {
         setIsFetchingOG(false);

@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { routes } from "@/config/routes";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
+import { suppressApiErrorToast } from "@/lib/api";
 
 type ExportMenuProps = {
   resource: IoResource;
@@ -53,7 +54,9 @@ export function ExportMenu({ resource, query, disabled }: ExportMenuProps) {
         locale,
       });
       appToast.success(t("exports.toast.queued"));
-    } catch {
+    } catch (error) {
+      // The export-specific text replaces the global API error toast (TEC-1117).
+      suppressApiErrorToast(error);
       appToast.error(t("exports.toast.failed"));
     } finally {
       setPending(null);

@@ -20,6 +20,7 @@ import { Bounded3DStage, Model3DViewboxConfig } from "./Bounded3DStage";
 import { toast } from "sonner";
 import { productsService } from "../services/products.service";
 import { useLocale } from "@/providers/locale-provider";
+import { isApiError } from "@/lib/api";
 
 interface ViewboxStudioModalProps {
   open: boolean;
@@ -90,9 +91,12 @@ export function ViewboxStudioModal({
       onSaved?.(viewbox);
       onOpenChange(false);
     } catch (err: unknown) {
-      toast.error(
-        err instanceof Error ? err.message : t("products.error_updating"),
-      );
+      // API errors already get the global toast (TEC-1117).
+      if (!isApiError(err)) {
+        toast.error(
+          err instanceof Error ? err.message : t("products.error_updating"),
+        );
+      }
     } finally {
       setIsSaving(false);
     }
@@ -134,6 +138,7 @@ export function ViewboxStudioModal({
         toast.error(data.error?.message || t("products.error_updating"));
       }
     } catch {
+      // toast-guard: no ApiError here; a raw fetch whose failures are toasted above.
       toast.error(t("common.error_generic"));
     } finally {
       setIsUploadingGLB(false);

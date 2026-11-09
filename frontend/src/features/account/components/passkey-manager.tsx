@@ -297,6 +297,7 @@ export function PasskeyManager() {
         queryKey: ["account", "identities"],
       });
     } catch {
+      // toast-guard: next-auth passkey sign-in; it never throws an ApiError.
       toast.error(t("auth.passkey.register_error"));
     } finally {
       setRegisterPending(false);

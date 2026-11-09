@@ -216,6 +216,7 @@ export function BackgroundStudioPage() {
       setDoc(parsed);
       toast.success(t("background_studio.toast.imported"));
     } catch {
+      // toast-guard: JSON parsing only, no API call.
       toast.error(t("background_studio.toast.invalid_json"));
     }
   };
@@ -228,6 +229,7 @@ export function BackgroundStudioPage() {
       setImportText(stringifyBackground(parsed));
       toast.success(t("background_studio.toast.imported"));
     } catch {
+      // toast-guard: file read and JSON parsing only, no API call.
       toast.error(t("background_studio.toast.invalid_json"));
     }
   };

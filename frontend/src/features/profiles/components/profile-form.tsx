@@ -69,6 +69,7 @@ import {
   VCardImportDialog,
   type VCardApplyOptions,
 } from "./vcard-import-dialog";
+import { isApiError, suppressApiErrorToast } from "@/lib/api";
 
 interface ProfileFormProps {
   initialData?: ProfileDetail;
@@ -613,9 +614,12 @@ export function ProfileForm({
         form.setValue("avatar_url", res.avatar_url, { shouldDirty: true });
         appToast.success(t("profiles.toasts.update_success"));
       } catch (err: unknown) {
-        appToast.error(
-          err instanceof Error ? err.message : t("common.error_generic"),
-        );
+        // API errors already get the global toast (TEC-1117).
+        if (!isApiError(err)) {
+          appToast.error(
+            err instanceof Error ? err.message : t("common.error_generic"),
+          );
+        }
       } finally {
         setAvatarUploading(false);
       }
@@ -639,9 +643,12 @@ export function ProfileForm({
         form.setValue("cover_url", res.cover_url, { shouldDirty: true });
         appToast.success(t("profiles.toasts.update_success"));
       } catch (err: unknown) {
-        appToast.error(
-          err instanceof Error ? err.message : t("common.error_generic"),
-        );
+        // API errors already get the global toast (TEC-1117).
+        if (!isApiError(err)) {
+          appToast.error(
+            err instanceof Error ? err.message : t("common.error_generic"),
+          );
+        }
       } finally {
         setCoverUploading(false);
       }
@@ -675,7 +682,9 @@ export function ProfileForm({
         });
       }
       appToast.success(t("profiles.toasts.metadata_fetched"));
-    } catch {
+    } catch (error) {
+      // The metadata-specific text replaces the global API error toast (TEC-1117).
+      suppressApiErrorToast(error);
       appToast.error(t("profiles.toasts.metadata_failed"));
     } finally {
       setScrapingIndex(null);

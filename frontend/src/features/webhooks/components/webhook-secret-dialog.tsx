@@ -35,6 +35,7 @@ export function WebhookSecretDialog({ endpoint, onClose }: Props) {
       setCopied(true);
       appToast.success(t("webhooks.secret.copied"));
     } catch {
+      // toast-guard: clipboard only, no API call.
       appToast.error(t("common.error_generic"));
     }
   };

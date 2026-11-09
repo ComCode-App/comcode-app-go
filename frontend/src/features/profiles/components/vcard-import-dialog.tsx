@@ -37,6 +37,7 @@ import {
 import { appToast } from "@/providers/toast-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { cn } from "@/lib/utils";
+import { isApiError } from "@/lib/api";
 
 export interface VCardApplyOptions {
   includeIdentity: boolean;
@@ -101,9 +102,12 @@ export function VCardImportDialog({
       setParsedData(data);
       appToast.success(t("profiles.vcard.parse_success"));
     } catch (err: unknown) {
-      appToast.error(
-        err instanceof Error ? err.message : t("profiles.vcard.parse_failed"),
-      );
+      // API errors already get the global toast (TEC-1117).
+      if (!isApiError(err)) {
+        appToast.error(
+          err instanceof Error ? err.message : t("profiles.vcard.parse_failed"),
+        );
+      }
       resetState();
     } finally {
       setIsLoading(false);

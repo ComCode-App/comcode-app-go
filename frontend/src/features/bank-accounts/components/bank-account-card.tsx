@@ -50,6 +50,7 @@ export function BankAccountCard({
       appToast.success(t("bank_accounts.toast.copied"));
       setTimeout(() => setCopied(false), 2000);
     } catch {
+      // toast-guard: clipboard only, no API call.
       appToast.error(t("common.error_generic"));
     }
   };
