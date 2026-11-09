@@ -43,7 +43,9 @@ export function VerifyEmailForm() {
       toast.success(t("auth.verify.success"));
       router.replace(routes.guest.login);
     } catch (error) {
-      if (isApiError(error)) {
+      if (isApiError(error) && error.code === "RATE_LIMITED") {
+        setFormError(t("auth.rate_limited"));
+      } else if (isApiError(error)) {
         setFormError(error.message || t("auth.verify.error"));
       } else {
         setFormError(t("auth.verify.error"));
