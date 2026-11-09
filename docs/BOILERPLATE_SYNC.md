@@ -80,7 +80,7 @@ Kronolojik sıra (boilerplate `git log --reverse` sırası). Issue sütunu, işi
 | `c6ba13e` | 2026-10-14 | Auth guard ve forbidden/unauthorized sayfalarını çevir | PORT edildi (TEC-1110) | `forbidden`/`unauthorized` sayfaları ve `route-guard.tsx` sabit Türkçe. | [TEC-1110](https://linear.app/technowide-furkan/issue/TEC-1110) |
 | `8d7202f` | 2026-10-14 | Port edilen auth/push kodunu marka-nötr yap | ATLA | Düzeltilen dosyalar ComCode'da yok; native/QR port edilirse bu sonraki hal alınır. |  |
 | `7f9b992` | 2026-10-14 | CI: yeşil feature branch için auto PR + merge | PORT edildi (TEC-1093) | `auto-pr` işi devre dışı (`if: false`/değişken) eklenecek; pnpm 11 pin'i atla. `auto-pr` `if: false` ile kapalı. | [TEC-1093](https://linear.app/technowide-furkan/issue/TEC-1093) |
-| `e9fc3e0` | 2026-10-14 | Deploy: uygulama başına özel ağ | ZATEN VAR (kısmi), `stop_grace_period` port edildi (TEC-1095) | `app` ağı ve prefix'li isimler var; backend hâlâ `dokploy-network`'te, healthcheck `/readyz`, `stop_grace_period` yok. Backend `dokploy-network`'te ve `/readyz` healthcheck bilinçli olarak aynı kaldı. | [TEC-1095](https://linear.app/technowide-furkan/issue/TEC-1095) |
+| `e9fc3e0` | 2026-10-14 | Deploy: uygulama başına özel ağ | PORT edildi (TEC-1095, TEC-1115) | `app` ağı ve prefix'li isimler var; `stop_grace_period` TEC-1095'te, backend'in `dokploy-network`'ten çıkması ve `/healthz` healthcheck TEC-1115'te port edildi. | [TEC-1095](https://linear.app/technowide-furkan/issue/TEC-1095), [TEC-1115](https://linear.app/technowide-furkan/issue/TEC-1115) |
 | `5da990f` | 2026-10-14 | Backend: kalan dosyaları gofmt | PORT edildi (TEC-1112) | `gofmt -l` ~74 dosya listeliyor; format hook'undan önce tek mekanik commit. | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
 | `9f687d7` | 2026-10-14 | Repo düzeyi Claude Code kurulumu | PORT edildi (TEC-1112) | `CLAUDE.md`, `.mcp.json`, hooks, reviewer, `verify-changes`/`db-migration` skill'leri yok; `.claude/settings.json` attribution bloğu korunarak. Reviewer `comcode-reviewer` adıyla; hook kaydı (`hooks` bloğu) `.claude/settings.json`'a sahip tarafından eklenir. | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) |
 | `14c7755` | 2026-10-14 | Tenant core tasarım çalışması | ATLA | Tenant core port edilmez; uyarlanabilir fikirler TEC-1107 ve TEC-1114'te. |  |
@@ -170,6 +170,7 @@ Kronolojik sıra (boilerplate `git log --reverse` sırası). Issue sütunu, işi
 | [TEC-1112](https://linear.app/technowide-furkan/issue/TEC-1112) | Repo hijyeni (format, Claude Code kurulumu, Node sürümü) |
 | [TEC-1113](https://linear.app/technowide-furkan/issue/TEC-1113) | Auth loglama ve performans |
 | [TEC-1114](https://linear.app/technowide-furkan/issue/TEC-1114) | Karar bekleyen özellikler (e-posta kodu girişi, hesap silme, Apple web, modül registry, principal cache, mobil/native/push) |
+| [TEC-1115](https://linear.app/technowide-furkan/issue/TEC-1115) | Backend'i `dokploy-network`'ten çıkar, healthcheck `/healthz` |
 
 ## Özet
 
