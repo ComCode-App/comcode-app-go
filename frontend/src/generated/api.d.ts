@@ -918,6 +918,71 @@ export interface paths {
         patch: operations["patchAuthProfile"];
         trace?: never;
     };
+    "/v1/auth/email-code/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request an email sign-in code
+         * @description Emails a 6-digit one-time sign-in code (10 minutes, 5 attempts, single use, stored
+         *     hashed; the email is a sealed security email). The response is always
+         *     `200 {status: accepted}` for a well-formed email, whether or not it belongs to an account.
+         *
+         *     Unknown email: when self-registration is open (`auth_settings.registration_enabled`)
+         *     a sign-up code is sent as well and `/v1/auth/email-code/verify` creates the account.
+         *     When registration is closed nothing is sent (same response). A failure while issuing
+         *     the code or enqueuing the email is logged and still answers accepted.
+         *
+         *     Rate limited per client IP (10) and per email (5) in a 15-minute window.
+         */
+        post: operations["postAuthEmailCodeRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/email-code/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in (or sign up) with an email code
+         * @description Exchanges an email code for a token pair (personal account active, like login). A wrong,
+         *     expired, used or exhausted code and an unknown email all answer
+         *     `400 INVALID_EMAIL_CODE`. A disabled account is reported (`403 FORBIDDEN`) only after a
+         *     valid code.
+         *
+         *     Two-factor: when the user has an authenticator, the call without `totp_code` answers
+         *     `403 MFA_REQUIRED` and the email code stays valid; resend the same `code` plus
+         *     `totp_code`. A wrong `totp_code` (`401 INVALID_MFA_CODE`) counts against the code's
+         *     attempts. When the access policy requires 2FA and the user has none,
+         *     `403 MFA_NOT_ENROLLED`.
+         *
+         *     Sign-up: for an email without an account, while self-registration is open, a valid code
+         *     creates the user (email verified, no password, `name` = email local part, empty
+         *     `surname`, default role, personal account) and returns tokens. With registration
+         *     closed no account is created (`400 INVALID_EMAIL_CODE`).
+         *
+         *     Rate limited per client IP (30) and per email (10) in a 15-minute window.
+         */
+        post: operations["postAuthEmailCodeVerify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/password/forgot": {
         parameters: {
             query?: never;
@@ -8660,6 +8725,18 @@ export interface components {
             /** @enum {string} */
             locale?: "tr" | "en";
         };
+        EmailCodeRequest: {
+            /** Format: email */
+            email: string;
+        };
+        EmailCodeVerifyRequest: {
+            /** Format: email */
+            email: string;
+            /** @description 6-digit code from the email */
+            code: string;
+            /** @description Authenticator or recovery code, required after `MFA_REQUIRED`. */
+            totp_code?: string;
+        };
         ForgotPasswordRequest: {
             /** Format: email */
             email: string;
@@ -13785,6 +13862,61 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postAuthEmailCodeRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStatus"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    postAuthEmailCodeVerify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailCodeVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Authenticated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTokens"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
         };
     };

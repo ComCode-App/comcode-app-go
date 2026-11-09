@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { signIn as signInPasskey } from "next-auth/webauthn";
 import { useQuery } from "@tanstack/react-query";
-import { Fingerprint, ShieldCheck } from "lucide-react";
+import { Fingerprint, Mail, ShieldCheck } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { AppleIcon } from "@/components/icons/apple-icon";
@@ -21,21 +21,47 @@ import {
   createLoginSchema,
   type LoginFormValues,
 } from "@/features/auth/schemas";
+import {
+  normalizeEmailCode,
+  signInErrorKey,
+} from "@/features/auth/lib/sign-in-errors";
+import { isApiError } from "@/lib/api";
 import { safeNextPath } from "@/lib/auth/safe-next";
 import { defaultHomeForUser } from "@/lib/auth/types";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { fetchAppPublicConfig } from "@/services/app-config.service";
+import { authService } from "@/services/auth.service";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import { AuthCard } from "./auth-card";
 
 type OAuthId = "github" | "google" | "facebook" | "apple";
 
-type SavedCredentials = {
-  email: string;
-  password: string;
-};
+type SavedCredentials =
+  | { kind: "password"; email: string; password: string }
+  | { kind: "email-code"; email: string; code: string };
+
+/** Email code sign-in steps (TEC-1121): off, enter email, enter code. */
+type EmailCodeStep = "off" | "email" | "code";
+
+function createEmailCodeEmailSchema(t: (key: string) => string) {
+  return z.object({
+    email: z.string().trim().email(t("auth.validation.email")),
+  });
+}
+
+function createEmailCodeSchema(t: (key: string) => string) {
+  return z.object({
+    code: z
+      .string()
+      .refine(
+        (v) => normalizeEmailCode(v) !== null,
+        t("auth.email_code.validation.code"),
+      ),
+  });
+}
 
 function createMfaSchema(t: (key: string) => string) {
   return z.object({
@@ -58,6 +84,13 @@ export function LoginForm() {
     useState<SavedCredentials | null>(null);
   const schema = useMemo(() => createLoginSchema(t), [t]);
   const mfaSchema = useMemo(() => createMfaSchema(t), [t]);
+  const emailCodeEmailSchema = useMemo(
+    () => createEmailCodeEmailSchema(t),
+    [t],
+  );
+  const emailCodeSchema = useMemo(() => createEmailCodeSchema(t), [t]);
+  const [emailCodeStep, setEmailCodeStep] = useState<EmailCodeStep>("off");
+  const [emailCodeEmail, setEmailCodeEmail] = useState("");
 
   const { data: appConfig } = useQuery({
     queryKey: ["app", "config", locale],
@@ -110,46 +143,36 @@ export function LoginForm() {
   const resolveCredentialsError = (
     error: string | undefined | null,
     code: string | undefined | null,
-  ) => {
-    const signal = code ?? error ?? "";
-    if (!signal) return t("auth.login.error");
-    if (signal.includes("RATE_LIMITED")) {
-      return t("auth.login.rate_limited");
-    }
-    if (signal.includes("NO_TENANT_MEMBERSHIP")) {
-      return t("auth.login.no_tenant_membership");
-    }
-    if (signal.includes("MFA_REQUIRED")) {
-      return t("auth.totp.login_required");
-    }
-    if (signal.includes("INVALID_MFA_CODE")) {
-      return t("auth.totp.login_invalid");
-    }
-    if (signal.includes("MFA_NOT_ENROLLED")) {
-      return t("auth.totp.login_not_enrolled");
-    }
-    return t("auth.login.error");
-  };
+    fallbackKey = "auth.login.error",
+  ) => t(signInErrorKey(code ?? error, fallbackKey));
 
   const signInWithCredentials = async (
-    email: string,
-    password: string,
+    credentials: SavedCredentials,
     totpCode?: string,
   ) => {
-    const result = await signIn("credentials", {
-      email,
-      password,
+    const isPassword = credentials.kind === "password";
+    const result = await signIn(isPassword ? "credentials" : "email-code", {
+      email: credentials.email,
+      ...(isPassword
+        ? { password: credentials.password }
+        : { code: credentials.code }),
       totp_code: totpCode ?? "",
       redirect: false,
     });
     if (result?.error || result?.code) {
       if (result.code === "MFA_REQUIRED") {
-        setSavedCredentials({ email, password });
+        setSavedCredentials(credentials);
         setMfaStep(true);
         setFormError(null);
         return "mfa";
       }
-      setFormError(resolveCredentialsError(result.error, result.code));
+      setFormError(
+        resolveCredentialsError(
+          result.error,
+          result.code,
+          isPassword ? "auth.login.error" : "auth.email_code.invalid",
+        ),
+      );
       return false;
     }
     const ok = await finishLogin();
@@ -160,7 +183,11 @@ export function LoginForm() {
     setFormError(null);
     setPending(true);
     try {
-      await signInWithCredentials(values.email, values.password);
+      await signInWithCredentials({
+        kind: "password",
+        email: values.email,
+        password: values.password,
+      });
     } catch {
       setFormError(t("auth.login.error"));
     } finally {
@@ -174,8 +201,7 @@ export function LoginForm() {
     setPending(true);
     try {
       const outcome = await signInWithCredentials(
-        savedCredentials.email,
-        savedCredentials.password,
+        savedCredentials,
         values.totp_code.trim(),
       );
       if (outcome === true) {
@@ -194,6 +220,73 @@ export function LoginForm() {
     setSavedCredentials(null);
     setFormError(null);
     setPending(false);
+  };
+
+  const startEmailCode = () => {
+    setFormError(null);
+    setEmailCodeStep("email");
+  };
+
+  const cancelEmailCode = () => {
+    setFormError(null);
+    setEmailCodeStep("off");
+  };
+
+  const requestEmailCode = async (email: string) => {
+    setFormError(null);
+    setPending(true);
+    try {
+      if (sessionStatus === "authenticated") {
+        await signOut({ redirect: false });
+      }
+      await authService.requestEmailCode(email);
+      setEmailCodeEmail(email);
+      setEmailCodeStep("code");
+      return true;
+    } catch (error) {
+      // TEC-1110: ApiError.message is already the localized text for its code.
+      setFormError(
+        isApiError(error) && error.code === "RATE_LIMITED"
+          ? t("auth.login.rate_limited")
+          : isApiError(error) && error.message
+            ? error.message
+            : t("auth.email_code.request_error"),
+      );
+      return false;
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const onEmailCodeRequest = async (
+    values: z.infer<typeof emailCodeEmailSchema>,
+  ) => {
+    await requestEmailCode(values.email.trim());
+  };
+
+  const onEmailCodeResend = async () => {
+    if (await requestEmailCode(emailCodeEmail)) {
+      toast.success(t("auth.email_code.resent"));
+    }
+  };
+
+  const onEmailCodeSubmit = async (values: z.infer<typeof emailCodeSchema>) => {
+    const code = normalizeEmailCode(values.code);
+    if (!code) return;
+    setFormError(null);
+    setPending(true);
+    try {
+      const outcome = await signInWithCredentials({
+        kind: "email-code",
+        email: emailCodeEmail,
+        code,
+      });
+      if (outcome === "mfa") setEmailCodeStep("off");
+    } catch {
+      setFormError(t("auth.email_code.invalid"));
+    } finally {
+      setPending(false);
+    }
   };
 
   const onPasskeySignIn = async () => {
@@ -332,6 +425,108 @@ export function LoginForm() {
     );
   }
 
+  if (emailCodeStep !== "off") {
+    const errorBlock = displayError ? (
+      <Field data-invalid={true}>
+        <FieldError>{displayError}</FieldError>
+      </Field>
+    ) : null;
+    return (
+      <AuthCard
+        title={t("auth.email_code.title")}
+        description={
+          emailCodeStep === "email"
+            ? t("auth.email_code.description")
+            : t("auth.email_code.sent", { email: emailCodeEmail })
+        }
+      >
+        {emailCodeStep === "email" ? (
+          <AppForm
+            key="email-code-email"
+            schema={emailCodeEmailSchema}
+            defaultValues={{ email: emailCodeEmail }}
+            onSubmit={onEmailCodeRequest}
+          >
+            <FieldGroup>
+              {errorBlock}
+              <AppInput
+                name="email"
+                label={t("auth.login.email")}
+                type="email"
+                autoComplete="email"
+                placeholder={t("auth.placeholders.email")}
+              />
+              <div className="flex flex-col gap-2">
+                <Button type="submit" disabled={authPending} className="w-full">
+                  <Mail aria-hidden />
+                  {pending
+                    ? t("auth.email_code.sending")
+                    : t("auth.email_code.send")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={authPending}
+                  className="w-full"
+                  onClick={cancelEmailCode}
+                >
+                  {t("common.back")}
+                </Button>
+              </div>
+            </FieldGroup>
+          </AppForm>
+        ) : (
+          <AppForm
+            key="email-code-code"
+            schema={emailCodeSchema}
+            defaultValues={{ code: "" }}
+            onSubmit={onEmailCodeSubmit}
+          >
+            <FieldGroup>
+              {errorBlock}
+              <AppInput
+                name="code"
+                label={t("auth.email_code.code")}
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                maxLength={7}
+                placeholder={t("auth.email_code.code_placeholder")}
+              />
+              <div className="flex flex-col gap-2">
+                <Button type="submit" disabled={authPending} className="w-full">
+                  {pending
+                    ? t("auth.login.submitting")
+                    : t("auth.email_code.verify")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={authPending}
+                  className="w-full"
+                  onClick={onEmailCodeResend}
+                >
+                  {t("auth.email_code.resend")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={authPending}
+                  className="w-full"
+                  onClick={() => {
+                    setFormError(null);
+                    setEmailCodeStep("email");
+                  }}
+                >
+                  {t("auth.email_code.change_email")}
+                </Button>
+              </div>
+            </FieldGroup>
+          </AppForm>
+        )}
+      </AuthCard>
+    );
+  }
+
   return (
     <AuthCard
       title={t("auth.login.title")}
@@ -430,6 +625,17 @@ export function LoginForm() {
             <FieldError>{displayError}</FieldError>
           </Field>
         ) : null}
+
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full"
+          disabled={authPending}
+          onClick={startEmailCode}
+        >
+          <Mail aria-hidden />
+          {t("auth.email_code.sign_in")}
+        </Button>
 
         {showRegisterLink ? (
           <p className="text-muted-foreground text-center text-sm">

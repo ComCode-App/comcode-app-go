@@ -92,7 +92,7 @@ type Querier interface {
 	// account-lint: cross-account payment provider callback: session found by merchant oid / provider token
 	CompletePaymentCardSession(ctx context.Context, argUuid uuid.UUID) (PaymentCardSession, error)
 	ConfirmUserTOTP(ctx context.Context, arg ConfirmUserTOTPParams) (UserTotp, error)
-	ConsumeOTP(ctx context.Context, id int64) error
+	ConsumeOTP(ctx context.Context, id int64) (int64, error)
 	CountAccountActiveCardsUsage(ctx context.Context, accountID int64) (int64, error)
 	CountAccountBackgrounds(ctx context.Context, accountID int64) (int64, error)
 	CountAccountCards(ctx context.Context, arg CountAccountCardsParams) (int64, error)
