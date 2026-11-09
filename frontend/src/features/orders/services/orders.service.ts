@@ -1,6 +1,7 @@
 import type { ServerListParams } from "@/components/entity";
 import type { ResourceMeta } from "@/features/io/types";
 import type { components } from "@/generated/api";
+import { ApiError } from "@/lib/api/errors";
 import { platformRequest } from "@/lib/api/platform-request";
 
 /** Provider refunds of online order payments (TEC-935). */
@@ -427,7 +428,13 @@ export const ordersService = {
     });
     const json = await res.json();
     if (!res.ok || json.error) {
-      throw new Error(json.error?.message || "Failed to upload file");
+      // Keep the API error code (e.g. SVG_UNSAFE_CONTENT, PAYLOAD_TOO_LARGE) for the UI.
+      throw new ApiError({
+        status: res.status,
+        code: json.error?.code ?? "",
+        message: json.error?.message || "Failed to upload file",
+        details: json.error?.details,
+      });
     }
     return json.data as AssetRequestSummary;
   },

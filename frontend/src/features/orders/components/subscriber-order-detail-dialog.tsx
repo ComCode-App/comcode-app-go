@@ -34,6 +34,7 @@ import { useCanPayOrders, useStartOrderPayment } from "../hooks/use-order-paymen
 import { useLocale } from "@/providers/locale-provider";
 import { ordersService, type AssetRequestSummary } from "../services/orders.service";
 import { ordersQueryKeys } from "../hooks/query-keys";
+import { uploadErrorKey } from "@/lib/api/upload-errors";
 import { cn } from "@/lib/utils";
 
 interface SubscriberOrderDetailDialogProps {
@@ -74,7 +75,8 @@ export function SubscriberOrderDetailDialog({
       refetch();
     },
     onError: (err: Error) => {
-      toast.error(err?.message || t("orders.error_asset_request"));
+      const key = uploadErrorKey(err);
+      toast.error(key ? t(key) : err?.message || t("orders.error_asset_request"));
     },
     onSettled: () => {
       setUploadingAssetUuid(null);

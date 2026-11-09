@@ -3,5 +3,7 @@
   "forbidden_body": "You do not have a role for this panel.",
   "unauthorized_title": "Sign in required",
   "unauthorized_body": "Please sign in to continue.",
-  "role_mismatch": "Your account is not allowed on this panel."
+  "role_mismatch": "Your account is not allowed on this panel.",
+  "upload_svg_unsafe": "This SVG contains unsafe content (script or external links) and was not uploaded. Please upload a plain SVG or a PNG.",
+  "upload_too_large": "The file is too large to upload."
 }

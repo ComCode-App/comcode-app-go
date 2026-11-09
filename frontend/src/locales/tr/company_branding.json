@@ -32,7 +32,7 @@
   "library.file": "Dosya",
   "library.name": "Ad",
   "library.upload": "Yükle",
-  "library.upload_hint": "Görseller: en fazla 5 MB JPEG, PNG veya WebP. Belgeler: en fazla 10 MB PDF.",
+  "library.upload_hint": "Görseller: en fazla 5 MB JPEG, PNG veya WebP (logolar GIF veya sade SVG de olabilir). Belgeler: en fazla 10 MB PDF.",
   "library.invalid_image": "JPEG, PNG veya WebP bir görsel kullanın.",
   "library.image_too_large": "Görseller en fazla 5 MB olabilir.",
   "library.invalid_document": "Belgeler PDF olmalıdır.",

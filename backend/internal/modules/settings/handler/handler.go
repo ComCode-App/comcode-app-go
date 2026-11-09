@@ -5,10 +5,11 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"strings"
+	"path"
 
 	settingsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/settings/usecase"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/storage"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/response"
 )
 
@@ -45,36 +46,25 @@ func (h *Handler) Patch(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UploadLogo(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(3 << 20); err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
-		return
-	}
-	file, header, err := r.FormFile("logo")
-	if err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "logo is required")
+	file, header, ok := upload.FormFile(w, r, storage.MaxLogoBytes, "logo")
+	defer upload.Cleanup(r)
+	if !ok {
 		return
 	}
 	defer func() { _ = file.Close() }()
-	head := make([]byte, 512)
-	n, _ := io.ReadFull(file, head)
-	mime, err := storage.DetectLogoMIME(header.Header.Get("Content-Type"), head[:n])
+	// Type and extension come from the bytes: raster or a static SVG that
+	// passes upload.ValidateSVG; the client Content-Type is ignored.
+	sniffed, err := upload.SniffLogo(file)
 	if err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, err.Error())
+		if upload.WriteError(w, r, err) {
+			return
+		}
+		response.InternalErr(w, r, err, "logo upload failed")
 		return
 	}
-	if err := storage.ValidateLogoSize(header.Size); err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, err.Error())
-		return
-	}
-	ext, err := storage.LogoExtForMIME(mime)
-	if err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, err.Error())
-		return
-	}
-	key := storage.AppLogoObjectKey(ext)
-	body := io.MultiReader(strings.NewReader(string(head[:n])), file)
+	key := storage.AppLogoObjectKey(sniffed.Ext)
 	if err := h.storage.Upload(r.Context(), storage.File{
-		Body: body, Size: header.Size, ContentType: mime, Filename: header.Filename,
+		Body: sniffed.Body, Size: header.Size, ContentType: sniffed.ContentType, Filename: header.Filename,
 	}, key); err != nil {
 		response.InternalErr(w, r, err, "logo upload failed")
 		return
@@ -103,7 +93,7 @@ func (h *Handler) StreamLogo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer func() { _ = rc.Close() }()
-	w.Header().Set("Content-Type", storage.MIMEFromLogoKey(key))
+	upload.SetServeHeaders(w, storage.MIMEFromLogoKey(key), path.Base(key), false)
 	_, _ = io.Copy(w, rc)
 }
 

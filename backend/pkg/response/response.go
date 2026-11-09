@@ -13,25 +13,27 @@ import (
 )
 
 const (
-	CodeValidationError      = "VALIDATION_ERROR"
-	CodeUnauthenticated      = "UNAUTHENTICATED"
-	CodeForbidden            = "FORBIDDEN"
-	CodeNotFound             = "NOT_FOUND"
-	CodeConflict             = "CONFLICT"
-	CodeInternalError        = "INTERNAL_ERROR"
-	CodeInvalidCredentials   = "INVALID_CREDENTIALS"
-	CodeInvalidResetCode     = "INVALID_RESET_CODE"
-	CodeInvalidVerifyCode    = "INVALID_VERIFICATION_CODE"
-	CodePasswordResetFailed  = "PASSWORD_RESET_FAILED"
-	CodeNoTenantMembership   = "NO_TENANT_MEMBERSHIP"
-	CodeRealtimeDisabled     = "REALTIME_DISABLED"
-	CodeStepUpRequired       = "STEP_UP_REQUIRED"
-	CodeMFARequired          = "MFA_REQUIRED"
-	CodeMFANotEnrolled       = "MFA_NOT_ENROLLED"
-	CodeRateLimited          = "RATE_LIMITED"
-	CodeInvalidMFACode       = "INVALID_MFA_CODE"
-	CodePlanLimitExceeded    = "PLAN_LIMIT_EXCEEDED"
-	CodeInvalidPasscode      = "INVALID_PASSCODE"
+	CodeValidationError     = "VALIDATION_ERROR"
+	CodePayloadTooLarge     = "PAYLOAD_TOO_LARGE"
+	CodeSVGUnsafeContent    = "SVG_UNSAFE_CONTENT"
+	CodeUnauthenticated     = "UNAUTHENTICATED"
+	CodeForbidden           = "FORBIDDEN"
+	CodeNotFound            = "NOT_FOUND"
+	CodeConflict            = "CONFLICT"
+	CodeInternalError       = "INTERNAL_ERROR"
+	CodeInvalidCredentials  = "INVALID_CREDENTIALS"
+	CodeInvalidResetCode    = "INVALID_RESET_CODE"
+	CodeInvalidVerifyCode   = "INVALID_VERIFICATION_CODE"
+	CodePasswordResetFailed = "PASSWORD_RESET_FAILED"
+	CodeNoTenantMembership  = "NO_TENANT_MEMBERSHIP"
+	CodeRealtimeDisabled    = "REALTIME_DISABLED"
+	CodeStepUpRequired      = "STEP_UP_REQUIRED"
+	CodeMFARequired         = "MFA_REQUIRED"
+	CodeMFANotEnrolled      = "MFA_NOT_ENROLLED"
+	CodeRateLimited         = "RATE_LIMITED"
+	CodeInvalidMFACode      = "INVALID_MFA_CODE"
+	CodePlanLimitExceeded   = "PLAN_LIMIT_EXCEEDED"
+	CodeInvalidPasscode     = "INVALID_PASSCODE"
 )
 
 // RequestIDFunc resolves the correlation id from request context.
@@ -155,6 +157,14 @@ func TooManyRequests(w http.ResponseWriter, r *http.Request, message string) {
 		message = "Too many attempts. Try again later."
 	}
 	Error(w, r, http.StatusTooManyRequests, CodeRateLimited, message)
+}
+
+// PayloadTooLarge writes HTTP 413 PAYLOAD_TOO_LARGE.
+func PayloadTooLarge(w http.ResponseWriter, r *http.Request, message string) {
+	if message == "" {
+		message = "request body exceeds the maximum allowed size"
+	}
+	Error(w, r, http.StatusRequestEntityTooLarge, CodePayloadTooLarge, message)
 }
 
 // Internal writes HTTP 500 INTERNAL_ERROR.

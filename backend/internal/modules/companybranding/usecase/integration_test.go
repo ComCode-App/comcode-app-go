@@ -20,6 +20,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/storage"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/testutil/pgtest"
 )
 
@@ -172,6 +173,20 @@ func TestIntegrationLibraryScopingAndRoles(t *testing.T) {
 	}
 	if _, err := e.upload(owner, model.KindImage, []byte("<svg xmlns='http://www.w3.org/2000/svg'/>")); !errors.Is(err, model.ErrInvalid) {
 		t.Fatalf("svg accepted: %v", err)
+	}
+	// Logos may be SVG, but only static vector content (TEC-1097).
+	svgLogo, err := e.upload(owner, model.KindLogo, []byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#123"/></svg>`))
+	if err != nil {
+		t.Fatalf("clean svg logo: %v", err)
+	}
+	if svgLogo.ContentType != "image/svg+xml" || !strings.HasSuffix(svgLogo.URL, ".svg") {
+		t.Fatalf("svg logo stored as %q at %q", svgLogo.ContentType, svgLogo.URL)
+	}
+	if _, err := e.upload(owner, model.KindLogo, []byte(`<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"/>`)); !errors.Is(err, upload.ErrSVGUnsafe) {
+		t.Fatalf("unsafe svg logo: %v", err)
+	}
+	if _, err := e.upload(owner, model.KindLogo, []byte("<html><script>alert(1)</script></html>")); !errors.Is(err, upload.ErrUnsupportedType) {
+		t.Fatalf("html logo: %v", err)
 	}
 
 	// Another company sees and touches nothing of Acme's.

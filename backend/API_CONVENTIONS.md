@@ -90,6 +90,15 @@ Domain / auth use cases call `notifications.Service.Enqueue(...)` only. HTTP han
 
 Cross-module signals use the platform event bus (`internal/platform/events`). Use cases `Publish`; bus handlers may enqueue notifications — never SMTP.
 
+## Uploads
+
+Multipart handlers use `internal/platform/upload` (TEC-1097):
+
+- `upload.FormFile(w, r, maxBytes, "field")` caps the body with `http.MaxBytesReader` **before** anything reads it; oversize is `413 PAYLOAD_TOO_LARGE`. Storage explorer uploads use `STORAGE_MAX_BYTES`; images use `upload.MaxImageBytes` (5 MiB). Never call `ParseMultipartForm` / `FormValue` on an uncapped body.
+- Unauthenticated uploads check their token before reading the file (see `POST /v1/orders/assets/upload`).
+- The stored type and extension come from the bytes, never the client: `upload.SniffImage` (PNG/JPEG/WebP/GIF), `upload.SniffLogo` (also static SVG), `upload.SniffArtwork`. SVG is accepted only for logos (and order artwork) and only when `upload.ValidateSVG` passes; otherwise `422 SVG_UNSAFE_CONTENT`. Map errors with `upload.WriteError`.
+- Serving stored objects goes through `upload.SetServeHeaders`: always `X-Content-Type-Options: nosniff`; only raster images, PDF, audio/video (and GLB/USDZ) are `inline`; everything else (HTML, SVG, XML, JS, unknown) is `attachment` with a sandbox CSP.
+
 ## OpenAPI
 
 Contract: `docs/openapi.yaml` (OpenAPI 3.1) + Scalar at `/docs/`. Run `make openapi-lint` after path/schema changes.
