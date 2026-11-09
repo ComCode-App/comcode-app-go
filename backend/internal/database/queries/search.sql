@@ -1,6 +1,7 @@
 -- Cmd+K search sources (TEC-595). Platform-wide by design: the specs are gated by platform.*
 -- permissions and link to platform pages; app users never see them.
 
+-- account-lint: cross-account search index builder: documents carry account_id and searches filter on it
 -- name: ListOrdersForSearch :many
 SELECT o.uuid, o.order_number, o.status, u.email AS customer_email,
        TRIM(u.name || ' ' || u.surname)::text AS customer_name, a.name AS account_name
@@ -29,6 +30,7 @@ ORDER BY id;
 -- it as a filterable attribute and app queries always filter on the caller's active account.
 -- Activation codes and passcodes are never selected.
 
+-- account-lint: cross-account search index builder: documents carry account_id and searches filter on it
 -- name: ListProfilesForSearch :many
 SELECT p.uuid, p.account_id,
        COALESCE(TRIM(d.first_name || ' ' || d.last_name), '')::text AS display_name,
@@ -58,6 +60,7 @@ WHERE p.deleted_at IS NULL
   AND (sqlc.narg(uuid)::uuid IS NULL OR p.uuid = sqlc.narg(uuid)::uuid)
 ORDER BY p.id;
 
+-- account-lint: cross-account search index builder: documents carry account_id and searches filter on it
 -- name: ListCardsForSearch :many
 SELECT c.uuid, c.account_id, c.name, c.smart_code, c.status,
        COALESCE(TRIM(d.first_name || ' ' || d.last_name), '')::text AS profile_name

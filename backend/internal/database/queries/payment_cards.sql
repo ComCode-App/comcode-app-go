@@ -54,21 +54,25 @@ INSERT INTO payment_card_sessions (account_id, user_id, provider, status, mercha
 VALUES ($1, $2, $3, 'pending', $4, $5)
 RETURNING *;
 
+-- account-lint: cross-account usecase checks row.AccountID against the active account (404 otherwise)
 -- name: GetPaymentCardSessionByUUID :one
 SELECT *
 FROM payment_card_sessions
 WHERE uuid = $1;
 
+-- account-lint: cross-account payment provider callback: merchant oid is the provider's reference
 -- name: GetPaymentCardSessionByMerchantOID :one
 SELECT *
 FROM payment_card_sessions
 WHERE merchant_oid = $1;
 
+-- account-lint: cross-account payment provider callback: provider token is the reference
 -- name: GetPaymentCardSessionByProviderToken :one
 SELECT *
 FROM payment_card_sessions
 WHERE provider_token = $1;
 
+-- account-lint: cross-account add-card start: session id from the row just inserted for this account
 -- name: UpdatePaymentCardSessionInit :one
 UPDATE payment_card_sessions
 SET provider_token = COALESCE(sqlc.narg(provider_token), provider_token),
@@ -76,6 +80,7 @@ SET provider_token = COALESCE(sqlc.narg(provider_token), provider_token),
 WHERE uuid = sqlc.arg(uuid)
 RETURNING *;
 
+-- account-lint: cross-account payment provider callback: session found by merchant oid / provider token
 -- name: CompletePaymentCardSession :one
 UPDATE payment_card_sessions
 SET status = 'completed',
@@ -84,6 +89,7 @@ WHERE uuid = sqlc.arg(uuid)
   AND status = 'pending'
 RETURNING *;
 
+-- account-lint: cross-account payment provider callback / init failure: session id from that flow
 -- name: FailPaymentCardSession :one
 UPDATE payment_card_sessions
 SET status = 'failed'

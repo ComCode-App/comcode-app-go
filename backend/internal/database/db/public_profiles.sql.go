@@ -87,6 +87,7 @@ type GetCanonicalRouteByPathRow struct {
 }
 
 // Public profile pages (/{username}): canonical_profile routes + profile bank account picks.
+// account-lint: cross-account public profile page resolver
 // Any canonical route (active, locked or retired) whose profile and account are still live.
 func (q *Queries) GetCanonicalRouteByPath(ctx context.Context, path string) (GetCanonicalRouteByPathRow, error) {
 	row := q.db.QueryRow(ctx, getCanonicalRouteByPath, path)
@@ -121,6 +122,7 @@ type GetLiveCanonicalRouteForProfileRow struct {
 	PresentationConfig []byte    `json:"presentation_config"`
 }
 
+// account-lint: cross-account profile id from a profile already resolved for the account (or the public resolver)
 func (q *Queries) GetLiveCanonicalRouteForProfile(ctx context.Context, profileID pgtype.Int8) (GetLiveCanonicalRouteForProfileRow, error) {
 	row := q.db.QueryRow(ctx, getLiveCanonicalRouteForProfile, profileID)
 	var i GetLiveCanonicalRouteForProfileRow
@@ -170,6 +172,7 @@ type GetRouteByPathAnyTypeRow struct {
 	ProfileID pgtype.Int8 `json:"profile_id"`
 }
 
+// account-lint: cross-account public path lookup: paths are globally unique
 func (q *Queries) GetRouteByPathAnyType(ctx context.Context, path string) (GetRouteByPathAnyTypeRow, error) {
 	row := q.db.QueryRow(ctx, getRouteByPathAnyType, path)
 	var i GetRouteByPathAnyTypeRow
@@ -257,6 +260,7 @@ type ListProfileBankAccountsPublicRow struct {
 	BankBrandColor string    `json:"bank_brand_color"`
 }
 
+// account-lint: cross-account public profile page: bank accounts linked to the profile
 // Selected, active bank accounts of a profile with their bank's display data.
 func (q *Queries) ListProfileBankAccountsPublic(ctx context.Context, profileID int64) ([]ListProfileBankAccountsPublicRow, error) {
 	rows, err := q.db.Query(ctx, listProfileBankAccountsPublic, profileID)
@@ -291,6 +295,7 @@ const retireCanonicalRoute = `-- name: RetireCanonicalRoute :exec
 UPDATE routes SET status = 'retired' WHERE id = $1 AND route_type = 'canonical_profile'
 `
 
+// account-lint: cross-account route id from LiveRoute of the account's own profile
 func (q *Queries) RetireCanonicalRoute(ctx context.Context, id int64) error {
 	_, err := q.db.Exec(ctx, retireCanonicalRoute, id)
 	return err
@@ -308,6 +313,7 @@ type ReviveCanonicalRouteParams struct {
 	ID                 int64  `json:"id"`
 }
 
+// account-lint: cross-account route id is a retired route of the same profile (PathOwner check)
 func (q *Queries) ReviveCanonicalRoute(ctx context.Context, arg ReviveCanonicalRouteParams) error {
 	_, err := q.db.Exec(ctx, reviveCanonicalRoute, arg.Status, arg.PresentationConfig, arg.ID)
 	return err
@@ -325,6 +331,7 @@ type SetCanonicalRouteStateParams struct {
 	ID                 int64  `json:"id"`
 }
 
+// account-lint: cross-account route id from LiveRoute of the account's own profile
 func (q *Queries) SetCanonicalRouteState(ctx context.Context, arg SetCanonicalRouteStateParams) error {
 	_, err := q.db.Exec(ctx, setCanonicalRouteState, arg.Status, arg.PresentationConfig, arg.ID)
 	return err

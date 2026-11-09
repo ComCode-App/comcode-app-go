@@ -79,6 +79,7 @@ WHERE o.deleted_at IS NULL
     OR o.order_type = sqlc.narg(order_type)::text
   );
 
+-- account-lint: cross-account platform orders; app GET /v1/orders/{uuid} goes through GetForAccount, which checks AccountID
 -- name: GetOrderByUUID :one
 SELECT 
     o.*,
@@ -97,6 +98,7 @@ LEFT JOIN accounts ca ON ca.id = o.account_id AND ca.type = 'company'
 WHERE o.uuid = $1
   AND o.deleted_at IS NULL;
 
+-- account-lint: cross-account platform order lookup by number (platform.orders.read)
 -- name: GetOrderByOrderNumber :one
 SELECT 
     o.*,
@@ -144,6 +146,7 @@ RETURNING *;
 
 -- Locks the order row so the from_status written to order_status_history (TEC-944) is the
 -- status the transition actually replaced.
+-- account-lint: cross-account platform order status change (platform.orders.write)
 -- name: LockOrderForStatusChange :one
 SELECT id, account_id, status
 FROM orders
@@ -155,6 +158,7 @@ FOR UPDATE;
 INSERT INTO order_status_history (account_id, order_id, from_status, to_status, changed_by_user_id)
 VALUES (sqlc.arg(account_id), sqlc.arg(order_id), sqlc.narg(from_status), sqlc.arg(to_status), sqlc.narg(changed_by_user_id));
 
+-- account-lint: cross-account platform order status / provider callback apply
 -- name: UpdateOrderStatus :one
 UPDATE orders
 SET status = sqlc.arg(status)::text,
@@ -166,6 +170,7 @@ WHERE uuid = sqlc.arg(uuid)::uuid
   AND deleted_at IS NULL
 RETURNING *;
 
+-- account-lint: cross-account platform order payment / provider callback apply
 -- name: UpdateOrderPaymentStatus :one
 UPDATE orders
 SET payment_status = sqlc.arg(payment_status)::text,
@@ -176,6 +181,7 @@ WHERE uuid = sqlc.arg(uuid)::uuid
   AND deleted_at IS NULL
 RETURNING *;
 
+-- account-lint: cross-account platform /v1/platform/orders (platform.orders.write)
 -- name: UpdateOrderFulfillmentStatus :one
 UPDATE orders
 SET fulfillment_status = sqlc.arg(fulfillment_status)::text,
@@ -185,6 +191,7 @@ WHERE uuid = sqlc.arg(uuid)::uuid
   AND deleted_at IS NULL
 RETURNING *;
 
+-- account-lint: cross-account platform /v1/platform/orders (platform.orders.write)
 -- name: UpdateOrderShipping :one
 UPDATE orders
 SET shipping_carrier = sqlc.arg(shipping_carrier),
@@ -197,6 +204,7 @@ WHERE uuid = sqlc.arg(uuid)
   AND deleted_at IS NULL
 RETURNING *;
 
+-- account-lint: cross-account platform /v1/platform/orders (platform.orders.write)
 -- name: UpdateOrderNotes :one
 UPDATE orders
 SET admin_note = COALESCE(sqlc.narg(admin_note), admin_note),
@@ -205,11 +213,13 @@ WHERE uuid = sqlc.arg(uuid)
   AND deleted_at IS NULL
 RETURNING *;
 
+-- account-lint: cross-account platform /v1/platform/orders (platform.orders.write)
 -- name: DeleteOrder :exec
 UPDATE orders
 SET deleted_at = NOW()
 WHERE uuid = $1;
 
+-- account-lint: cross-account items of an order already loaded through a platform route or GetForAccount
 -- name: ListOrderItemsByOrderID :many
 SELECT 
     oi.*,
@@ -233,6 +243,7 @@ LEFT JOIN routes r ON r.card_id = nc.id AND r.deleted_at IS NULL
 WHERE oi.order_id = $1
 ORDER BY oi.id ASC;
 
+-- account-lint: cross-account platform order provisioning (platform.orders.write)
 -- name: GetOrderItemByUUID :one
 SELECT 
     oi.*,
@@ -313,6 +324,7 @@ SELECT *
 FROM order_asset_requests
 WHERE uuid = $1;
 
+-- account-lint: cross-account public asset upload link: the token is the credential
 -- name: GetAssetRequestByToken :one
 SELECT 
     ar.*,
@@ -345,6 +357,7 @@ SET status = sqlc.arg(status),
 WHERE uuid = sqlc.arg(uuid)
 RETURNING *;
 
+-- account-lint: cross-account platform order KPIs
 -- name: GetOrderStats :one
 SELECT 
     COUNT(*)::bigint as total_orders,
@@ -357,6 +370,7 @@ SELECT
 FROM orders
 WHERE deleted_at IS NULL;
 
+-- account-lint: cross-account platform production manifest (platform.orders.read + step-up)
 -- name: ListOrderManifest :many
 -- Production manifest (TEC-581): one row per provisioned card of an order, including the
 -- activation code. Platform-only; callers gate it behind platform.orders.read + step-up.
@@ -379,6 +393,7 @@ JOIN nfc_cards nc ON nc.order_item_id = oi.id AND nc.deleted_at IS NULL
 WHERE o.uuid = $1
 ORDER BY oi.id ASC, nc.id ASC;
 
+-- account-lint: cross-account platform cancel/refund: retires the cards of that order
 -- name: RetireOrderCardRoutes :many
 -- Cancelled/refunded orders (TEC-585): the order's card routes become retired, which the
 -- resolver shows as "card deactivated". Paths are never released for reuse. Unused activation

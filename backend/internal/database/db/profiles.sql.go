@@ -462,36 +462,6 @@ func (q *Queries) GetPrimaryProfileByAccountID(ctx context.Context, accountID in
 	return i, err
 }
 
-const getProfileByUUID = `-- name: GetProfileByUUID :one
-SELECT id, uuid, user_id, primary_locale, birthday, gender, avatar_url, cover_url, is_primary, completion_rate, created_at, updated_at, deleted_at, account_id, sector_id
-FROM profiles
-WHERE uuid = $1
-  AND deleted_at IS NULL
-`
-
-func (q *Queries) GetProfileByUUID(ctx context.Context, argUuid uuid.UUID) (Profile, error) {
-	row := q.db.QueryRow(ctx, getProfileByUUID, argUuid)
-	var i Profile
-	err := row.Scan(
-		&i.ID,
-		&i.Uuid,
-		&i.UserID,
-		&i.PrimaryLocale,
-		&i.Birthday,
-		&i.Gender,
-		&i.AvatarUrl,
-		&i.CoverUrl,
-		&i.IsPrimary,
-		&i.CompletionRate,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
-		&i.AccountID,
-		&i.SectorID,
-	)
-	return i, err
-}
-
 const getProfileByUUIDForAccount = `-- name: GetProfileByUUIDForAccount :one
 SELECT id, uuid, user_id, primary_locale, birthday, gender, avatar_url, cover_url, is_primary, completion_rate, created_at, updated_at, deleted_at, account_id, sector_id
 FROM profiles
@@ -762,6 +732,7 @@ type ListProfilesByAccountIDRow struct {
 	Username       string             `json:"username"`
 }
 
+// account-lint: cross-account canonical-route subquery is keyed by this account's profile id (display only)
 func (q *Queries) ListProfilesByAccountID(ctx context.Context, arg ListProfilesByAccountIDParams) ([]ListProfilesByAccountIDRow, error) {
 	rows, err := q.db.Query(ctx, listProfilesByAccountID,
 		arg.AccountID,

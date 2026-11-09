@@ -1,3 +1,4 @@
+-- account-lint: cross-account public route resolver (/{path}); paths are globally unique
 -- name: GetRouteByPath :one
 SELECT 
     r.*,
@@ -25,6 +26,7 @@ LEFT JOIN profiles p ON p.id = COALESCE(c.profile_id, r.profile_id) AND p.delete
 WHERE LOWER(TRIM(r.path)) = LOWER(TRIM(sqlc.arg(path)))
   AND r.deleted_at IS NULL;
 
+-- account-lint: cross-account usecase checks route.AccountID against the active account (404 otherwise)
 -- name: GetRouteByUUID :one
 SELECT 
     r.*,
@@ -122,6 +124,7 @@ WHERE uuid = sqlc.arg(uuid)
   AND account_id = sqlc.arg(account_id)
   AND deleted_at IS NULL;
 
+-- account-lint: cross-account route paths are globally unique
 -- name: CheckPathExists :one
 -- A deleted or renamed smart link keeps its old path for 30 days (TEC-559/558, architecture
 -- decision #4) so nobody can take over a link that is still printed or shared. Platform staff
@@ -145,6 +148,7 @@ SELECT (EXISTS(
       AND (sqlc.narg(exclude_uuid)::uuid IS NULL OR hr.uuid != sqlc.narg(exclude_uuid)::uuid)
 ))::boolean AS taken;
 
+-- account-lint: cross-account card id comes from an account-scoped card (no app caller takes it from input)
 -- name: GetRouteByCardID :one
 SELECT * FROM routes
 WHERE card_id = sqlc.arg(card_id)

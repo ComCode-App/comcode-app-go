@@ -4,18 +4,22 @@ VALUES (sqlc.arg(resource), sqlc.arg(actor_id), sqlc.arg(format), sqlc.arg(local
         sqlc.arg(file_key), sqlc.narg(account_id))
 RETURNING *;
 
+-- account-lint: cross-account import upload: job id from the row just inserted for this account
 -- name: UpdateImportJobFileKey :one
 UPDATE import_jobs
 SET file_key = $2
 WHERE uuid = $1
 RETURNING *;
 
+-- account-lint: cross-account usecase getOwned checks account + actor; platform GetJob checks admin/actor
 -- name: GetImportJobByUUID :one
 SELECT * FROM import_jobs WHERE uuid = $1;
 
+-- account-lint: cross-account import worker / Confirm: job id from an owned job (getOwned) or the queue
 -- name: GetImportJobByID :one
 SELECT * FROM import_jobs WHERE id = $1;
 
+-- account-lint: cross-account import mapping: job already checked by getOwned
 -- name: UpdateImportJobMapping :one
 UPDATE import_jobs
 SET mapping_json = $2,
@@ -24,6 +28,7 @@ SET mapping_json = $2,
 WHERE uuid = $1 AND status IN ('uploaded', 'mapped', 'previewed')
 RETURNING *;
 
+-- account-lint: cross-account import preview: job already checked by getOwned
 -- name: UpdateImportJobPreview :one
 UPDATE import_jobs
 SET preview_json = $2,
@@ -31,18 +36,21 @@ SET preview_json = $2,
 WHERE uuid = $1 AND status IN ('mapped', 'previewed')
 RETURNING *;
 
+-- account-lint: cross-account import confirm: job already checked by getOwned
 -- name: QueueImportJob :one
 UPDATE import_jobs
 SET status = 'queued'
 WHERE uuid = $1 AND status = 'previewed'
 RETURNING *;
 
+-- account-lint: cross-account import worker: job id from the queue
 -- name: MarkImportJobApplying :one
 UPDATE import_jobs
 SET status = 'applying'
 WHERE id = $1 AND status = 'queued'
 RETURNING *;
 
+-- account-lint: cross-account import worker: job id from the queue
 -- name: MarkImportJobApplied :one
 UPDATE import_jobs
 SET status = 'applied',
@@ -52,6 +60,7 @@ SET status = 'applied',
 WHERE id = $1
 RETURNING *;
 
+-- account-lint: cross-account import worker: job id from the queue
 -- name: MarkImportJobFailed :one
 UPDATE import_jobs
 SET status = 'failed',
@@ -59,26 +68,31 @@ SET status = 'failed',
 WHERE id = $1
 RETURNING *;
 
+-- account-lint: cross-account import rollback: job already checked by getOwned
 -- name: MarkImportJobRolledBack :one
 UPDATE import_jobs
 SET status = 'rolled_back'
 WHERE id = $1 AND status = 'applied'
 RETURNING *;
 
+-- account-lint: cross-account platform /v1/platform/imports: the caller's own jobs (actor_id)
 -- name: ListImportJobsForActor :many
 SELECT * FROM import_jobs
 WHERE actor_id = $1
 ORDER BY created_at DESC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
+-- account-lint: cross-account platform /v1/platform/imports: the caller's own jobs (actor_id)
 -- name: CountImportJobsForActor :one
 SELECT COUNT(*)::bigint FROM import_jobs WHERE actor_id = $1;
 
+-- account-lint: cross-account platform /v1/platform/imports admin list
 -- name: ListAllImportJobs :many
 SELECT * FROM import_jobs
 ORDER BY created_at DESC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
+-- account-lint: cross-account platform /v1/platform/imports admin list
 -- name: CountAllImportJobs :one
 SELECT COUNT(*)::bigint FROM import_jobs;
 

@@ -81,6 +81,7 @@ const getOrderPaymentRefundByIdempotencyKey = `-- name: GetOrderPaymentRefundByI
 SELECT id, uuid, account_id, order_id, session_id, provider, status, amount_minor, currency, reference_no, idempotency_key, reason, provider_ref, error_code, error_message, attempts, requested_by_user_id, completed_at, created_at, updated_at FROM order_payment_refunds WHERE idempotency_key = $1
 `
 
+// account-lint: cross-account platform order refunds (platform.orders.write + step-up)
 func (q *Queries) GetOrderPaymentRefundByIdempotencyKey(ctx context.Context, idempotencyKey string) (OrderPaymentRefund, error) {
 	row := q.db.QueryRow(ctx, getOrderPaymentRefundByIdempotencyKey, idempotencyKey)
 	var i OrderPaymentRefund
@@ -113,6 +114,7 @@ const getOrderPaymentRefundByUUID = `-- name: GetOrderPaymentRefundByUUID :one
 SELECT id, uuid, account_id, order_id, session_id, provider, status, amount_minor, currency, reference_no, idempotency_key, reason, provider_ref, error_code, error_message, attempts, requested_by_user_id, completed_at, created_at, updated_at FROM order_payment_refunds WHERE uuid = $1
 `
 
+// account-lint: cross-account platform order refunds (platform.orders.*)
 func (q *Queries) GetOrderPaymentRefundByUUID(ctx context.Context, argUuid uuid.UUID) (OrderPaymentRefund, error) {
 	row := q.db.QueryRow(ctx, getOrderPaymentRefundByUUID, argUuid)
 	var i OrderPaymentRefund
@@ -145,6 +147,7 @@ const getOrderPaymentSessionByID = `-- name: GetOrderPaymentSessionByID :one
 SELECT id, uuid, account_id, order_id, user_id, provider, status, merchant_oid, provider_token, provider_ref, amount_minor, currency, checkout_url, metadata, expires_at, completed_at, created_at, updated_at FROM order_payment_sessions WHERE id = $1
 `
 
+// account-lint: cross-account platform order refunds (platform.orders.*)
 func (q *Queries) GetOrderPaymentSessionByID(ctx context.Context, id int64) (OrderPaymentSession, error) {
 	row := q.db.QueryRow(ctx, getOrderPaymentSessionByID, id)
 	var i OrderPaymentSession
@@ -184,6 +187,7 @@ type ListOrderPaymentRefundsRow struct {
 	SessionUuid        uuid.UUID          `json:"session_uuid"`
 }
 
+// account-lint: cross-account platform order refunds (platform.orders.read)
 func (q *Queries) ListOrderPaymentRefunds(ctx context.Context, orderID int64) ([]ListOrderPaymentRefundsRow, error) {
 	rows, err := q.db.Query(ctx, listOrderPaymentRefunds, orderID)
 	if err != nil {
@@ -256,6 +260,7 @@ type ListOrderPaymentsForRefundRow struct {
 }
 
 // TEC-935: refunds of online card order payments through the payment provider.
+// account-lint: cross-account platform order refunds (platform.orders.read)
 func (q *Queries) ListOrderPaymentsForRefund(ctx context.Context, orderID int64) ([]ListOrderPaymentsForRefundRow, error) {
 	rows, err := q.db.Query(ctx, listOrderPaymentsForRefund, orderID)
 	if err != nil {
@@ -292,6 +297,7 @@ const lockOrderPaymentRefund = `-- name: LockOrderPaymentRefund :one
 SELECT id, uuid, account_id, order_id, session_id, provider, status, amount_minor, currency, reference_no, idempotency_key, reason, provider_ref, error_code, error_message, attempts, requested_by_user_id, completed_at, created_at, updated_at FROM order_payment_refunds WHERE id = $1 FOR UPDATE
 `
 
+// account-lint: cross-account platform order refunds (platform.orders.write)
 func (q *Queries) LockOrderPaymentRefund(ctx context.Context, id int64) (OrderPaymentRefund, error) {
 	row := q.db.QueryRow(ctx, lockOrderPaymentRefund, id)
 	var i OrderPaymentRefund
@@ -324,6 +330,7 @@ const lockOrderPaymentSessionByID = `-- name: LockOrderPaymentSessionByID :one
 SELECT id, uuid, account_id, order_id, user_id, provider, status, merchant_oid, provider_token, provider_ref, amount_minor, currency, checkout_url, metadata, expires_at, completed_at, created_at, updated_at FROM order_payment_sessions WHERE id = $1 FOR UPDATE
 `
 
+// account-lint: cross-account platform order refunds (platform.orders.write)
 func (q *Queries) LockOrderPaymentSessionByID(ctx context.Context, id int64) (OrderPaymentSession, error) {
 	row := q.db.QueryRow(ctx, lockOrderPaymentSessionByID, id)
 	var i OrderPaymentSession
@@ -366,6 +373,7 @@ type MarkOrderPaymentRefundFailedParams struct {
 	ID           int64       `json:"id"`
 }
 
+// account-lint: cross-account platform order refunds (platform.orders.write)
 func (q *Queries) MarkOrderPaymentRefundFailed(ctx context.Context, arg MarkOrderPaymentRefundFailedParams) (OrderPaymentRefund, error) {
 	row := q.db.QueryRow(ctx, markOrderPaymentRefundFailed, arg.ErrorCode, arg.ErrorMessage, arg.ID)
 	var i OrderPaymentRefund
@@ -411,6 +419,7 @@ type MarkOrderPaymentRefundSucceededParams struct {
 	ID          int64       `json:"id"`
 }
 
+// account-lint: cross-account platform order refunds (platform.orders.write)
 func (q *Queries) MarkOrderPaymentRefundSucceeded(ctx context.Context, arg MarkOrderPaymentRefundSucceededParams) (OrderPaymentRefund, error) {
 	row := q.db.QueryRow(ctx, markOrderPaymentRefundSucceeded, arg.ProviderRef, arg.ID)
 	var i OrderPaymentRefund
@@ -454,6 +463,7 @@ type RetryOrderPaymentRefundParams struct {
 	ID                int64       `json:"id"`
 }
 
+// account-lint: cross-account platform order refunds (platform.orders.write)
 func (q *Queries) RetryOrderPaymentRefund(ctx context.Context, arg RetryOrderPaymentRefundParams) (OrderPaymentRefund, error) {
 	row := q.db.QueryRow(ctx, retryOrderPaymentRefund, arg.RequestedByUserID, arg.ID)
 	var i OrderPaymentRefund
@@ -494,6 +504,7 @@ type SumOrderPaymentRefundsRow struct {
 	PendingMinor  int64 `json:"pending_minor"`
 }
 
+// account-lint: cross-account platform order refunds (platform.orders.*)
 func (q *Queries) SumOrderPaymentRefunds(ctx context.Context, sessionID int64) (SumOrderPaymentRefundsRow, error) {
 	row := q.db.QueryRow(ctx, sumOrderPaymentRefunds, sessionID)
 	var i SumOrderPaymentRefundsRow

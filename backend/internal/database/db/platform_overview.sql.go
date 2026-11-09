@@ -26,6 +26,7 @@ type PlatformOverviewCardsRow struct {
 }
 
 // Provisioned cards start as 'unactivated' and become 'active' when the customer activates them.
+// account-lint: cross-account platform overview dashboard, all accounts
 func (q *Queries) PlatformOverviewCards(ctx context.Context) (PlatformOverviewCardsRow, error) {
 	row := q.db.QueryRow(ctx, platformOverviewCards)
 	var i PlatformOverviewCardsRow
@@ -106,6 +107,7 @@ type PlatformOverviewConversionFunnelRow struct {
 // → delivered). Stage times are averaged from the order's creation to the first recorded entry;
 // backfilled rows (from_status NULL, migration 000058) count as reached but carry no timing.
 // Bounded by the period: idx_orders_created_at, then idx_order_status_history_order per order.
+// account-lint: cross-account platform overview dashboard, all accounts
 func (q *Queries) PlatformOverviewConversionFunnel(ctx context.Context, arg PlatformOverviewConversionFunnelParams) (PlatformOverviewConversionFunnelRow, error) {
 	row := q.db.QueryRow(ctx, platformOverviewConversionFunnel, arg.Since, arg.Until)
 	var i PlatformOverviewConversionFunnelRow
@@ -234,6 +236,7 @@ type PlatformOverviewMRRRow struct {
 // MRR: active subscriptions (online payment and manual alike) on recurring plans, the yearly
 // price spread over 12 months. Free and lifetime plans have no recurring revenue and are left
 // out. past_due subscriptions are not MRR; they are summed separately as at-risk MRR (TEC-944).
+// account-lint: cross-account platform overview dashboard, all accounts
 func (q *Queries) PlatformOverviewMRR(ctx context.Context) ([]PlatformOverviewMRRRow, error) {
 	rows, err := q.db.Query(ctx, platformOverviewMRR)
 	if err != nil {
@@ -276,6 +279,7 @@ type PlatformOverviewOrderStatusCountsRow struct {
 }
 
 // Orders created since the window start, grouped by their current status.
+// account-lint: cross-account platform overview dashboard, all accounts
 func (q *Queries) PlatformOverviewOrderStatusCounts(ctx context.Context, since pgtype.Timestamptz) ([]PlatformOverviewOrderStatusCountsRow, error) {
 	rows, err := q.db.Query(ctx, platformOverviewOrderStatusCounts, since)
 	if err != nil {
@@ -316,6 +320,7 @@ type PlatformOverviewProfilesRow struct {
 }
 
 // A profile is published when it has a live (active) username route.
+// account-lint: cross-account platform overview dashboard, all accounts
 func (q *Queries) PlatformOverviewProfiles(ctx context.Context) (PlatformOverviewProfilesRow, error) {
 	row := q.db.QueryRow(ctx, platformOverviewProfiles)
 	var i PlatformOverviewProfilesRow
@@ -341,6 +346,7 @@ type PlatformOverviewSubscriptionCountsRow struct {
 	CanceledSince int64 `json:"canceled_since"`
 }
 
+// account-lint: cross-account platform overview dashboard, all accounts
 func (q *Queries) PlatformOverviewSubscriptionCounts(ctx context.Context, since pgtype.Timestamptz) (PlatformOverviewSubscriptionCountsRow, error) {
 	row := q.db.QueryRow(ctx, platformOverviewSubscriptionCounts, since)
 	var i PlatformOverviewSubscriptionCountsRow
@@ -412,6 +418,7 @@ type PlatformOverviewTopProfilesRow struct {
 }
 
 // Most viewed live profiles from the daily aggregates (public profile page views).
+// account-lint: cross-account platform overview dashboard, all accounts
 func (q *Queries) PlatformOverviewTopProfiles(ctx context.Context, arg PlatformOverviewTopProfilesParams) ([]PlatformOverviewTopProfilesRow, error) {
 	rows, err := q.db.Query(ctx, platformOverviewTopProfiles, arg.EventType, arg.SinceDate, arg.LimitCount)
 	if err != nil {

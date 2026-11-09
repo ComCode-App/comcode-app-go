@@ -51,6 +51,7 @@ type CountSubscriptionsParams struct {
 	Status NullSubscriptionStatus `json:"status"`
 }
 
+// account-lint: cross-account platform /v1/platform/subscriptions
 func (q *Queries) CountSubscriptions(ctx context.Context, arg CountSubscriptionsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countSubscriptions, arg.Q, arg.Status)
 	var column_1 int64
@@ -184,6 +185,7 @@ type GetSubscriptionByUUIDRow struct {
 	CompanySlug             pgtype.Text         `json:"company_slug"`
 }
 
+// account-lint: cross-account platform /v1/platform/subscriptions
 func (q *Queries) GetSubscriptionByUUID(ctx context.Context, argUuid uuid.UUID) (GetSubscriptionByUUIDRow, error) {
 	row := q.db.QueryRow(ctx, getSubscriptionByUUID, argUuid)
 	var i GetSubscriptionByUUIDRow
@@ -322,6 +324,7 @@ type ListSubscriptionsFilteredRow struct {
 	CompanySlug             pgtype.Text         `json:"company_slug"`
 }
 
+// account-lint: cross-account platform /v1/platform/subscriptions
 func (q *Queries) ListSubscriptionsFiltered(ctx context.Context, arg ListSubscriptionsFilteredParams) ([]ListSubscriptionsFilteredRow, error) {
 	rows, err := q.db.Query(ctx, listSubscriptionsFiltered,
 		arg.Q,
@@ -402,6 +405,7 @@ type UpdateSubscriptionParams struct {
 	Uuid     uuid.UUID              `json:"uuid"`
 }
 
+// account-lint: cross-account platform /v1/platform/subscriptions
 func (q *Queries) UpdateSubscription(ctx context.Context, arg UpdateSubscriptionParams) (Subscription, error) {
 	row := q.db.QueryRow(ctx, updateSubscription,
 		arg.PlanID,

@@ -79,6 +79,7 @@ WHERE uuid = $1
 RETURNING id, uuid, user_id, provider, status, merchant_oid, provider_token, checkout_url, expires_at, completed_at, created_at, updated_at, account_id
 `
 
+// account-lint: cross-account payment provider callback: session found by merchant oid / provider token
 func (q *Queries) CompletePaymentCardSession(ctx context.Context, argUuid uuid.UUID) (PaymentCardSession, error) {
 	row := q.db.QueryRow(ctx, completePaymentCardSession, argUuid)
 	var i PaymentCardSession
@@ -164,6 +165,7 @@ WHERE uuid = $1
 RETURNING id, uuid, user_id, provider, status, merchant_oid, provider_token, checkout_url, expires_at, completed_at, created_at, updated_at, account_id
 `
 
+// account-lint: cross-account payment provider callback / init failure: session id from that flow
 func (q *Queries) FailPaymentCardSession(ctx context.Context, argUuid uuid.UUID) (PaymentCardSession, error) {
 	row := q.db.QueryRow(ctx, failPaymentCardSession, argUuid)
 	var i PaymentCardSession
@@ -285,6 +287,7 @@ FROM payment_card_sessions
 WHERE merchant_oid = $1
 `
 
+// account-lint: cross-account payment provider callback: merchant oid is the provider's reference
 func (q *Queries) GetPaymentCardSessionByMerchantOID(ctx context.Context, merchantOid string) (PaymentCardSession, error) {
 	row := q.db.QueryRow(ctx, getPaymentCardSessionByMerchantOID, merchantOid)
 	var i PaymentCardSession
@@ -312,6 +315,7 @@ FROM payment_card_sessions
 WHERE provider_token = $1
 `
 
+// account-lint: cross-account payment provider callback: provider token is the reference
 func (q *Queries) GetPaymentCardSessionByProviderToken(ctx context.Context, providerToken pgtype.Text) (PaymentCardSession, error) {
 	row := q.db.QueryRow(ctx, getPaymentCardSessionByProviderToken, providerToken)
 	var i PaymentCardSession
@@ -339,6 +343,7 @@ FROM payment_card_sessions
 WHERE uuid = $1
 `
 
+// account-lint: cross-account usecase checks row.AccountID against the active account (404 otherwise)
 func (q *Queries) GetPaymentCardSessionByUUID(ctx context.Context, argUuid uuid.UUID) (PaymentCardSession, error) {
 	row := q.db.QueryRow(ctx, getPaymentCardSessionByUUID, argUuid)
 	var i PaymentCardSession
@@ -509,6 +514,7 @@ type UpdatePaymentCardSessionInitParams struct {
 	Uuid          uuid.UUID   `json:"uuid"`
 }
 
+// account-lint: cross-account add-card start: session id from the row just inserted for this account
 func (q *Queries) UpdatePaymentCardSessionInit(ctx context.Context, arg UpdatePaymentCardSessionInitParams) (PaymentCardSession, error) {
 	row := q.db.QueryRow(ctx, updatePaymentCardSessionInit, arg.ProviderToken, arg.CheckoutUrl, arg.Uuid)
 	var i PaymentCardSession

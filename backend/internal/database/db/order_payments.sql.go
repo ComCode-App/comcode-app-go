@@ -29,6 +29,7 @@ type CompleteOrderPaymentSessionParams struct {
 	ID          int64       `json:"id"`
 }
 
+// account-lint: cross-account payment provider callback: session found by merchant oid / provider token
 func (q *Queries) CompleteOrderPaymentSession(ctx context.Context, arg CompleteOrderPaymentSessionParams) (OrderPaymentSession, error) {
 	row := q.db.QueryRow(ctx, completeOrderPaymentSession, arg.ProviderRef, arg.Metadata, arg.ID)
 	var i OrderPaymentSession
@@ -128,6 +129,7 @@ type FailOrderPaymentSessionParams struct {
 	ID       int64  `json:"id"`
 }
 
+// account-lint: cross-account payment provider callback / init failure: session id from that flow
 func (q *Queries) FailOrderPaymentSession(ctx context.Context, arg FailOrderPaymentSessionParams) (OrderPaymentSession, error) {
 	row := q.db.QueryRow(ctx, failOrderPaymentSession, arg.Metadata, arg.ID)
 	var i OrderPaymentSession
@@ -173,6 +175,7 @@ type GetOrderPaymentAmountRow struct {
 	AmountMinor   int64     `json:"amount_minor"`
 }
 
+// account-lint: cross-account usecase checks target.AccountID against the active account
 func (q *Queries) GetOrderPaymentAmount(ctx context.Context, argUuid uuid.UUID) (GetOrderPaymentAmountRow, error) {
 	row := q.db.QueryRow(ctx, getOrderPaymentAmount, argUuid)
 	var i GetOrderPaymentAmountRow
@@ -193,6 +196,7 @@ const getOrderPaymentSessionByMerchantOID = `-- name: GetOrderPaymentSessionByMe
 SELECT id, uuid, account_id, order_id, user_id, provider, status, merchant_oid, provider_token, provider_ref, amount_minor, currency, checkout_url, metadata, expires_at, completed_at, created_at, updated_at FROM order_payment_sessions WHERE merchant_oid = $1
 `
 
+// account-lint: cross-account payment provider callback: merchant oid is the provider's reference
 func (q *Queries) GetOrderPaymentSessionByMerchantOID(ctx context.Context, merchantOid string) (OrderPaymentSession, error) {
 	row := q.db.QueryRow(ctx, getOrderPaymentSessionByMerchantOID, merchantOid)
 	var i OrderPaymentSession
@@ -223,6 +227,7 @@ const getOrderPaymentSessionByProviderToken = `-- name: GetOrderPaymentSessionBy
 SELECT id, uuid, account_id, order_id, user_id, provider, status, merchant_oid, provider_token, provider_ref, amount_minor, currency, checkout_url, metadata, expires_at, completed_at, created_at, updated_at FROM order_payment_sessions WHERE provider_token = $1
 `
 
+// account-lint: cross-account payment provider callback: provider token is the reference
 func (q *Queries) GetOrderPaymentSessionByProviderToken(ctx context.Context, providerToken pgtype.Text) (OrderPaymentSession, error) {
 	row := q.db.QueryRow(ctx, getOrderPaymentSessionByProviderToken, providerToken)
 	var i OrderPaymentSession
@@ -285,6 +290,7 @@ type GetOrderPaymentSessionByUUIDRow struct {
 	OrderPaymentStatus string                `json:"order_payment_status"`
 }
 
+// account-lint: cross-account usecase checks row.AccountID against the active account (404 otherwise)
 func (q *Queries) GetOrderPaymentSessionByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrderPaymentSessionByUUIDRow, error) {
 	row := q.db.QueryRow(ctx, getOrderPaymentSessionByUUID, argUuid)
 	var i GetOrderPaymentSessionByUUIDRow
@@ -331,6 +337,7 @@ type LockOrderForPaymentRow struct {
 	PaymentStatus string    `json:"payment_status"`
 }
 
+// account-lint: cross-account provider payment/refund apply: order id from a verified session
 func (q *Queries) LockOrderForPayment(ctx context.Context, id int64) (LockOrderForPaymentRow, error) {
 	row := q.db.QueryRow(ctx, lockOrderForPayment, id)
 	var i LockOrderForPaymentRow
@@ -348,6 +355,7 @@ const lockOrderPaymentSession = `-- name: LockOrderPaymentSession :one
 SELECT id, uuid, account_id, order_id, user_id, provider, status, merchant_oid, provider_token, provider_ref, amount_minor, currency, checkout_url, metadata, expires_at, completed_at, created_at, updated_at FROM order_payment_sessions WHERE merchant_oid = $1 FOR UPDATE
 `
 
+// account-lint: cross-account order checkout flow: session id from that flow (callback or the account's own start)
 func (q *Queries) LockOrderPaymentSession(ctx context.Context, merchantOid string) (OrderPaymentSession, error) {
 	row := q.db.QueryRow(ctx, lockOrderPaymentSession, merchantOid)
 	var i OrderPaymentSession
@@ -388,6 +396,7 @@ type UpdateOrderPaymentSessionInitParams struct {
 	Uuid          uuid.UUID   `json:"uuid"`
 }
 
+// account-lint: cross-account order checkout start: session id from the row just inserted for this account
 func (q *Queries) UpdateOrderPaymentSessionInit(ctx context.Context, arg UpdateOrderPaymentSessionInitParams) (OrderPaymentSession, error) {
 	row := q.db.QueryRow(ctx, updateOrderPaymentSessionInit, arg.ProviderToken, arg.CheckoutUrl, arg.Uuid)
 	var i OrderPaymentSession

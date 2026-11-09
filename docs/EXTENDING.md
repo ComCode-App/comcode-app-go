@@ -1,6 +1,6 @@
 # Extending ComCode
 
-Add product modules on top of auth, RBAC, accounts, notifications, and the two shells. Owned data belongs to an account: add `account_id`, scope app queries by the active account and check the account role on writes ([TENANCY_AND_ACCESS.md](./TENANCY_AND_ACCESS.md)).
+Add product modules on top of auth, RBAC, accounts, notifications, and the two shells. Owned data belongs to an account: add `account_id`, scope app queries by the active account and check the account role on writes ([TENANCY_AND_ACCESS.md](./TENANCY_AND_ACCESS.md)). New owned tables go into `backend/internal/database/account_tables.txt`; the account isolation lint then requires an `account_id` filter (or a `-- account-lint: cross-account <reason>` comment) on every query that touches them ([DATABASE_RULES.md](../backend/DATABASE_RULES.md#account-isolation-lint)).
 
 For a full agent checklist, use `.agents/skills/add-platform-resource`. Narrative is here; checklists are in skills.
 
