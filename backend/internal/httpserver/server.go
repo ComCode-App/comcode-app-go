@@ -632,7 +632,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	s.http = &http.Server{
 		Addr: cfg.HTTP.Addr,
 		// RequestID is outermost so 5xx logs, error reports, and panics carry the id.
-		Handler: middleware.Chain(mux,
+		Handler: middleware.Chain(middleware.CaptureRoute(mux),
 			middleware.RequestID,
 			middleware.ServerErrors(log),
 			middleware.Recover,

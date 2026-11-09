@@ -2,6 +2,7 @@ package handler
 
 import (
 	"crypto/subtle"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -10,6 +11,8 @@ import (
 	"github.com/google/uuid"
 )
 
+var errAdapterKeyRejected = errors.New("auth adapter key missing or does not match")
+
 func (h *Handler) requireAdapterKey(w http.ResponseWriter, r *http.Request) bool {
 	if h.adapterSecret == "" {
 		response.Internal(w, r, "Adapter integration is not configured")
@@ -17,6 +20,8 @@ func (h *Handler) requireAdapterKey(w http.ResponseWriter, r *http.Request) bool
 	}
 	got := strings.TrimSpace(r.Header.Get("X-Auth-Adapter-Key"))
 	if got == "" || subtle.ConstantTimeCompare([]byte(got), []byte(h.adapterSecret)) != 1 {
+		// Logged by the request observer: points at an AUTH_ADAPTER_SECRET mismatch.
+		response.RecordFailure(w, errAdapterKeyRejected)
 		response.Unauthorized(w, r, "Invalid adapter credentials")
 		return false
 	}
