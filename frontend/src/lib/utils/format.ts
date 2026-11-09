@@ -11,6 +11,8 @@ import {
   tr as dayPickerTr,
 } from "react-day-picker/locale";
 
+import { slugify } from "./slugify";
+
 import { i18nConfig, type AppLocale } from "@/config/i18n";
 
 export function dateFnsLocale(
@@ -103,12 +105,7 @@ export function fileSize(bytes: number) {
 }
 
 export function slug(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+  return slugify(value);
 }
 
 export function uuid() {
