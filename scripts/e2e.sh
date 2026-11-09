@@ -104,6 +104,11 @@ wait_http "http://127.0.0.1:${WEB_PORT}/login" "frontend"
 
 echo "==> playwright"
 if [ -z "${PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD:-}" ]; then
-  pnpm exec playwright install chromium >/dev/null
+  # A fresh Linux CI runner (GitHub-hosted ubuntu) also needs Chromium's system libraries.
+  if [ -n "${CI:-}" ] && [ "$(uname -s)" = "Linux" ]; then
+    pnpm exec playwright install --with-deps chromium >/dev/null
+  else
+    pnpm exec playwright install chromium >/dev/null
+  fi
 fi
 pnpm e2e "$@"
