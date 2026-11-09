@@ -160,7 +160,7 @@ function SmartLinkForm({ link, detail, onDone }: { link?: SmartLink; detail?: Sm
         return; // the global plan-limit toast offers the upgrade
       }
       if (isApiError(err) && err.status === 409) setError(t("smart_links.error.slug_taken"));
-      else if (isApiError(err) && /reserved/i.test(err.message)) setError(t("smart_links.error.slug_reserved"));
+      else if (isApiError(err) && /reserved/i.test(err.serverMessage ?? "")) setError(t("smart_links.error.slug_reserved"));
       else setError(isApiError(err) ? err.message : t("common.error_generic"));
     },
   });

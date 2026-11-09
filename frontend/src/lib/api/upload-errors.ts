@@ -1,11 +1,13 @@
+import { API_ERROR_MESSAGE_KEYS } from "./error-messages";
+
 /**
- * Upload error codes the API returns for rejected files (TEC-1097), mapped to
- * locale keys so upload UIs can show a clear, translated warning instead of
- * the raw server message. Kept dependency-free for the node test.
+ * Upload error codes the API returns for rejected files (TEC-1097). Their locale keys live in the
+ * central code → key map (`error-messages.ts`); this lets upload UIs tell an upload rejection apart
+ * from other errors.
  */
-export const UPLOAD_ERROR_KEYS: Record<string, string> = {
-  SVG_UNSAFE_CONTENT: "errors.upload_svg_unsafe",
-  PAYLOAD_TOO_LARGE: "errors.upload_too_large",
+export const UPLOAD_ERROR_KEYS: Readonly<Record<string, string>> = {
+  SVG_UNSAFE_CONTENT: API_ERROR_MESSAGE_KEYS.SVG_UNSAFE_CONTENT,
+  PAYLOAD_TOO_LARGE: API_ERROR_MESSAGE_KEYS.PAYLOAD_TOO_LARGE,
 };
 
 /** Locale key for an upload error (anything with an API error `code`), or null. */

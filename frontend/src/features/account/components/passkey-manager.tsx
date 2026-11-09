@@ -271,11 +271,8 @@ export function PasskeyManager() {
         const list = await authService.listPasskeys();
         return list.items ?? [];
       } catch (error) {
-        toast.error(
-          isApiError(error)
-            ? error.message || t("common.error_generic")
-            : t("common.error_generic"),
-        );
+        // API errors already get the global toast (TEC-1110).
+        if (!isApiError(error)) toast.error(t("common.error_generic"));
         throw error;
       }
     },
@@ -312,11 +309,8 @@ export function PasskeyManager() {
       toast.success(t("auth.passkey.rename_success"));
       await passkeysQuery.refetch();
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message || t("common.error_generic"));
-      } else {
-        toast.error(t("common.error_generic"));
-      }
+      // API errors already get the global toast (TEC-1110).
+      if (!isApiError(error)) toast.error(t("common.error_generic"));
     }
   };
 
@@ -332,9 +326,8 @@ export function PasskeyManager() {
     } catch (error) {
       if (isLastSignInMethodError(error)) {
         // The global API error toast already showed the localized message.
-      } else if (isApiError(error)) {
-        toast.error(error.message || t("common.error_generic"));
-      } else {
+      } else if (!isApiError(error)) {
+        // API errors already get the global toast (TEC-1110).
         toast.error(t("common.error_generic"));
       }
     } finally {

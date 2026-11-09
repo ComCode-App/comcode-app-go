@@ -105,6 +105,13 @@ func (p RealtimeProvider) Deliver(ctx context.Context, n db.Notification, userUU
 	if n.TemplateCode.Valid && n.TemplateCode.String != "" {
 		notification["template_code"] = n.TemplateCode.String
 	}
+	// Forward the template payload so the live card renders without a follow-up GET.
+	if len(n.Payload) > 0 {
+		var extra map[string]any
+		if err := json.Unmarshal(n.Payload, &extra); err == nil && len(extra) > 0 {
+			notification["payload"] = extra
+		}
+	}
 	payload := map[string]any{
 		"type":         "notification.created",
 		"notification": notification,

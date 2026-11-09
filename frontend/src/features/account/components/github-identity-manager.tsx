@@ -75,11 +75,8 @@ export function OAuthIdentityManager({ providers }: OAuthIdentityManagerProps) {
           hasPasskey: result.has_passkey ?? false,
         };
       } catch (error) {
-        toast.error(
-          isApiError(error)
-            ? error.message || t("common.error_generic")
-            : t("common.error_generic"),
-        );
+        // API errors already get the global toast (TEC-1110).
+        if (!isApiError(error)) toast.error(t("common.error_generic"));
         throw error;
       }
     },
@@ -116,9 +113,8 @@ export function OAuthIdentityManager({ providers }: OAuthIdentityManagerProps) {
       if (isLastSignInMethodError(error)) {
         // The global API error toast already showed the localized message.
         await identitiesQuery.refetch();
-      } else if (isApiError(error)) {
-        toast.error(error.message || t("auth.oauth.unlink_error"));
-      } else {
+      } else if (!isApiError(error)) {
+        // API errors already get the global toast (TEC-1110).
         toast.error(t("auth.oauth.unlink_error"));
       }
     } finally {

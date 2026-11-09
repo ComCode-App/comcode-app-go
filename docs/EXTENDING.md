@@ -24,6 +24,7 @@ For a full agent checklist, use `.agents/skills/add-platform-resource`. Narrativ
 4. Call the BFF (`/api/v1/...`), not the Go host, from the browser.
 5. Dates: shared `DatePicker` / `AppDatePicker` — see `.agents/skills/admin-date-picker`.
 6. After OpenAPI changes: `cd frontend && pnpm api:generate`.
+7. API errors: a failed request shows one global toast, worded from the error code (`frontend/src/lib/api/error-messages.ts`, en/tr keys). A new backend error code needs an entry there; `api-errors.test.mjs` fails otherwise. A mutation with its own `onError` gets no global toast (add `meta: { toastErrors: true }` if that handler only cleans up); `meta: { silentErrors: true }` silences queries and mutations; a plain `await` caller uses `suppressApiErrorToast(err)`.
 
 ## Sidebar (nav-engine)
 
