@@ -126,6 +126,7 @@ func New(
 }
 
 func (s *Service) Execute(ctx context.Context, actorID int64, in ExecuteInput) (ExecuteResult, error) {
+	ctx = bulkengine.WithActor(ctx, actorID)
 	def, adapter, err := s.registry.ActionDef(in.Resource, in.Action)
 	if err != nil {
 		return ExecuteResult{}, fmt.Errorf("%w: %v", ErrInvalidRequest, err)
@@ -224,6 +225,7 @@ func (s *Service) runJob(ctx context.Context, jobID int64, notify bool) error {
 	if err != nil {
 		return err
 	}
+	ctx = bulkengine.WithActor(ctx, job.ActorID)
 	if job.AccountID.Valid {
 		ctx = jobscope.With(ctx, jobscope.Scope{
 			AccountID: job.AccountID.Int64, ActorID: job.ActorID, Params: job.ParamsJson,
@@ -297,6 +299,7 @@ func (s *Service) Rollback(ctx context.Context, jobUUID uuid.UUID, actorID int64
 	if err != nil || !access.allows(job, actorID) {
 		return BulkJobView{}, ErrNotFound
 	}
+	ctx = bulkengine.WithActor(ctx, actorID)
 	if job.AccountID.Valid {
 		ctx = jobscope.With(ctx, jobscope.Scope{
 			AccountID: job.AccountID.Int64, ActorID: actorID, Params: job.ParamsJson,

@@ -285,8 +285,25 @@ func (r *memRepo) ReplaceUserRoles(_ context.Context, userID int64, roleIDs []in
 	return nil
 }
 
+// Fixed role uuids of the in-memory catalog; any other uuid resolves to the subscriber role.
+var (
+	superAdminRoleUUID = uuid.MustParse("00000000-0000-0000-0000-00000000aaaa")
+	subscriberRoleUUID = uuid.MustParse("00000000-0000-0000-0000-00000000bbbb")
+)
+
 func (r *memRepo) ResolveRoleIDsByUUIDs(_ context.Context, roleUUIDs []uuid.UUID) ([]int64, error) {
-	return []int64{2}, nil
+	out := make([]int64, 0, len(roleUUIDs))
+	for _, id := range roleUUIDs {
+		if id == superAdminRoleUUID {
+			out = append(out, r.roles[rbac.RoleSuperAdmin])
+		} else {
+			out = append(out, r.roles[rbac.RoleSubscriber])
+		}
+	}
+	if len(out) == 0 {
+		return []int64{2}, nil
+	}
+	return out, nil
 }
 
 func (r *memRepo) SaveRefresh(_ context.Context, userID int64, hash string, exp time.Time, meta model.SessionMeta) (model.RefreshSession, error) {
@@ -525,7 +542,10 @@ func (r *memRepo) DeleteUserTOTP(context.Context, int64) error                  
 func (r *memRepo) ListRolesFiltered(context.Context, int32, int32, string) ([]model.RoleSummary, int64, error) {
 	return []model.RoleSummary{{UUID: uuid.New(), Name: "Subscriber", Slug: rbac.RoleSubscriber}}, 1, nil
 }
-func (r *memRepo) GetRoleByUUID(context.Context, uuid.UUID) (model.RoleSummary, error) {
+func (r *memRepo) GetRoleByUUID(_ context.Context, id uuid.UUID) (model.RoleSummary, error) {
+	if id == superAdminRoleUUID {
+		return model.RoleSummary{UUID: id, Slug: rbac.RoleSuperAdmin, IsSystem: true}, nil
+	}
 	return model.RoleSummary{UUID: uuid.New(), Slug: rbac.RoleSubscriber}, nil
 }
 func (r *memRepo) ListRolePermissionSlugs(context.Context, uuid.UUID) ([]string, error) {

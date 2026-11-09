@@ -128,6 +128,29 @@ Returns `user`, `roles[]`, `permissions[]`, `account` (active), `accounts[]`, `s
 
 Last super admin cannot be demoted via role removal or disable.
 
+### Super admin boundary
+
+Permissions alone never reach a super admin. A caller who holds `platform.users.*` but not the
+`super_admin` role gets **403 `FORBIDDEN`** ("Only a super admin can change super admin accounts
+or the super_admin role", `usecase.ErrSuperAdminRequired`) when they:
+
+- grant `super_admin` (create or patch with its uuid in `role_uuids[]`, also to themselves);
+- change a super admin account at all: profile, `role_uuids[]` (so also removing `super_admin`),
+  `status` (disable/enable), password (`/password`) or impersonation.
+
+The check reads the request principal, which `LoadPrincipal` reloads from the database on every
+request. The other write paths enforce the same rule:
+
+- **Bulk** (`POST /v1/platform/users/bulk`): the bulk service puts the job's actor on the context
+  (`bulkengine.WithActor`, also for queued runs and rollbacks); `disable`/`enable` of a super admin
+  fails that item unless the actor is a super admin, and so does a rollback that touches a super
+  admin or restores a role snapshot holding `super_admin`.
+- **Import** (`POST /v1/platform/users/import`): a row whose `role_slugs` (or the default
+  `role_slugs`) contain `super_admin` is rejected ("the super_admin role cannot be assigned by
+  import"), whoever runs it. An import rollback leaves users who are super admins by then alone.
+
+New super admins come from an existing super admin on the user page, or from `make create-super-admin`.
+
 ## Platform roles
 
 | Method | Path | Permission |
