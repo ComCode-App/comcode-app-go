@@ -42,6 +42,8 @@ import { routes } from "@/config/routes";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 import { cn } from "@/lib/utils";
+import { suppressApiErrorToast } from "@/lib/api";
+import { uploadErrorKey } from "@/lib/api/upload-errors";
 
 type ImportWizardProps = {
   resource: ImportResource;
@@ -180,6 +182,7 @@ export function ImportWizard({
       a.click();
       URL.revokeObjectURL(url);
     } catch {
+      // toast-guard: no ApiError here; platformDownloadRequest throws a plain Error and never toasts.
       appToast.error(t("imports.toast.sample_failed"));
     }
   };
@@ -216,8 +219,13 @@ export function ImportWizard({
       }
 
       setStep("mapping");
-    } catch {
-      appToast.error(t("imports.toast.upload_failed"));
+    } catch (error) {
+      // A rejected file (too large, unsafe SVG) keeps the global toast, which names the reason;
+      // otherwise the import-specific text replaces it (TEC-1117).
+      if (!uploadErrorKey(error)) {
+        suppressApiErrorToast(error);
+        appToast.error(t("imports.toast.upload_failed"));
+      }
     } finally {
       setPending(false);
     }
@@ -248,7 +256,9 @@ export function ImportWizard({
       );
       setJob(updated);
       setStep("defaults");
-    } catch {
+    } catch (error) {
+      // The import-specific text replaces the global API error toast (TEC-1117).
+      suppressApiErrorToast(error);
       appToast.error(t("imports.toast.mapping_failed"));
     } finally {
       setPending(false);
@@ -268,7 +278,9 @@ export function ImportWizard({
       setStep("preview");
       const previewed = await importsService.preview(updated.uuid, jobsBase);
       setJob(previewed);
-    } catch {
+    } catch (error) {
+      // The import-specific text replaces the global API error toast (TEC-1117).
+      suppressApiErrorToast(error);
       appToast.error(t("imports.toast.preview_failed"));
     } finally {
       setPending(false);
@@ -284,7 +296,9 @@ export function ImportWizard({
       setStep("done");
       appToast.success(t("imports.toast.confirmed"));
       onComplete?.();
-    } catch {
+    } catch (error) {
+      // The import-specific text replaces the global API error toast (TEC-1117).
+      suppressApiErrorToast(error);
       appToast.error(t("imports.toast.confirm_failed"));
     } finally {
       setPending(false);

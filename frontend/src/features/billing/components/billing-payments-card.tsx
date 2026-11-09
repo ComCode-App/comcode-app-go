@@ -80,6 +80,7 @@ export function BillingPaymentsCard({ accountUuid }: { accountUuid?: string }) {
       try {
         await billingService.downloadReceipt(payment, locale);
       } catch {
+        // toast-guard: platformDownloadFile throws a plain Error and never toasts.
         appToast.error(t("billing.payments.receipt_failed"));
       } finally {
         setDownloading(null);

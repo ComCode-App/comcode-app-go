@@ -55,13 +55,8 @@ export function AccountProfilePage({ shell }: { shell: AccountShell }) {
       await authService.requestEmailVerify(user?.email);
       toast.success(t("auth.verify.request_success"));
     } catch (error) {
-      if (isApiError(error) && error.code === "RATE_LIMITED") {
-        toast.error(t("auth.rate_limited"));
-      } else if (isApiError(error)) {
-        toast.error(error.message || t("common.error_generic"));
-      } else {
-        toast.error(t("common.error_generic"));
-      }
+      // API errors (RATE_LIMITED included) already get the global toast (TEC-1117).
+      if (!isApiError(error)) toast.error(t("common.error_generic"));
     } finally {
       await hydrateProfile();
     }

@@ -22,6 +22,7 @@ import {
 } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
+import { suppressApiErrorToast } from "@/lib/api";
 
 const FORMATS: ExportFormat[] = ["xlsx", "csv", "pdf"];
 
@@ -56,7 +57,9 @@ export function OrderManifestMenu({
           { format, locale },
         );
         appToast.success(t("exports.toast.queued"));
-      } catch {
+      } catch (error) {
+        // The export-specific text replaces the global API error toast (TEC-1117).
+        suppressApiErrorToast(error);
         appToast.error(t("exports.toast.failed"));
       }
     });
@@ -69,6 +72,7 @@ export function OrderManifestMenu({
         );
         triggerBrowserDownload(blob, filename ?? "qr-codes.zip");
       } catch {
+        // toast-guard: no ApiError here; platformDownloadFile throws a plain Error and never toasts.
         appToast.error(t("orders.manifest.qr_failed"));
       }
     });

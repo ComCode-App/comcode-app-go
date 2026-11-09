@@ -40,6 +40,7 @@ export function PaymentCallbackUrlField({
       await navigator.clipboard.writeText(callbackUrl);
       appToast.success(t("integrations.payment.callback_copied"));
     } catch {
+      // toast-guard: clipboard only, no API call.
       appToast.error(t("integrations.payment.callback_copy_failed"));
     }
   }, [callbackUrl, t]);

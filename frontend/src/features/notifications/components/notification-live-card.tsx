@@ -17,6 +17,7 @@ import { runNotificationAction } from "@/features/notifications/lib/run-notifica
 import { cn } from "@/lib/utils";
 import { appToast } from "@/providers/toast-provider";
 import { useLocale } from "@/providers/locale-provider";
+import { suppressApiErrorToast } from "@/lib/api";
 
 type NotificationLiveCardProps = {
   item: LiveNotificationItem;
@@ -138,7 +139,9 @@ export function NotificationLiveCard({
       });
       markInboxRead();
       dismiss();
-    } catch {
+    } catch (error) {
+      // The action-specific text replaces the global API error toast (TEC-1117).
+      suppressApiErrorToast(error);
       appToast.error(t("notifications.toast.action_failed"));
     }
   };

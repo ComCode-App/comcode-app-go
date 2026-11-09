@@ -14,6 +14,7 @@ import type { Notification } from "@/features/notifications/services/notificatio
 import { datetime } from "@/lib/utils";
 import { appToast } from "@/providers/toast-provider";
 import { useLocale } from "@/providers/locale-provider";
+import { suppressApiErrorToast } from "@/lib/api";
 
 type NotificationDetailDrawerProps = {
   notification: Notification | null;
@@ -68,7 +69,9 @@ export function NotificationDetailDrawer({
                     action,
                     navigate: (href) => router.push(href),
                     notification,
-                  }).catch(() => {
+                  }).catch((error: unknown) => {
+                    // Replaces the global API error toast (TEC-1117).
+                    suppressApiErrorToast(error);
                     appToast.error(t("notifications.toast.action_failed"));
                   });
                 }}

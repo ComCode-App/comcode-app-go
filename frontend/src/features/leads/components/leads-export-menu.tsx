@@ -15,7 +15,7 @@ import { entitlementKeys, useQuota } from "@/features/entitlements";
 import type { ExportFormat, ExportJob } from "@/features/io/types";
 import { formatResetDate } from "@/features/leads/components/leads-quota-meter";
 import { leadsService } from "@/features/leads/services/leads.service";
-import { ApiError } from "@/lib/api";
+import { isPlanLimitError, suppressApiErrorToast } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
@@ -85,10 +85,10 @@ export function LeadsExportMenu({
         appToast.info(t("leads.export.pending"));
       }
     } catch (error) {
-      // 403 PLAN_LIMIT_EXCEEDED has its own global toast.
-      if (!(
-        error instanceof ApiError && error.code === "PLAN_LIMIT_EXCEEDED"
-      )) {
+      // 403 PLAN_LIMIT_EXCEEDED keeps its global upgrade toast; any other error shows only the
+      // export-specific text (TEC-1117).
+      if (!isPlanLimitError(error)) {
+        suppressApiErrorToast(error);
         appToast.error(t("leads.export.failed"));
       }
     } finally {
