@@ -333,6 +333,11 @@ services:
       NEXT_PUBLIC_CENTRIFUGO_URL: ${NEXT_PUBLIC_CENTRIFUGO_URL:-}
       NEXT_PUBLIC_DEFAULT_LOCALE: ${NEXT_PUBLIC_DEFAULT_LOCALE:-tr}
       NEXT_PUBLIC_FALLBACK_LOCALE: ${NEXT_PUBLIC_FALLBACK_LOCALE:-en}
+      # Runtime (not baked): domain association files for the mobile app (TEC-1183).
+      MOBILE_APPLE_TEAM_ID: ${MOBILE_APPLE_TEAM_ID:-}
+      MOBILE_IOS_BUNDLE_ID: ${MOBILE_IOS_BUNDLE_ID:-}
+      MOBILE_ANDROID_PACKAGE: ${MOBILE_ANDROID_PACKAGE:-}
+      MOBILE_ANDROID_SHA256_CERTS: ${MOBILE_ANDROID_SHA256_CERTS:-}
     depends_on:
       backend:
         condition: service_healthy
