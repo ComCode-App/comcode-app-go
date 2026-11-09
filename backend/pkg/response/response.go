@@ -34,6 +34,7 @@ const (
 	CodeInvalidMFACode      = "INVALID_MFA_CODE"
 	CodePlanLimitExceeded   = "PLAN_LIMIT_EXCEEDED"
 	CodeInvalidPasscode     = "INVALID_PASSCODE"
+	CodeLastSignInMethod    = "LAST_SIGN_IN_METHOD"
 )
 
 // RequestIDFunc resolves the correlation id from request context.

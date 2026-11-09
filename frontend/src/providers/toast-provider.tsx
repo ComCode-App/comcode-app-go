@@ -5,6 +5,10 @@ import { useEffect, type ReactNode } from "react";
 import { Toaster, toast } from "sonner";
 
 import { routes } from "@/config/routes";
+import {
+  isLastSignInMethodError,
+  LAST_SIGN_IN_METHOD_MESSAGE_KEY,
+} from "@/features/account/lib/sign-in-methods";
 import { ApiError, setGlobalApiErrorHandler } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -26,6 +30,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             onClick: () => window.location.assign(routes.app.billing.root),
           },
         });
+        return;
+      }
+      if (isLastSignInMethodError(error)) {
+        toast.error(t(LAST_SIGN_IN_METHOD_MESSAGE_KEY));
         return;
       }
       if (error.isForbidden) {

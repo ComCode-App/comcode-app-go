@@ -31,6 +31,9 @@ type PasskeyListResult = {
 type IdentityListResult = {
   items: LinkedIdentitySummary[];
   total: number;
+  /** False when the user never chose a password (OAuth sign-up). */
+  has_password: boolean;
+  has_passkey: boolean;
 };
 
 export type DeviceSession = {
@@ -149,7 +152,9 @@ export const authService = {
   },
 
   async listIdentities() {
-    return unwrap<IdentityListResult>(await apiClient.GET("/v1/auth/identities"));
+    return unwrap<IdentityListResult>(
+      await apiClient.GET("/v1/auth/identities"),
+    );
   },
 
   /** Switches the session's active account; the BFF stores the returned tokens. */
