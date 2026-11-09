@@ -27,7 +27,7 @@ Never reference short Docker DNS names (`seaweedfs`, `centrifugo`, `backend`) on
 
 Root `.env` is canonical. `backend/.env` is a fallback only. Do not keep a long-lived `frontend/.env.local` for API URLs; `API_URL` comes from the root env.
 
-`API_URL` **must** include `/v1` (Go routes are `/v1/...`). Default: `http://127.0.0.1:8080/v1`.
+`API_URL` **must** include `/v1` (Go routes are `/v1/...`). Local default: `http://127.0.0.1:58080/v1`.
 
 ## Local
 
@@ -41,8 +41,8 @@ Helpers:
 | Target | What it does |
 |--------|----------------|
 | `make infra` / `make infra-down` | Compose infra only |
-| `make backend-dev` | air on `:8080` |
-| `make frontend-dev` | `pnpm dev` on `:3000` |
+| `make backend-dev` | air on `:58080` (`APP_HTTP_ADDR`) |
+| `make frontend-dev` | `next dev` on `:54002` (`FRONTEND_PORT`) |
 | `make migrate-up` | Apply SQL migrations |
 | `make create-super-admin` | Upsert platform admin + `super_admin` role |
 | `make search-reindex` | Rebuild Meilisearch indexes (users, roles, …) |
@@ -52,17 +52,21 @@ Helpers:
 
 | Service | URL |
 |---------|-----|
-| Frontend | http://localhost:3000 |
-| API | http://127.0.0.1:8080 |
-| Scalar docs | http://127.0.0.1:8080/docs/ |
-| Health / ready | http://127.0.0.1:8080/healthz · `/readyz` |
+| Frontend | http://localhost:54002 |
+| API | http://127.0.0.1:58080 |
+| Scalar docs | http://127.0.0.1:58080/docs/ |
+| Health / ready | http://127.0.0.1:58080/healthz · `/readyz` |
 | Adminer | http://127.0.0.1:8081 |
-| SeaweedFS S3 | http://127.0.0.1:8333 (bucket `S3_BUCKET`, keys `S3_ACCESS_KEY` / `S3_SECRET_KEY`) |
+| Postgres | 127.0.0.1:55432 |
+| Redis | 127.0.0.1:56379 |
+| SeaweedFS S3 | http://127.0.0.1:58333 (bucket `S3_BUCKET`, keys `S3_ACCESS_KEY` / `S3_SECRET_KEY`) |
 | MailHog | http://127.0.0.1:8025 |
 | Meilisearch | http://127.0.0.1:7700 |
 | Centrifugo WS | ws://127.0.0.1:8000/connection/websocket |
 
-Login: http://localhost:3000/platform/login
+Login: http://localhost:54002/platform/login
+
+Local host ports never use 3000/8080 (they clash with other projects); the defaults live in `.env.example` and the `Makefile`. Inside the production containers the frontend still listens on 3000 and the API on 8080 (`compose.prod.yml`, Dockerfiles).
 
 ## Branding
 
@@ -181,7 +185,7 @@ Dokploy → the compose app → **Domains**: pick the service and the **containe
 - `S3_ACCESS_KEY` / `S3_SECRET_KEY` are the admin identity. Anonymous users may only `GET` objects in `S3_BUCKET` (public media); listing, writes and deletes need the key.
 - In Dokploy, route the media domain to service `comcode-seaweedfs`, port `8333` (was `minio:9000`); see Dokploy domains.
 - Any other S3-compatible store works with `STORAGE_DRIVER=s3` and `S3_ENDPOINT`. `minio` is accepted as a legacy alias.
-- Driver check against a live store: `STORAGE_IT_ENDPOINT=http://127.0.0.1:8333 S3_ACCESS_KEY=… S3_SECRET_KEY=… S3_BUCKET=… go test ./internal/platform/storage -run TestS3CompatibleBackend`.
+- Driver check against a live store: `STORAGE_IT_ENDPOINT=http://127.0.0.1:58333 S3_ACCESS_KEY=… S3_SECRET_KEY=… S3_BUCKET=… go test ./internal/platform/storage -run TestS3CompatibleBackend`.
 - Moving from MinIO: there is no prod data. Locally, copy objects with any S3 client (`rclone sync minio:bucket seaweed:bucket`) or start fresh; the old `*-minio` volume can be removed.
 
 `APP_ENCRYPTION_KEY` (32-byte, raw or base64) encrypts OAuth, GitHub App, TOTP, payment and webhook secrets at rest. `make prod-env-init` generates it; never rotate it once data is stored. The backend refuses to start outside development with the example key (see Required secrets).
@@ -288,7 +292,7 @@ New integration test packages add `func TestMain(m *testing.M) { pgtest.Main(m) 
 
 Playwright tests in `frontend/e2e` cover the critical paths: password login, login with an authenticator (TOTP), profile creation, a subscriber card order, marking it paid in `/platform/orders/pipeline` (which provisions the card), and activating that card from `/cards`.
 
-`scripts/e2e.sh` runs them the way CI's `e2e` job does. It starts Postgres, Redis and SeaweedFS from `compose.local.yml` under its own project name and ports (56433, 56380, 58333), migrates, runs the API on `:58080` and the production Next.js build on `:53000`, then removes everything on exit. It can run next to `make local-dev`. Extra arguments go to `playwright test` (`scripts/e2e.sh auth.spec.ts`). `E2E_SKIP_BUILD=1` reuses the last `pnpm build`. Stack logs land in `frontend/e2e/.state/logs`. With `CI` set on Linux (the GitHub-hosted runner) it installs Chromium with its system libraries (`playwright install --with-deps`).
+`scripts/e2e.sh` runs them the way CI's `e2e` job does. It starts Postgres, Redis and SeaweedFS from `compose.local.yml` under its own project name and ports (56433, 56380, 58334), migrates, runs the API on `:58081` and the production Next.js build on `:53000`, then removes everything on exit. It can run next to `make local-dev`. Extra arguments go to `playwright test` (`scripts/e2e.sh auth.spec.ts`). `E2E_SKIP_BUILD=1` reuses the last `pnpm build`. Stack logs land in `frontend/e2e/.state/logs`. With `CI` set on Linux (the GitHub-hosted runner) it installs Chromium with its system libraries (`playwright install --with-deps`).
 
 Against your running dev stack instead:
 
@@ -302,7 +306,7 @@ How the suite works:
 - `e2e/global-setup.ts` creates three fresh users per run through the platform users API: a subscriber, a subscriber with TOTP enabled, and a super admin operator. Unique emails keep runs independent of plan quotas and per-email login rate limits, so the database never has to be reset.
 - The UI runs in English. Each test user's saved locale is `en`.
 - Activation codes are never returned by the order or card APIs, so the order test reads the provisioned card from Postgres. Settings: `E2E_DATABASE_URL`, or the `DB_*` variables.
-- Other settings: `E2E_BASE_URL` (default `http://localhost:3000`), `E2E_API_URL` (default `API_URL`), and `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`.
+- Other settings: `E2E_BASE_URL` (default `http://localhost:54002`), `E2E_API_URL` (default `API_URL`), and `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`.
 
 ## Super admin
 

@@ -6,7 +6,7 @@ Planning lives in **Linear only** (project ComCode). Reference issues as `COM-12
 
 | Path | Role |
 |------|------|
-| [`backend/`](./backend) | Go HTTP API + Asynq worker (`:8080`, `/v1/...`) |
+| [`backend/`](./backend) | Go HTTP API + Asynq worker (local `:58080`, `/v1/...`) |
 | [`frontend/`](./frontend) | Next.js App Router BFF (`/platform`, app `/`, public `/{username}`, `/c/{code}`, `/s/{slug}`) |
 | [`compose.local.yml`](./compose.local.yml) | Local infra only |
 | [`compose.prod.yml`](./compose.prod.yml) | Full stack + Dokploy network |
@@ -56,7 +56,7 @@ make create-super-admin
 # or: make create-super-admin SA_EMAIL=you@example.com SA_PASSWORD='Str0ngPassword'
 ```
 
-Then open http://localhost:3000/platform/login and sign in as `super_admin`.
+Then open http://localhost:54002/platform/login and sign in as `super_admin`.
 
 `make local-dev` starts Postgres, Redis, SeaweedFS, MailHog, Adminer, Centrifugo, and Meilisearch in Docker, migrates the database, then runs **air** (API) and **pnpm dev** (frontend) on the host. It does **not** build app images.
 

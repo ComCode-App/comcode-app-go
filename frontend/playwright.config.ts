@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 // E2E smoke tests run against an already running stack (Go API + Next.js + Postgres + Redis).
 // Locally: `make local-dev`, `make create-super-admin`, then `pnpm e2e`. See docs/DEVELOPMENT.md#e2e.
-const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:54002";
 
 export default defineConfig({
   testDir: "./e2e",

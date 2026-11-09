@@ -17,7 +17,7 @@ Or from this directory, after infra is up:
 make migrate-up
 make sqlc
 make create-super-admin
-make dev             # air on APP_HTTP_ADDR (default :8080)
+make dev             # air on APP_HTTP_ADDR (local :58080)
 make health          # GET /healthz and /readyz
 ```
 
@@ -38,7 +38,7 @@ Requires migrations (`000005_seed_rbac`) so the `super_admin` role exists. The C
 ### Register a user (self-serve, no roles)
 
 ```bash
-curl -sS -X POST http://127.0.0.1:8080/v1/auth/register \
+curl -sS -X POST http://127.0.0.1:58080/v1/auth/register \
   -H 'Content-Type: application/json' \
   -d '{
     "email": "user@example.test",
@@ -55,14 +55,14 @@ Also enqueues welcome + email verification via the notification center (MailHog 
 ### Login / me / profile
 
 ```bash
-curl -sS -X POST http://127.0.0.1:8080/v1/auth/login \
+curl -sS -X POST http://127.0.0.1:58080/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"admin@localhost","password":"Password1"}'
 
-curl -sS http://127.0.0.1:8080/v1/auth/me \
+curl -sS http://127.0.0.1:58080/v1/auth/me \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 
-curl -sS -X PATCH http://127.0.0.1:8080/v1/auth/profile \
+curl -sS -X PATCH http://127.0.0.1:58080/v1/auth/profile \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"name":"Ada","surname":"Lovelace"}'
@@ -71,12 +71,12 @@ curl -sS -X PATCH http://127.0.0.1:8080/v1/auth/profile \
 ### Password forgot → MailHog → reset
 
 ```bash
-curl -sS -X POST http://127.0.0.1:8080/v1/auth/password/forgot \
+curl -sS -X POST http://127.0.0.1:58080/v1/auth/password/forgot \
   -H 'Content-Type: application/json' \
   -d '{"email":"user@example.test"}'
 # Open http://127.0.0.1:8025 — copy the 6-digit code from the email
 
-curl -sS -X POST http://127.0.0.1:8080/v1/auth/password/reset \
+curl -sS -X POST http://127.0.0.1:58080/v1/auth/password/reset \
   -H 'Content-Type: application/json' \
   -d '{"email":"user@example.test","code":"123456","password":"Password2"}'
 ```
@@ -84,39 +84,39 @@ curl -sS -X POST http://127.0.0.1:8080/v1/auth/password/reset \
 ### Notifications inbox (test)
 
 ```bash
-curl -sS -X POST http://127.0.0.1:8080/v1/notifications/test \
+curl -sS -X POST http://127.0.0.1:58080/v1/notifications/test \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"email":false}'
 
-curl -sS 'http://127.0.0.1:8080/v1/notifications?limit=20&offset=0' \
+curl -sS 'http://127.0.0.1:58080/v1/notifications?limit=20&offset=0' \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ### Platform roles & users
 
 ```bash
-curl -sS 'http://127.0.0.1:8080/v1/platform/roles?limit=20&offset=0' \
+curl -sS 'http://127.0.0.1:58080/v1/platform/roles?limit=20&offset=0' \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 
-curl -sS 'http://127.0.0.1:8080/v1/platform/users?limit=20&offset=0' \
+curl -sS 'http://127.0.0.1:58080/v1/platform/users?limit=20&offset=0' \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ### Storage / activity / logs (smoke)
 
 ```bash
-curl -sS 'http://127.0.0.1:8080/v1/platform/storage/objects?limit=20&offset=0' \
+curl -sS 'http://127.0.0.1:58080/v1/platform/storage/objects?limit=20&offset=0' \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 
-curl -sS 'http://127.0.0.1:8080/v1/platform/activity?limit=20&offset=0' \
+curl -sS 'http://127.0.0.1:58080/v1/platform/activity?limit=20&offset=0' \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 
-curl -sS 'http://127.0.0.1:8080/v1/platform/logs?limit=20&offset=0' \
+curl -sS 'http://127.0.0.1:58080/v1/platform/logs?limit=20&offset=0' \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
-Interactive contract: http://127.0.0.1:8080/docs/
+Interactive contract: http://127.0.0.1:58080/docs/
 
 ## Database & SQL
 

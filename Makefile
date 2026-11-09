@@ -16,7 +16,7 @@ if [ -f "$(ENV_FILE)" ]; then \
 fi;
 endef
 
-FRONTEND_PORT ?= 3000
+FRONTEND_PORT ?= 54002
 
 .PHONY: infra infra-down infra-logs infra-ps migrate-up backend-dev frontend-dev local-dev \
 	free-dev-ports prod-env-init prod-env-upgrade prod-env-check env-check compose-env-check prod-config prod-up prod-build-local prod-up-local prod-down tools create-super-admin search-reindex seed check-i18n
@@ -51,7 +51,7 @@ frontend-dev:
 	@$(load_env) \
 	cd frontend && \
 	if [ ! -d node_modules ]; then pnpm install; fi && \
-	pnpm dev
+	pnpm exec next dev --port "$${FRONTEND_PORT:-$(FRONTEND_PORT)}"
 
 # Free host ports bound by dev servers and services (backend, frontend, redis, postgres, seaweedfs, meili, etc.)
 free-dev-ports:
@@ -94,16 +94,16 @@ free-dev-ports:
 			sleep 0.4; \
 		done; \
 	}; \
-	http_addr="$${APP_HTTP_ADDR:-:8080}"; \
+	http_addr="$${APP_HTTP_ADDR:-:58080}"; \
 	backend_port="$${http_addr##*:}"; \
-	backend_port="$${backend_port:-8080}"; \
+	backend_port="$${backend_port:-58080}"; \
 	frontend_port="$${PORT:-$${FRONTEND_PORT:-$(FRONTEND_PORT)}}"; \
-	frontend_port="$${frontend_port:-3000}"; \
-	postgres_port="$${POSTGRES_PORT:-$${DB_PORT:-5432}}"; \
-	redis_addr="$${REDIS_ADDR:-:6379}"; \
+	frontend_port="$${frontend_port:-54002}"; \
+	postgres_port="$${POSTGRES_PORT:-$${DB_PORT:-55432}}"; \
+	redis_addr="$${REDIS_ADDR:-:56379}"; \
 	redis_port="$${REDIS_PORT:-$${redis_addr##*:}}"; \
-	redis_port="$${redis_port:-6379}"; \
-	s3_port="$${S3_API_PORT:-8333}"; \
+	redis_port="$${redis_port:-56379}"; \
+	s3_port="$${S3_API_PORT:-58333}"; \
 	centrifugo_port="$${CENTRIFUGO_PORT:-8000}"; \
 	meili_port="$${MEILI_PORT:-7700}"; \
 	mailhog_smtp_port="$${MAILHOG_SMTP_PORT:-$${SMTP_PORT:-1025}}"; \

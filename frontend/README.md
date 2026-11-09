@@ -31,22 +31,22 @@ cd frontend
 pnpm install
 pnpm api:generate   # refresh types from ../backend/docs/openapi.yaml
 pnpm typecheck && pnpm lint
-pnpm dev            # http://localhost:3000
+pnpm dev            # http://localhost:54002
 ```
 
 ### Env (root `.env`)
 
-| Variable                       | Purpose                                                     |
-| ------------------------------ | ----------------------------------------------------------- |
-| `API_URL`                      | Server-only Go upstream, default `http://127.0.0.1:8080/v1` |
-| `AUTH_SECRET` / `AUTH_URL`     | NextAuth                                                    |
-| `NEXT_PUBLIC_BFF_BASE_URL`     | Browser BFF base (`/api`) when set                          |
-| `NEXT_PUBLIC_REALTIME_ENABLED` | `false` skips Centrifugo connect                            |
-| `NEXT_PUBLIC_CENTRIFUGO_URL`   | Fallback WS URL if the token response omits `ws_url`        |
+| Variable                       | Purpose                                                      |
+| ------------------------------ | ------------------------------------------------------------ |
+| `API_URL`                      | Server-only Go upstream, default `http://127.0.0.1:58080/v1` |
+| `AUTH_SECRET` / `AUTH_URL`     | NextAuth                                                     |
+| `NEXT_PUBLIC_BFF_BASE_URL`     | Browser BFF base (`/api`) when set                           |
+| `NEXT_PUBLIC_REALTIME_ENABLED` | `false` skips Centrifugo connect                             |
+| `NEXT_PUBLIC_CENTRIFUGO_URL`   | Fallback WS URL if the token response omits `ws_url`         |
 
 Cookie names: `app_access_token` / `app_refresh_token` (HttpOnly).
 
-Go API listens on `APP_HTTP_ADDR` (default `:8080`). Paths are `/v1/...`.
+Go API listens on `APP_HTTP_ADDR` (local `.env.example`: `:58080`; containers: `:8080`). Paths are `/v1/...`.
 Centrifugo HMAC stays server-side — never expose it to the browser.
 
 ## BFF
