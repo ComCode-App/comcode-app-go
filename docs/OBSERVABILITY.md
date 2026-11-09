@@ -18,9 +18,13 @@ When you add a new `Enqueue` call, wrap the task: `q.Enqueue(queue.WithRequestID
 
 ## API failures
 
-Middleware order (`internal/httpserver/server.go`): `RequestID → ServerErrors → Recover → clientip → mux`.
+Middleware order (`internal/httpserver/server.go`): `RequestID → ServerErrors → Recover → clientip → CaptureRoute(mux)`.
 
-- `ServerErrors` logs every 5xx as `http_handler_failed` (when the handler used `response.InternalErr(w, r, err, msg)`, so the real error is attached) or `http_server_error`, with method, path, status and `request_id`.
+- `ServerErrors` logs every 5xx as `http_handler_failed` (when the handler used `response.InternalErr(w, r, err, msg)`, so the real error is attached) or `http_server_error`, with method, route, status, `duration_ms`, `error_code` and `request_id`.
+- Logs carry the matched **route pattern** (`POST /v1/auth/login`, `GET /v1/invites/{token}`), recorded by `CaptureRoute`, never the raw path, query string or body. Unrouted requests log `route=unmatched`.
+- Every 4xx, and every `/v1/auth/*` and `/v1/internal/auth/*` request (success too), writes one INFO `http_request` line with `error_code` (from the envelope) and `reason`: the cause a handler kept with `response.RecordFailure(w, err)` (the auth handlers do; a wrong `AUTH_ADAPTER_SECRET` shows as `auth adapter key missing or does not match`).
+- A request the client cancelled (closed tab, navigation) is logged at INFO as `http_request_canceled` with status **499** and counted as 499 in metrics. It is never logged at ERROR or reported, even when the handler answered 5xx because its context was cancelled.
+- Error text (`error`, `reason`, panic values) goes through `internal/platform/logredact`: emails, phone numbers, JWTs, bearer credentials and `password=` / `token=`-style pairs are replaced with placeholders. Do not log request bodies, passwords or tokens on purpose.
 - `Recover` turns a handler panic into a normal `500 INTERNAL_ERROR` envelope (with `meta.request_id`) instead of a dropped connection. The panic value and stack are logged. `http.ErrAbortHandler` is re-panicked, as net/http expects.
 
 Prefer `response.InternalErr` over `response.Internal` for unexpected errors so the cause is logged and reported.
@@ -58,7 +62,7 @@ The DSNs are stored encrypted with `ENCRYPTION_KEY` in `error_tracking_settings`
 
 ### What is reported
 
-- **API:** 5xx errors recorded through `response.InternalErr`, 500s without a recorded error (sent as a message), and panics (with the panicking stack). Tags: `request_id`, `http.method`, `http.path`, `http.status`. 4xx responses are never reported.
+- **API:** 5xx errors recorded through `response.InternalErr`, 500s without a recorded error (sent as a message), and panics (with the panicking stack). Tags: `request_id`, `http.method`, `http.route` (route pattern), `http.status`. 4xx responses and client cancels (499) are never reported.
 - **Worker:** task failures only once they are **final**, so a transient error that a retry fixes does not create an issue. Tags: `request_id`, `task.type`, `task.id`, `task.queue`.
 - `server_name` is `<APP_NAME>-api` or `<APP_NAME>-worker`. PII is not sent. Request bodies, headers and user data are not attached.
 
@@ -70,6 +74,14 @@ The browser reads its config at runtime from `GET /v1/public/error-tracking` (`{
 - **Visitor pages** (`/{username}`, `/s/*`, `/c/*`): only `catcher.ts` (about 1 KB gzip) ships. It adds two window listeners and does nothing else. On the first uncaught error it fetches the config and, if tracking is on, loads the SDK chunk (about 30 KB gzip) with a minimal setup and sends the error. A page without errors makes no extra request and downloads no SDK, so the TEC-858 bundle gains are kept. Tag `surface=public`. `src/app/visitor-bundle.test.mjs` fails if a visitor page imports `@sentry/browser` statically.
 - Route `error.tsx` boundaries call `reportError(error)`, since React does not rethrow errors a boundary caught.
 - No user info, cookies, headers, bodies or query strings are collected (`dataCollection`).
+
+### Next.js server (BFF and NextAuth)
+
+The Next.js server has no Sentry SDK; its failures go to the container log, redacted with `frontend/src/lib/observability/redact.ts` (same rules as the API):
+
+- BFF (`lib/server/bff-proxy.ts`): `[bff] upstream unavailable` (502) and `[bff] <path>` (500) at error level. A browser cancel is answered `499` and logged at info level as `[bff] client closed request`.
+- NextAuth: a `logger.error` hook (`lib/observability/auth-logger.ts`) prints one `[auth][error] <type>: …` line. User-caused types (`CredentialsSignin`, `AccessDenied`, …) are warnings.
+- Credentials sign-in failures log `[auth][credentials] authorize failed {code, status}`: never the email, password or authenticator code.
 
 ## Metrics (optional, Prometheus)
 

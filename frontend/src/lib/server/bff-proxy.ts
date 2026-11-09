@@ -1,3 +1,4 @@
+import { describeError } from "@/lib/observability/redact";
 import {
   clearAuthSessionCookie,
   getApiTokens,
@@ -526,7 +527,11 @@ export async function proxyToUpstream(
       );
     }
     if (err instanceof UpstreamUnavailableError) {
-      console.error("[bff] upstream unavailable", path, err.cause ?? err);
+      console.error(
+        "[bff] upstream unavailable",
+        path,
+        describeError(err.cause ?? err),
+      );
       return bffErrorResponse(
         502,
         "UPSTREAM_UNAVAILABLE",
@@ -618,6 +623,9 @@ async function forwardToUpstream(
   );
 }
 
+/** nginx convention for "client closed the connection before the response". */
+const CLIENT_CLOSED_REQUEST = 499;
+
 /**
  * Route handler entry: never let an exception reset the connection (the edge
  * proxy would report "upstream prematurely closed"); answer with the API's
@@ -630,7 +638,20 @@ export async function handleProxyRequest(
   try {
     return await proxyToUpstream(pathSegments, request);
   } catch (err) {
-    console.error("[bff]", pathSegments.join("/"), err);
+    if (request.signal.aborted) {
+      // The browser went away mid-request (navigation, closed tab): not a server
+      // fault. Logged as 499 at info level; nobody reads the response.
+      console.info(
+        "[bff] client closed request",
+        JSON.stringify({
+          status: CLIENT_CLOSED_REQUEST,
+          method: request.method,
+          path: pathSegments.join("/"),
+        }),
+      );
+      return new Response(null, { status: CLIENT_CLOSED_REQUEST });
+    }
+    console.error("[bff]", pathSegments.join("/"), describeError(err));
     return bffErrorResponse(
       500,
       "INTERNAL_ERROR",

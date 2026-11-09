@@ -18,7 +18,12 @@ import {
   loginWithPassword,
   type OAuthConfigPayload,
 } from "@/lib/auth/go-adapter-client";
+import { createProviderCache } from "@/lib/auth/provider-cache";
 import { secureAuthCookies } from "@/lib/auth/secure-cookies";
+import {
+  logAuthError,
+  logCredentialsFailure,
+} from "@/lib/observability/auth-logger";
 import { fetchAppPublicConfig } from "@/services/app-config.service";
 
 const pendingGitHubLogins = new Map<string, string>();
@@ -70,28 +75,62 @@ function isOAuthProvider(provider: string | undefined): provider is OAuthProvide
   );
 }
 
-async function loadOAuthConfig(provider: OAuthProviderId): Promise<OAuthConfigPayload | null> {
+type OAuthConfigResult = {
+  config: OAuthConfigPayload | null;
+  /** False when the backend call failed (the provider then stays off for this build). */
+  ok: boolean;
+};
+
+async function loadOAuthConfig(
+  provider: OAuthProviderId,
+): Promise<OAuthConfigResult> {
   try {
     const config = await adapterGetOAuthConfig(provider);
     if (config.enabled && config.client_id && config.client_secret) {
-      return config;
+      return { config, ok: true };
     }
+    return { config: null, ok: true };
   } catch {
     // Provider stays disabled when config is unavailable.
+    return { config: null, ok: false };
   }
-  return null;
 }
 
-async function buildProviders(): Promise<Provider[]> {
-  let passwordLogin = true;
-  let passkeyLogin = true;
+async function loadLoginMethods() {
   try {
     const appConfig = await fetchAppPublicConfig("en");
-    passwordLogin = appConfig.auth_methods.password.login;
-    passkeyLogin = appConfig.auth_methods.passkey.login;
+    return {
+      passwordLogin: appConfig.auth_methods.password.login,
+      passkeyLogin: appConfig.auth_methods.passkey.login,
+      ok: true,
+    };
   } catch {
     // Keep defaults when public config is unavailable.
+    return { passwordLogin: true, passkeyLogin: true, ok: false };
   }
+}
+
+async function buildProviders(): Promise<{
+  value: Provider[];
+  complete: boolean;
+}> {
+  // All backend lookups run in parallel (TEC-1113).
+  const [methods, githubResult, googleResult, facebookResult, appleResult] =
+    await Promise.all([
+      loadLoginMethods(),
+      loadOAuthConfig("github"),
+      loadOAuthConfig("google"),
+      loadOAuthConfig("facebook"),
+      loadOAuthConfig("apple"),
+    ]);
+  const { passwordLogin, passkeyLogin } = methods;
+  const complete = [
+    methods,
+    githubResult,
+    googleResult,
+    facebookResult,
+    appleResult,
+  ].every((r) => r.ok);
 
   const providers: Provider[] = [];
 
@@ -107,7 +146,13 @@ async function buildProviders(): Promise<Provider[]> {
           const email = String(credentials?.email ?? "").trim();
           const password = String(credentials?.password ?? "");
           const totpCode = String(credentials?.totp_code ?? "").trim();
-          if (!email || !password) return null;
+          if (!email || !password) {
+            console.warn("[auth][credentials] missing email or password", {
+              hasEmail: Boolean(email),
+              hasPassword: Boolean(password),
+            });
+            return null;
+          }
 
           try {
             const tokens = await loginWithPassword(
@@ -126,6 +171,8 @@ async function buildProviders(): Promise<Provider[]> {
             };
           } catch (error) {
             const code = (error as Error & { code?: string }).code;
+            // Code + status only: never the email, password or authenticator code.
+            logCredentialsFailure(error);
             if (code === "MFA_REQUIRED") {
               throw new MFARequiredError();
             }
@@ -146,7 +193,7 @@ async function buildProviders(): Promise<Provider[]> {
     providers.push(Passkey({}));
   }
 
-  const github = await loadOAuthConfig("github");
+  const github = githubResult.config;
   if (github) {
     providers.push(
       GitHub({
@@ -156,7 +203,7 @@ async function buildProviders(): Promise<Provider[]> {
     );
   }
 
-  const google = await loadOAuthConfig("google");
+  const google = googleResult.config;
   if (google) {
     providers.push(
       Google({
@@ -166,7 +213,7 @@ async function buildProviders(): Promise<Provider[]> {
     );
   }
 
-  const facebook = await loadOAuthConfig("facebook");
+  const facebook = facebookResult.config;
   if (facebook) {
     providers.push(
       Facebook({
@@ -176,7 +223,7 @@ async function buildProviders(): Promise<Provider[]> {
     );
   }
 
-  const apple = await loadOAuthConfig("apple");
+  const apple = appleResult.config;
   if (apple) {
     providers.push(
       Apple({
@@ -186,15 +233,19 @@ async function buildProviders(): Promise<Provider[]> {
     );
   }
 
-  return providers;
+  return { value: providers, complete };
 }
+
+/** Shared across requests in this server process; TTL in provider-cache.ts. */
+const providerCache = createProviderCache(buildProviders);
 
 const authHandlers = NextAuth(async () => ({
   adapter: goAdapter({ pendingGitHubLogins }),
   trustHost: process.env.AUTH_TRUST_HOST === "true",
   useSecureCookies: secureAuthCookies(),
   session: { strategy: "jwt" },
-  providers: await buildProviders(),
+  logger: { error: logAuthError },
+  providers: await providerCache.get(),
   experimental: {
     enableWebAuthn: true,
   },
