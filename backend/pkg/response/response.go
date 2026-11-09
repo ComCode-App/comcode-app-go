@@ -36,6 +36,8 @@ const (
 	CodeInvalidPasscode     = "INVALID_PASSCODE"
 	CodeLastSignInMethod    = "LAST_SIGN_IN_METHOD"
 	CodeInvalidEmailCode    = "INVALID_EMAIL_CODE"
+	// CodeAppUpdateRequired: 426, the mobile app is older than mobile.min_version (TEC-1178).
+	CodeAppUpdateRequired = "APP_UPDATE_REQUIRED"
 )
 
 // RequestIDFunc resolves the correlation id from request context.

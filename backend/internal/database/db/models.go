@@ -704,19 +704,23 @@ type AppRelease struct {
 }
 
 type AppSetting struct {
-	ID            int16              `json:"id"`
-	LogoObjectKey pgtype.Text        `json:"logo_object_key"`
-	PrimaryColor  string             `json:"primary_color"`
-	CompanyName   string             `json:"company_name"`
-	Tagline       string             `json:"tagline"`
-	Address       string             `json:"address"`
-	Phone         string             `json:"phone"`
-	Email         string             `json:"email"`
-	Website       string             `json:"website"`
-	FooterText    string             `json:"footer_text"`
-	PaperSize     string             `json:"paper_size"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	ID                    int16              `json:"id"`
+	LogoObjectKey         pgtype.Text        `json:"logo_object_key"`
+	PrimaryColor          string             `json:"primary_color"`
+	CompanyName           string             `json:"company_name"`
+	Tagline               string             `json:"tagline"`
+	Address               string             `json:"address"`
+	Phone                 string             `json:"phone"`
+	Email                 string             `json:"email"`
+	Website               string             `json:"website"`
+	FooterText            string             `json:"footer_text"`
+	PaperSize             string             `json:"paper_size"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+	MobileMinVersion      string             `json:"mobile_min_version"`
+	MobileLatestVersion   string             `json:"mobile_latest_version"`
+	MobileIosStoreUrl     string             `json:"mobile_ios_store_url"`
+	MobileAndroidStoreUrl string             `json:"mobile_android_store_url"`
 }
 
 type AuthSetting struct {

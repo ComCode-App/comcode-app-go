@@ -12,7 +12,11 @@ SET primary_color = COALESCE(sqlc.narg(primary_color), primary_color),
     website = COALESCE(sqlc.narg(website), website),
     footer_text = COALESCE(sqlc.narg(footer_text), footer_text),
     paper_size = COALESCE(sqlc.narg(paper_size), paper_size),
-    logo_object_key = COALESCE(sqlc.narg(logo_object_key), logo_object_key)
+    logo_object_key = COALESCE(sqlc.narg(logo_object_key), logo_object_key),
+    mobile_min_version = COALESCE(sqlc.narg(mobile_min_version), mobile_min_version),
+    mobile_latest_version = COALESCE(sqlc.narg(mobile_latest_version), mobile_latest_version),
+    mobile_ios_store_url = COALESCE(sqlc.narg(mobile_ios_store_url), mobile_ios_store_url),
+    mobile_android_store_url = COALESCE(sqlc.narg(mobile_android_store_url), mobile_android_store_url)
 WHERE id = 1
 RETURNING *;
 
