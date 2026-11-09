@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import { securityHeaderRules } from "./src/config/security-headers";
+
 /** Company management moved from /account/* to /company/* (TEC-949); old links keep working. */
 const companyRedirects = [
   ["offices", "offices"],
@@ -18,11 +20,16 @@ const noReferrerPaths = ["/platform/invite/:path*", "/platform/login", "/platfor
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Security headers (TEC-1102); public profile framing is still open, see the module.
+  // Invite-token pages come last so their no-referrer wins over the base policy (TEC-1104).
   async headers() {
-    return noReferrerPaths.map((source) => ({
-      source,
-      headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
-    }));
+    return [
+      ...securityHeaderRules(process.env.NODE_ENV === "production"),
+      ...noReferrerPaths.map((source) => ({
+        source,
+        headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
+      })),
+    ];
   },
   async redirects() {
     return companyRedirects.map(([from, to]) => ({

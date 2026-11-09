@@ -12,6 +12,7 @@ import {
 } from "@/features/accounts/services/account.service";
 import { AuthCard } from "@/features/auth/components/auth-card";
 import { isApiError } from "@/lib/api";
+import { loginWithNext, safeNextPath } from "@/lib/auth/safe-next";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { authService } from "@/services/auth.service";
@@ -51,7 +52,7 @@ export function InviteAcceptPage({ token }: { token: string }) {
     retry: false,
   });
 
-  const here = routes.guest.invite(token);
+  const here = routes.guest.invite(encodeURIComponent(token));
   const accept = useMutation({
     mutationFn: async () => {
       const result = await accountService.acceptInvite(token);
@@ -110,9 +111,11 @@ export function InviteAcceptPage({ token }: { token: string }) {
     );
   }
 
-  const next = encodeURIComponent(here);
-  const loginHref = `${routes.guest.login}?next=${next}`;
-  const registerHref = `${routes.guest.register}?invite=${encodeURIComponent(token)}&email=${encodeURIComponent(invite.email)}&next=${next}`;
+  // `here` is built from the route, but still goes through the shared guard
+  // so every ?next= the app emits passes the same check as the ones it reads.
+  const loginHref = loginWithNext(routes.guest.login, here);
+  const safeHere = safeNextPath(here, null);
+  const registerHref = `${routes.guest.register}?invite=${encodeURIComponent(token)}&email=${encodeURIComponent(invite.email)}${safeHere ? `&next=${encodeURIComponent(safeHere)}` : ""}`;
 
   if (!isAuthenticated || !user) {
     return (

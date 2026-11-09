@@ -18,6 +18,7 @@ import {
   isPlatformUser,
   isSubscriber,
 } from "@/lib/auth/types";
+import { loginWithNext, safeNextPath } from "@/lib/auth/safe-next";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -65,12 +66,18 @@ export function RouteGuard({ children, mode }: RouteGuardProps) {
     if (!bootstrapped) return;
 
     if (mode === "guest" && isAuthenticated && user) {
-      router.replace(defaultHomeForUser(user));
+      // Same target as the login form: a safe ?next= wins, otherwise the
+      // user's default shell. Without this the guard races the form after
+      // sign-in and drops the deep link.
+      const next = new URLSearchParams(window.location.search).get("next");
+      router.replace(safeNextPath(next, defaultHomeForUser(user)));
       return;
     }
 
     if ((mode === "platform" || mode === "app") && !isAuthenticated) {
-      router.replace(routes.guest.login);
+      // Come back to the same page (query included) after signing in.
+      const { pathname, search } = window.location;
+      router.replace(loginWithNext(routes.guest.login, `${pathname}${search}`));
     }
   }, [bootstrapped, mode, isAuthenticated, user, router]);
 
