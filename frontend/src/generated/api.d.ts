@@ -871,8 +871,10 @@ export interface paths {
         put?: never;
         /**
          * Issue Centrifugo subscription JWT
-         * @description Body `{ channel }`. Allowlist `user:{own_uuid}`, member `workspace:{uuid}`,
-         *     and `conversation:{uuid}` (authenticated session; HTTP inbox ACL is the hard boundary).
+         * @description Body `{ channel }`. Explicit allowlist: `user:{own_uuid}` (the caller's own
+         *     channel) and `system.notifications` (super admins only). Every other channel,
+         *     including `conversation:{uuid}`, `workspace:{uuid}` and account channels, is
+         *     denied with 403.
          */
         post: operations["postRealtimeSubscriptionToken"];
         delete?: never;

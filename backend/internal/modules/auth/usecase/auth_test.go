@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -677,5 +678,39 @@ func TestRegisterWithInviteWhileClosed(t *testing.T) {
 	}
 	if user.Email != "invited@example.com" {
 		t.Fatalf("user: %+v", user)
+	}
+}
+
+func TestCanSubscribeChannelAllowlist(t *testing.T) {
+	uc := New(newMemRepo(), nil)
+	me, other := uuid.New(), uuid.New()
+	ctx := context.Background()
+	cases := []struct {
+		ch   string
+		sa   bool
+		want bool
+	}{
+		{"user:" + me.String(), false, true},
+		{"user:" + me.String(), true, true},
+		{"user:" + other.String(), false, false},
+		{"user:" + other.String(), true, false},
+		{"user:" + strings.ToUpper(me.String()), false, false},
+		{"conversation:" + other.String(), false, false},
+		{"conversation:" + me.String(), true, false},
+		{"workspace:" + other.String(), false, false},
+		{"account:" + other.String(), false, false},
+		{"tenant:" + other.String(), true, false},
+		{"system.notifications", false, false},
+		{"system.notifications", true, true},
+		{"", true, false},
+	}
+	for _, c := range cases {
+		got, err := uc.CanSubscribeChannel(ctx, me, c.sa, c.ch)
+		if err != nil || got != c.want {
+			t.Fatalf("%q (sa=%v): got %v,%v want %v", c.ch, c.sa, got, err, c.want)
+		}
+	}
+	if ok, _ := uc.CanSubscribeChannel(ctx, uuid.Nil, false, "user:"+uuid.Nil.String()); ok {
+		t.Fatal("nil user must not get a user channel")
 	}
 }

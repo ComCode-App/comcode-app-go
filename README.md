@@ -53,7 +53,7 @@ In another terminal (after Postgres is up):
 
 ```sh
 make create-super-admin
-# or: make create-super-admin SA_EMAIL=you@example.com SA_PASSWORD='Secret1'
+# or: make create-super-admin SA_EMAIL=you@example.com SA_PASSWORD='Str0ngPassword'
 ```
 
 Then open http://localhost:3000/platform/login and sign in as `super_admin`.
