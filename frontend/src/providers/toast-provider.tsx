@@ -5,10 +5,6 @@ import { useEffect, type ReactNode } from "react";
 import { Toaster, toast } from "sonner";
 
 import { routes } from "@/config/routes";
-import {
-  isLastSignInMethodError,
-  LAST_SIGN_IN_METHOD_MESSAGE_KEY,
-} from "@/features/account/lib/sign-in-methods";
 import { ApiError, setGlobalApiErrorHandler } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -18,12 +14,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setGlobalApiErrorHandler((error: ApiError) => {
-      if (error.isUnauthorized) {
-        toast.error(t("auth.session_expired"));
-        return;
-      }
       if (error.isPlanLimit) {
         toast.warning(t("entitlements.limit_reached_title"), {
+          id: "api-error:PLAN_LIMIT_EXCEEDED",
           description: t("entitlements.limit_reached_toast"),
           action: {
             label: t("entitlements.upgrade"),
@@ -32,31 +25,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         });
         return;
       }
-      if (isLastSignInMethodError(error)) {
-        toast.error(t(LAST_SIGN_IN_METHOD_MESSAGE_KEY));
-        return;
-      }
-      if (error.isForbidden) {
-        toast.error(t("common.error_forbidden"));
-        return;
-      }
-      if (error.isNotFound) {
-        toast.error(t("common.error_not_found"));
-        return;
-      }
-      if (error.isValidation) {
-        toast.error(error.message || t("common.error_validation"));
-        return;
-      }
-      if (error.isServer) {
-        toast.error(
-          error.requestId
-            ? `${t("common.error_server")} (${error.requestId})`
-            : t("common.error_server"),
-        );
-        return;
-      }
-      toast.error(error.message || t("common.error_generic"));
+      // `error.message` is already localized by code (lib/api/error-messages.ts). The id folds
+      // repeats of the same error (e.g. query retries) into one toast.
+      const message = error.message || t("common.error_generic");
+      toast.error(
+        error.isServer && error.requestId
+          ? `${message} (${error.requestId})`
+          : message,
+        { id: `api-error:${error.code}:${message}` },
+      );
     });
 
     return () => setGlobalApiErrorHandler(null);

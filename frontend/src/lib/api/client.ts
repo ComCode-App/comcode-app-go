@@ -124,9 +124,8 @@ export async function unwrap<T>(
 
   if (!response.ok || error) {
     const apiError = parseApiError(response.status, error ?? data);
-    if (!options?.silent && apiError.code !== "STEP_UP_REQUIRED") {
-      emitApiError(apiError);
-    }
+    // `silent`: unwrap does not toast; a react-query cache still may (see lib/query/client.ts).
+    if (!options?.silent) emitApiError(apiError);
     throw apiError;
   }
 

@@ -75,6 +75,8 @@ export function useUpdateUser() {
   const { t } = useLocale();
 
   return useAppMutation({
+    // onError only refreshes the cache; keep the global error toast.
+    meta: { toastErrors: true },
     mutationFn: ({
       uuid,
       body,
@@ -112,6 +114,8 @@ export function useEnableUser() {
   const { t } = useLocale();
 
   return useAppMutation({
+    // onError only refreshes the cache; keep the global error toast.
+    meta: { toastErrors: true },
     mutationFn: (uuid: string) =>
       usersService.update(uuid, { status: "active" }),
     onMutate: async (uuid) => {
@@ -152,6 +156,8 @@ export function useDisableUser() {
   const { t } = useLocale();
 
   return useAppMutation({
+    // onError only refreshes the cache; keep the global error toast.
+    meta: { toastErrors: true },
     mutationFn: (uuid: string) =>
       usersService.update(uuid, { status: "disabled" }),
     onMutate: async (uuid) => {

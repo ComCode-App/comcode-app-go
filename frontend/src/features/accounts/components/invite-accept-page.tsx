@@ -11,29 +11,19 @@ import {
   accountService,
 } from "@/features/accounts/services/account.service";
 import { AuthCard } from "@/features/auth/components/auth-card";
-import { isApiError } from "@/lib/api";
+import { apiErrorMessageKey, isApiError } from "@/lib/api";
 import { loginWithNext, safeNextPath } from "@/lib/auth/safe-next";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { authService } from "@/services/auth.service";
 
+/** The invite page words rate limiting for invites; other codes use the central map. */
+const INVITE_ERROR_KEYS = { RATE_LIMITED: "accounts.invite_page.rate_limited" } as const;
+
 /** Maps the accept endpoint's error codes to messages. */
 function acceptErrorKey(error: unknown): string {
-  if (!isApiError(error)) return "accounts.invite_page.accept_failed";
-  switch (error.code) {
-    case "INVITE_EXPIRED":
-      return "accounts.invite_page.expired";
-    case "INVITE_CLOSED":
-      return "accounts.invite_page.closed";
-    case "INVITE_EMAIL_MISMATCH":
-      return "accounts.invite_page.email_mismatch";
-    case "INVITE_IMPERSONATION":
-      return "accounts.invite_page.impersonating";
-    case "RATE_LIMITED":
-      return "accounts.invite_page.rate_limited";
-    default:
-      return "accounts.invite_page.accept_failed";
-  }
+  const key = isApiError(error) ? apiErrorMessageKey(error, INVITE_ERROR_KEYS) : null;
+  return key?.startsWith("accounts.invite_page.") ? key : "accounts.invite_page.accept_failed";
 }
 
 /**
@@ -50,6 +40,8 @@ export function InviteAcceptPage({ token }: { token: string }) {
     queryKey: ["invite", token],
     queryFn: () => accountService.previewInvite(token),
     retry: false,
+    // The page renders the error itself.
+    meta: { silentErrors: true },
   });
 
   const here = routes.guest.invite(encodeURIComponent(token));
@@ -76,7 +68,7 @@ export function InviteAcceptPage({ token }: { token: string }) {
         title={t("accounts.invite_page.invalid_title")}
         description={
           isApiError(preview.error) && preview.error.code === "RATE_LIMITED"
-            ? t("accounts.invite_page.rate_limited")
+            ? t(INVITE_ERROR_KEYS.RATE_LIMITED)
             : t("accounts.invite_page.invalid")
         }
       >

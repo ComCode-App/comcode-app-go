@@ -46,10 +46,10 @@ function RoleMismatch({ expected, home }: { expected: string; home: string }) {
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <p className="text-muted-foreground text-sm">
-            Bu alan yalnızca <strong>{expected}</strong> erişimi gerektirir.
+            {t("errors.area_requires", { area: expected })}
           </p>
           <Button asChild>
-            <Link href={home}>Devam et</Link>
+            <Link href={home}>{t("errors.continue")}</Link>
           </Button>
         </CardContent>
       </Card>
@@ -86,7 +86,8 @@ export function RouteGuard({ children, mode }: RouteGuardProps) {
   }
 
   if ((mode === "platform" || mode === "app") && !isAuthenticated) {
-    return null;
+    // The effect above is sending the visitor to the login page.
+    return <PageLoader label={t("errors.redirecting_to_login")} />;
   }
 
   if (mode === "platform" && user && !isPlatformUser(user)) {
@@ -101,7 +102,7 @@ export function RouteGuard({ children, mode }: RouteGuardProps) {
   if (mode === "app" && user && !isSubscriber(user)) {
     return (
       <RoleMismatch
-        expected="App"
+        expected={t("errors.area_app")}
         home={isPlatformUser(user) ? routes.platform.home : routes.errors.forbidden}
       />
     );

@@ -10,13 +10,18 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const source = fs.readFileSync(path.join(here, "upload-errors.ts"), "utf8");
-const { outputText } = ts.transpileModule(source, {
-  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
-});
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "upload-errors-"));
+// upload-errors.ts reads its keys from the central map (TEC-1110), so transpile both.
+for (const name of ["upload-errors", "error-messages"]) {
+  const { outputText } = ts.transpileModule(fs.readFileSync(path.join(here, `${name}.ts`), "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+  });
+  fs.writeFileSync(
+    path.join(tmp, `${name}.mjs`),
+    outputText.replaceAll('"./error-messages"', '"./error-messages.mjs"'),
+  );
+}
 const compiled = path.join(tmp, "upload-errors.mjs");
-fs.writeFileSync(compiled, outputText);
 
 const { uploadErrorKey, UPLOAD_ERROR_KEYS } = await import(pathToFileURL(compiled).href);
 
