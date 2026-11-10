@@ -1894,6 +1894,7 @@ type OauthProviderSetting struct {
 	AppleTeamID        string             `json:"apple_team_id"`
 	AppleKeyID         string             `json:"apple_key_id"`
 	ApplePrivateKeyEnc pgtype.Text        `json:"apple_private_key_enc"`
+	NativeClientIds    []string           `json:"native_client_ids"`
 }
 
 type Order struct {

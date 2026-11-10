@@ -64,6 +64,12 @@ func (m *memStore) UpdateOAuthProviderSettings(_ context.Context, a db.UpdateOAu
 	if a.AppleKeyID.Valid {
 		row.AppleKeyID = a.AppleKeyID.String
 	}
+	if a.SetNativeClientIds {
+		if a.NativeClientIds == nil {
+			panic("native_client_ids must not be nil when set (would store NULL)")
+		}
+		row.NativeClientIds = a.NativeClientIds
+	}
 	switch {
 	case a.ClearApplePrivateKey:
 		row.ApplePrivateKeyEnc = pgtype.Text{}
@@ -275,5 +281,80 @@ func TestApplePatchValidation(t *testing.T) {
 	g, _ := New(newMemStore(), testBox(t)).Get(context.Background(), "google")
 	if g.TeamID != nil || g.PrivateKeyConfigured != nil {
 		t.Fatalf("google settings carry apple fields: %+v", g)
+	}
+}
+
+func TestNativeClientIDs(t *testing.T) {
+	ctx := context.Background()
+	store := newMemStore()
+	svc := New(store, testBox(t))
+
+	// Off until login is on and an audience exists.
+	if cfg, err := svc.NativeConfig(ctx, "apple"); err != nil || cfg.Enabled {
+		t.Fatalf("default native config: %+v %v", cfg, err)
+	}
+	// Native audiences alone may switch a provider on (no web client secret needed).
+	got, err := svc.Patch(ctx, "apple", PatchInput{
+		LoginEnabled:    ptr(true),
+		NativeClientIDs: ptr([]string{" app.comcode.mobile ", "app.comcode.mobile", ""}),
+	})
+	if err != nil {
+		t.Fatalf("enable with native id only: %v", err)
+	}
+	if got.NativeClientIDs == nil || len(*got.NativeClientIDs) != 1 || (*got.NativeClientIDs)[0] != "app.comcode.mobile" {
+		t.Fatalf("native ids = %+v", got.NativeClientIDs)
+	}
+	cfg, err := svc.NativeConfig(ctx, "apple")
+	if err != nil || !cfg.Enabled || cfg.RegisterAllowed || len(cfg.Audiences) != 1 {
+		t.Fatalf("native config: %+v %v", cfg, err)
+	}
+	// The web client stays off without web credentials.
+	if ok, _ := svc.IsLoginEnabled(ctx, "apple"); ok {
+		t.Fatal("web sign-in must stay off without client credentials")
+	}
+	// A patch without the field keeps the list.
+	if _, err := svc.Patch(ctx, "apple", PatchInput{RegisterEnabled: ptr(true)}); err != nil {
+		t.Fatal(err)
+	}
+	if cfg, _ := svc.NativeConfig(ctx, "apple"); len(cfg.Audiences) != 1 || !cfg.RegisterAllowed {
+		t.Fatalf("list must survive an unrelated patch: %+v", cfg)
+	}
+	// Clearing the last audience while nothing else enables the provider is refused.
+	if _, err := svc.Patch(ctx, "apple", PatchInput{NativeClientIDs: ptr([]string{})}); !errors.Is(err, ErrInvalidRequest) {
+		t.Fatalf("clearing the only credential of an enabled provider: %v", err)
+	}
+	if _, err := svc.Patch(ctx, "apple", PatchInput{LoginEnabled: ptr(false), RegisterEnabled: ptr(false), NativeClientIDs: ptr([]string{})}); err != nil {
+		t.Fatalf("disable and clear: %v", err)
+	}
+	if ids := store.rows["apple"].NativeClientIds; ids == nil || len(ids) != 0 {
+		t.Fatalf("cleared list must be stored empty, got %#v", ids)
+	}
+
+	// Google gets the field too, Facebook does not.
+	g, _ := svc.Get(ctx, "google")
+	if g.NativeClientIDs == nil {
+		t.Fatal("google settings must carry native_client_ids")
+	}
+	f, _ := svc.Get(ctx, "facebook")
+	if f.NativeClientIDs != nil {
+		t.Fatal("facebook settings must not carry native_client_ids")
+	}
+	if _, err := svc.Patch(ctx, "facebook", PatchInput{NativeClientIDs: ptr([]string{"x"})}); !errors.Is(err, ErrInvalidRequest) {
+		t.Fatalf("facebook native ids: %v", err)
+	}
+	if cfg, err := svc.NativeConfig(ctx, "facebook"); err != nil || cfg.Enabled {
+		t.Fatalf("facebook native config: %+v %v", cfg, err)
+	}
+
+	bad := map[string][]string{
+		"space":    {"has space"},
+		"comma":    {"a,b"},
+		"too long": {strings.Repeat("a", maxNativeClientIDLen+1)},
+		"too many": {"a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9", "a10", "a11"},
+	}
+	for name, ids := range bad {
+		if _, err := svc.Patch(ctx, "google", PatchInput{NativeClientIDs: ptr(ids)}); !errors.Is(err, ErrInvalidRequest) {
+			t.Errorf("%s: err = %v", name, err)
+		}
 	}
 }

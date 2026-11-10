@@ -1,11 +1,12 @@
 "use client";
 
-import { KeyRound } from "lucide-react";
+import { KeyRound, Smartphone } from "lucide-react";
 import { useMemo } from "react";
 
 import {
   AppForm,
   AppInput,
+  AppTextarea,
   FormActions,
   FormLayout,
   FormSection,
@@ -48,6 +49,8 @@ export function OAuthProviderSettingsForm({
   const { t } = useLocale();
   const ns = `integrations.${provider}`;
   const isApple = provider === "apple";
+  // Apple and Google also sign in from the mobile app with an id_token (TEC-1180).
+  const hasNative = provider === "apple" || provider === "google";
   // Apple: with a signing key the web client secret is generated, so a pasted
   // JWT is only a fallback (TEC-1123).
   const appleKeyActive =
@@ -63,6 +66,7 @@ export function OAuthProviderSettingsForm({
       key_id: settings.key_id ?? "",
       private_key: "",
       remove_private_key: false,
+      native_client_ids: (settings.native_client_ids ?? []).join("\n"),
     }),
     [settings],
   );
@@ -86,8 +90,18 @@ export function OAuthProviderSettingsForm({
               },
             ]
           : []),
+        ...(hasNative
+          ? [
+              {
+                key: "native",
+                label: t(`${ns}.form.native_title`),
+                description: t(`${ns}.form.native_hint`),
+                icon: Smartphone,
+              },
+            ]
+          : []),
       ]),
-    [Icon, isApple, ns, provider, t],
+    [Icon, hasNative, isApple, ns, provider, t],
   );
 
   return (
@@ -182,6 +196,26 @@ export function OAuthProviderSettingsForm({
             >
               <AppleSigningKeyFields
                 settings={settings}
+                disabled={!canWrite || isSaving}
+              />
+            </FormSection>
+          ) : null}
+
+          {hasNative ? (
+            <FormSection
+              id={sections.id("native")}
+              title={t(`${ns}.form.native_title`)}
+              description={t(`${ns}.form.native_hint`)}
+            >
+              <AppTextarea
+                name="native_client_ids"
+                label={t(`${ns}.form.native_client_ids`)}
+                description={t(`${ns}.form.native_client_ids_hint`)}
+                className="sm:col-span-2"
+                rows={3}
+                spellCheck={false}
+                autoCapitalize="off"
+                autoCorrect="off"
                 disabled={!canWrite || isSaving}
               />
             </FormSection>

@@ -37,6 +37,7 @@ func RegisterRoutes(
 	mux.HandleFunc("POST /v1/auth/email/verify", h.VerifyEmail)
 	mux.HandleFunc("POST /v1/auth/email-code/request", h.RequestEmailCode)
 	mux.HandleFunc("POST /v1/auth/email-code/verify", h.VerifyEmailCode)
+	mux.HandleFunc("POST /v1/auth/oauth/{provider}/native", h.NativeOAuthSignIn)
 
 	mux.HandleFunc("GET /v1/internal/auth/users/by-email", h.AdapterGetUserByEmail)
 	mux.HandleFunc("GET /v1/internal/auth/users/{uuid}", h.AdapterGetUserByUUID)
@@ -55,6 +56,7 @@ func RegisterRoutes(
 
 	mux.Handle("GET /v1/auth/identities", middleware.Chain(http.HandlerFunc(h.ListIdentities), authn))
 	mux.Handle("DELETE /v1/auth/identities/{provider}", middleware.Chain(http.HandlerFunc(h.UnlinkIdentity), authn))
+	mux.Handle("POST /v1/auth/identities/{provider}/native", middleware.Chain(http.HandlerFunc(h.NativeLinkIdentity), authn))
 
 	mux.Handle("POST /v1/auth/logout", middleware.Chain(http.HandlerFunc(h.Logout), authn))
 	mux.Handle("GET /v1/auth/me", middleware.Chain(http.HandlerFunc(h.Me), authn))

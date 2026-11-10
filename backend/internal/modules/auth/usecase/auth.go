@@ -153,6 +153,9 @@ type AuthUseCase struct {
 	invites      InviteChecker
 	// reviewAccounts maps email -> fixed App Store / Play review sign-in code (TEC-1182).
 	reviewAccounts map[string]string
+	// Native Apple / Google id_token sign-in (TEC-1180); nil = off.
+	idTokens       IDTokenVerifier
+	nativeSettings NativeProviderSettings
 }
 
 // InviteChecker reports open company invites (accounts usecase.Invites, TEC-945).

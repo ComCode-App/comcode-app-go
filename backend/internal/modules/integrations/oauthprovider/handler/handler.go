@@ -56,6 +56,10 @@ func (h *Handler) PatchSettings(w http.ResponseWriter, r *http.Request) {
 			meta["key_id"] = *settings.KeyID
 			meta["private_key_fingerprint"] = *settings.PrivateKeyFingerprint
 		}
+		if settings.NativeClientIDs != nil {
+			// Native app audiences are public identifiers (bundle id, OAuth client ids).
+			meta["native_client_ids"] = *settings.NativeClientIDs
+		}
 		h.activity.Record(r.Context(), uid, "integrations.oauth.updated", "platform.integrations."+settings.Provider, nil, meta, r)
 	}
 	response.JSON(w, r, http.StatusOK, settings)

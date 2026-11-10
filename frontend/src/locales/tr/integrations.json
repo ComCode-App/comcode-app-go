@@ -35,7 +35,7 @@
   "google.form.section_hint": "Google Cloud Console'da OAuth kimlik bilgisi oluşturun. Redirect URI /api/auth/callback/google ile bitmelidir.",
   "google.form.callback_hint": "Yetkili yönlendirme URI: {{url}}",
   "google.form.login_enabled": "Google ile girişi etkinleştir",
-  "google.form.login_enabled_hint": "Client ID ve Client Secret gereklidir.",
+  "google.form.login_enabled_hint": "Web girişi için Client ID ve Client Secret, uygulamadan giriş için aşağıda bir uygulama client id'si gereklidir.",
   "google.form.register_enabled": "Google ile kayda izin ver",
   "google.form.register_enabled_hint": "Ayrıca Auth ayarlarında global kaydın açık olması gerekir.",
   "google.form.client_id": "Client ID",
@@ -75,7 +75,7 @@
   "apple.form.section_hint": "Apple HTTPS ister (yerel dahil). Client ID olarak Services ID kullanın. İmzalama anahtarını aşağıdan yükleyin; yapıştırılan client secret JWT yalnızca yedektir.",
   "apple.form.callback_hint": "Geri dönüş (Return) URL adresi: {{url}}",
   "apple.form.login_enabled": "Apple ile girişi etkinleştir",
-  "apple.form.login_enabled_hint": "Services ID ve imzalama anahtarı (veya client secret JWT) gereklidir.",
+  "apple.form.login_enabled_hint": "Web girişi için Services ID ve imzalama anahtarı (veya client secret JWT), uygulamadan giriş için aşağıda bir bundle id gereklidir.",
   "apple.form.register_enabled": "Apple ile kayda izin ver",
   "apple.form.register_enabled_hint": "Ayrıca Auth ayarlarında global kaydın açık olması gerekir.",
   "apple.form.client_id": "Services ID",
@@ -137,5 +137,13 @@
   "payment.error.title": "Ödeme ayarları yüklenemedi",
   "payment.error.description": "Bir süre sonra tekrar deneyin.",
   "payment.toast.saved": "Ödeme ayarları kaydedildi",
-  "payment.toast.failed": "Ödeme ayarları kaydedilemedi"
+  "payment.toast.failed": "Ödeme ayarları kaydedilemedi",
+  "apple.form.native_title": "Mobil uygulama",
+  "apple.form.native_hint": "ComCode uygulamasından yerel Apple ile giriş. Yalnızca uygulamanın bundle id'si gerekir; client secret gerekmez.",
+  "apple.form.native_client_ids": "Bundle id'ler",
+  "apple.form.native_client_ids_hint": "Uygulamanın iOS bundle id'leri, her satıra bir tane (ör. app.comcode.mobile). Boş bırakılırsa uygulamadan giriş kapanır.",
+  "google.form.native_title": "Mobil uygulama",
+  "google.form.native_hint": "ComCode uygulamasından yerel Google ile giriş. Yalnızca uygulamanın OAuth client id'leri gerekir; client secret gerekmez.",
+  "google.form.native_client_ids": "Uygulama client id'leri",
+  "google.form.native_client_ids_hint": "iOS ve Android OAuth client id'leri, her satıra bir tane. Android girişi web client id'sini kullanıyorsa onu da ekleyin. Boş bırakılırsa uygulamadan giriş kapanır."
 }

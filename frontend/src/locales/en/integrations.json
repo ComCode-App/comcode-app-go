@@ -35,7 +35,7 @@
   "google.form.section_hint": "Create OAuth credentials in Google Cloud Console. Redirect URI must end with /api/auth/callback/google.",
   "google.form.callback_hint": "Authorized redirect URI: {{url}}",
   "google.form.login_enabled": "Enable Google sign-in",
-  "google.form.login_enabled_hint": "Requires Client ID and Client Secret.",
+  "google.form.login_enabled_hint": "Web sign-in requires Client ID and Client Secret; app sign-in requires an app client id below.",
   "google.form.register_enabled": "Allow Google self-registration",
   "google.form.register_enabled_hint": "Also requires global registration under Auth settings.",
   "google.form.client_id": "Client ID",
@@ -75,7 +75,7 @@
   "apple.form.section_hint": "Apple requires HTTPS (including local). Use a Services ID as Client ID. Upload the signing key below; a pasted client secret JWT is only a fallback.",
   "apple.form.callback_hint": "Return URL: {{url}}",
   "apple.form.login_enabled": "Enable Apple sign-in",
-  "apple.form.login_enabled_hint": "Requires the Services ID and a signing key (or a client secret JWT).",
+  "apple.form.login_enabled_hint": "Web sign-in requires the Services ID and a signing key (or a client secret JWT); app sign-in requires a bundle id below.",
   "apple.form.register_enabled": "Allow Apple self-registration",
   "apple.form.register_enabled_hint": "Also requires global registration under Auth settings.",
   "apple.form.client_id": "Services ID",
@@ -137,5 +137,13 @@
   "payment.error.title": "Could not load payment settings",
   "payment.error.description": "Try again in a moment.",
   "payment.toast.saved": "Payment settings saved",
-  "payment.toast.failed": "Could not save payment settings"
+  "payment.toast.failed": "Could not save payment settings",
+  "apple.form.native_title": "Mobile app",
+  "apple.form.native_hint": "Native Sign in with Apple from the ComCode app. Needs only the app's bundle id; no client secret.",
+  "apple.form.native_client_ids": "Bundle ids",
+  "apple.form.native_client_ids_hint": "The iOS bundle id(s) of the app, one per line (e.g. app.comcode.mobile). Empty turns app sign-in off.",
+  "google.form.native_title": "Mobile app",
+  "google.form.native_hint": "Native Google sign-in from the ComCode app. Needs only the OAuth client ids of the app; no client secret.",
+  "google.form.native_client_ids": "App client ids",
+  "google.form.native_client_ids_hint": "The iOS and Android OAuth client ids, one per line. Add the web client id too if Android sign-in uses it. Empty turns app sign-in off."
 }
