@@ -68,6 +68,11 @@ export type AppSettings = {
   footer_text: string;
   paper_size: string;
   logo_url?: string | null;
+  /** Mobile app version gate and store links (TEC-1178); "" = not set. */
+  mobile_min_version: string;
+  mobile_latest_version: string;
+  mobile_ios_store_url: string;
+  mobile_android_store_url: string;
 };
 
 export type ActivityEvent = {

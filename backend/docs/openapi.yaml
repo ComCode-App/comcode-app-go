@@ -26,6 +26,9 @@ info:
     - Success/error envelope: `{success,data|error,meta.request_id}` on all `/v1/*`.
     - Lists: `{items,total,limit,offset}` under `data` (`limit`/`offset`/`q`/`sort`; never `page`/`search`).
     - Probes `/healthz` and `/readyz` are **not** enveloped.
+    - Mobile app: reaches `/v1/*` through the Next.js mobile gateway (`/api/mobile/v1/*`, Bearer
+      only) and sends `X-Client: comcode-mobile`, `X-App-Version`, `X-Platform: ios|android`.
+      An app below `mobile.min_version` gets `426 APP_UPDATE_REQUIRED` (see `AppUpdateRequired`).
     - See `API_CONVENTIONS.md` and `docs/api/errors.md`.
   contact:
     name: App
@@ -183,6 +186,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "426":
+          $ref: "#/components/responses/AppUpdateRequired"
         "403":
           $ref: "#/components/responses/Forbidden"
         "500":
@@ -231,6 +236,8 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "409":
           $ref: "#/components/responses/RefreshRace"
+        "426":
+          $ref: "#/components/responses/AppUpdateRequired"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -279,6 +286,8 @@ paths:
                 $ref: "#/components/schemas/EnvelopeMe"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "426":
+          $ref: "#/components/responses/AppUpdateRequired"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1638,6 +1647,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "426":
+          $ref: "#/components/responses/AppUpdateRequired"
         "403":
           $ref: "#/components/responses/Forbidden"
         "429":
@@ -2158,7 +2169,13 @@ paths:
       tags: [Health]
       operationId: getAppConfig
       summary: Public app config
-      description: Unauthenticated bootstrap payload (auth methods, branding).
+      description: |
+        Unauthenticated bootstrap payload (auth methods, branding, mobile app versions).
+
+        `mobile` comes from the platform settings (Settings → General → Mobile app). It is the one
+        `/v1` route an outdated mobile app can still call: every other request with
+        `X-Client: comcode-mobile` and an `X-App-Version` below `mobile.min_version` is answered
+        `426 APP_UPDATE_REQUIRED` (TEC-1178).
       security: []
       responses:
         "200":
@@ -2166,7 +2183,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EnvelopeStatus"
+                $ref: "#/components/schemas/EnvelopeAppConfig"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -8093,19 +8110,33 @@ paths:
       tags: [Settings]
       operationId: patchPlatformSettings
       summary: "PATCH /v1/platform/settings"
-      description: "Registered in `internal/modules/settings/routes.go`. Requires `platform.settings.write`."
+      description: |
+        Registered in `internal/modules/settings/routes.go`. Requires `platform.settings.write`.
+        Partial update of the branding / letterhead fields and the mobile app version gate
+        (`mobile_*`, published in `GET /v1/app/config` as `mobile`). Versions are `""` or
+        `major[.minor[.patch]]` and `mobile_latest_version` may not be lower than
+        `mobile_min_version`; store URLs are `""` or an `https` URL. Invalid values answer
+        `400 VALIDATION_ERROR` with field details.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: false
         content:
           application/json:
-            schema: { type: object, additionalProperties: true }
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                mobile_min_version: { type: string, examples: ["1.2.0"] }
+                mobile_latest_version: { type: string, examples: ["1.4.1"] }
+                mobile_ios_store_url: { type: string, examples: ["https://apps.apple.com/app/id0000000000"] }
+                mobile_android_store_url: { type: string, examples: ["https://play.google.com/store/apps/details?id=software.technowide.comcode"] }
       responses:
         "200":
           description: Success envelope (see API_CONVENTIONS.md); some endpoints stream files or redirect
           content:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeGeneric" }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
@@ -12027,6 +12058,16 @@ components:
       schema: { type: string, maxLength: 32 }
 
   responses:
+    AppUpdateRequired:
+      description: |
+        The mobile app (`X-Client: comcode-mobile`) sent an `X-App-Version` below the configured
+        `mobile.min_version` (`GET /v1/app/config`). Code `APP_UPDATE_REQUIRED`; `error.details[0]`
+        is `{field: "min_version", message: "<min version>"}`. Applies to every `/v1` route except
+        `GET /v1/app/config`; web requests never carry `X-Client` and are not affected.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     BadRequest:
       description: Validation or malformed request
       content:
@@ -14202,6 +14243,45 @@ components:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/ImpersonationResult" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAppConfig:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AppConfig" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    AppConfig:
+      type: object
+      description: Public bootstrap config. Fields other than `mobile` are described in `handleAppConfig` (server.go).
+      additionalProperties: true
+      required: [mobile]
+      properties:
+        mode: { type: string }
+        name: { type: string }
+        registration_enabled: { type: boolean }
+        mobile: { $ref: "#/components/schemas/MobileAppConfig" }
+
+    MobileAppConfig:
+      type: object
+      description: Mobile app version gate and store links (TEC-1178). Empty strings mean "not set".
+      required: [min_version, latest_version, store_urls]
+      properties:
+        min_version:
+          type: string
+          description: Older apps get `426 APP_UPDATE_REQUIRED` on every `/v1` request except this config. "" = no gate.
+          examples: ["1.2.0"]
+        latest_version:
+          type: string
+          description: Newest store version; the app may suggest (not force) an update below it.
+          examples: ["1.4.1"]
+        store_urls:
+          type: object
+          required: [ios, android]
+          properties:
+            ios: { type: string, description: App Store page (https) or "" }
+            android: { type: string, description: Google Play page (https) or "" }
 
     EnvelopeStatus:
       type: object
