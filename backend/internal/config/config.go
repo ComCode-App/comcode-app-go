@@ -29,6 +29,7 @@ type Config struct {
 	JWT        JWTConfig
 	Log        LogConfig
 	VAPID      VAPIDConfig
+	Expo       ExpoConfig
 	Search     SearchConfig
 	Observe    ObservabilityConfig
 }
@@ -59,6 +60,12 @@ type VAPIDConfig struct {
 	PublicKey  string
 	PrivateKey string
 	Subject    string
+}
+
+// ExpoConfig holds the Expo Push Service settings (mobile push, TEC-1187). AccessToken is
+// optional: needed only with Expo "enhanced push security"; sent as a Bearer header.
+type ExpoConfig struct {
+	AccessToken string
 }
 
 // JWTConfig holds access JWT and opaque refresh token settings.
@@ -281,6 +288,9 @@ func Load() (Config, error) {
 			PublicKey:  getEnv("VAPID_PUBLIC_KEY", ""),
 			PrivateKey: getEnv("VAPID_PRIVATE_KEY", ""),
 			Subject:    getEnv("VAPID_SUBJECT", "mailto:noreply@example.com"),
+		},
+		Expo: ExpoConfig{
+			AccessToken: getEnv("EXPO_ACCESS_TOKEN", ""),
 		},
 		Search: SearchConfig{
 			Enabled:     getBool("SEARCH_ENABLED", true),

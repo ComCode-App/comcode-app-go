@@ -227,9 +227,13 @@ type Querier interface {
 	DeleteCard(ctx context.Context, arg DeleteCardParams) error
 	DeleteCompanyMedia(ctx context.Context, arg DeleteCompanyMediaParams) (int64, error)
 	DeleteCompanyMemberProfile(ctx context.Context, arg DeleteCompanyMemberProfileParams) (int64, error)
+	// Maintenance: devices disabled for more than 30 days (signed out, revoked, not registered).
+	DeleteDisabledPushDevices(ctx context.Context) (int64, error)
 	DeleteEventDefinition(ctx context.Context, id int64) error
 	// The visitor copy email holds the visitor's details too; it goes with the exchange.
 	DeleteExchangeCopyNotifications(ctx context.Context, sourceEvent pgtype.Text) (int64, error)
+	// Maintenance: Expo keeps receipts about 24 hours; an unprocessed ticket after that is useless.
+	DeleteExpiredPushTickets(ctx context.Context) (int64, error)
 	DeleteLogPurgeRule(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteOAuthAccountByProviderAccount(ctx context.Context, arg DeleteOAuthAccountByProviderAccountParams) error
 	DeleteOAuthAccountByUserProvider(ctx context.Context, arg DeleteOAuthAccountByUserProviderParams) error
@@ -250,10 +254,13 @@ type Querier interface {
 	DeleteProfileTranslations(ctx context.Context, profileID int64) error
 	DeletePushDeviceForUser(ctx context.Context, arg DeletePushDeviceForUserParams) (int64, error)
 	DeletePushSubscription(ctx context.Context, arg DeletePushSubscriptionParams) error
+	DeletePushTickets(ctx context.Context, ids []int64) error
 	DeleteRole(ctx context.Context, argUuid uuid.UUID) error
 	DeleteRoute(ctx context.Context, arg DeleteRouteParams) error
 	DeleteSectorAdmin(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteSocialPlatform(ctx context.Context, argUuid uuid.UUID) error
+	// Maintenance: the app re-registers on every start, so a device not seen for 270 days is gone.
+	DeleteStalePushDevices(ctx context.Context) (int64, error)
 	DeleteStorageShare(ctx context.Context, argUuid uuid.UUID) error
 	DeleteStorageStar(ctx context.Context, arg DeleteStorageStarParams) error
 	DeleteStorageTrashByUUID(ctx context.Context, argUuid uuid.UUID) error
@@ -268,6 +275,9 @@ type Querier interface {
 	DeleteWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) error
 	DeleteWebAuthnCredentialByUUID(ctx context.Context, arg DeleteWebAuthnCredentialByUUIDParams) error
 	DeleteWebhookEndpoint(ctx context.Context, arg DeleteWebhookEndpointParams) (int64, error)
+	// Expo answered DeviceNotRegistered (ticket or receipt): the app was uninstalled or the token
+	// is dead. Registering again from a live session re-enables the row.
+	DisablePushDeviceNotRegistered(ctx context.Context, id int64) (int64, error)
 	DistinctVisitorsPerDay(ctx context.Context, arg DistinctVisitorsPerDayParams) ([]DistinctVisitorsPerDayRow, error)
 	DistinctVisitorsPerHour(ctx context.Context, arg DistinctVisitorsPerHourParams) ([]DistinctVisitorsPerHourRow, error)
 	// First device registration opts the user into push (the OS permission prompt is the consent).
@@ -517,6 +527,7 @@ type Querier interface {
 	InsertOrderStatusHistory(ctx context.Context, arg InsertOrderStatusHistoryParams) error
 	InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventParams) (OutboxEvent, error)
 	InsertProfileBankAccount(ctx context.Context, arg InsertProfileBankAccountParams) error
+	InsertPushTicket(ctx context.Context, arg InsertPushTicketParams) error
 	InsertRolePermission(ctx context.Context, arg InsertRolePermissionParams) error
 	InsertRouteHistory(ctx context.Context, arg InsertRouteHistoryParams) error
 	InsertStorageActivity(ctx context.Context, arg InsertStorageActivityParams) (StorageActivity, error)
@@ -603,6 +614,8 @@ type Querier interface {
 	// Worker-only unscoped discovery. Manual/legacy subscriptions are deliberately excluded.
 	// account-lint: cross-account renewal worker, all accounts
 	ListDuePaymentSubscriptions(ctx context.Context, nowAt pgtype.Timestamptz) ([]int64, error)
+	// Tickets whose receipt can be read (Expo: about 15 minutes after sending), oldest first.
+	ListDuePushTickets(ctx context.Context, arg ListDuePushTicketsParams) ([]ListDuePushTicketsRow, error)
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListEventDefinitions(ctx context.Context, arg ListEventDefinitionsParams) ([]EventDefinition, error)
 	ListEventsPaginated(ctx context.Context, arg ListEventsPaginatedParams) ([]Event, error)
@@ -675,6 +688,12 @@ type Querier interface {
 	ListProfilesForSearch(ctx context.Context, argUuid pgtype.UUID) ([]ListProfilesForSearchRow, error)
 	ListPushDevicesByUser(ctx context.Context, userID int64) ([]PushDevice, error)
 	ListPushSubscriptionsByUser(ctx context.Context, userID int64) ([]PushSubscription, error)
+	// Devices that may receive a notification's push (TEC-1187): not disabled, and the session
+	// family they registered from still has a live refresh token. A family that simply expired is
+	// not marked disabled (auth.md, "Push devices follow the session"), so the check is here.
+	// Devices that already hold a ticket for the notification are skipped, so a retried send task
+	// does not push twice.
+	ListPushTargetsForNotification(ctx context.Context, arg ListPushTargetsForNotificationParams) ([]PushDevice, error)
 	ListRolePermissionSlugsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]string, error)
 	ListRoleUUIDsForBulk(ctx context.Context, q_ pgtype.Text) ([]uuid.UUID, error)
 	ListRolesFiltered(ctx context.Context, arg ListRolesFilteredParams) ([]Role, error)
@@ -1055,6 +1074,8 @@ type Querier interface {
 	UpsertPushDeviceForSession(ctx context.Context, arg UpsertPushDeviceForSessionParams) (PushDevice, error)
 	UpsertPushSubscription(ctx context.Context, arg UpsertPushSubscriptionParams) (PushSubscription, error)
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
+	// Cheap check before queueing a mobile push (TEC-1187). The send task re-checks the session.
+	UserHasActivePushDevices(ctx context.Context, userID int64) (bool, error)
 	// Any device, disabled ones included: a user who registered before is not "first" again, so an
 	// explicit push_enabled = false survives signing in on the phone again.
 	UserHasPushDevices(ctx context.Context, userID int64) (bool, error)

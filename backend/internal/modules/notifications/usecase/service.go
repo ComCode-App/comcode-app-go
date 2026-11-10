@@ -69,6 +69,8 @@ type Service struct {
 	log          *slog.Logger
 	syncMode     bool // when queue is nil, deliver inline
 	vapid        *VAPIDConfig
+	expo         *expoClient
+	pushQueue    Enqueuer
 	actionSecret []byte
 	actionTTL    time.Duration
 	box          *crypto.SecretBox
@@ -137,6 +139,7 @@ func (s *Service) Enqueue(ctx context.Context, in model.EnqueueInput) ([]model.N
 		}
 	}
 
+	payloadIn := withAccountUUID(ctx, s.q, in.Payload, in.AccountID)
 	secrets := secretValues(in)
 	deduplicatedEvent := strings.HasPrefix(in.SourceEvent, "orders.status:") || strings.HasPrefix(in.SourceEvent, "billing:")
 	var out []model.Notification
@@ -172,8 +175,8 @@ func (s *Service) Enqueue(ctx context.Context, in model.EnqueueInput) ([]model.N
 				title = in.TemplateCode
 			}
 		}
-		payload, err := json.Marshal(in.Payload)
-		if err != nil || in.Payload == nil {
+		payload, err := json.Marshal(payloadIn)
+		if err != nil || payloadIn == nil {
 			payload = []byte("{}")
 		}
 		actionURL := textPtr(in.ActionURL)
@@ -355,7 +358,39 @@ func (s *Service) Deliver(ctx context.Context, id int64) error {
 			s.pushBestEffort(ctx, row.UserID.Int64, row.Title, row.Body, data)
 		}
 	}
+	// Mobile push (Expo, TEC-1187): in-app and push-channel rows with a pushtext entry.
+	if row.Channel == model.ChannelInapp || row.Channel == model.ChannelPush {
+		s.scheduleMobilePush(ctx, row)
+	}
 	return nil
+}
+
+// withAccountUUID copies the public uuid of the account a notification belongs to into its
+// payload as account_uuid (the mobile app switches accounts before opening it). The payload map
+// of the caller is not changed.
+func withAccountUUID(ctx context.Context, q Querier, payload map[string]any, accountID *int64) map[string]any {
+	if accountID == nil || *accountID <= 0 {
+		return payload
+	}
+	if _, set := payload["account_uuid"]; set {
+		return payload
+	}
+	aq, ok := q.(interface {
+		GetAccountByID(ctx context.Context, id int64) (db.GetAccountByIDRow, error)
+	})
+	if !ok {
+		return payload
+	}
+	acc, err := aq.GetAccountByID(ctx, *accountID)
+	if err != nil {
+		return payload
+	}
+	out := make(map[string]any, len(payload)+1)
+	for k, v := range payload {
+		out[k] = v
+	}
+	out["account_uuid"] = acc.Uuid.String()
+	return out
 }
 
 // ReclaimStuck re-runs delivery for rows left in processing after a worker
