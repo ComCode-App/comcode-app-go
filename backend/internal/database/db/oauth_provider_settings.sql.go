@@ -12,7 +12,7 @@ import (
 )
 
 const getOAuthProviderSettings = `-- name: GetOAuthProviderSettings :one
-SELECT provider, login_enabled, register_enabled, client_id, client_secret_enc, created_at, updated_at, apple_team_id, apple_key_id, apple_private_key_enc FROM oauth_provider_settings
+SELECT provider, login_enabled, register_enabled, client_id, client_secret_enc, created_at, updated_at, apple_team_id, apple_key_id, apple_private_key_enc, native_client_ids FROM oauth_provider_settings
 WHERE provider = $1
 `
 
@@ -30,12 +30,13 @@ func (q *Queries) GetOAuthProviderSettings(ctx context.Context, provider string)
 		&i.AppleTeamID,
 		&i.AppleKeyID,
 		&i.ApplePrivateKeyEnc,
+		&i.NativeClientIds,
 	)
 	return i, err
 }
 
 const listOAuthProviderSettings = `-- name: ListOAuthProviderSettings :many
-SELECT provider, login_enabled, register_enabled, client_id, client_secret_enc, created_at, updated_at, apple_team_id, apple_key_id, apple_private_key_enc FROM oauth_provider_settings
+SELECT provider, login_enabled, register_enabled, client_id, client_secret_enc, created_at, updated_at, apple_team_id, apple_key_id, apple_private_key_enc, native_client_ids FROM oauth_provider_settings
 ORDER BY provider ASC
 `
 
@@ -59,6 +60,7 @@ func (q *Queries) ListOAuthProviderSettings(ctx context.Context) ([]OauthProvide
 			&i.AppleTeamID,
 			&i.AppleKeyID,
 			&i.ApplePrivateKeyEnc,
+			&i.NativeClientIds,
 		); err != nil {
 			return nil, err
 		}
@@ -78,12 +80,16 @@ SET login_enabled = COALESCE($1, login_enabled),
     client_secret_enc = COALESCE($4, client_secret_enc),
     apple_team_id = COALESCE($5, apple_team_id),
     apple_key_id = COALESCE($6, apple_key_id),
+    native_client_ids = CASE
+        WHEN $7::boolean THEN $8::text[]
+        ELSE native_client_ids
+    END,
     apple_private_key_enc = CASE
-        WHEN $7::boolean THEN NULL
-        ELSE COALESCE($8, apple_private_key_enc)
+        WHEN $9::boolean THEN NULL
+        ELSE COALESCE($10, apple_private_key_enc)
     END
-WHERE provider = $9
-RETURNING provider, login_enabled, register_enabled, client_id, client_secret_enc, created_at, updated_at, apple_team_id, apple_key_id, apple_private_key_enc
+WHERE provider = $11
+RETURNING provider, login_enabled, register_enabled, client_id, client_secret_enc, created_at, updated_at, apple_team_id, apple_key_id, apple_private_key_enc, native_client_ids
 `
 
 type UpdateOAuthProviderSettingsParams struct {
@@ -93,6 +99,8 @@ type UpdateOAuthProviderSettingsParams struct {
 	ClientSecretEnc      pgtype.Text `json:"client_secret_enc"`
 	AppleTeamID          pgtype.Text `json:"apple_team_id"`
 	AppleKeyID           pgtype.Text `json:"apple_key_id"`
+	SetNativeClientIds   bool        `json:"set_native_client_ids"`
+	NativeClientIds      []string    `json:"native_client_ids"`
 	ClearApplePrivateKey bool        `json:"clear_apple_private_key"`
 	ApplePrivateKeyEnc   pgtype.Text `json:"apple_private_key_enc"`
 	Provider             string      `json:"provider"`
@@ -106,6 +114,8 @@ func (q *Queries) UpdateOAuthProviderSettings(ctx context.Context, arg UpdateOAu
 		arg.ClientSecretEnc,
 		arg.AppleTeamID,
 		arg.AppleKeyID,
+		arg.SetNativeClientIds,
+		arg.NativeClientIds,
 		arg.ClearApplePrivateKey,
 		arg.ApplePrivateKeyEnc,
 		arg.Provider,
@@ -122,6 +132,7 @@ func (q *Queries) UpdateOAuthProviderSettings(ctx context.Context, arg UpdateOAu
 		&i.AppleTeamID,
 		&i.AppleKeyID,
 		&i.ApplePrivateKeyEnc,
+		&i.NativeClientIds,
 	)
 	return i, err
 }
