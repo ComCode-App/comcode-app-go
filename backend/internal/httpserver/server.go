@@ -137,6 +137,7 @@ import (
 	profileverificationsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileverifications"
 	profileverificationshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileverifications/handler"
 	profileverificationsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileverifications/usecase"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/qrlogin"
 	routesmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes"
 	routeshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/handler"
 	routesrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/repository"
@@ -439,6 +440,17 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	bulkSvc := bulkusecase.New(deps.Queries, bulkReg, deps.Queue, notifSvc, activityRec, cfg.Bulk, log)
 	logsSvc := logsusecase.New(deps.Queries)
 	geoSvc := geoip.NewService(deps.Queries, secretBox, deps.Redis, log)
+
+	// QR sign-in (TEC-1184): Redis-only sessions, anonymous Centrifugo channel, GeoIP location.
+	var qrIssuer qrlogin.TokenIssuer
+	if rtIssuer != nil {
+		qrIssuer = rtIssuer
+	}
+	qrSvc := qrlogin.NewService(qrlogin.Deps{
+		Store: qrlogin.NewStore(deps.Redis, cfg.App.Env), Accounts: uc, Issuer: qrIssuer,
+		Publisher: deps.Realtime, Geo: geoSvc, StepUp: stepUpSvc, FrontendURL: cfg.Auth.FrontendURL, Log: log,
+	})
+	qrlogin.RegisterRoutes(mux, qrlogin.NewHandler(qrSvc, ratelimit.New(deps.Redis, cfg.App.Env)), tokens, loader)
 	cachedRegistry := analyticsregistry.NewCachedStore(deps.Queries, 5*time.Minute)
 	eventValidator := analyticsdomain.NewValidator(cachedRegistry)
 	uaParser := device.NewParser()

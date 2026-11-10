@@ -97,6 +97,34 @@ Store reviewers cannot receive the emailed code, so the backend can give chosen 
 - **Audit**: each sign-in with a fixed code logs INFO `auth_review_code_used` with `user_id`, a truncated SHA-256 of the email (`email_sha256`) and `request_id`; never the code or the email in clear. A suppressed request logs `auth_review_account_code_request` (`user_id`), and boot logs `auth_review_accounts_enabled` with the count only.
 - **Rotate** the code after each store review (new random 6 digits, redeploy): a reviewer's code must not stay valid for the next submission. **Remove** the variable (blank) when no review is pending; the account itself can stay.
 
+## QR sign-in (TEC-1184)
+
+Web shows a QR, the signed-in mobile app approves it (one direction only, [mobile.md §3](../../docs/design/mobile.md#3-qr-ile-giriş), KARAR-6). Module: `internal/modules/qrlogin`. State is Redis only: `app:<env>:qrlogin:<sha256(id)>` (the raw id is never a key), TTL 120 s; approval resets it to a 60 s exchange window. No table. Every transition is one Lua script: `pending → claimed → approved | rejected`, and a successful exchange deletes the key ("exchanged"; a replay gets 404).
+
+| Method | Path | Auth |
+|---|---|---|
+| POST | `/v1/auth/qr/sessions` | Anonymous (web login tab) |
+| POST | `/v1/auth/qr/sessions/{id}/state` | `browser_secret` |
+| POST | `/v1/auth/qr/exchange` | `browser_secret` + `exchange_token`; web server only |
+| GET | `/v1/auth/qr/sessions/{id}` | Bearer (phone) |
+| POST | `/v1/auth/qr/sessions/{id}/approve` | Bearer |
+| POST | `/v1/auth/qr/sessions/{id}/reject` | Bearer |
+
+1. **Create** returns `session_id` (QR: `{PUBLIC_FRONTEND_URL}/login/qr/{id}`), a `browser_secret` that stays in the tab (only its SHA-256 is stored) and an anonymous Centrifugo grant: a connection JWT with `sub: ""` and a subscription JWT for one channel `qrlogin:{random}` (not derived from the session id), both valid until 30 s after the session. The request's User-Agent, client IP (`clientip`) and approximate location (GeoIP engine, `internal/platform/geoip`; empty when unknown) are stored for the approval screen. `503 REALTIME_DISABLED` without Centrifugo.
+2. **Get** (phone) shows browser / OS / device parsed from the User-Agent (display hint only), IP, location, created / expires, and **claims** the session for the caller: another user then gets `409 QR_SESSION_CLAIMED`. The first claim publishes `{type:"scanned"}`.
+3. **Approve / reject**: exactly one wins (`409 QR_SESSION_RESOLVED` for the rest). Approval publishes `{type:"approved", exchange_token}`, rejection `{type:"rejected"}`. After an approval the user gets the `auth.qr_login_approved` security email (sent even with email notifications off) and an in-app notice with browser, IP and location (migration `000081`).
+   - Only an **active** user can approve (`403 FORBIDDEN` otherwise; disabled users are already refused by the auth middleware).
+   - **Impersonation sessions** cannot view, approve or reject (`403 FORBIDDEN`), so a support session never claims a user's QR.
+   - **Step-up (KARAR-15)**: a super admin or a user with any `platform.*` permission needs a fresh step-up grant (`/v1/auth/step-up/*`) to approve, else `403 STEP_UP_REQUIRED`. Other users approve without it (the app asks for the device's local check).
+4. **State** is read once after the tab (re)subscribes, never polled: `pending | scanned | approved (+ exchange_token) | rejected`.
+5. **Exchange** (NextAuth `qr-login` provider on the web server, mobile.md B8) → the same token pair as `/v1/auth/login` plus `user {uuid,email,name}`. The session is issued like every sign-in: **personal account** active, the approving phone's account is not carried; the session row records the QR browser's User-Agent / IP. No TOTP prompt: the phone already holds a signed-in session. The user is re-checked (active) at exchange.
+
+Wrong `browser_secret` / `exchange_token` (`400 QR_LOGIN_INVALID`) burn attempts on `state` and `exchange`; the 5th deletes the session. The mobile gateway refuses `/api/mobile/v1/auth/qr/exchange`; the browser BFF refusal comes with the web panel (mobile.md B8).
+
+Centrifugo: namespace `qrlogin` in `deploy/centrifugo/config*.json` with every client permission off (subscribe, publish, history, presence). The tab can join its channel only with the subscription token; `allow_anonymous_connect_without_token` stays off. Restart Centrifugo after deploying the config.
+
+Phishing: an attacker can show a victim their own QR. The approval screen shows browser, IP and location; the app warns to approve only a code on a screen in front of you.
+
 ## Linked identities
 
 | Method | Path | Auth |
@@ -206,6 +234,10 @@ Redis INCR, 15-minute window, fail-open if Redis is down. `429 RATE_LIMITED` + `
 | Native identity link (`/auth/identities/{provider}/native`) | user, IP | 10, 30 |
 | Card activation | user, and client IP | 10, 30 |
 | Public analytics events (`POST /v1/events`) | client IP | 600 |
+| QR sign-in create (`/auth/qr/sessions`) | client IP | 60 |
+| QR sign-in state | client IP (+ 5 wrong secrets delete the session) | 60 |
+| QR sign-in exchange | client IP, session | 60, 10 |
+| QR sign-in view / approve + reject | user | 30, 30 |
 
 Login and forgot-password keep a per-email cap across IPs so a botnet cannot guess one account's password from many addresses; it is higher than the IP + email cap, so locking a person out takes many requests and only lasts until the window ends (password reset and passkey sign-in are not affected).
 
@@ -224,7 +256,7 @@ Login and forgot-password keep a per-email cap across IPs so a botnet cannot gue
 
 ## Security emails
 
-Email verification and password reset codes (`SecurityEmail`) and account invitation links (`SecretVars: invite_url`) never sit readable on `notifications` rows (TEC-1099). The row keeps a masked rendering (`••••••` in place of the code or link, `action_url` dropped), so `GET /v1/platform/notifications`, the platform detail `GET /v1/platform/notifications/{uuid}` (any channel, email included; TEC-1120), its search, the export and backups never see it. The real subject and body are AES-GCM encrypted with `APP_ENCRYPTION_KEY` in `notifications.sealed_content`; the delivery worker decrypts them in memory, so retries and stuck-row reclaims send the real code, and a successful send sets the column to NULL. Without a usable key (none, or the built-in development key outside development/test) such notifications are refused instead of stored in plaintext. `GET /v1/notifications` and `GET /v1/notifications/{uuid}` serve `inapp` rows only, so an account cannot read its own verification code back. Migration `000072` masked older rows and cancelled unsent ones. The refresh reuse notice (`auth.refresh_reuse`, see Sessions) is also a `SecurityEmail`, so it ignores email preferences.
+Email verification and password reset codes (`SecurityEmail`; the QR sign-in notice `auth.qr_login_approved` uses the same path but carries no secret) and account invitation links (`SecretVars: invite_url`) never sit readable on `notifications` rows (TEC-1099). The row keeps a masked rendering (`••••••` in place of the code or link, `action_url` dropped), so `GET /v1/platform/notifications`, the platform detail `GET /v1/platform/notifications/{uuid}` (any channel, email included; TEC-1120), its search, the export and backups never see it. The real subject and body are AES-GCM encrypted with `APP_ENCRYPTION_KEY` in `notifications.sealed_content`; the delivery worker decrypts them in memory, so retries and stuck-row reclaims send the real code, and a successful send sets the column to NULL. Without a usable key (none, or the built-in development key outside development/test) such notifications are refused instead of stored in plaintext. `GET /v1/notifications` and `GET /v1/notifications/{uuid}` serve `inapp` rows only, so an account cannot read its own verification code back. Migration `000072` masked older rows and cancelled unsent ones. The refresh reuse notice (`auth.refresh_reuse`, see Sessions) is also a `SecurityEmail`, so it ignores email preferences.
 
 ## `/v1/auth/me`
 
