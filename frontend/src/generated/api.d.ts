@@ -603,6 +603,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/identities/{provider}/native": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link a native Apple / Google identity to the signed-in user
+         * @description Verifies the `id_token` like `POST /v1/auth/oauth/{provider}/native` and links its
+         *     subject to the signed-in user (TEC-1180). Returns the updated identity list; linking an
+         *     identity that is already linked to this user is a no-op.
+         *
+         *     - `403 OAUTH_EMAIL_UNVERIFIED`: the token has no verified email.
+         *     - `409 CONFLICT`: the identity is linked to another user, or the user already has a
+         *       different identity of this provider.
+         *     - `403 OAUTH_PROVIDER_DISABLED`, `401 OAUTH_INVALID_TOKEN`: as for sign-in.
+         *     - `403 FORBIDDEN`: impersonation sessions cannot link sign-in methods.
+         *
+         *     Rate limited per user (10) and client IP (30) in a 15-minute window.
+         */
+        post: operations["postAuthIdentityNative"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/identities/{provider}": {
         parameters: {
             query?: never;
@@ -1157,6 +1187,53 @@ export interface paths {
          *     active), `429 RATE_LIMITED` (60 / 15 min per client IP, 10 per session).
          */
         post: operations["postAuthQRExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/oauth/{provider}/native": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in (or sign up) with a native Apple / Google id_token
+         * @description For the mobile app (TEC-1180). The app generates a random `nonce`, hands its SHA-256 to
+         *     the Apple / Google SDK and sends the returned `id_token` with the raw `nonce`. The API
+         *     checks the RS256 signature against the provider's JWKS (cached; an unknown key id
+         *     re-fetches at most once a minute), `iss`, `exp`, `aud` and `nonce`. Accepted audiences
+         *     are the provider's `native_client_ids` (Platform → Integrations → Apple / Google).
+         *
+         *     Outcomes:
+         *     - linked identity: token pair. A user with an authenticator gets `403 MFA_REQUIRED`;
+         *       resend the same `id_token` and `nonce` plus `totp_code` (`401 INVALID_MFA_CODE` when
+         *       wrong). The admin "2FA for password sign-in" policy does not apply (as for web OAuth).
+         *     - not linked, the verified email belongs to an account: `409 OAUTH_ACCOUNT_NOT_LINKED`.
+         *       Sign in with the existing method, then link with
+         *       `POST /v1/auth/identities/{provider}/native`.
+         *     - not linked, `email_verified` false or no email: `403 OAUTH_EMAIL_UNVERIFIED`. Such a
+         *       token never matches, creates or links an account.
+         *     - not linked, new email: when self-registration and the provider's `register_enabled`
+         *       are on, a passwordless user (email verified, default role, personal account) is
+         *       created, the identity linked and a token pair returned; otherwise
+         *       `403 REGISTRATION_DISABLED`.
+         *     - provider switched off or no native audience: `403 OAUTH_PROVIDER_DISABLED`.
+         *     - bad signature / audience / issuer / nonce or expired token: `401 OAUTH_INVALID_TOKEN`.
+         *     - disabled account: `403 FORBIDDEN`.
+         *
+         *     Tokens always start on the personal account. With `X-Client: comcode-mobile` the
+         *     session is a mobile session (mobile refresh lifetime, device label).
+         *
+         *     Rate limited per client IP (30) and, after verification, per provider subject (10) in a
+         *     15-minute window.
+         */
+        post: operations["postAuthOAuthNative"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4712,6 +4789,64 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications/push-devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's mobile push devices
+         * @description Expo push devices of the signed-in user (TEC-1186), active ones first. `current` marks the
+         *     device registered from the caller's own session. Disabled devices stay listed with
+         *     `disabled_at` / `disabled_reason` until the app registers again or deletes them.
+         */
+        get: operations["listNotificationPushDevices"];
+        put?: never;
+        /**
+         * Register a mobile push device
+         * @description Upserts the caller's Expo push token (TEC-1186), on sign-in and on every app start. The
+         *     device is tied to the caller's session (the access token's refresh token family): logout,
+         *     revoking that session (sessions list, refresh token reuse), "sign out other sessions" and
+         *     password change / reset disable it. Registering again from a live session re-enables it.
+         *     A token registered earlier by another user moves to the caller. The user's first device
+         *     turns `push_enabled` on in the notification preferences; later registrations keep the
+         *     preference as it is. 10 requests per minute per user, shared with DELETE.
+         *
+         *     - `409 PUSH_SESSION_INACTIVE`: the access token's session was revoked or expired.
+         *     - `403 PUSH_IMPERSONATION`: an impersonating admin cannot register devices.
+         */
+        post: operations["registerNotificationPushDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications/push-devices/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete one of the caller's push devices
+         * @description Removes the caller's own Expo token (app sign-out, notification permission withdrawn).
+         *     `404` when the token is unknown or belongs to another user. URL-encode the token
+         *     (`ExponentPushToken%5B...%5D`). Shares the 10 per minute per user limit with POST;
+         *     `403 PUSH_IMPERSONATION` while impersonating.
+         */
+        delete: operations["deleteNotificationPushDevice"];
         options?: never;
         head?: never;
         patch?: never;
@@ -8927,6 +9062,21 @@ export interface components {
             /** @description Authenticator or recovery code, required after `MFA_REQUIRED`. */
             totp_code?: string;
         };
+        NativeOAuthTokenRequest: {
+            /** @description The id_token returned by the Apple / Google SDK in the app. */
+            id_token: string;
+            /** @description The raw nonce the app generated for this sign-in. The token's `nonce` claim must equal it or its hex SHA-256. */
+            nonce: string;
+            /** @description Apple only. Accepted and currently ignored (reserved for the Apple token exchange). */
+            authorization_code?: string;
+        };
+        NativeOAuthSignInRequest: components["schemas"]["NativeOAuthTokenRequest"] & {
+            /** @description Apple sends the name to the app on the first authorization only (never in the id_token); used as the new account's name when the token has none. */
+            given_name?: string;
+            family_name?: string;
+            /** @description Authenticator or recovery code, required after `MFA_REQUIRED`. */
+            totp_code?: string;
+        };
         ForgotPasswordRequest: {
             /** Format: email */
             email: string;
@@ -9151,6 +9301,8 @@ export interface components {
              * @enum {string}
              */
             client_secret_source?: "signing_key" | "client_secret" | "none";
+            /** @description Apple and Google only. Audiences accepted for id_tokens from the mobile app (`POST /v1/auth/oauth/{provider}/native`): the iOS bundle id for Apple; the Google iOS and Android OAuth client ids (and the web client id when Android Credential Manager puts it in `aud`). Empty: native sign-in is off. */
+            native_client_ids?: string[];
         };
         PatchOAuthProviderSettingsRequest: {
             login_enabled?: boolean;
@@ -9166,6 +9318,8 @@ export interface components {
             private_key?: string;
             /** @description Apple only. Deletes the stored signing key. Cannot be combined with private_key. */
             remove_private_key?: boolean;
+            /** @description Apple and Google only. Replaces the native audience list (trimmed, de-duplicated, no spaces or commas). `[]` clears it. Login may be enabled with native ids alone (the web client then stays off until it has its credentials). */
+            native_client_ids?: string[];
         };
         EnvelopeOAuthProviderSettings: {
             /** @enum {boolean} */
@@ -9566,6 +9720,56 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["NotificationPreferences"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        PushDevice: {
+            /** Format: uuid */
+            uuid: string;
+            /** @description Expo push token (`ExponentPushToken[...]`) */
+            token: string;
+            /** @enum {string} */
+            platform: "ios" | "android";
+            /** @enum {string|null} */
+            locale: "tr" | "en" | null;
+            app_version: string | null;
+            device_name: string | null;
+            /** @description Registered from the caller's own session */
+            current: boolean;
+            /** Format: date-time */
+            last_seen_at: string;
+            /** Format: date-time */
+            disabled_at: string | null;
+            /** @enum {string|null} */
+            disabled_reason: "signed_out" | "session_revoked" | "all_sessions_revoked" | "device_not_registered" | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        PushDeviceRegisterRequest: {
+            /** @description `ExponentPushToken[...]` or `ExpoPushToken[...]` */
+            token: string;
+            /** @enum {string} */
+            platform: "ios" | "android";
+            /** @description Device language; `tr-TR` / `en_US` are reduced to tr / en, others are dropped */
+            locale?: string;
+            app_version?: string;
+            device_name?: string;
+        };
+        EnvelopePushDeviceRegistered: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                device: components["schemas"]["PushDevice"];
+                /** @description The user's push preference after the registration */
+                push_enabled: boolean;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePushDeviceList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PushDevice"][];
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeResourceMeta: {
@@ -13707,6 +13911,39 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    postAuthIdentityNative: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: "apple" | "google";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NativeOAuthTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Linked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeIdentityList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     deleteAuthIdentity: {
         parameters: {
             query?: never;
@@ -14524,6 +14761,50 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postAuthOAuthNative: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description `mobile` (or `comcode-mobile`) for the mobile app; anything else is a web session. Fixes
+                 *     the refresh lifetime of a new session (TEC-1179). The web BFF never forwards it.
+                 */
+                "X-Client"?: components["parameters"]["XClient"];
+                /** @description Mobile app only. Device label shown in the sessions list (printable, max 100 characters). */
+                "X-Device-Name"?: components["parameters"]["XDeviceName"];
+                /** @description Mobile app only. App version shown in the sessions list (max 32 characters). */
+                "X-App-Version"?: components["parameters"]["XAppVersion"];
+            };
+            path: {
+                provider: "apple" | "google";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NativeOAuthSignInRequest"];
+            };
+        };
+        responses: {
+            /** @description Authenticated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTokens"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["AppUpdateRequired"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
         };
@@ -20897,6 +21178,86 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listNotificationPushDevices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Devices */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePushDeviceList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    registerNotificationPushDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushDeviceRegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description Registered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePushDeviceRegistered"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteNotificationPushDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStatus"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
         };
     };
     getPlatformActivity: {

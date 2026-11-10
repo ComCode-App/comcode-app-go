@@ -998,6 +998,60 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/auth/identities/{provider}/native:
+    post:
+      tags: [Auth]
+      operationId: postAuthIdentityNative
+      summary: Link a native Apple / Google identity to the signed-in user
+      description: |
+        Verifies the `id_token` like `POST /v1/auth/oauth/{provider}/native` and links its
+        subject to the signed-in user (TEC-1180). Returns the updated identity list; linking an
+        identity that is already linked to this user is a no-op.
+
+        - `403 OAUTH_EMAIL_UNVERIFIED`: the token has no verified email.
+        - `409 CONFLICT`: the identity is linked to another user, or the user already has a
+          different identity of this provider.
+        - `403 OAUTH_PROVIDER_DISABLED`, `401 OAUTH_INVALID_TOKEN`: as for sign-in.
+        - `403 FORBIDDEN`: impersonation sessions cannot link sign-in methods.
+
+        Rate limited per user (10) and client IP (30) in a 15-minute window.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [apple, google]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NativeOAuthTokenRequest"
+      responses:
+        "200":
+          description: Linked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeIdentityList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /v1/auth/identities/{provider}:
     delete:
       tags: [Auth]
@@ -1874,6 +1928,81 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/auth/oauth/{provider}/native:
+    post:
+      tags: [Auth]
+      operationId: postAuthOAuthNative
+      summary: Sign in (or sign up) with a native Apple / Google id_token
+      description: |
+        For the mobile app (TEC-1180). The app generates a random `nonce`, hands its SHA-256 to
+        the Apple / Google SDK and sends the returned `id_token` with the raw `nonce`. The API
+        checks the RS256 signature against the provider's JWKS (cached; an unknown key id
+        re-fetches at most once a minute), `iss`, `exp`, `aud` and `nonce`. Accepted audiences
+        are the provider's `native_client_ids` (Platform → Integrations → Apple / Google).
+
+        Outcomes:
+        - linked identity: token pair. A user with an authenticator gets `403 MFA_REQUIRED`;
+          resend the same `id_token` and `nonce` plus `totp_code` (`401 INVALID_MFA_CODE` when
+          wrong). The admin "2FA for password sign-in" policy does not apply (as for web OAuth).
+        - not linked, the verified email belongs to an account: `409 OAUTH_ACCOUNT_NOT_LINKED`.
+          Sign in with the existing method, then link with
+          `POST /v1/auth/identities/{provider}/native`.
+        - not linked, `email_verified` false or no email: `403 OAUTH_EMAIL_UNVERIFIED`. Such a
+          token never matches, creates or links an account.
+        - not linked, new email: when self-registration and the provider's `register_enabled`
+          are on, a passwordless user (email verified, default role, personal account) is
+          created, the identity linked and a token pair returned; otherwise
+          `403 REGISTRATION_DISABLED`.
+        - provider switched off or no native audience: `403 OAUTH_PROVIDER_DISABLED`.
+        - bad signature / audience / issuer / nonce or expired token: `401 OAUTH_INVALID_TOKEN`.
+        - disabled account: `403 FORBIDDEN`.
+
+        Tokens always start on the personal account. With `X-Client: comcode-mobile` the
+        session is a mobile session (mobile refresh lifetime, device label).
+
+        Rate limited per client IP (30) and, after verification, per provider subject (10) in a
+        15-minute window.
+      security: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [apple, google]
+        - $ref: "#/components/parameters/XClient"
+        - $ref: "#/components/parameters/XDeviceName"
+        - $ref: "#/components/parameters/XAppVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NativeOAuthSignInRequest"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTokens"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "426":
+          $ref: "#/components/responses/AppUpdateRequired"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -7542,6 +7671,87 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeGeneric" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /v1/notifications/push-devices:
+    get:
+      tags: [Notifications]
+      operationId: listNotificationPushDevices
+      summary: List the caller's mobile push devices
+      description: |
+        Expo push devices of the signed-in user (TEC-1186), active ones first. `current` marks the
+        device registered from the caller's own session. Disabled devices stay listed with
+        `disabled_at` / `disabled_reason` until the app registers again or deletes them.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Devices
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePushDeviceList" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    post:
+      tags: [Notifications]
+      operationId: registerNotificationPushDevice
+      summary: Register a mobile push device
+      description: |
+        Upserts the caller's Expo push token (TEC-1186), on sign-in and on every app start. The
+        device is tied to the caller's session (the access token's refresh token family): logout,
+        revoking that session (sessions list, refresh token reuse), "sign out other sessions" and
+        password change / reset disable it. Registering again from a live session re-enables it.
+        A token registered earlier by another user moves to the caller. The user's first device
+        turns `push_enabled` on in the notification preferences; later registrations keep the
+        preference as it is. 10 requests per minute per user, shared with DELETE.
+
+        - `409 PUSH_SESSION_INACTIVE`: the access token's session was revoked or expired.
+        - `403 PUSH_IMPERSONATION`: an impersonating admin cannot register devices.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PushDeviceRegisterRequest" }
+      responses:
+        "200":
+          description: Registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePushDeviceRegistered" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /v1/notifications/push-devices/{token}:
+    delete:
+      tags: [Notifications]
+      operationId: deleteNotificationPushDevice
+      summary: Delete one of the caller's push devices
+      description: |
+        Removes the caller's own Expo token (app sign-out, notification permission withdrawn).
+        `404` when the token is unknown or belongs to another user. URL-encode the token
+        (`ExponentPushToken%5B...%5D`). Shares the 10 per minute per user limit with POST;
+        `403 PUSH_IMPERSONATION` while impersonating.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string, maxLength: 255 }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStatus" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "500": { $ref: "#/components/responses/InternalError" }
 
   /v1/platform/activity:
     get:
@@ -13894,6 +14104,37 @@ components:
           type: string
           description: Authenticator or recovery code, required after `MFA_REQUIRED`.
 
+    NativeOAuthTokenRequest:
+      type: object
+      required: [id_token, nonce]
+      properties:
+        id_token:
+          type: string
+          description: The id_token returned by the Apple / Google SDK in the app.
+        nonce:
+          type: string
+          description: >-
+            The raw nonce the app generated for this sign-in. The token's `nonce` claim must equal
+            it or its hex SHA-256.
+        authorization_code:
+          type: string
+          description: Apple only. Accepted and currently ignored (reserved for the Apple token exchange).
+
+    NativeOAuthSignInRequest:
+      allOf:
+        - $ref: "#/components/schemas/NativeOAuthTokenRequest"
+        - type: object
+          properties:
+            given_name:
+              type: string
+              description: >-
+                Apple sends the name to the app on the first authorization only (never in the
+                id_token); used as the new account's name when the token has none.
+            family_name: { type: string }
+            totp_code:
+              type: string
+              description: Authenticator or recovery code, required after `MFA_REQUIRED`.
+
     ForgotPasswordRequest:
       type: object
       required: [email]
@@ -14187,6 +14428,14 @@ components:
           description: >-
             Apple only. What the web sign-in uses: a client secret generated from the
             signing key (wins when set), the pasted client secret JWT, or nothing.
+        native_client_ids:
+          type: array
+          items: { type: string }
+          description: >-
+            Apple and Google only. Audiences accepted for id_tokens from the mobile app
+            (`POST /v1/auth/oauth/{provider}/native`): the iOS bundle id for Apple; the Google
+            iOS and Android OAuth client ids (and the web client id when Android Credential
+            Manager puts it in `aud`). Empty: native sign-in is off.
 
     PatchOAuthProviderSettingsRequest:
       type: object
@@ -14212,6 +14461,14 @@ components:
         remove_private_key:
           type: boolean
           description: Apple only. Deletes the stored signing key. Cannot be combined with private_key.
+        native_client_ids:
+          type: array
+          maxItems: 10
+          items: { type: string, maxLength: 255 }
+          description: >-
+            Apple and Google only. Replaces the native audience list (trimmed, de-duplicated,
+            no spaces or commas). `[]` clears it. Login may be enabled with native ids alone
+            (the web client then stays off until it has its credentials).
 
     EnvelopeOAuthProviderSettings:
       type: object
@@ -14730,6 +14987,62 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/NotificationPreferences" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PushDevice:
+      type: object
+      required: [uuid, token, platform, locale, app_version, device_name, current, last_seen_at, disabled_at, disabled_reason, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        token: { type: string, description: "Expo push token (`ExponentPushToken[...]`)" }
+        platform: { type: string, enum: [ios, android] }
+        locale: { type: [string, "null"], enum: [tr, en, null] }
+        app_version: { type: [string, "null"] }
+        device_name: { type: [string, "null"] }
+        current: { type: boolean, description: Registered from the caller's own session }
+        last_seen_at: { type: string, format: date-time }
+        disabled_at: { type: [string, "null"], format: date-time }
+        disabled_reason:
+          type: [string, "null"]
+          enum: [signed_out, session_revoked, all_sessions_revoked, device_not_registered, null]
+        created_at: { type: string, format: date-time }
+
+    PushDeviceRegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [token, platform]
+      properties:
+        token: { type: string, maxLength: 255, description: "`ExponentPushToken[...]` or `ExpoPushToken[...]`" }
+        platform: { type: string, enum: [ios, android] }
+        locale: { type: string, description: "Device language; `tr-TR` / `en_US` are reduced to tr / en, others are dropped" }
+        app_version: { type: string, maxLength: 32 }
+        device_name: { type: string, maxLength: 100 }
+
+    EnvelopePushDeviceRegistered:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [device, push_enabled]
+          properties:
+            device: { $ref: "#/components/schemas/PushDevice" }
+            push_enabled: { type: boolean, description: The user's push preference after the registration }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePushDeviceList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/PushDevice" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeResourceMeta:

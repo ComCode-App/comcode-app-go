@@ -41,6 +41,7 @@
   "resources.platform.integrations.apple": "Apple entegrasyonu",
   "resources.auth.step_up": "Step-up doğrulama",
   "actions.auth.account_switched": "Aktif hesap değiştirildi",
+  "actions.auth.identity.linked": "Giriş yöntemi bağlandı",
   "resources.auth.accounts": "Hesaplar",
   "actions.accounts.created": "Hesap oluşturuldu",
   "actions.accounts.updated": "Hesap güncellendi",

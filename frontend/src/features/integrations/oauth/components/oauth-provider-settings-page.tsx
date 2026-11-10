@@ -8,7 +8,10 @@ import { PageHeader } from "@/components/layout/page-header";
 import type { PermissionSlug } from "@/config/permissions";
 import { OAuthProviderSettingsForm } from "@/features/integrations/oauth/components/oauth-provider-settings-form";
 import { oauthProviderIcons } from "@/features/integrations/oauth/oauth-provider-icons";
-import type { OAuthProviderFormValues } from "@/features/integrations/oauth/schemas/oauth-provider-form";
+import {
+  parseNativeClientIds,
+  type OAuthProviderFormValues,
+} from "@/features/integrations/oauth/schemas/oauth-provider-form";
 import {
   oauthProviderService,
   type OAuthProviderSlug,
@@ -67,6 +70,11 @@ export function OAuthProviderSettingsPage({
           ? { client_secret: values.client_secret.trim() }
           : {}),
         ...(provider === "apple" ? appleKeyPatch(values) : {}),
+        ...(provider === "apple" || provider === "google"
+          ? {
+              native_client_ids: parseNativeClientIds(values.native_client_ids),
+            }
+          : {}),
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });

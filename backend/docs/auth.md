@@ -53,6 +53,25 @@ Super admin bypasses permission checks in `HasPermission`. Most platform HTTP ro
 - **Client secret precedence**: (1) a stored signing key: the adapter route `/v1/internal/auth/oauth/apple` returns a freshly generated ES256 `client_secret` (sub = Services ID, valid 24 h) with `client_secret_expires_at`; (2) otherwise the pasted client secret JWT (`client_secret`); (3) otherwise Apple sign-in stays off. There is no env fallback: ComCode never read Apple settings from env. The frontend provider cache (TEC-1113) never outlives `client_secret_expires_at` minus 10 minutes.
 - **form_post callback**: Apple returns with a cross-site POST to `/api/auth/callback/apple`. On `signin/apple` and `callback/apple` only, and only over https, the Auth.js state / PKCE / nonce cookies (and a dedicated callback-url cookie) are `SameSite=None; Secure` (`frontend/src/lib/auth/apple-form-post.ts`); session and CSRF cookies are unchanged. The Auth.js route refuses every other cross-site POST to `/api/auth/*` with the BFF's origin check.
 
+### Native Apple / Google sign-in (mobile, TEC-1180)
+
+| Method | Path | Auth |
+|--------|------|------|
+| POST | `/v1/auth/oauth/{apple\|google}/native` | Public → token pair (like `/auth/login`) |
+| POST | `/v1/auth/identities/{apple\|google}/native` | Bearer → identity list (links to the signed-in user) |
+
+- **Mobile only**: the app calls it through the mobile gateway (`/api/mobile/v1/*`). The cookie BFF refuses `auth/oauth/*/native` with `404` (`isCookieBffRefusedPath`), so the token pair is never handed to browser JavaScript.
+- **Flow**: the app generates a random `nonce`, gives its SHA-256 to the Apple / Google SDK and sends `{id_token, nonce, given_name?, family_name?, totp_code?}`. `authorization_code` is accepted and ignored until the Apple token exchange lands.
+- **Verification** (`internal/platform/oidc`): RS256 signature against the provider JWKS (`appleid.apple.com/auth/keys`, `googleapis.com/oauth2/v3/certs`), cached for the response `max-age` (default 1 h, at most 24 h). A token with an unknown `kid` re-fetches the JWKS at most once a minute per provider (failed fetches count), so forged key ids cannot hammer the provider; a rotated key is picked up within a minute. Then `iss`, `exp` (1 minute leeway), `aud` (one of the configured audiences), a non-empty `sub` and `nonce` (equal to the raw nonce or its hex SHA-256; required). Any failure answers `401 OAUTH_INVALID_TOKEN`.
+- **Audiences** (`oauth_provider_settings.native_client_ids`, migration 000079): set on Platform → Integrations → Apple (iOS bundle id) / Google (iOS and Android client ids; add the web client id if Android Credential Manager puts it in `aud`). `PATCH /v1/platform/integrations/{apple|google}` `native_client_ids` replaces the list. Native sign-in is on when `login_enabled` is on and the list is not empty, otherwise `403 OAUTH_PROVIDER_DISABLED`. It needs no client secret, so a provider may be switched on with native ids alone (the web provider then stays off until it has its credentials).
+- **Outcomes**: the identity is looked up by provider + `sub` in `oauth_accounts` (the same rows the web Auth.js flow writes).
+  - Linked: sign in. A user with an authenticator gets `403 MFA_REQUIRED` and resends the same token and nonce with `totp_code`. The `password_login_totp_required` policy does not apply, as for web OAuth. Disabled user: `403`.
+  - Not linked, verified email of an existing account: `409 OAUTH_ACCOUNT_NOT_LINKED`. No automatic linking by email: the user signs in with the existing method and links the provider from the profile.
+  - Not linked, `email_verified` false or no email: `403 OAUTH_EMAIL_UNVERIFIED`. Such a token never matches, creates or links an account (the link endpoint refuses it too).
+  - Not linked, new verified email: with `registration_enabled` and the provider's `register_enabled` on, a passwordless user is created (email verified, `name` / `surname` from the token or the request, else the email local part; default role; personal account) and the identity linked. Otherwise `403 REGISTRATION_DISABLED`.
+- **Session**: always starts on the personal account. With `X-Client: comcode-mobile` it is a mobile session (mobile refresh lifetime, device label; see Client type below).
+- **Linking** needs a signed-in, non-impersonation session; `409 CONFLICT` when the identity is linked to another user or the user already has another identity of that provider. Activity: `auth.identity.linked`.
+
 ## Email code sign-in (TEC-1121)
 
 | Method | Path | Auth |
@@ -112,6 +131,7 @@ Phishing: an attacker can show a victim their own QR. The approval screen shows 
 |--------|------|------|
 | GET | `/v1/auth/identities` | Bearer → `{items, total, has_password, has_passkey}` |
 | DELETE | `/v1/auth/identities/{provider}` | Bearer (`github`, `google`, `facebook`, `apple`) |
+| POST | `/v1/auth/identities/{apple\|google}/native` | Bearer, native id_token (see Native Apple / Google sign-in) |
 
 Last sign-in method guard (TEC-1105):
 
@@ -157,6 +177,19 @@ Rotation marks the old token `rotated_at` (in addition to `revoked_at`). When `P
 | Rotated earlier | `401` | the whole family is revoked, `auth_refresh_reuse_detected` is logged (WARN) and the owner gets the `auth.refresh_reuse` security email |
 
 The email is only sent when the family still had a live token, so replaying a token of an already revoked session sends nothing. Clients refresh single-flight (web: `refresh-single-flight.ts`); the browser's refresh flow treats `409` as "renewed elsewhere" and retries the request.
+
+### Push devices follow the session (TEC-1186)
+
+A mobile push device (`push_devices`, `/v1/notifications/push-devices`) stores the `sid` it registered from in `session_family_uuid`. The revocation queries in `queries/auth_tokens.sql` disable the family's devices in the same statement as its refresh tokens:
+
+| Revocation | Query | `disabled_reason` |
+|------------|-------|-------------------|
+| Logout (also a disabled user refreshing) | `RevokeRefreshFamilyByHash` | `signed_out` |
+| One session (sessions list, refresh reuse, end of impersonation) | `RevokeRefreshFamilyForUser` | `session_revoked` |
+| Sign out other sessions (devices of the kept session stay) | `RevokeOtherRefreshFamiliesForUser` | `session_revoked` |
+| Password change / reset (every session) | `RevokeAllRefreshTokensForUser` | `all_sessions_revoked` |
+
+Registration only succeeds while the family is live (`409 PUSH_SESSION_INACTIVE` otherwise), so an access token that outlives its session cannot re-enable the device; signing in again and registering moves the device to the new session. A family that simply expires is not marked; the sender (B10) must skip devices whose family has no live refresh token. A new revocation path must disable push devices the same way.
 ## Mobile clients (TEC-1178)
 
 The mobile app does not use cookies. It reaches the private Go API through the Next.js **mobile
@@ -197,6 +230,8 @@ Redis INCR, 15-minute window, fail-open if Redis is down. `429 RATE_LIMITED` + `
 | Verify email (`/auth/email/verify`) | IP, email | 10, 10 |
 | Email code request (`/auth/email-code/request`) | IP, email | 10, 5 |
 | Email code verify (`/auth/email-code/verify`) | IP, email | 30, 10 |
+| Native OAuth sign-in (`/auth/oauth/{provider}/native`) | IP; provider subject (after verification) | 30; 10 |
+| Native identity link (`/auth/identities/{provider}/native`) | user, IP | 10, 30 |
 | Card activation | user, and client IP | 10, 30 |
 | Public analytics events (`POST /v1/events`) | client IP | 600 |
 | QR sign-in create (`/auth/qr/sessions`) | client IP | 60 |

@@ -248,6 +248,7 @@ type Querier interface {
 	DeleteProfileContactDetails(ctx context.Context, profileID int64) error
 	DeleteProfileSocialLinks(ctx context.Context, profileID int64) error
 	DeleteProfileTranslations(ctx context.Context, profileID int64) error
+	DeletePushDeviceForUser(ctx context.Context, arg DeletePushDeviceForUserParams) (int64, error)
 	DeletePushSubscription(ctx context.Context, arg DeletePushSubscriptionParams) error
 	DeleteRole(ctx context.Context, argUuid uuid.UUID) error
 	DeleteRoute(ctx context.Context, arg DeleteRouteParams) error
@@ -269,6 +270,8 @@ type Querier interface {
 	DeleteWebhookEndpoint(ctx context.Context, arg DeleteWebhookEndpointParams) (int64, error)
 	DistinctVisitorsPerDay(ctx context.Context, arg DistinctVisitorsPerDayParams) ([]DistinctVisitorsPerDayRow, error)
 	DistinctVisitorsPerHour(ctx context.Context, arg DistinctVisitorsPerHourParams) ([]DistinctVisitorsPerHourRow, error)
+	// First device registration opts the user into push (the OS permission prompt is the consent).
+	EnablePushPreference(ctx context.Context, userID int64) error
 	ExtensionExists(ctx context.Context, extname string) (bool, error)
 	// account-lint: cross-account payment provider callback / init failure: session id from that flow
 	FailCheckoutSession(ctx context.Context, arg FailCheckoutSessionParams) (PaymentCheckoutSession, error)
@@ -670,6 +673,7 @@ type Querier interface {
 	// Activation codes and passcodes are never selected.
 	// account-lint: cross-account search index builder: documents carry account_id and searches filter on it
 	ListProfilesForSearch(ctx context.Context, argUuid pgtype.UUID) ([]ListProfilesForSearchRow, error)
+	ListPushDevicesByUser(ctx context.Context, userID int64) ([]PushDevice, error)
 	ListPushSubscriptionsByUser(ctx context.Context, userID int64) ([]PushSubscription, error)
 	ListRolePermissionSlugsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]string, error)
 	ListRoleUUIDsForBulk(ctx context.Context, q_ pgtype.Text) ([]uuid.UUID, error)
@@ -898,16 +902,23 @@ type Querier interface {
 	// account-lint: cross-account route id is a retired route of the same profile (PathOwner check)
 	ReviveCanonicalRoute(ctx context.Context, arg ReviveCanonicalRouteParams) error
 	RevokeAccountInvite(ctx context.Context, arg RevokeAccountInviteParams) (int64, error)
+	// RevokeAllRefreshTokensForUser ends every session of the user (password change / reset) and
+	// disables all of the user's push devices (TEC-1186).
 	RevokeAllRefreshTokensForUser(ctx context.Context, userID int64) error
 	// TEC-1104: a removed member's open invites to the account stop working too.
 	RevokeOpenAccountInvitesForUser(ctx context.Context, arg RevokeOpenAccountInvitesForUserParams) (int64, error)
+	// RevokeOtherRefreshFamiliesForUser keeps one session and revokes the rest, disabling every
+	// push device that is not tied to the kept session (TEC-1186).
 	RevokeOtherRefreshFamiliesForUser(ctx context.Context, arg RevokeOtherRefreshFamiliesForUserParams) error
 	// account-lint: cross-account platform /v1/platform/profile-verifications revoke
 	RevokeProfileVerificationByUUID(ctx context.Context, arg RevokeProfileVerificationByUUIDParams) (ProfileVerificationRequest, error)
 	// account-lint: cross-account profile id resolved through GetProfileIDForAccount (account-scoped)
 	RevokeProfileVerificationForProfile(ctx context.Context, arg RevokeProfileVerificationForProfileParams) (ProfileVerificationRequest, error)
-	// RevokeRefreshFamilyByHash revokes every live token in the family of the given token (logout).
+	// RevokeRefreshFamilyByHash revokes every live token in the family of the given token (logout)
+	// and disables the family's push devices (TEC-1186).
 	RevokeRefreshFamilyByHash(ctx context.Context, tokenHash string) error
+	// RevokeRefreshFamilyForUser revokes one device session (sessions list, refresh reuse, end of
+	// impersonation) and disables its push devices (TEC-1186). The row count is the refresh tokens'.
 	RevokeRefreshFamilyForUser(ctx context.Context, arg RevokeRefreshFamilyForUserParams) (int64, error)
 	RevokeStorageLink(ctx context.Context, argUuid uuid.UUID) (StorageLink, error)
 	// RotateRefreshFamilyWithAccount re-issues the active token of a family with a new active account.
@@ -1037,8 +1048,16 @@ type Querier interface {
 	UpsertPaymentProviderCustomer(ctx context.Context, arg UpsertPaymentProviderCustomerParams) (PaymentProviderCustomer, error)
 	UpsertPaymentSavedCard(ctx context.Context, arg UpsertPaymentSavedCardParams) (PaymentSavedCard, error)
 	UpsertPlanLimit(ctx context.Context, arg UpsertPlanLimitParams) error
+	// Registers the token for the caller's live session family. No row comes back when the family
+	// is revoked or expired, so an access token outliving its session cannot re-enable a device.
+	// A token registered by another user moves to the caller (the device changed hands). Devices
+	// are user-level, not account-owned; auth_tokens.sql disables them with their session family.
+	UpsertPushDeviceForSession(ctx context.Context, arg UpsertPushDeviceForSessionParams) (PushDevice, error)
 	UpsertPushSubscription(ctx context.Context, arg UpsertPushSubscriptionParams) (PushSubscription, error)
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
+	// Any device, disabled ones included: a user who registered before is not "first" again, so an
+	// explicit push_enabled = false survives signing in on the phone again.
+	UserHasPushDevices(ctx context.Context, userID int64) (bool, error)
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)
 }
 

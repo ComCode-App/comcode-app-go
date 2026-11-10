@@ -186,6 +186,7 @@ import (
 	ioadapters "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/ioengine/adapters"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/mail"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/oidc"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/opengraph"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/payment"
@@ -355,6 +356,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	entitlementSvc := entitlement.New(deps.Queries)
 	entitlementSvc.SetUsageAlerter(notifmodule.NewQuotaAlerter(notifSvc, deps.Queries, log))
 	uc.SetEntitlement(authusecase.NewEntitlementAdapter(entitlementSvc))
+	// Native Apple / Google id_token sign-in (TEC-1180): audiences come from the admin panel.
+	uc.SetNativeOAuth(oidc.New(oidc.DefaultProviders(), nil), oauthProvSvc)
 	oauthUC := authusecase.NewOAuth(repo, secretBox)
 	s.githubSvc = githubSvc
 	s.oauthProvSvc = oauthProvSvc
@@ -367,6 +370,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)
 
 	nh := notifhandler.New(notifSvc)
+	nh.SetRateLimiter(ratelimit.New(deps.Redis, cfg.App.Env))
 	notifmodule.RegisterRoutes(mux, nh, tokens, loader)
 	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log)
 	notifmodule.RegisterBillingHandlers(eventBus, notifSvc, deps.Queries)

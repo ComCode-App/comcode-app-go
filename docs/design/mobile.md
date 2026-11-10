@@ -334,7 +334,27 @@ yapılabilir; onay uçları curl / entegrasyon testiyle sınanır.
 
 ### 4.1 Tablo ve uçlar
 
-Sıradaki migration numarası (bugün `000077`; başka işler eklediyse bir sonraki):
+**Uygulandı (B9, TEC-1186):** migration `000080_push_devices`, `GET/POST /v1/notifications/push-devices`
+ve `DELETE /v1/notifications/push-devices/{token}` (KARAR-10 (a)). Uygulamadaki farklar ve
+ayrıntılar:
+
+- `disabled_reason`: `signed_out` (çıkış), `session_revoked` (tek oturum kapatma, refresh yeniden
+  kullanımı, impersonation sonu, "diğer oturumları kapat"), `all_sessions_revoked` (parola değişimi /
+  sıfırlama), `device_not_registered` (B10 makbuzu). Devre dışı bırakma, refresh token iptaliyle aynı
+  SQL deyiminde yapılır (`queries/auth_tokens.sql`, [auth.md](../../backend/docs/auth.md) → "Push
+  devices follow the session").
+- Kayıt yalnız canlı oturum ailesiyle olur; iptal edilmiş ya da süresi dolmuş oturumun access
+  token'ı `409 PUSH_SESSION_INACTIVE` alır. Impersonation sırasında kayıt / silme `403
+  PUSH_IMPERSONATION`.
+- "İlk kayıt": kullanıcının daha önce hiç cihaz satırı yoksa (devre dışı olanlar dahil)
+  `push_enabled` açılır; tercih satırı önceden varsa da açılır. Sonraki kayıtlar tercihe dokunmaz,
+  böylece kullanıcının kapattığı push yeniden girişte açılmaz.
+- Silme yalnız kendi token'ı içindir; başkasının ya da bilinmeyen token `404` alır (varlık sızmaz).
+- Süresi kendiliğinden dolan aile işaretlenmez; B10 gönderirken canlı refresh token'ı olmayan
+  ailenin cihazlarını atlamalıdır.
+- POST ve DELETE kullanıcı başına dakikada 10 isteklik ortak bütçeyi paylaşır.
+
+Önerilen şema (tasarım):
 
 ```
 push_devices
