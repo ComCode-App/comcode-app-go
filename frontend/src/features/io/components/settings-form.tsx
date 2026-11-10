@@ -1,6 +1,6 @@
 "use client";
 
-import { Contact, Palette } from "lucide-react";
+import { Contact, Palette, Smartphone } from "lucide-react";
 import { useMemo } from "react";
 import {
   Controller,
@@ -24,8 +24,8 @@ import { Input } from "@/components/ui/input";
 import { brand } from "@/config/brand";
 import { apiConfig } from "@/config/api";
 import {
+  createSettingsFormSchema,
   PAPER_SIZES,
-  settingsFormSchema,
   toPatchPayload,
   toSettingsFormValues,
   type SettingsFormValues,
@@ -82,6 +82,12 @@ function SettingsFormFields({
           label: t("settings.form.section_contact"),
           description: t("settings.contact_hint"),
           icon: Contact,
+        },
+        {
+          key: "mobile",
+          label: t("settings.mobile.section"),
+          description: t("settings.mobile.hint"),
+          icon: Smartphone,
         },
       ]),
     [t],
@@ -224,6 +230,42 @@ function SettingsFormFields({
         />
       </FormSection>
 
+      <FormSection
+        id={sections.id("mobile")}
+        title={t("settings.mobile.section")}
+        description={t("settings.mobile.hint")}
+        columns={2}
+      >
+        <AppInput
+          name="mobile_min_version"
+          label={t("settings.mobile.min_version")}
+          description={t("settings.mobile.min_version_hint")}
+          placeholder="1.0.0"
+          disabled={!canWrite}
+        />
+        <AppInput
+          name="mobile_latest_version"
+          label={t("settings.mobile.latest_version")}
+          description={t("settings.mobile.latest_version_hint")}
+          placeholder="1.0.0"
+          disabled={!canWrite}
+        />
+        <AppInput
+          name="mobile_ios_store_url"
+          label={t("settings.mobile.ios_store_url")}
+          placeholder="https://apps.apple.com/app/id…"
+          disabled={!canWrite}
+          className="sm:col-span-2"
+        />
+        <AppInput
+          name="mobile_android_store_url"
+          label={t("settings.mobile.android_store_url")}
+          placeholder="https://play.google.com/store/apps/details?id=…"
+          disabled={!canWrite}
+          className="sm:col-span-2"
+        />
+      </FormSection>
+
       {canWrite ? (
         <FormActions>
           <Button type="button" variant="outline" onClick={onCancel}>
@@ -302,6 +344,8 @@ export function SettingsForm({
   onUploadLogo,
   onRemoveLogo,
 }: SettingsFormProps) {
+  const { t } = useLocale();
+  const schema = useMemo(() => createSettingsFormSchema(t), [t]);
   const defaultValues = useMemo(
     () => toSettingsFormValues(settings, brand.colors.primary),
     [settings],
@@ -309,7 +353,7 @@ export function SettingsForm({
 
   return (
     <AppForm
-      schema={settingsFormSchema}
+      schema={schema}
       defaultValues={defaultValues}
       onSubmit={async (values) => {
         await onSubmit(toPatchPayload(values));

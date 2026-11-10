@@ -1,5 +1,6 @@
 /**
- * Request checks for the same-origin `/api/v1/*` BFF (TEC-1102). Pure functions
+ * Request checks for the same-origin `/api/v1/*` BFF (TEC-1102) and the
+ * cookie-free mobile gateway `/api/mobile/v1/*` (TEC-1178). Pure functions
  * (no Next imports) so they are unit-tested in `bff-guard.test.mjs`.
  */
 
@@ -43,6 +44,60 @@ export function isForbiddenProxyPath(segments: readonly string[]): boolean {
   }
   return segments[0]!.toLowerCase() === "internal";
 }
+
+/**
+ * Mobile gateway (`/api/mobile/v1/*`, TEC-1178) path check: everything the
+ * cookie BFF refuses (`isForbiddenProxyPath`: traversal, encoded separators,
+ * `/v1/internal/*`), plus Go routes only a server or a payment provider calls:
+ *
+ * - `public/payment/**`: iyzico / PayTR callbacks. The provider posts them to
+ *   the web origin (`/api/v1/public/payment/...`); the app never does.
+ * - `auth/qr/exchange`: the QR sign-in exchange is called by the web server
+ *   that showed the QR code (design: docs/design/mobile.md §3), never by the
+ *   phone that approves it.
+ *
+ * Compared case-insensitively so a differently cased path cannot slip past
+ * this list (Go routes are case-sensitive, so it would 404 there anyway).
+ */
+export function isMobileGatewayRefusedPath(
+  segments: readonly string[],
+): boolean {
+  if (isForbiddenProxyPath(segments)) return true;
+  const path = segments.join("/").toLowerCase();
+  if (path === "public/payment" || path.startsWith("public/payment/")) {
+    return true;
+  }
+  return MOBILE_REFUSED_PATHS.has(path);
+}
+
+const MOBILE_REFUSED_PATHS = new Set(["auth/qr/exchange"]);
+
+/**
+ * Cookie BFF (`/api/v1/*`) refusals on top of `isForbiddenProxyPath`. Both
+ * return a raw API token pair in the JSON body, and the BFF must never hand
+ * tokens to browser JavaScript:
+ *
+ * - `auth/oauth/{provider}/native`: native Apple / Google sign-in (TEC-1180)
+ *   for the mobile app; the web app never calls it (mobile gateway only).
+ * - `auth/qr/exchange`: the QR sign-in exchange (TEC-1185). Only the NextAuth
+ *   server (`qr-login` credentials provider in `auth.ts`) calls it with
+ *   `fetchUpstream`; the mobile gateway refuses it too.
+ *
+ * Compared case-insensitively.
+ */
+export function isCookieBffRefusedPath(segments: readonly string[]): boolean {
+  if (isForbiddenProxyPath(segments)) return true;
+  const lower = segments.map((s) => s.toLowerCase());
+  if (COOKIE_BFF_REFUSED_PATHS.has(lower.join("/"))) return true;
+  return (
+    lower.length === 4 &&
+    lower[0] === "auth" &&
+    lower[1] === "oauth" &&
+    lower[3] === "native"
+  );
+}
+
+const COOKIE_BFF_REFUSED_PATHS = new Set(["auth/qr/exchange"]);
 
 /**
  * Mutating paths that are POSTed cross-site on purpose, so they skip the CSRF

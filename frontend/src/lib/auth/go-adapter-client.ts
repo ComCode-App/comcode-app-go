@@ -82,7 +82,10 @@ export type GitHubOAuthConfigPayload = {
   client_secret: string;
 };
 
-export type OAuthConfigPayload = GitHubOAuthConfigPayload;
+export type OAuthConfigPayload = GitHubOAuthConfigPayload & {
+  /** Set when the API generated the secret (Apple signing key); RFC 3339. */
+  client_secret_expires_at?: string;
+};
 
 export type LinkOAuthAccountPayload = {
   userId: string;
@@ -275,4 +278,49 @@ export async function loginWithPassword(
     }),
   });
   return unwrap<GoTokensPayload>(result);
+}
+
+/** Email one-time code sign-in (TEC-1121); same MFA_REQUIRED round-trip as password login. */
+export async function loginWithEmailCode(
+  email: string,
+  code: string,
+  totpCode?: string,
+) {
+  const result = await fetchUpstream("auth/email-code/verify", {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email,
+      code,
+      ...(totpCode ? { totp_code: totpCode } : {}),
+    }),
+  });
+  return unwrap<GoTokensPayload>(result);
+}
+
+export type QRLoginExchangePayload = GoTokensPayload & {
+  user: { uuid: string; email: string; name: string };
+};
+
+/**
+ * Redeems an approved QR sign-in (TEC-1185). Server-side only: the NextAuth
+ * `qr-login` provider calls it, so the token pair never reaches browser JS
+ * (the cookie BFF refuses this path). `fetchUpstream` forwards the browser's
+ * address chain and User-Agent from the incoming sign-in request.
+ */
+export async function exchangeQRLogin(
+  sessionId: string,
+  browserSecret: string,
+  exchangeToken: string,
+) {
+  const result = await fetchUpstream("auth/qr/exchange", {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_id: sessionId,
+      browser_secret: browserSecret,
+      exchange_token: exchangeToken,
+    }),
+  });
+  return unwrap<QRLoginExchangePayload>(result);
 }

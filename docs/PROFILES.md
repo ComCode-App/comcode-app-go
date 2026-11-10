@@ -36,7 +36,8 @@ gender, avatar/cover URLs, `is_primary`, and the full lists `translations`, `add
 - **Update replaces the lists**: translations, addresses, contacts and social links are deleted and re-created from the payload. Omit one and it is gone.
 - Setting `is_primary` clears the flag on the account's other profiles; `POST /{uuid}/primary` does the same on its own. One primary profile per account.
 - `completion_rate` (0-100) is computed on the server on every write; see [Completion score](#completion-score-and-suggestions-tec-549).
-- Delete is a soft delete (`deleted_at`); cached vCards are removed and the route cache is invalidated. A deleted profile stops counting towards `profiles.max`.
+- Delete is a soft delete (`deleted_at`); the route cache is invalidated. A deleted profile stops counting towards `profiles.max`. The username route is not changed.
+- Media cleanup (TEC-1176, KVKK): after the delete commits, the profile's objects are deleted from object storage, because the bucket serves anonymous GETs. Every profile delete goes through `Service.Delete` (owner route and the employee import rollback), so all paths are covered. See [Media](#media).
 
 ## Completion score and suggestions (TEC-549)
 
@@ -108,6 +109,30 @@ UI `features/profiles/components/profile-verification-card.tsx` (owner) and
 - Avatar and cover are uploaded as multipart (`avatar` / `cover` fields; the form is parsed with a 5 MB limit) to `POST /v1/profiles/{uuid}/avatar|cover`; the API stores the object under the profile's prefix and writes the URL. The browser never builds storage keys.
 - `avatar_url` / `cover_url` in an upsert payload are validated: empty, a staged temp avatar (`tmp/avatars/…`, produced by the vCard import), or media under this profile's own prefix. Anything else is 400. On create/update a staged avatar is copied to the permanent key and the temp object deleted.
 - The vCard embeds the profile's own avatar read from object storage (capped size); it never fetches remote URLs.
+- Deleted profiles (TEC-1176): `Service.Delete` collects the keys the row points at (avatar, cover, cached vCards) before the delete and, after it commits, schedules `app:profiles:media_cleanup` on the `maintenance` queue (10 retries, 30 s delay so a late vCard cache write is caught, one task per profile). With `QUEUE_ENABLED=false`, or if the enqueue fails, it runs inline, best effort. Code: `profiles/usecase/media_cleanup.go`.
+  - Deleted: every object under `profiles/{uuid}/` (avatar, cover, old extensions, vCards, copied company logos, legacy media) and a staged `tmp/avatars/` object the row still pointed at.
+  - Kept: company media library files (`accounts/{uuid}/media/`, owned by the company) and any key a live row still references (`CountStorageKeyReferences`: another profile's avatar/cover, `company_media`, background thumbnails). A later run deletes it once the reference is gone.
+  - The job skips a profile that is still live and is idempotent (objects already gone are fine). Failures are logged with the request id and the profile uuid (no personal data), make Asynq retry, and never undo the delete.
+  - Profiles deleted before TEC-1176 (TEC-1177): run the one-off [backfill](#backfill-for-profiles-deleted-before-tec-1176-tec-1177) once.
+
+### Backfill for profiles deleted before TEC-1176 (TEC-1177)
+
+`/app/profile-media-backfill` (backend image, `backend/cmd/profile-media-backfill`) walks every soft-deleted profile (`profiles.deleted_at IS NOT NULL`) in id order, collects its keys the same way `Service.Delete` does plus the `profiles/{uuid}/` listing, and applies the same reference check. Output is counts and ids only (logs carry profile uuids), no personal data.
+
+- Default is a **dry run**: it prints the number of deleted profiles, candidate objects, deletable objects and objects skipped by the reference check, and deletes nothing.
+- `-apply` enqueues `app:profiles:media_cleanup` for each deleted profile that still has a deletable object (maintenance queue, TaskID `profile-media-cleanup:{uuid}` dedupes against a queued task); the worker deletes the objects. With `QUEUE_ENABLED=false`, or with `-inline`, it cleans up in the process instead.
+- `-batch-size N` (default 200) rows per query; `-limit N` stops after N profiles; `-after-id ID` resumes after the `last_id` a previous run printed. Safe to run twice: once the cleanup finished, a run enqueues and deletes nothing (only objects a live row still references stay as `skipped_referenced`).
+- Exit status is 1 when any profile failed (see the logs); run it again, it only retries what is left.
+
+In production (Dokploy: open a terminal on the backend container and run the same `/app/…` commands), on the host:
+
+```sh
+docker compose --env-file .env.server -f compose.prod.yml exec backend /app/profile-media-backfill          # dry run
+docker compose --env-file .env.server -f compose.prod.yml exec backend /app/profile-media-backfill -apply   # enqueue
+docker compose --env-file .env.server -f compose.prod.yml exec backend /app/profile-media-backfill          # check: deletable=0 once the worker is done
+```
+
+Locally: `cd backend && go run ./cmd/profile-media-backfill [-apply]` with the repo-root `.env` loaded.
 
 ## vCard
 

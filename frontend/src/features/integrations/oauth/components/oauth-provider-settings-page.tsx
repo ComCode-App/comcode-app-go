@@ -8,7 +8,10 @@ import { PageHeader } from "@/components/layout/page-header";
 import type { PermissionSlug } from "@/config/permissions";
 import { OAuthProviderSettingsForm } from "@/features/integrations/oauth/components/oauth-provider-settings-form";
 import { oauthProviderIcons } from "@/features/integrations/oauth/oauth-provider-icons";
-import type { OAuthProviderFormValues } from "@/features/integrations/oauth/schemas/oauth-provider-form";
+import {
+  parseNativeClientIds,
+  type OAuthProviderFormValues,
+} from "@/features/integrations/oauth/schemas/oauth-provider-form";
 import {
   oauthProviderService,
   type OAuthProviderSlug,
@@ -17,6 +20,19 @@ import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 import { appToast } from "@/providers/toast-provider";
+
+/** Apple signing key fields for the PATCH body; the key is sent only when a file was chosen. */
+function appleKeyPatch(values: OAuthProviderFormValues) {
+  const privateKey = values.private_key?.trim();
+  return {
+    team_id: values.team_id?.trim().toUpperCase() ?? "",
+    key_id: values.key_id?.trim().toUpperCase() ?? "",
+    ...(privateKey ? { private_key: privateKey } : {}),
+    ...(!privateKey && values.remove_private_key
+      ? { remove_private_key: true }
+      : {}),
+  };
+}
 
 type OAuthProviderSettingsPageProps = {
   provider: OAuthProviderSlug;
@@ -52,6 +68,12 @@ export function OAuthProviderSettingsPage({
         client_id: values.client_id,
         ...(values.client_secret?.trim()
           ? { client_secret: values.client_secret.trim() }
+          : {}),
+        ...(provider === "apple" ? appleKeyPatch(values) : {}),
+        ...(provider === "apple" || provider === "google"
+          ? {
+              native_client_ids: parseNativeClientIds(values.native_client_ids),
+            }
           : {}),
       }),
     onSuccess: async () => {

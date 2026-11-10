@@ -62,6 +62,50 @@ test("path allowlist refuses traversal, encoded separators and internal routes",
   }
 });
 
+test("mobile gateway refuses BFF-forbidden, payment callback and QR exchange paths", () => {
+  const refused = [
+    [],
+    [".."],
+    ["a/b"],
+    ["%2e%2e"],
+    ["internal", "auth", "users"],
+    ["Internal", "auth", "session"],
+    ["public", "payment"],
+    ["public", "payment", "iyzico", "callback"],
+    ["public", "payment", "paytr", "callback"],
+    ["Public", "Payment", "paytr", "callback"],
+    ["auth", "qr", "exchange"],
+    ["AUTH", "QR", "EXCHANGE"],
+  ];
+  for (const segs of refused) {
+    assert.equal(
+      guard.isMobileGatewayRefusedPath(segs),
+      true,
+      JSON.stringify(segs),
+    );
+  }
+  for (const segs of [
+    ["auth", "login"],
+    ["auth", "refresh"],
+    ["auth", "email-code", "verify"],
+    ["auth", "qr", "approve"],
+    ["app", "config"],
+    ["public", "p", "ali"],
+    ["profiles"],
+  ]) {
+    assert.equal(
+      guard.isMobileGatewayRefusedPath(segs),
+      false,
+      JSON.stringify(segs),
+    );
+  }
+  // The cookie BFF still lets the payment callbacks through (providers post to it).
+  assert.equal(
+    guard.isForbiddenProxyPath(["public", "payment", "iyzico", "callback"]),
+    false,
+  );
+});
+
 test("cross-site mutations are blocked, same-origin and safe methods pass", () => {
   assert.equal(
     guard.isCrossSiteMutation(
@@ -148,4 +192,65 @@ test("jwtExpiresAt reads exp without verifying", () => {
   assert.equal(guard.jwtExpiresAt(`h.${payload}.s`), 1700000000);
   assert.equal(guard.jwtExpiresAt("garbage"), null);
   assert.equal(guard.jwtExpiresAt(null), null);
+});
+
+test("cookie BFF refuses native OAuth sign-in (token pair stays mobile-only)", () => {
+  for (const segs of [
+    ["auth", "oauth", "google", "native"],
+    ["auth", "oauth", "apple", "native"],
+    ["Auth", "OAuth", "Apple", "Native"],
+    ["internal", "auth", "users"],
+  ]) {
+    assert.equal(
+      guard.isCookieBffRefusedPath(segs),
+      true,
+      JSON.stringify(segs),
+    );
+  }
+  for (const segs of [
+    ["auth", "identities", "google", "native"],
+    ["auth", "oauth", "google", "callback"],
+    ["auth", "refresh"],
+  ]) {
+    assert.equal(
+      guard.isCookieBffRefusedPath(segs),
+      false,
+      JSON.stringify(segs),
+    );
+  }
+  assert.equal(
+    guard.isMobileGatewayRefusedPath(["auth", "oauth", "apple", "native"]),
+    false,
+  );
+});
+
+test("cookie BFF refuses the QR sign-in exchange (tokens stay on the web server)", () => {
+  for (const segs of [
+    ["auth", "qr", "exchange"],
+    ["Auth", "QR", "Exchange"],
+  ]) {
+    assert.equal(
+      guard.isCookieBffRefusedPath(segs),
+      true,
+      JSON.stringify(segs),
+    );
+    assert.equal(
+      guard.isMobileGatewayRefusedPath(segs),
+      true,
+      JSON.stringify(segs),
+    );
+  }
+  // The tab itself creates the session and reads its state through the BFF.
+  for (const segs of [
+    ["auth", "qr", "sessions"],
+    ["auth", "qr", "sessions", "abc", "state"],
+    ["auth", "qr", "sessions", "abc"],
+    ["auth", "qr", "sessions", "abc", "approve"],
+  ]) {
+    assert.equal(
+      guard.isCookieBffRefusedPath(segs),
+      false,
+      JSON.stringify(segs),
+    );
+  }
 });

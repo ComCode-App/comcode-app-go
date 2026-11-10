@@ -25,7 +25,7 @@ RUN if [ -n "${APP_RELEASE_JSON_B64}" ]; then \
     fi && \
     REL=github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/release && \
     LDFLAGS="-s -w -X ${REL}.Version=${APP_VERSION} -X ${REL}.Commit=${APP_COMMIT} -X ${REL}.BuiltAt=${APP_BUILT_AT}" && \
-    for cmd in server worker seed create-super-admin search-reindex migrate-legacy; do \
+    for cmd in server worker seed create-super-admin search-reindex migrate-legacy profile-media-backfill; do \
       CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
       go build -trimpath -ldflags="${LDFLAGS}" -o "/out/${cmd}" "./cmd/${cmd}" || exit 1; \
     done
@@ -46,6 +46,7 @@ COPY --from=builder /out/seed /app/seed
 COPY --from=builder /out/create-super-admin /app/create-super-admin
 COPY --from=builder /out/search-reindex /app/search-reindex
 COPY --from=builder /out/migrate-legacy /app/migrate-legacy
+COPY --from=builder /out/profile-media-backfill /app/profile-media-backfill
 COPY migrations /app/migrations
 COPY deploy/docker/entrypoint.sh /app/entrypoint.sh
 

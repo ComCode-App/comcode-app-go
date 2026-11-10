@@ -15,6 +15,7 @@ import (
 	assetshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companyassets/handler"
 	assetsrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companyassets/repository"
 	assetsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companyassets/usecase"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/appversion"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/clientip"
 	"log/slog"
 	"net/http"
@@ -136,6 +137,7 @@ import (
 	profileverificationsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileverifications"
 	profileverificationshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileverifications/handler"
 	profileverificationsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileverifications/usecase"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/qrlogin"
 	routesmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes"
 	routeshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/handler"
 	routesrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/repository"
@@ -174,6 +176,7 @@ import (
 	analyticsrealtime "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/analytics/realtime"
 	analyticsregistry "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/analytics/registry"
 	analyticsstorage "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/analytics/storage"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/appleauth"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/bulkengine"
 	bulkadapters "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/bulkengine/adapters"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/crypto"
@@ -184,6 +187,7 @@ import (
 	ioadapters "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/ioengine/adapters"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/mail"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/oidc"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/opengraph"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/payment"
@@ -267,6 +271,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("httpserver: jwt: %w", err)
 	}
+	if err := tokens.SetMobileRefreshTTL(cfg.JWT.RefreshTTLMobile); err != nil {
+		return nil, fmt.Errorf("httpserver: jwt: %w", err)
+	}
 
 	mailer := mail.NewSMTPSender(cfg.SMTP)
 	// The exchange visitor copy attaches the owner's vCard at send time (TEC-940); the profiles
@@ -287,6 +294,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		PrivateKey: cfg.VAPID.PrivateKey,
 		Subject:    cfg.VAPID.Subject,
 	})
+	// Queue off (inline delivery): mobile pushes are sent inline too (TEC-1187).
+	notifSvc.WithExpo(notifusecase.ExpoConfig{AccessToken: cfg.Expo.AccessToken})
 
 	repo := authrepo.NewPostgres(deps.DB, deps.Queries)
 	uc := authusecase.New(repo, tokens)
@@ -341,11 +350,22 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	authSettingsSvc := authsettingsusecase.New(deps.Queries)
 	uc.SetAuthSettings(authSettingsSvc)
 	uc.SetAccessPolicy(stepUpSvc)
+	uc.SetReviewAccounts(cfg.Auth.ReviewAccounts)
+	if n := len(cfg.Auth.ReviewAccounts); n > 0 {
+		// Count only: the emails and codes are secrets (TEC-1182).
+		log.Info("auth_review_accounts_enabled", "count", n)
+	}
 	uc.SetSecretBox(secretBox, cfg.App.Name)
 	entitlementSvc := entitlement.New(deps.Queries)
 	entitlementSvc.SetUsageAlerter(notifmodule.NewQuotaAlerter(notifSvc, deps.Queries, log))
 	uc.SetEntitlement(authusecase.NewEntitlementAdapter(entitlementSvc))
+	// Native Apple / Google id_token sign-in (TEC-1180): audiences come from the admin panel.
+	uc.SetNativeOAuth(oidc.New(oidc.DefaultProviders(), nil), oauthProvSvc)
 	oauthUC := authusecase.NewOAuth(repo, secretBox)
+	// Apple authorization code exchange and token revocation (TEC-1181), signed with the panel .p8.
+	appleTokens := authusecase.NewAppleTokens(repo, secretBox, oauthProvSvc, appleauth.NewTokenClient(appleauth.DefaultBaseURL, nil), log)
+	uc.SetAppleTokens(appleTokens)
+	oauthUC.SetAppleTokens(appleTokens)
 	s.githubSvc = githubSvc
 	s.oauthProvSvc = oauthProvSvc
 	s.authSettings = authSettingsSvc
@@ -357,6 +377,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)
 
 	nh := notifhandler.New(notifSvc)
+	nh.SetRateLimiter(ratelimit.New(deps.Redis, cfg.App.Env))
 	notifmodule.RegisterRoutes(mux, nh, tokens, loader)
 	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log)
 	notifmodule.RegisterBillingHandlers(eventBus, notifSvc, deps.Queries)
@@ -388,6 +409,13 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	profileVerificationsSvc.SetFrontendURL(cfg.Auth.FrontendURL)
 	profilesSvc.SetVerifications(profileVerificationsSvc)
 	profilesSvc.SetSearchIndexer(searchIndexer)
+	// A deleted profile's media leaves object storage too (TEC-1176, KVKK): queued on the
+	// maintenance queue, inline when the queue is off.
+	var profileMediaCleaner *profilesusecase.MediaCleaner
+	if deps.Storage != nil {
+		profileMediaCleaner = profilesusecase.NewMediaCleaner(deps.Storage, deps.Queries, deps.Queue, log)
+		profilesSvc.SetMediaCleaner(profileMediaCleaner)
+	}
 	// Employee profiles of company accounts (TEC-573): bulk and import adapters write through
 	// the profiles service.
 	companyBulk := companyprofilesusecase.NewBulkAdapter(deps.Queries, profilesSvc, deps.Storage, companyBrandingSvc)
@@ -417,6 +445,17 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	bulkSvc := bulkusecase.New(deps.Queries, bulkReg, deps.Queue, notifSvc, activityRec, cfg.Bulk, log)
 	logsSvc := logsusecase.New(deps.Queries)
 	geoSvc := geoip.NewService(deps.Queries, secretBox, deps.Redis, log)
+
+	// QR sign-in (TEC-1184): Redis-only sessions, anonymous Centrifugo channel, GeoIP location.
+	var qrIssuer qrlogin.TokenIssuer
+	if rtIssuer != nil {
+		qrIssuer = rtIssuer
+	}
+	qrSvc := qrlogin.NewService(qrlogin.Deps{
+		Store: qrlogin.NewStore(deps.Redis, cfg.App.Env), Accounts: uc, Issuer: qrIssuer,
+		Publisher: deps.Realtime, Geo: geoSvc, StepUp: stepUpSvc, FrontendURL: cfg.Auth.FrontendURL, Log: log,
+	})
+	qrlogin.RegisterRoutes(mux, qrlogin.NewHandler(qrSvc, ratelimit.New(deps.Redis, cfg.App.Env)), tokens, loader)
 	cachedRegistry := analyticsregistry.NewCachedStore(deps.Queries, 5*time.Minute)
 	eventValidator := analyticsdomain.NewValidator(cachedRegistry)
 	uaParser := device.NewParser()
@@ -452,6 +491,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 				_, err := geoSvc.UpdateNow(ctx)
 				return err
 			})
+		if profileMediaCleaner != nil {
+			s.worker.WithProfileMediaCleanup(profileMediaCleaner.Process)
+		}
 		if searchIndexer != nil {
 			s.worker.WithSearch(
 				searchIndexer.ProcessUpsert,
@@ -637,6 +679,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			middleware.ServerErrors(log),
 			middleware.Recover,
 			clientip.New(trustedProxies).Middleware,
+			// Outdated mobile apps (X-Client + X-App-Version below mobile_min_version) get 426.
+			appversion.Gate(appversion.Cached(settingsusecase.New(deps.Queries).MinMobileVersion, 30*time.Second, nil)),
 		),
 		ReadTimeout:  cfg.HTTP.ReadTimeout,
 		WriteTimeout: cfg.HTTP.WriteTimeout,
@@ -695,6 +739,8 @@ func (s *Server) Shutdown(ctx context.Context) error {
 func (s *Server) handleAppConfig(w http.ResponseWriter, r *http.Request) {
 	settingsSvc := settingsusecase.New(s.queries)
 	letterhead, _ := settingsSvc.PublicLetterhead(r.Context())
+	// Mobile app version gate and store links (TEC-1178); empty values when unset or unreadable.
+	mobile, _ := settingsSvc.Mobile(r.Context())
 
 	registrationEnabled := false
 	passwordLogin := true
@@ -744,6 +790,7 @@ func (s *Server) handleAppConfig(w http.ResponseWriter, r *http.Request) {
 			"apple":    oauthMethod("apple"),
 		},
 		"letterhead": letterhead,
+		"mobile":     mobile,
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"success": true,

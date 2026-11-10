@@ -12,7 +12,7 @@
   "form.totp_enabled": "Authenticator ile doğrulamaya izin ver",
   "form.totp_enabled_hint": "2FA açık kullanıcılar hassas işlemleri authenticator kodu ile onaylayabilir.",
   "form.password_login_totp_required": "Şifre ile girişte 2FA zorunlu",
-  "form.password_login_totp_required_hint": "Açıkken kullanıcılar e-posta/şifre ile giriş yapmadan önce authenticator kurmalıdır. Passkey ve OAuth girişleri etkilenmez.",
+  "form.password_login_totp_required_hint": "Açıkken kullanıcılar e-posta/şifre veya e-posta koduyla giriş yapmadan önce authenticator kurmalıdır. Passkey ve OAuth girişleri etkilenmez.",
   "form.save": "Ayarları kaydet",
   "toast.saved": "Erişim ayarları kaydedildi",
   "toast.failed": "Erişim ayarları kaydedilemedi",

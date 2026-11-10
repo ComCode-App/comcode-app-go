@@ -374,6 +374,7 @@ func (s *Service) notify(ctx context.Context, r *model.Review, code, reason stri
 		uid := id
 		if _, err := s.notifier.Enqueue(ctx, notifmodel.EnqueueInput{
 			UserID:       &uid,
+			AccountID:    &r.AccountID,
 			Channels:     channels,
 			TemplateCode: code,
 			TemplateVars: map[string]string{"profile_name": name, "reason": reason, "profile_url": s.frontendURL + action},

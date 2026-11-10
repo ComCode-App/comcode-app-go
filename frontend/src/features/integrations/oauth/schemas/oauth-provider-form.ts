@@ -5,6 +5,22 @@ export const oauthProviderFormSchema = z.object({
   register_enabled: z.boolean(),
   client_id: z.string().trim(),
   client_secret: z.string().trim().optional(),
+  // Apple signing key (.p8, TEC-1123); validated by the API on save.
+  team_id: z.string().trim().optional(),
+  key_id: z.string().trim().optional(),
+  /** PEM text of the chosen .p8 file (write-only, never pre-filled from the API). */
+  private_key: z.string().optional(),
+  remove_private_key: z.boolean().optional(),
+  /** Apple / Google native (mobile) audiences, one per line (TEC-1180). */
+  native_client_ids: z.string().optional(),
 });
+
+/** Splits the native audience textarea into ids (lines or commas); the API validates them. */
+export function parseNativeClientIds(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(/[\n,]/)
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
 
 export type OAuthProviderFormValues = z.infer<typeof oauthProviderFormSchema>;

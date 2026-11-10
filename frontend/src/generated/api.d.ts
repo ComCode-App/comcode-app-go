@@ -79,6 +79,10 @@ export interface paths {
          * @description Authenticates with email/password and returns a token pair. An unknown email and a wrong
          *     password get the same `401 INVALID_CREDENTIALS`; a disabled account is reported (403) only
          *     after the correct password. Rate limited per IP + email, per IP and per email.
+         *
+         *     The mobile app sends `X-Client: mobile` (plus `X-Device-Name`, `X-App-Version`): the new
+         *     session gets the mobile refresh lifetime (`JWT_REFRESH_TTL_MOBILE`, default 60 days)
+         *     instead of `JWT_REFRESH_TTL` (7 days).
          */
         post: operations["postAuthLogin"];
         delete?: never;
@@ -98,7 +102,17 @@ export interface paths {
         put?: never;
         /**
          * Refresh tokens
-         * @description Rotates an opaque refresh token and returns a new token pair.
+         * @description Rotates an opaque refresh token and returns a new token pair. The new refresh token's
+         *     lifetime restarts (sliding) and follows the session's client type, fixed at sign-in:
+         *     `JWT_REFRESH_TTL` for web, `JWT_REFRESH_TTL_MOBILE` for the mobile app. `X-Client` on
+         *     this call cannot change it; `X-App-Version` updates the session's app version.
+         *
+         *     Reuse detection: presenting a refresh token that was already rotated
+         *     - less than 30 seconds after its rotation answers `409 REFRESH_RACE` (a concurrent
+         *       refresh; the session stays live, use the token the other request received);
+         *     - later revokes the whole session (every token of the family) and emails the owner a
+         *       security notice (`auth.refresh_reuse`); the answer is `401`.
+         *     A token revoked by logout or session revocation simply answers `401`.
          */
         post: operations["postAuthRefresh"];
         delete?: never;
@@ -589,6 +603,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/identities/{provider}/native": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link a native Apple / Google identity to the signed-in user
+         * @description Verifies the `id_token` like `POST /v1/auth/oauth/{provider}/native` and links its
+         *     subject to the signed-in user (TEC-1180). Returns the updated identity list; linking an
+         *     identity that is already linked to this user is a no-op.
+         *
+         *     - `403 OAUTH_EMAIL_UNVERIFIED`: the token has no verified email.
+         *     - `409 CONFLICT`: the identity is linked to another user, or the user already has a
+         *       different identity of this provider.
+         *     - `403 OAUTH_PROVIDER_DISABLED`, `401 OAUTH_INVALID_TOKEN`: as for sign-in.
+         *     - `403 FORBIDDEN`: impersonation sessions cannot link sign-in methods.
+         *
+         *     Rate limited per user (10) and client IP (30) in a 15-minute window.
+         */
+        post: operations["postAuthIdentityNative"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/identities/{provider}": {
         parameters: {
             query?: never;
@@ -603,6 +647,8 @@ export interface paths {
          * Unlink an OAuth identity
          * @description `409 LAST_SIGN_IN_METHOD` when the user has no password, no passkey and this is
          *     their last linked identity (TEC-1105).
+         *     Apple: a stored Apple refresh token is revoked at Apple after the identity is
+         *     removed (TEC-1181); a failed revocation is logged and does not fail the unlink.
          */
         delete: operations["deleteAuthIdentity"];
         options?: never;
@@ -916,6 +962,284 @@ export interface paths {
          * @description Partial update of name/surname. Email/password/status/roles are not changeable here.
          */
         patch: operations["patchAuthProfile"];
+        trace?: never;
+    };
+    "/v1/auth/email-code/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request an email sign-in code
+         * @description Emails a 6-digit one-time sign-in code (10 minutes, 5 attempts, single use, stored
+         *     hashed; the email is a sealed security email). The response is always
+         *     `200 {status: accepted}` for a well-formed email, whether or not it belongs to an account.
+         *
+         *     Unknown email: when self-registration is open (`auth_settings.registration_enabled`)
+         *     a sign-up code is sent as well and `/v1/auth/email-code/verify` creates the account.
+         *     When registration is closed nothing is sent (same response). A failure while issuing
+         *     the code or enqueuing the email is logged and still answers accepted.
+         *
+         *     Rate limited per client IP (10) and per email (5) in a 15-minute window.
+         */
+        post: operations["postAuthEmailCodeRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/email-code/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in (or sign up) with an email code
+         * @description Exchanges an email code for a token pair (personal account active, like login). A wrong,
+         *     expired, used or exhausted code and an unknown email all answer
+         *     `400 INVALID_EMAIL_CODE`. A disabled account is reported (`403 FORBIDDEN`) only after a
+         *     valid code.
+         *
+         *     Two-factor: when the user has an authenticator, the call without `totp_code` answers
+         *     `403 MFA_REQUIRED` and the email code stays valid; resend the same `code` plus
+         *     `totp_code`. A wrong `totp_code` (`401 INVALID_MFA_CODE`) counts against the code's
+         *     attempts. When the access policy requires 2FA and the user has none,
+         *     `403 MFA_NOT_ENROLLED`.
+         *
+         *     Sign-up: for an email without an account, while self-registration is open, a valid code
+         *     creates the user (email verified, no password, `name` = email local part, empty
+         *     `surname`, default role, personal account) and returns tokens. With registration
+         *     closed no account is created (`400 INVALID_EMAIL_CODE`).
+         *
+         *     Rate limited per client IP (30) and per email (10) in a 15-minute window.
+         *
+         *     Mobile clients send the same client headers as `POST /v1/auth/login`.
+         */
+        post: operations["postAuthEmailCodeVerify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/qr/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a QR sign-in (web login page)
+         * @description Creates a short-lived (120 s) QR sign-in session for the calling browser tab (TEC-1184).
+         *     Render `qr_url` (`{PUBLIC_FRONTEND_URL}/login/qr/{session_id}`) as a QR; the signed-in
+         *     mobile app opens it (in-app scanner or universal link).
+         *
+         *     Keep `browser_secret` in the tab only: it is needed to read the state and to exchange an
+         *     approval. `realtime` holds an **anonymous** Centrifugo connection token (`sub: ""`) and a
+         *     subscription token for exactly one channel `qrlogin:{random}` (unrelated to the session
+         *     id); both expire 30 s after the session. Channel events (`data.type`): `scanned`,
+         *     `approved` (with `exchange_token`), `rejected`.
+         *
+         *     The request's User-Agent, client IP and approximate location (GeoIP) are stored for the
+         *     approval screen. Rate limited per client IP (60 / 15 min). `503 REALTIME_DISABLED` when
+         *     Centrifugo is not configured.
+         */
+        post: operations["postAuthQRSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/qr/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * QR sign-in details (mobile app)
+         * @description Shows who is asking to sign in: browser / OS parsed from the web request's User-Agent
+         *     (display hint only), its IP and approximate location (`null` when unknown), created /
+         *     expiry time. The first signed-in viewer **claims** the session and the tab gets
+         *     `{type: "scanned"}`; another user then gets `409 QR_SESSION_CLAIMED`.
+         *
+         *     Errors: `403 FORBIDDEN` (impersonation session), `404 QR_SESSION_NOT_FOUND` (unknown,
+         *     expired or used), `409 QR_SESSION_CLAIMED`, `429 RATE_LIMITED` (30 / 15 min per user).
+         */
+        get: operations["getAuthQRSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/qr/sessions/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a QR sign-in (mobile app)
+         * @description Signs the waiting browser tab in as the caller (on the caller's personal account at
+         *     exchange). Publishes `{type: "approved", exchange_token}` to the tab's channel and starts
+         *     a 60 s exchange window. Exactly one approve / reject succeeds. The caller then gets the
+         *     `auth.qr_login_approved` security email and an in-app notice.
+         *
+         *     Errors: `403 FORBIDDEN` (impersonation session or inactive user), `403 STEP_UP_REQUIRED`
+         *     (super admins and users with any `platform.*` permission need a fresh step-up grant),
+         *     `404 QR_SESSION_NOT_FOUND`, `409 QR_SESSION_RESOLVED`, `409 QR_SESSION_CLAIMED`,
+         *     `429 RATE_LIMITED` (30 / 15 min per user, shared with reject).
+         */
+        post: operations["postAuthQRSessionApprove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/qr/sessions/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a QR sign-in (mobile app)
+         * @description Publishes `{type: "rejected"}` to the tab's channel. No step-up or account-state check.
+         *     Errors: `403 FORBIDDEN` (impersonation session), `404 QR_SESSION_NOT_FOUND`,
+         *     `409 QR_SESSION_RESOLVED`, `409 QR_SESSION_CLAIMED`, `429 RATE_LIMITED`.
+         */
+        post: operations["postAuthQRSessionReject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/qr/sessions/{id}/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * QR sign-in state for the owning tab
+         * @description Read once after the tab (re)subscribes to its channel so an event sent while the socket
+         *     was down is not lost. Not meant for polling. A wrong `browser_secret` counts against 5
+         *     attempts (shared with exchange); the 5th deletes the session.
+         *
+         *     Errors: `400 QR_LOGIN_INVALID`, `404 QR_SESSION_NOT_FOUND`, `429 RATE_LIMITED`
+         *     (60 / 15 min per client IP).
+         */
+        post: operations["postAuthQRSessionState"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/qr/exchange": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Redeem an approved QR sign-in (web server only)
+         * @description Called by the web server (NextAuth `qr-login` credentials provider), never by browser JS
+         *     or the mobile app (the mobile gateway and the cookie BFF `/api/v1` both refuse it with
+         *     `404`, TEC-1185). Needs the session id, the tab's `browser_secret` and the `exchange_token`
+         *     from the approval event. Single use: the session is deleted on success.
+         *
+         *     Returns the same token pair as `/v1/auth/login` plus the signed-in user. The session
+         *     starts on the approver's **personal account**; the session row keeps the User-Agent / IP
+         *     of the browser that showed the QR. No TOTP prompt (the approving phone is signed in).
+         *
+         *     Errors: `400 QR_LOGIN_INVALID` (wrong secret / token or not approved yet; 5 wrong
+         *     attempts delete the session), `404 QR_SESSION_NOT_FOUND`, `403 FORBIDDEN` (user no longer
+         *     active), `429 RATE_LIMITED` (60 / 15 min per client IP, 10 per session).
+         */
+        post: operations["postAuthQRExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/oauth/{provider}/native": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in (or sign up) with a native Apple / Google id_token
+         * @description For the mobile app (TEC-1180). The app generates a random `nonce`, hands its SHA-256 to
+         *     the Apple / Google SDK and sends the returned `id_token` with the raw `nonce`. The API
+         *     checks the RS256 signature against the provider's JWKS (cached; an unknown key id
+         *     re-fetches at most once a minute), `iss`, `exp`, `aud` and `nonce`. Accepted audiences
+         *     are the provider's `native_client_ids` (Platform → Integrations → Apple / Google).
+         *
+         *     Outcomes:
+         *     - linked identity: token pair. A user with an authenticator gets `403 MFA_REQUIRED`;
+         *       resend the same `id_token` and `nonce` plus `totp_code` (`401 INVALID_MFA_CODE` when
+         *       wrong). The admin "2FA for password sign-in" policy does not apply (as for web OAuth).
+         *     - not linked, the verified email belongs to an account: `409 OAUTH_ACCOUNT_NOT_LINKED`.
+         *       Sign in with the existing method, then link with
+         *       `POST /v1/auth/identities/{provider}/native`.
+         *     - not linked, `email_verified` false or no email: `403 OAUTH_EMAIL_UNVERIFIED`. Such a
+         *       token never matches, creates or links an account.
+         *     - not linked, new email: when self-registration and the provider's `register_enabled`
+         *       are on, a passwordless user (email verified, default role, personal account) is
+         *       created, the identity linked and a token pair returned; otherwise
+         *       `403 REGISTRATION_DISABLED`.
+         *     - provider switched off or no native audience: `403 OAUTH_PROVIDER_DISABLED`.
+         *     - bad signature / audience / issuer / nonce or expired token: `401 OAUTH_INVALID_TOKEN`.
+         *     - disabled account: `403 FORBIDDEN`.
+         *
+         *     Tokens always start on the personal account. With `X-Client: comcode-mobile` the
+         *     session is a mobile session (mobile refresh lifetime, device label).
+         *
+         *     Rate limited per client IP (30) and, after verification, per provider subject (10) in a
+         *     15-minute window.
+         */
+        post: operations["postAuthOAuthNative"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/auth/password/forgot": {
@@ -1268,7 +1592,12 @@ export interface paths {
         };
         /**
          * Public app config
-         * @description Unauthenticated bootstrap payload (auth methods, branding).
+         * @description Unauthenticated bootstrap payload (auth methods, branding, mobile app versions).
+         *
+         *     `mobile` comes from the platform settings (Settings → General → Mobile app). It is the one
+         *     `/v1` route an outdated mobile app can still call: every other request with
+         *     `X-Client: comcode-mobile` and an `X-App-Version` below `mobile.min_version` is answered
+         *     `426 APP_UPDATE_REQUIRED` (TEC-1178).
          */
         get: operations["getAppConfig"];
         put?: never;
@@ -1328,7 +1657,7 @@ export interface paths {
         };
         /**
          * List active sessions
-         * @description Device sessions for the current user, one per refresh-token family (rotation keeps the family). `uuid` is the family id; `current` is the session bound to this access token.
+         * @description Device sessions for the current user, one per refresh-token family (rotation keeps the family). `uuid` is the family id; `current` is the session bound to this access token. `client_type` is `web` or `mobile`; mobile sessions carry the app's `device_name` and latest `app_version`.
          */
         get: operations["listAuthSessions"];
         put?: never;
@@ -4467,6 +4796,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/notifications/push-devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's mobile push devices
+         * @description Expo push devices of the signed-in user (TEC-1186), active ones first. `current` marks the
+         *     device registered from the caller's own session. Disabled devices stay listed with
+         *     `disabled_at` / `disabled_reason` until the app registers again or deletes them.
+         */
+        get: operations["listNotificationPushDevices"];
+        put?: never;
+        /**
+         * Register a mobile push device
+         * @description Upserts the caller's Expo push token (TEC-1186), on sign-in and on every app start. The
+         *     device is tied to the caller's session (the access token's refresh token family): logout,
+         *     revoking that session (sessions list, refresh token reuse), "sign out other sessions" and
+         *     password change / reset disable it. Registering again from a live session re-enables it.
+         *     A token registered earlier by another user moves to the caller. The user's first device
+         *     turns `push_enabled` on in the notification preferences; later registrations keep the
+         *     preference as it is. 10 requests per minute per user, shared with DELETE.
+         *
+         *     - `409 PUSH_SESSION_INACTIVE`: the access token's session was revoked or expired.
+         *     - `403 PUSH_IMPERSONATION`: an impersonating admin cannot register devices.
+         */
+        post: operations["registerNotificationPushDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications/push-devices/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete one of the caller's push devices
+         * @description Removes the caller's own Expo token (app sign-out, notification permission withdrawn).
+         *     `404` when the token is unknown or belongs to another user. URL-encode the token
+         *     (`ExponentPushToken%5B...%5D`). Shares the 10 per minute per user limit with POST;
+         *     `403 PUSH_IMPERSONATION` while impersonating.
+         */
+        delete: operations["deleteNotificationPushDevice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/activity": {
         parameters: {
             query?: never;
@@ -5187,6 +5574,11 @@ export interface paths {
         /**
          * PATCH /v1/platform/settings
          * @description Registered in `internal/modules/settings/routes.go`. Requires `platform.settings.write`.
+         *     Partial update of the branding / letterhead fields and the mobile app version gate
+         *     (`mobile_*`, published in `GET /v1/app/config` as `mobile`). Versions are `""` or
+         *     `major[.minor[.patch]]` and `mobile_latest_version` may not be lower than
+         *     `mobile_min_version`; store URLs are `""` or an `https` URL. Invalid values answer
+         *     `400 VALIDATION_ERROR` with field details.
          */
         patch: operations["patchPlatformSettings"];
         trace?: never;
@@ -8660,6 +9052,33 @@ export interface components {
             /** @enum {string} */
             locale?: "tr" | "en";
         };
+        EmailCodeRequest: {
+            /** Format: email */
+            email: string;
+        };
+        EmailCodeVerifyRequest: {
+            /** Format: email */
+            email: string;
+            /** @description 6-digit code from the email */
+            code: string;
+            /** @description Authenticator or recovery code, required after `MFA_REQUIRED`. */
+            totp_code?: string;
+        };
+        NativeOAuthTokenRequest: {
+            /** @description The id_token returned by the Apple / Google SDK in the app. */
+            id_token: string;
+            /** @description The raw nonce the app generated for this sign-in. The token's `nonce` claim must equal it or its hex SHA-256. */
+            nonce: string;
+            /** @description Apple only, optional. Exchanged at Apple for a refresh token that is stored encrypted and revoked when the Apple identity is unlinked or the account is deleted. Best effort; a failed exchange never fails the request. Ignored for Google. */
+            authorization_code?: string;
+        };
+        NativeOAuthSignInRequest: components["schemas"]["NativeOAuthTokenRequest"] & {
+            /** @description Apple sends the name to the app on the first authorization only (never in the id_token); used as the new account's name when the token has none. */
+            given_name?: string;
+            family_name?: string;
+            /** @description Authenticator or recovery code, required after `MFA_REQUIRED`. */
+            totp_code?: string;
+        };
         ForgotPasswordRequest: {
             /** Format: email */
             email: string;
@@ -8871,12 +9290,38 @@ export interface components {
             register_enabled: boolean;
             client_id: string;
             client_secret_configured: boolean;
+            /** @description Apple only. Apple Developer Team ID (10 characters). */
+            team_id?: string;
+            /** @description Apple only. Key ID of the uploaded Sign in with Apple key. */
+            key_id?: string;
+            /** @description Apple only. A .p8 signing key is stored (encrypted). The key itself is never returned. */
+            private_key_configured?: boolean;
+            /** @description Apple only. `SHA256:<base64>` hash of the stored key's public half; empty when no usable key is stored. */
+            private_key_fingerprint?: string;
+            /**
+             * @description Apple only. What the web sign-in uses: a client secret generated from the signing key (wins when set), the pasted client secret JWT, or nothing.
+             * @enum {string}
+             */
+            client_secret_source?: "signing_key" | "client_secret" | "none";
+            /** @description Apple and Google only. Audiences accepted for id_tokens from the mobile app (`POST /v1/auth/oauth/{provider}/native`): the iOS bundle id for Apple; the Google iOS and Android OAuth client ids (and the web client id when Android Credential Manager puts it in `aud`). Empty: native sign-in is off. */
+            native_client_ids?: string[];
         };
         PatchOAuthProviderSettingsRequest: {
             login_enabled?: boolean;
             register_enabled?: boolean;
             client_id?: string;
+            /** @description Write-only. Blank keeps the stored secret. For Apple, an optional fallback client secret JWT. */
             client_secret?: string;
+            /** @description Apple only. 10 letters or digits (normalised to upper case). */
+            team_id?: string;
+            /** @description Apple only. 10 letters or digits; the KEYID in AuthKey_<KEYID>.p8. */
+            key_id?: string;
+            /** @description Apple only. Contents of the .p8 file (PEM, PKCS#8, EC P-256). Stored encrypted with APP_ENCRYPTION_KEY, never returned or logged. Requires team_id and key_id. */
+            private_key?: string;
+            /** @description Apple only. Deletes the stored signing key. Cannot be combined with private_key. */
+            remove_private_key?: boolean;
+            /** @description Apple and Google only. Replaces the native audience list (trimmed, de-duplicated, no spaces or commas). `[]` clears it. Login may be enabled with native ids alone (the web client then stays off until it has its credentials). */
+            native_client_ids?: string[];
         };
         EnvelopeOAuthProviderSettings: {
             /** @enum {boolean} */
@@ -9026,6 +9471,12 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
             impersonated?: boolean;
+            /** @enum {string} */
+            client_type: "web" | "mobile";
+            /** @description Mobile app device name (display only) */
+            device_name?: string;
+            /** @description Latest mobile app version of the session */
+            app_version?: string;
         };
         SessionList: {
             items: components["schemas"]["AuthSession"][];
@@ -9060,6 +9511,145 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["ImpersonationResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAppConfig: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AppConfig"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description Public bootstrap config. Fields other than `mobile` are described in `handleAppConfig` (server.go). */
+        AppConfig: {
+            mode?: string;
+            name?: string;
+            registration_enabled?: boolean;
+            mobile: components["schemas"]["MobileAppConfig"];
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description Mobile app version gate and store links (TEC-1178). Empty strings mean "not set". */
+        MobileAppConfig: {
+            /**
+             * @description Older apps get `426 APP_UPDATE_REQUIRED` on every `/v1` request except this config. "" = no gate.
+             * @example 1.2.0
+             */
+            min_version: string;
+            /**
+             * @description Newest store version; the app may suggest (not force) an update below it.
+             * @example 1.4.1
+             */
+            latest_version: string;
+            store_urls: {
+                /** @description App Store page (https) or "" */
+                ios: string;
+                /** @description Google Play page (https) or "" */
+                android: string;
+            };
+        };
+        QRLoginCreated: {
+            /** @description 43-char base64url id (in the QR) */
+            session_id: string;
+            /**
+             * Format: uri
+             * @example https://comcode.example/login/qr/Zm9v...
+             */
+            qr_url: string;
+            /** @description Keep in the tab only */
+            browser_secret: string;
+            /** Format: date-time */
+            expires_at: string;
+            /**
+             * Format: int64
+             * @example 120
+             */
+            expires_in: number;
+            realtime: {
+                ws_url: string;
+                /** @description Anonymous Centrifugo connection JWT */
+                connection_token: string;
+                /** @description Subscription JWT for `channel` only */
+                subscription_token: string;
+                /** @example qrlogin:4Hq... */
+                channel: string;
+            };
+        };
+        EnvelopeQRLoginCreated: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["QRLoginCreated"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description Approximate location from the GeoIP engine */
+        QRLoginLocation: {
+            /** @example TR */
+            country_code?: string;
+            /** @example Turkey */
+            country?: string;
+            /** @example Istanbul */
+            city?: string;
+        };
+        QRLoginDetails: {
+            session_id: string;
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected";
+            client: {
+                /** @example Chrome */
+                browser: string;
+                /** @example 128 */
+                browser_version: string;
+                /** @example Windows */
+                os: string;
+                /** @enum {string} */
+                device_type: "desktop" | "mobile" | "tablet";
+                user_agent: string;
+            };
+            ip: string;
+            location: null | components["schemas"]["QRLoginLocation"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
+        EnvelopeQRLoginDetails: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["QRLoginDetails"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        QRLoginStateRequest: {
+            browser_secret: string;
+        };
+        QRLoginState: {
+            /** @enum {string} */
+            status: "pending" | "scanned" | "approved" | "rejected";
+            /** @description Present when approved */
+            exchange_token?: string;
+        };
+        EnvelopeQRLoginState: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["QRLoginState"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        QRLoginExchangeRequest: {
+            session_id: string;
+            browser_secret: string;
+            exchange_token: string;
+        };
+        QRLoginExchanged: components["schemas"]["Tokens"] & {
+            user: {
+                /** Format: uuid */
+                uuid: string;
+                /** Format: email */
+                email: string;
+                name: string;
+            };
+        };
+        EnvelopeQRLoginExchanged: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["QRLoginExchanged"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeStatus: {
@@ -9132,6 +9722,56 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["NotificationPreferences"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        PushDevice: {
+            /** Format: uuid */
+            uuid: string;
+            /** @description Expo push token (`ExponentPushToken[...]`) */
+            token: string;
+            /** @enum {string} */
+            platform: "ios" | "android";
+            /** @enum {string|null} */
+            locale: "tr" | "en" | null;
+            app_version: string | null;
+            device_name: string | null;
+            /** @description Registered from the caller's own session */
+            current: boolean;
+            /** Format: date-time */
+            last_seen_at: string;
+            /** Format: date-time */
+            disabled_at: string | null;
+            /** @enum {string|null} */
+            disabled_reason: "signed_out" | "session_revoked" | "all_sessions_revoked" | "device_not_registered" | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        PushDeviceRegisterRequest: {
+            /** @description `ExponentPushToken[...]` or `ExpoPushToken[...]` */
+            token: string;
+            /** @enum {string} */
+            platform: "ios" | "android";
+            /** @description Device language; `tr-TR` / `en_US` are reduced to tr / en, others are dropped */
+            locale?: string;
+            app_version?: string;
+            device_name?: string;
+        };
+        EnvelopePushDeviceRegistered: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                device: components["schemas"]["PushDevice"];
+                /** @description The user's push preference after the registration */
+                push_enabled: boolean;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePushDeviceList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PushDevice"][];
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeResourceMeta: {
@@ -12154,6 +12794,20 @@ export interface components {
         };
     };
     responses: {
+        /**
+         * @description The mobile app (`X-Client: comcode-mobile`) sent an `X-App-Version` below the configured
+         *     `mobile.min_version` (`GET /v1/app/config`). Code `APP_UPDATE_REQUIRED`; `error.details[0]`
+         *     is `{field: "min_version", message: "<min version>"}`. Applies to every `/v1` route except
+         *     `GET /v1/app/config`; web requests never carry `X-Client` and are not affected.
+         */
+        AppUpdateRequired: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description Validation or malformed request */
         BadRequest: {
             headers: {
@@ -12222,6 +12876,18 @@ export interface components {
             };
         };
         /**
+         * @description `REFRESH_RACE`: the refresh token was rotated less than 30 seconds ago by a concurrent
+         *     request. The session is still live; retry with the newest refresh token.
+         */
+        RefreshRace: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /**
          * @description `LAST_SIGN_IN_METHOD`: the change would leave the user without any way to sign in.
          *     Set a password (password reset) or add another sign-in method first.
          */
@@ -12270,6 +12936,8 @@ export interface components {
         };
     };
     parameters: {
+        /** @description QR sign-in session id (from the QR URL) */
+        QRSessionID: string;
         /** @description First UTC day (YYYY-MM-DD, inclusive). Default: 29 days before `to`. A range spans at most 366 days. */
         CompanyAnalyticsFrom: string;
         /** @description Last UTC day (YYYY-MM-DD, inclusive). Default: today. */
@@ -12281,6 +12949,15 @@ export interface components {
         Q: string;
         /** @description Comma-separated fields; prefix `-` for descending */
         Sort: string;
+        /**
+         * @description `mobile` (or `comcode-mobile`) for the mobile app; anything else is a web session. Fixes
+         *     the refresh lifetime of a new session (TEC-1179). The web BFF never forwards it.
+         */
+        XClient: "mobile" | "comcode-mobile";
+        /** @description Mobile app only. Device label shown in the sessions list (printable, max 100 characters). */
+        XDeviceName: string;
+        /** @description Mobile app only. App version shown in the sessions list (max 32 characters). */
+        XAppVersion: string;
     };
     requestBodies: never;
     headers: never;
@@ -12368,7 +13045,17 @@ export interface operations {
     postAuthLogin: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description `mobile` (or `comcode-mobile`) for the mobile app; anything else is a web session. Fixes
+                 *     the refresh lifetime of a new session (TEC-1179). The web BFF never forwards it.
+                 */
+                "X-Client"?: components["parameters"]["XClient"];
+                /** @description Mobile app only. Device label shown in the sessions list (printable, max 100 characters). */
+                "X-Device-Name"?: components["parameters"]["XDeviceName"];
+                /** @description Mobile app only. App version shown in the sessions list (max 32 characters). */
+                "X-App-Version"?: components["parameters"]["XAppVersion"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -12390,6 +13077,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            426: components["responses"]["AppUpdateRequired"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
         };
@@ -12397,7 +13085,17 @@ export interface operations {
     postAuthRefresh: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description `mobile` (or `comcode-mobile`) for the mobile app; anything else is a web session. Fixes
+                 *     the refresh lifetime of a new session (TEC-1179). The web BFF never forwards it.
+                 */
+                "X-Client"?: components["parameters"]["XClient"];
+                /** @description Mobile app only. Device label shown in the sessions list (printable, max 100 characters). */
+                "X-Device-Name"?: components["parameters"]["XDeviceName"];
+                /** @description Mobile app only. App version shown in the sessions list (max 32 characters). */
+                "X-App-Version"?: components["parameters"]["XAppVersion"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -12418,6 +13116,8 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
+            409: components["responses"]["RefreshRace"];
+            426: components["responses"]["AppUpdateRequired"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -12467,6 +13167,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            426: components["responses"]["AppUpdateRequired"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -13212,6 +13913,39 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    postAuthIdentityNative: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: "apple" | "google";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NativeOAuthTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Linked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeIdentityList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     deleteAuthIdentity: {
         parameters: {
             query?: never;
@@ -13788,6 +14522,295 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    postAuthEmailCodeRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStatus"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    postAuthEmailCodeVerify: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description `mobile` (or `comcode-mobile`) for the mobile app; anything else is a web session. Fixes
+                 *     the refresh lifetime of a new session (TEC-1179). The web BFF never forwards it.
+                 */
+                "X-Client"?: components["parameters"]["XClient"];
+                /** @description Mobile app only. Device label shown in the sessions list (printable, max 100 characters). */
+                "X-Device-Name"?: components["parameters"]["XDeviceName"];
+                /** @description Mobile app only. App version shown in the sessions list (max 32 characters). */
+                "X-App-Version"?: components["parameters"]["XAppVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailCodeVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Authenticated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTokens"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            426: components["responses"]["AppUpdateRequired"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postAuthQRSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description QR session created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQRLoginCreated"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+            /** @description Realtime disabled (`REALTIME_DISABLED`) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAuthQRSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description QR sign-in session id (from the QR URL) */
+                id: components["parameters"]["QRSessionID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Session details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQRLoginDetails"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postAuthQRSessionApprove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description QR sign-in session id (from the QR URL) */
+                id: components["parameters"]["QRSessionID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Approved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStatus"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postAuthQRSessionReject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description QR sign-in session id (from the QR URL) */
+                id: components["parameters"]["QRSessionID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStatus"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postAuthQRSessionState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description QR sign-in session id (from the QR URL) */
+                id: components["parameters"]["QRSessionID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QRLoginStateRequest"];
+            };
+        };
+        responses: {
+            /** @description Current state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQRLoginState"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postAuthQRExchange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QRLoginExchangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Authenticated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQRLoginExchanged"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postAuthOAuthNative: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description `mobile` (or `comcode-mobile`) for the mobile app; anything else is a web session. Fixes
+                 *     the refresh lifetime of a new session (TEC-1179). The web BFF never forwards it.
+                 */
+                "X-Client"?: components["parameters"]["XClient"];
+                /** @description Mobile app only. Device label shown in the sessions list (printable, max 100 characters). */
+                "X-Device-Name"?: components["parameters"]["XDeviceName"];
+                /** @description Mobile app only. App version shown in the sessions list (max 32 characters). */
+                "X-App-Version"?: components["parameters"]["XAppVersion"];
+            };
+            path: {
+                provider: "apple" | "google";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NativeOAuthSignInRequest"];
+            };
+        };
+        responses: {
+            /** @description Authenticated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTokens"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["AppUpdateRequired"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     postAuthPasswordForgot: {
         parameters: {
             query?: never;
@@ -14307,7 +15330,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EnvelopeStatus"];
+                    "application/json": components["schemas"]["EnvelopeAppConfig"];
                 };
             };
             500: components["responses"]["InternalError"];
@@ -20159,6 +21182,86 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
         };
     };
+    listNotificationPushDevices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Devices */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePushDeviceList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    registerNotificationPushDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushDeviceRegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description Registered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePushDeviceRegistered"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteNotificationPushDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStatus"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     getPlatformActivity: {
         parameters: {
             query?: never;
@@ -21257,6 +22360,15 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
+                    /** @example 1.2.0 */
+                    mobile_min_version?: string;
+                    /** @example 1.4.1 */
+                    mobile_latest_version?: string;
+                    /** @example https://apps.apple.com/app/id0000000000 */
+                    mobile_ios_store_url?: string;
+                    /** @example https://play.google.com/store/apps/details?id=software.technowide.comcode */
+                    mobile_android_store_url?: string;
+                } & {
                     [key: string]: unknown;
                 };
             };
@@ -21271,6 +22383,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeGeneric"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };

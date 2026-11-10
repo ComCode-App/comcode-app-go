@@ -67,8 +67,9 @@ type Repository interface {
 	ReplaceUserRoles(ctx context.Context, userID int64, roleIDs []int64) error
 	ResolveRoleIDsByUUIDs(ctx context.Context, roleUUIDs []uuid.UUID) ([]int64, error)
 	SaveRefresh(ctx context.Context, userID int64, hash string, expiresAt time.Time, meta model.SessionMeta) (model.RefreshSession, error)
-	RotateRefresh(ctx context.Context, oldHash, newHash string, expiresAt time.Time, meta model.SessionMeta) (model.RefreshSession, error)
-	RotateRefreshFamilyWithAccount(ctx context.Context, familyUUID uuid.UUID, userID int64, newHash string, expiresAt time.Time, accountID int64) (model.RefreshSession, error)
+	RotateRefresh(ctx context.Context, oldHash, newHash string, exp model.RefreshExpiry, meta model.SessionMeta) (model.RefreshSession, error)
+	RotateRefreshFamilyWithAccount(ctx context.Context, familyUUID uuid.UUID, userID int64, newHash string, exp model.RefreshExpiry, accountID int64) (model.RefreshSession, error)
+	FindRotatedRefresh(ctx context.Context, hash string, raceWindow time.Duration) (model.RotatedRefresh, error)
 	GetActiveSessionFamily(ctx context.Context, familyUUID uuid.UUID, userID int64) (model.RefreshSession, error)
 	RevokeRefresh(ctx context.Context, hash string) error
 	RevokeAllRefresh(ctx context.Context, userID int64) error
@@ -150,6 +151,13 @@ type AuthUseCase struct {
 	box          SecretBox
 	totpIssuer   string
 	invites      InviteChecker
+	// reviewAccounts maps email -> fixed App Store / Play review sign-in code (TEC-1182).
+	reviewAccounts map[string]string
+	// Native Apple / Google id_token sign-in (TEC-1180); nil = off.
+	idTokens       IDTokenVerifier
+	nativeSettings NativeProviderSettings
+	// Apple authorization code exchange (TEC-1181); nil = codes are ignored.
+	appleTokens *AppleTokens
 }
 
 // InviteChecker reports open company invites (accounts usecase.Invites, TEC-945).
@@ -299,49 +307,61 @@ func (u *AuthUseCase) RegisterOAuthUser(ctx context.Context, email, name, surnam
 		return model.AdapterUser{}, fmt.Errorf("%w: registration is disabled", ErrForbidden)
 	}
 
-	email = strings.ToLower(strings.TrimSpace(email))
 	name = strings.TrimSpace(name)
 	surname = strings.TrimSpace(surname)
-	if email == "" {
-		return model.AdapterUser{}, fmt.Errorf("%w: email is required", ErrInvalidRequest)
-	}
 	if name == "" {
 		name = "User"
 	}
 	if surname == "" {
 		surname = "Account"
 	}
-	if _, err := u.repo.FindUserByEmail(ctx, email); err == nil {
-		return model.AdapterUser{}, fmt.Errorf("%w: email already registered", ErrConflict)
-	} else if !errors.Is(err, repository.ErrNotFound) {
+	user, err := u.createPasswordlessUser(ctx, email, name, surname, emailVerified)
+	if err != nil {
 		return model.AdapterUser{}, err
+	}
+	return toAdapterUser(user), nil
+}
+
+// createPasswordlessUser is the self-registration path for sign-ups that never set a password
+// (OAuth, email code): a random unusable hash marked unset, the default role and the welcome
+// notification. The users insert trigger creates the personal account. The caller has already
+// checked that registration is open.
+func (u *AuthUseCase) createPasswordlessUser(ctx context.Context, email, name, surname string, emailVerified bool) (model.User, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+	if email == "" {
+		return model.User{}, fmt.Errorf("%w: email is required", ErrInvalidRequest)
+	}
+	if _, err := u.repo.FindUserByEmail(ctx, email); err == nil {
+		return model.User{}, fmt.Errorf("%w: email already registered", ErrConflict)
+	} else if !errors.Is(err, repository.ErrNotFound) {
+		return model.User{}, err
 	}
 
 	random := make([]byte, 32)
 	if _, err := rand.Read(random); err != nil {
-		return model.AdapterUser{}, err
+		return model.User{}, err
 	}
 	hash, err := password.Hash(base64.RawURLEncoding.EncodeToString(random))
 	if err != nil {
-		return model.AdapterUser{}, err
+		return model.User{}, err
 	}
 
 	user, err := u.repo.CreateUser(ctx, model.User{
 		Email: email, PasswordHash: hash, Name: name, Surname: surname, Status: "active",
 	}, emailVerified)
 	if err != nil {
-		return model.AdapterUser{}, err
+		return model.User{}, err
 	}
 	// The random hash above is not a password the user can sign in with.
 	if err := u.repo.MarkPasswordUnset(ctx, user.ID); err != nil {
-		return model.AdapterUser{}, err
+		return model.User{}, err
 	}
 	user.PasswordSet = false
 	if err := u.assignDefaultRole(ctx, user.ID); err != nil {
-		return model.AdapterUser{}, err
+		return model.User{}, err
 	}
 	u.notifyWelcome(ctx, user)
-	return toAdapterUser(user), nil
+	return user, nil
 }
 
 // Login authenticates and issues tokens for any active user.
@@ -418,18 +438,23 @@ func (u *AuthUseCase) Login(ctx context.Context, email, rawPassword, totpCode st
 	return u.issueTokensForUser(ctx, user, meta)
 }
 
-// Refresh rotates an opaque refresh token.
-// Refresh rotates the refresh token within its session family and keeps the session's active account.
+// Refresh rotates the refresh token within its session family and keeps the session's active
+// account. The new token's lifetime follows the family's client type (web: JWT_REFRESH_TTL,
+// mobile: JWT_REFRESH_TTL_MOBILE), so the lifetime slides on every refresh.
+//
+// A token that cannot be rotated is checked for reuse (TEC-1179): a token already rotated less
+// than refreshRaceWindow ago answers ErrRefreshRace (two concurrent refreshes, the family stays
+// live); an older rotated token is a replay, so the whole family is revoked and the owner gets
+// a security email.
 func (u *AuthUseCase) Refresh(ctx context.Context, rawToken string, meta model.SessionMeta) (model.Tokens, error) {
 	rawRefresh, err := newOpaqueToken()
 	if err != nil {
 		return model.Tokens{}, err
 	}
-	refreshExp := u.now().UTC().Add(u.tokens.RefreshTTL())
-	session, err := u.repo.RotateRefresh(ctx, tokenHash(rawToken), tokenHash(rawRefresh), refreshExp, meta)
+	session, err := u.repo.RotateRefresh(ctx, tokenHash(rawToken), tokenHash(rawRefresh), u.refreshExpiry(), meta)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
-			return model.Tokens{}, ErrInvalidCredentials
+			return model.Tokens{}, u.checkRefreshReuse(ctx, tokenHash(rawToken))
 		}
 		return model.Tokens{}, err
 	}
@@ -441,7 +466,7 @@ func (u *AuthUseCase) Refresh(ctx context.Context, rawToken string, meta model.S
 		_ = u.repo.RevokeRefresh(ctx, tokenHash(rawRefresh))
 		return model.Tokens{}, ErrUserDisabled
 	}
-	return u.issueAccessForSession(ctx, user, session, rawRefresh, refreshExp)
+	return u.issueAccessForSession(ctx, user, session, rawRefresh, session.ExpiresAt)
 }
 
 // Logout revokes a refresh token. An empty token is a no-op so the BFF can
@@ -580,16 +605,20 @@ func (u *AuthUseCase) issueTokensForUser(ctx context.Context, user model.User, m
 		return model.Tokens{}, fmt.Errorf("personal account: %w", err)
 	}
 	meta.ActiveAccountID = &personal.ID
+	if meta.ImpersonatorUserID != nil || meta.ClientType != model.ClientMobile {
+		// Impersonation only exists on the web console: never a long-lived mobile session.
+		meta.ClientType, meta.DeviceName, meta.AppVersion = model.ClientWeb, "", ""
+	}
 	rawRefresh, err := newOpaqueToken()
 	if err != nil {
 		return model.Tokens{}, err
 	}
-	refreshExp := u.now().UTC().Add(u.tokens.RefreshTTL())
+	refreshExp := u.now().UTC().Add(u.refreshTTL(meta.ClientType))
 	session, err := u.repo.SaveRefresh(ctx, user.ID, tokenHash(rawRefresh), refreshExp, meta)
 	if err != nil {
 		return model.Tokens{}, err
 	}
-	return u.issueAccessForSession(ctx, user, session, rawRefresh, refreshExp)
+	return u.issueAccessForSession(ctx, user, session, rawRefresh, session.ExpiresAt)
 }
 
 // issueAccessForSession signs an access token bound to a session family and its active account.

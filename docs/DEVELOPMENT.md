@@ -82,6 +82,10 @@ Set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` in `.env`. The 
 
 Closed-browser push does not work until these three are set.
 
+## Mobile push (Expo)
+
+The worker sends mobile pushes through the Expo Push Service (`app:push:send`, receipts every 15 minutes with `app:push:receipts`). Nothing needs configuring: `EXPO_ACCESS_TOKEN` is only needed when "enhanced push security" is on for the Expo project. Pushes use the fixed lock-screen texts of `backend/internal/modules/notifications/pushtext`; a notification code without an entry there is not pushed. Design: [docs/design/mobile.md](./design/mobile.md) §4.
+
 `TRUSTED_PROXIES` (CIDRs, default loopback + private ranges) lists the peers whose `X-Forwarded-For` the API honours; see `backend/docs/auth.md` → Rate limits.
 
 Optional frontend public vars (root `.env`): `NEXT_PUBLIC_BFF_BASE_URL`, `NEXT_PUBLIC_REALTIME_ENABLED`, `NEXT_PUBLIC_CENTRIFUGO_URL`, `NEXT_PUBLIC_DEFAULT_LOCALE`, `NEXT_PUBLIC_FALLBACK_LOCALE`.
@@ -161,7 +165,16 @@ The Dokploy compose app uses the git source `ComCode-App/comcode-app-go`, the co
 
 > **Warning: existing deployments without `APP_ENCRYPTION_KEY`.** If production ran without `APP_ENCRYPTION_KEY` (or with the example value), every value encrypted at rest was encrypted with the public key `app-dev-encryption-key-32bytes!!`: OAuth provider and GitHub App secrets, TOTP secrets, payment provider (iyzico / PayTR) keys, webhook and error-tracking secrets. Setting a new key alone makes those values unreadable. Before deploying this guard, either re-encrypt them with the new key or re-enter them through the admin UI after the deploy (TOTP users would have to enroll again), and treat the old values as exposed: rotate the provider-side credentials. There is no key-rotation tool in the repo yet. The same key also seeds the analytics visitor hash, so unique-visitor counts restart from the new key.
 
-Dokploy-attached services: **comcode-seaweedfs, centrifugo, backend, frontend**. Postgres, Redis, Meilisearch, and the worker stay on the private app network.
+Dokploy-attached services: **comcode-seaweedfs, centrifugo, frontend**. The backend, Postgres, Redis, Meilisearch and the worker stay on the private app network (`${NAME_PREFIX}-app`). The browser reaches the API only through the frontend BFF (`/api` → `API_URL`, default `http://${NAME_PREFIX}-backend:8080/v1`), and payment providers call `APP_URL/api/v1/public/payment/<provider>/callback`, which the BFF forwards. The backend healthcheck is `/healthz` (liveness only); `/readyz` still reports Postgres/Redis state on demand.
+
+### Moving the backend off `dokploy-network` (TEC-1115)
+
+Older deployments attached the backend to `dokploy-network` and could have a Dokploy domain on it. This release removes that. The owner checks two things **before** deploying it (both in [OWNER_CHECKLIST.md](./OWNER_CHECKLIST.md)):
+
+1. Dokploy environment: `API_URL` is empty or exactly `http://comcode-backend:8080/v1`. A public backend URL stops working once the backend leaves `dokploy-network` (Traefik can no longer reach it), and every BFF call fails.
+2. PayTR merchant panel: the notification (callback) URL is `https://<frontend-domain>/api/v1/public/payment/paytr/callback`, not a backend domain.
+
+After the deploy, remove the backend domain from Dokploy → Domains (it no longer routes). Rollback: set `IMAGE_TAG` to the previous `v0.N` and redeploy the previous `v0.N` git tag, so both the image and `compose.prod.yml` come from that release (the old compose file puts the backend back on `dokploy-network`); re-add the backend domain only if something still needs it.
 
 ### Dokploy domains
 
@@ -331,6 +344,8 @@ unset SA_PASSWORD
 ```
 
 In Dokploy, open a terminal on the backend container and run `/app/create-super-admin -email you@example.com -password '…'`.
+
+Other one-off commands in the backend image are run the same way: `/app/search-reindex`, `/app/migrate-legacy` and `/app/profile-media-backfill` (media of profiles deleted before TEC-1176; dry run by default, `-apply` to clean up; see [PROFILES.md](./PROFILES.md#backfill-for-profiles-deleted-before-tec-1176-tec-1177)).
 
 ## After a backend contract change
 

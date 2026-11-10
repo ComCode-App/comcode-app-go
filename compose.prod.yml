@@ -23,7 +23,7 @@ x-backend-environment: &backend-environment
   HTTP_READ_TIMEOUT: ${HTTP_READ_TIMEOUT:-}
   HTTP_WRITE_TIMEOUT: ${HTTP_WRITE_TIMEOUT:-}
   HTTP_IDLE_TIMEOUT: ${HTTP_IDLE_TIMEOUT:-}
-  # X-Forwarded-For is honoured only from these peers (BFF, Traefik on the Docker network).
+  # X-Forwarded-For is honoured only from these peers (the frontend BFF on the app network).
   TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7}
   DB_HOST: ${NAME_PREFIX:-app}-postgres
   DB_PORT: "5432"
@@ -53,12 +53,15 @@ x-backend-environment: &backend-environment
   JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
   JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-}
   JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-}
+  JWT_REFRESH_TTL_MOBILE: ${JWT_REFRESH_TTL_MOBILE:-}
   AUTH_ADAPTER_SECRET: ${AUTH_ADAPTER_SECRET:?AUTH_ADAPTER_SECRET is required}
   APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?APP_ENCRYPTION_KEY is required}
   CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
   # Public site URL (card / share links, emails) and passkey RP id (the bare domain).
   PUBLIC_FRONTEND_URL: ${PUBLIC_FRONTEND_URL:?PUBLIC_FRONTEND_URL is required}
   AUTH_WEBAUTHN_RP_ID: ${AUTH_WEBAUTHN_RP_ID:?AUTH_WEBAUTHN_RP_ID is required}
+  # App Store / Play review sign-in (email:code,...); blank = off.
+  AUTH_REVIEW_ACCOUNTS: ${AUTH_REVIEW_ACCOUNTS:-}
   MAIL_FROM: ${MAIL_FROM:-noreply@localhost}
   MAIL_FROM_NAME: ${MAIL_FROM_NAME:-App}
   BILLING_RENEWAL_ENABLED: ${BILLING_RENEWAL_ENABLED:-false}
@@ -78,6 +81,8 @@ x-backend-environment: &backend-environment
   VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
   VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
   VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:noreply@example.com}
+  # Mobile push: optional Expo access token (enhanced push security); blank = none.
+  EXPO_ACCESS_TOKEN: ${EXPO_ACCESS_TOKEN:-}
   SEARCH_ENABLED: ${SEARCH_ENABLED:-true}
   SEARCH_DRIVER: ${SEARCH_DRIVER:-meilisearch}
   MEILI_HOST: http://${NAME_PREFIX:-app}-meilisearch:7700
@@ -275,7 +280,9 @@ services:
     expose:
       - "8080"
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/readyz"]
+      # Liveness only: /healthz does not touch Postgres/Redis, so a dependency blip does not
+      # flip the container to unhealthy. /readyz still reports dependency state on demand.
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/healthz"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -284,9 +291,11 @@ services:
     # over Docker's 10s default so a deploy never SIGKILLs a request mid-flight.
     stop_grace_period: 30s
     restart: unless-stopped
+    # Private: only the app network. The browser reaches the API through the frontend BFF
+    # (/api → API_URL), payment callbacks through APP_URL/api/v1/public/payment/…; no
+    # Dokploy domain may point at this service.
     networks:
       - app
-      - dokploy-network
 
   worker:
     <<: *backend-image
@@ -327,6 +336,11 @@ services:
       NEXT_PUBLIC_CENTRIFUGO_URL: ${NEXT_PUBLIC_CENTRIFUGO_URL:-}
       NEXT_PUBLIC_DEFAULT_LOCALE: ${NEXT_PUBLIC_DEFAULT_LOCALE:-tr}
       NEXT_PUBLIC_FALLBACK_LOCALE: ${NEXT_PUBLIC_FALLBACK_LOCALE:-en}
+      # Runtime (not baked): domain association files for the mobile app (TEC-1183).
+      MOBILE_APPLE_TEAM_ID: ${MOBILE_APPLE_TEAM_ID:-}
+      MOBILE_IOS_BUNDLE_ID: ${MOBILE_IOS_BUNDLE_ID:-}
+      MOBILE_ANDROID_PACKAGE: ${MOBILE_ANDROID_PACKAGE:-}
+      MOBILE_ANDROID_SHA256_CERTS: ${MOBILE_ANDROID_SHA256_CERTS:-}
     depends_on:
       backend:
         condition: service_healthy

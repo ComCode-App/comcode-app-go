@@ -15,7 +15,7 @@ var reserved = map[string]struct{}{
 	"api": {}, "v1": {}, "v2": {}, "internal": {}, "system": {}, "admin": {},
 	"health": {}, "ready": {}, "healthz": {}, "readyz": {}, "assets": {}, "static": {}, "images": {},
 	"_next": {}, "favicon.ico": {}, "robots.txt": {}, "sitemap.xml": {}, "manifest.json": {},
-	"apple-icon": {}, "icon": {}, "icon.svg": {},
+	"apple-icon": {}, "icon": {}, "icon.svg": {}, ".well-known": {},
 	// Route prefixes
 	"c": {}, "s": {}, "u": {}, "r": {}, "p": {}, "share": {}, "vcard": {}, "download": {},
 	// App pages

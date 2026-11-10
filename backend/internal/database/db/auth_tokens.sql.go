@@ -14,9 +14,10 @@ import (
 )
 
 const createRefreshToken = `-- name: CreateRefreshToken :one
-INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address, impersonator_user_id, active_account_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, active_account_id, family_uuid
+INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address, impersonator_user_id, active_account_id,
+                            client_type, device_name, app_version)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, active_account_id, family_uuid, client_type, device_name, app_version, rotated_at
 `
 
 type CreateRefreshTokenParams struct {
@@ -27,6 +28,9 @@ type CreateRefreshTokenParams struct {
 	IpAddress          *netip.Addr        `json:"ip_address"`
 	ImpersonatorUserID pgtype.Int8        `json:"impersonator_user_id"`
 	ActiveAccountID    pgtype.Int8        `json:"active_account_id"`
+	ClientType         string             `json:"client_type"`
+	DeviceName         pgtype.Text        `json:"device_name"`
+	AppVersion         pgtype.Text        `json:"app_version"`
 }
 
 func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error) {
@@ -38,6 +42,9 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 		arg.IpAddress,
 		arg.ImpersonatorUserID,
 		arg.ActiveAccountID,
+		arg.ClientType,
+		arg.DeviceName,
+		arg.AppVersion,
 	)
 	var i RefreshToken
 	err := row.Scan(
@@ -53,12 +60,16 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 		&i.CreatedAt,
 		&i.ActiveAccountID,
 		&i.FamilyUuid,
+		&i.ClientType,
+		&i.DeviceName,
+		&i.AppVersion,
+		&i.RotatedAt,
 	)
 	return i, err
 }
 
 const getActiveRefreshFamily = `-- name: GetActiveRefreshFamily :one
-SELECT id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, active_account_id, family_uuid
+SELECT id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, active_account_id, family_uuid, client_type, device_name, app_version, rotated_at
 FROM refresh_tokens
 WHERE family_uuid = $1
   AND user_id = $2
@@ -89,12 +100,55 @@ func (q *Queries) GetActiveRefreshFamily(ctx context.Context, arg GetActiveRefre
 		&i.CreatedAt,
 		&i.ActiveAccountID,
 		&i.FamilyUuid,
+		&i.ClientType,
+		&i.DeviceName,
+		&i.AppVersion,
+		&i.RotatedAt,
+	)
+	return i, err
+}
+
+const getRotatedRefreshToken = `-- name: GetRotatedRefreshToken :one
+SELECT user_id, family_uuid, client_type, device_name, user_agent,
+       COALESCE(rotated_at > NOW() - make_interval(secs => $1::float8), FALSE)::boolean AS within_race
+FROM refresh_tokens
+WHERE token_hash = $2
+  AND rotated_at IS NOT NULL
+`
+
+type GetRotatedRefreshTokenParams struct {
+	RaceSeconds float64 `json:"race_seconds"`
+	TokenHash   string  `json:"token_hash"`
+}
+
+type GetRotatedRefreshTokenRow struct {
+	UserID     int64       `json:"user_id"`
+	FamilyUuid uuid.UUID   `json:"family_uuid"`
+	ClientType string      `json:"client_type"`
+	DeviceName pgtype.Text `json:"device_name"`
+	UserAgent  pgtype.Text `json:"user_agent"`
+	WithinRace bool        `json:"within_race"`
+}
+
+// GetRotatedRefreshToken finds a refresh token that was already rotated (reuse detection,
+// TEC-1179). within_race is true while the rotation is younger than race_seconds (two
+// requests refreshing the same token concurrently).
+func (q *Queries) GetRotatedRefreshToken(ctx context.Context, arg GetRotatedRefreshTokenParams) (GetRotatedRefreshTokenRow, error) {
+	row := q.db.QueryRow(ctx, getRotatedRefreshToken, arg.RaceSeconds, arg.TokenHash)
+	var i GetRotatedRefreshTokenRow
+	err := row.Scan(
+		&i.UserID,
+		&i.FamilyUuid,
+		&i.ClientType,
+		&i.DeviceName,
+		&i.UserAgent,
+		&i.WithinRace,
 	)
 	return i, err
 }
 
 const getValidRefreshTokenByHash = `-- name: GetValidRefreshTokenByHash :one
-SELECT id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, active_account_id, family_uuid
+SELECT id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, active_account_id, family_uuid, client_type, device_name, app_version, rotated_at
 FROM refresh_tokens
 WHERE token_hash = $1
   AND revoked_at IS NULL
@@ -117,12 +171,16 @@ func (q *Queries) GetValidRefreshTokenByHash(ctx context.Context, tokenHash stri
 		&i.CreatedAt,
 		&i.ActiveAccountID,
 		&i.FamilyUuid,
+		&i.ClientType,
+		&i.DeviceName,
+		&i.AppVersion,
+		&i.RotatedAt,
 	)
 	return i, err
 }
 
 const listActiveRefreshTokensByUserID = `-- name: ListActiveRefreshTokensByUserID :many
-SELECT DISTINCT ON (family_uuid) id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, active_account_id, family_uuid
+SELECT DISTINCT ON (family_uuid) id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, active_account_id, family_uuid, client_type, device_name, app_version, rotated_at
 FROM refresh_tokens
 WHERE user_id = $1
   AND revoked_at IS NULL
@@ -152,6 +210,10 @@ func (q *Queries) ListActiveRefreshTokensByUserID(ctx context.Context, userID in
 			&i.CreatedAt,
 			&i.ActiveAccountID,
 			&i.FamilyUuid,
+			&i.ClientType,
+			&i.DeviceName,
+			&i.AppVersion,
+			&i.RotatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -164,23 +226,38 @@ func (q *Queries) ListActiveRefreshTokensByUserID(ctx context.Context, userID in
 }
 
 const revokeAllRefreshTokensForUser = `-- name: RevokeAllRefreshTokensForUser :exec
+WITH devices AS (
+    UPDATE push_devices
+    SET disabled_at = NOW(), disabled_reason = 'all_sessions_revoked'
+    WHERE push_devices.user_id = $1
+      AND push_devices.disabled_at IS NULL
+)
 UPDATE refresh_tokens
 SET revoked_at = NOW()
-WHERE user_id = $1
-  AND revoked_at IS NULL
+WHERE refresh_tokens.user_id = $1
+  AND refresh_tokens.revoked_at IS NULL
 `
 
+// RevokeAllRefreshTokensForUser ends every session of the user (password change / reset) and
+// disables all of the user's push devices (TEC-1186).
 func (q *Queries) RevokeAllRefreshTokensForUser(ctx context.Context, userID int64) error {
 	_, err := q.db.Exec(ctx, revokeAllRefreshTokensForUser, userID)
 	return err
 }
 
 const revokeOtherRefreshFamiliesForUser = `-- name: RevokeOtherRefreshFamiliesForUser :exec
+WITH devices AS (
+    UPDATE push_devices
+    SET disabled_at = NOW(), disabled_reason = 'session_revoked'
+    WHERE push_devices.user_id = $1
+      AND push_devices.session_family_uuid IS DISTINCT FROM $2::uuid
+      AND push_devices.disabled_at IS NULL
+)
 UPDATE refresh_tokens
 SET revoked_at = NOW()
-WHERE user_id = $1
-  AND family_uuid <> $2
-  AND revoked_at IS NULL
+WHERE refresh_tokens.user_id = $1
+  AND refresh_tokens.family_uuid <> $2
+  AND refresh_tokens.revoked_at IS NULL
 `
 
 type RevokeOtherRefreshFamiliesForUserParams struct {
@@ -188,30 +265,50 @@ type RevokeOtherRefreshFamiliesForUserParams struct {
 	FamilyUuid uuid.UUID `json:"family_uuid"`
 }
 
+// RevokeOtherRefreshFamiliesForUser keeps one session and revokes the rest, disabling every
+// push device that is not tied to the kept session (TEC-1186).
 func (q *Queries) RevokeOtherRefreshFamiliesForUser(ctx context.Context, arg RevokeOtherRefreshFamiliesForUserParams) error {
 	_, err := q.db.Exec(ctx, revokeOtherRefreshFamiliesForUser, arg.UserID, arg.FamilyUuid)
 	return err
 }
 
 const revokeRefreshFamilyByHash = `-- name: RevokeRefreshFamilyByHash :exec
+WITH family AS (
+    SELECT r.family_uuid, r.user_id FROM refresh_tokens r WHERE r.token_hash = $1
+), devices AS (
+    UPDATE push_devices d
+    SET disabled_at = NOW(), disabled_reason = 'signed_out'
+    FROM family
+    WHERE d.session_family_uuid = family.family_uuid
+      AND d.user_id = family.user_id
+      AND d.disabled_at IS NULL
+)
 UPDATE refresh_tokens
 SET revoked_at = NOW()
-WHERE family_uuid = (SELECT r.family_uuid FROM refresh_tokens r WHERE r.token_hash = $1)
+WHERE family_uuid = (SELECT family.family_uuid FROM family)
   AND revoked_at IS NULL
 `
 
-// RevokeRefreshFamilyByHash revokes every live token in the family of the given token (logout).
+// RevokeRefreshFamilyByHash revokes every live token in the family of the given token (logout)
+// and disables the family's push devices (TEC-1186).
 func (q *Queries) RevokeRefreshFamilyByHash(ctx context.Context, tokenHash string) error {
 	_, err := q.db.Exec(ctx, revokeRefreshFamilyByHash, tokenHash)
 	return err
 }
 
 const revokeRefreshFamilyForUser = `-- name: RevokeRefreshFamilyForUser :execrows
+WITH devices AS (
+    UPDATE push_devices
+    SET disabled_at = NOW(), disabled_reason = 'session_revoked'
+    WHERE push_devices.session_family_uuid = $1::uuid
+      AND push_devices.user_id = $2
+      AND push_devices.disabled_at IS NULL
+)
 UPDATE refresh_tokens
 SET revoked_at = NOW()
-WHERE family_uuid = $1
-  AND user_id = $2
-  AND revoked_at IS NULL
+WHERE refresh_tokens.family_uuid = $1
+  AND refresh_tokens.user_id = $2
+  AND refresh_tokens.revoked_at IS NULL
 `
 
 type RevokeRefreshFamilyForUserParams struct {
@@ -219,6 +316,8 @@ type RevokeRefreshFamilyForUserParams struct {
 	UserID     int64     `json:"user_id"`
 }
 
+// RevokeRefreshFamilyForUser revokes one device session (sessions list, refresh reuse, end of
+// impersonation) and disables its push devices (TEC-1186). The row count is the refresh tokens'.
 func (q *Queries) RevokeRefreshFamilyForUser(ctx context.Context, arg RevokeRefreshFamilyForUserParams) (int64, error) {
 	result, err := q.db.Exec(ctx, revokeRefreshFamilyForUser, arg.FamilyUuid, arg.UserID)
 	if err != nil {
@@ -230,24 +329,29 @@ func (q *Queries) RevokeRefreshFamilyForUser(ctx context.Context, arg RevokeRefr
 const rotateRefreshFamilyWithAccount = `-- name: RotateRefreshFamilyWithAccount :one
 WITH old AS (
     UPDATE refresh_tokens
-    SET revoked_at = NOW()
-    WHERE refresh_tokens.family_uuid = $4
-      AND refresh_tokens.user_id = $5
+    SET revoked_at = NOW(), rotated_at = NOW()
+    WHERE refresh_tokens.family_uuid = $5
+      AND refresh_tokens.user_id = $6
       AND refresh_tokens.revoked_at IS NULL
       AND refresh_tokens.expires_at > NOW()
     RETURNING refresh_tokens.user_id, refresh_tokens.user_agent, refresh_tokens.ip_address,
-              refresh_tokens.impersonator_user_id, refresh_tokens.family_uuid
+              refresh_tokens.impersonator_user_id, refresh_tokens.family_uuid,
+              refresh_tokens.client_type, refresh_tokens.device_name, refresh_tokens.app_version
 )
-INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address, impersonator_user_id, family_uuid, active_account_id)
-SELECT old.user_id, $1, $2,
-       old.user_agent, old.ip_address, old.impersonator_user_id, old.family_uuid, $3
+INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address, impersonator_user_id, family_uuid, active_account_id,
+                            client_type, device_name, app_version)
+SELECT old.user_id, $1,
+       CASE WHEN old.client_type = 'mobile' THEN $2::timestamptz ELSE $3::timestamptz END,
+       old.user_agent, old.ip_address, old.impersonator_user_id, old.family_uuid, $4,
+       old.client_type, old.device_name, old.app_version
 FROM old
-RETURNING id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, active_account_id, family_uuid
+RETURNING id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, active_account_id, family_uuid, client_type, device_name, app_version, rotated_at
 `
 
 type RotateRefreshFamilyWithAccountParams struct {
 	NewTokenHash    string             `json:"new_token_hash"`
-	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
+	MobileExpiresAt pgtype.Timestamptz `json:"mobile_expires_at"`
+	WebExpiresAt    pgtype.Timestamptz `json:"web_expires_at"`
 	ActiveAccountID pgtype.Int8        `json:"active_account_id"`
 	FamilyUuid      uuid.UUID          `json:"family_uuid"`
 	UserID          int64              `json:"user_id"`
@@ -257,7 +361,8 @@ type RotateRefreshFamilyWithAccountParams struct {
 func (q *Queries) RotateRefreshFamilyWithAccount(ctx context.Context, arg RotateRefreshFamilyWithAccountParams) (RefreshToken, error) {
 	row := q.db.QueryRow(ctx, rotateRefreshFamilyWithAccount,
 		arg.NewTokenHash,
-		arg.ExpiresAt,
+		arg.MobileExpiresAt,
+		arg.WebExpiresAt,
 		arg.ActiveAccountID,
 		arg.FamilyUuid,
 		arg.UserID,
@@ -276,6 +381,10 @@ func (q *Queries) RotateRefreshFamilyWithAccount(ctx context.Context, arg Rotate
 		&i.CreatedAt,
 		&i.ActiveAccountID,
 		&i.FamilyUuid,
+		&i.ClientType,
+		&i.DeviceName,
+		&i.AppVersion,
+		&i.RotatedAt,
 	)
 	return i, err
 }
@@ -283,36 +392,47 @@ func (q *Queries) RotateRefreshFamilyWithAccount(ctx context.Context, arg Rotate
 const rotateRefreshTokenByHash = `-- name: RotateRefreshTokenByHash :one
 WITH old AS (
     UPDATE refresh_tokens
-    SET revoked_at = NOW()
-    WHERE refresh_tokens.token_hash = $5
+    SET revoked_at = NOW(), rotated_at = NOW()
+    WHERE refresh_tokens.token_hash = $7
       AND refresh_tokens.revoked_at IS NULL
       AND refresh_tokens.expires_at > NOW()
     RETURNING refresh_tokens.user_id, refresh_tokens.impersonator_user_id,
-              refresh_tokens.family_uuid, refresh_tokens.active_account_id
+              refresh_tokens.family_uuid, refresh_tokens.active_account_id,
+              refresh_tokens.client_type, refresh_tokens.device_name, refresh_tokens.app_version
 )
-INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address, impersonator_user_id, family_uuid, active_account_id)
-SELECT old.user_id, $1, $2, $3, $4,
-       old.impersonator_user_id, old.family_uuid, old.active_account_id
+INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address, impersonator_user_id, family_uuid, active_account_id,
+                            client_type, device_name, app_version)
+SELECT old.user_id, $1,
+       CASE WHEN old.client_type = 'mobile' THEN $2::timestamptz ELSE $3::timestamptz END,
+       $4, $5,
+       old.impersonator_user_id, old.family_uuid, old.active_account_id,
+       old.client_type, old.device_name, COALESCE($6::text, old.app_version)
 FROM old
-RETURNING id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, active_account_id, family_uuid
+RETURNING id, uuid, user_id, token_hash, expires_at, revoked_at, user_agent, ip_address, impersonator_user_id, created_at, active_account_id, family_uuid, client_type, device_name, app_version, rotated_at
 `
 
 type RotateRefreshTokenByHashParams struct {
-	NewTokenHash string             `json:"new_token_hash"`
-	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
-	UserAgent    pgtype.Text        `json:"user_agent"`
-	IpAddress    *netip.Addr        `json:"ip_address"`
-	OldTokenHash string             `json:"old_token_hash"`
+	NewTokenHash    string             `json:"new_token_hash"`
+	MobileExpiresAt pgtype.Timestamptz `json:"mobile_expires_at"`
+	WebExpiresAt    pgtype.Timestamptz `json:"web_expires_at"`
+	UserAgent       pgtype.Text        `json:"user_agent"`
+	IpAddress       *netip.Addr        `json:"ip_address"`
+	AppVersion      pgtype.Text        `json:"app_version"`
+	OldTokenHash    string             `json:"old_token_hash"`
 }
 
 // RotateRefreshTokenByHash atomically revokes a valid refresh token and issues its
-// successor in the same family (no window without an active row).
+// successor in the same family (no window without an active row). The old row is marked
+// rotated (reuse detection, TEC-1179). The family keeps its client_type and device_name;
+// expires_at follows the family's client type, app_version follows the latest request.
 func (q *Queries) RotateRefreshTokenByHash(ctx context.Context, arg RotateRefreshTokenByHashParams) (RefreshToken, error) {
 	row := q.db.QueryRow(ctx, rotateRefreshTokenByHash,
 		arg.NewTokenHash,
-		arg.ExpiresAt,
+		arg.MobileExpiresAt,
+		arg.WebExpiresAt,
 		arg.UserAgent,
 		arg.IpAddress,
+		arg.AppVersion,
 		arg.OldTokenHash,
 	)
 	var i RefreshToken
@@ -329,6 +449,10 @@ func (q *Queries) RotateRefreshTokenByHash(ctx context.Context, arg RotateRefres
 		&i.CreatedAt,
 		&i.ActiveAccountID,
 		&i.FamilyUuid,
+		&i.ClientType,
+		&i.DeviceName,
+		&i.AppVersion,
+		&i.RotatedAt,
 	)
 	return i, err
 }

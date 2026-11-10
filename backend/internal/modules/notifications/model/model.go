@@ -56,6 +56,22 @@ type NotificationUser struct {
 	Email   string    `json:"email"`
 }
 
+// PushDevice is a registered mobile device (Expo push token, TEC-1186). Current marks the
+// device registered from the caller's own session.
+type PushDevice struct {
+	UUID           uuid.UUID  `json:"uuid"`
+	Token          string     `json:"token"`
+	Platform       string     `json:"platform"`
+	Locale         *string    `json:"locale"`
+	AppVersion     *string    `json:"app_version"`
+	DeviceName     *string    `json:"device_name"`
+	Current        bool       `json:"current"`
+	LastSeenAt     time.Time  `json:"last_seen_at"`
+	DisabledAt     *time.Time `json:"disabled_at"`
+	DisabledReason *string    `json:"disabled_reason"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
 // Preferences is the user notification preference set.
 type Preferences struct {
 	EmailEnabled    bool `json:"email_enabled"`
@@ -66,7 +82,10 @@ type Preferences struct {
 
 // EnqueueInput creates one or more queued notifications.
 type EnqueueInput struct {
-	TenantID     *int64
+	TenantID *int64
+	// AccountID is the account the notification is about. Its public uuid is stored in the
+	// payload as account_uuid (mobile push data, TEC-1187).
+	AccountID    *int64
 	WorkspaceID  *int64
 	UserID       *int64
 	UserUUID     *uuid.UUID

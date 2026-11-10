@@ -92,7 +92,7 @@ type Querier interface {
 	// account-lint: cross-account payment provider callback: session found by merchant oid / provider token
 	CompletePaymentCardSession(ctx context.Context, argUuid uuid.UUID) (PaymentCardSession, error)
 	ConfirmUserTOTP(ctx context.Context, arg ConfirmUserTOTPParams) (UserTotp, error)
-	ConsumeOTP(ctx context.Context, id int64) error
+	ConsumeOTP(ctx context.Context, id int64) (int64, error)
 	CountAccountActiveCardsUsage(ctx context.Context, accountID int64) (int64, error)
 	CountAccountBackgrounds(ctx context.Context, accountID int64) (int64, error)
 	CountAccountCards(ctx context.Context, arg CountAccountCardsParams) (int64, error)
@@ -147,6 +147,10 @@ type Querier interface {
 	CountSectors(ctx context.Context, q_ string) (int64, error)
 	CountSocialPlatforms(ctx context.Context, arg CountSocialPlatformsParams) (int64, error)
 	CountStorageActivity(ctx context.Context, objectKey string) (int64, error)
+	// account-lint: cross-account media cleanup worker (TEC-1176): a storage object may be referenced from any account, so the reference check counts rows everywhere and returns only the count
+	// Live rows that still point at an object key: profile avatar/cover URLs (bare key, stream path or
+	// public URL ending in "/{key}"), company media library files and Background Studio thumbnails.
+	CountStorageKeyReferences(ctx context.Context, objectKey string) (int64, error)
 	CountStorageTrash(ctx context.Context) (int64, error)
 	CountStructureAssignments(ctx context.Context, arg CountStructureAssignmentsParams) (int64, error)
 	CountStructureGroups(ctx context.Context, arg CountStructureGroupsParams) (int64, error)
@@ -223,9 +227,13 @@ type Querier interface {
 	DeleteCard(ctx context.Context, arg DeleteCardParams) error
 	DeleteCompanyMedia(ctx context.Context, arg DeleteCompanyMediaParams) (int64, error)
 	DeleteCompanyMemberProfile(ctx context.Context, arg DeleteCompanyMemberProfileParams) (int64, error)
+	// Maintenance: devices disabled for more than 30 days (signed out, revoked, not registered).
+	DeleteDisabledPushDevices(ctx context.Context) (int64, error)
 	DeleteEventDefinition(ctx context.Context, id int64) error
 	// The visitor copy email holds the visitor's details too; it goes with the exchange.
 	DeleteExchangeCopyNotifications(ctx context.Context, sourceEvent pgtype.Text) (int64, error)
+	// Maintenance: Expo keeps receipts about 24 hours; an unprocessed ticket after that is useless.
+	DeleteExpiredPushTickets(ctx context.Context) (int64, error)
 	DeleteLogPurgeRule(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteOAuthAccountByProviderAccount(ctx context.Context, arg DeleteOAuthAccountByProviderAccountParams) error
 	DeleteOAuthAccountByUserProvider(ctx context.Context, arg DeleteOAuthAccountByUserProviderParams) error
@@ -244,11 +252,15 @@ type Querier interface {
 	DeleteProfileContactDetails(ctx context.Context, profileID int64) error
 	DeleteProfileSocialLinks(ctx context.Context, profileID int64) error
 	DeleteProfileTranslations(ctx context.Context, profileID int64) error
+	DeletePushDeviceForUser(ctx context.Context, arg DeletePushDeviceForUserParams) (int64, error)
 	DeletePushSubscription(ctx context.Context, arg DeletePushSubscriptionParams) error
+	DeletePushTickets(ctx context.Context, ids []int64) error
 	DeleteRole(ctx context.Context, argUuid uuid.UUID) error
 	DeleteRoute(ctx context.Context, arg DeleteRouteParams) error
 	DeleteSectorAdmin(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteSocialPlatform(ctx context.Context, argUuid uuid.UUID) error
+	// Maintenance: the app re-registers on every start, so a device not seen for 270 days is gone.
+	DeleteStalePushDevices(ctx context.Context) (int64, error)
 	DeleteStorageShare(ctx context.Context, argUuid uuid.UUID) error
 	DeleteStorageStar(ctx context.Context, arg DeleteStorageStarParams) error
 	DeleteStorageTrashByUUID(ctx context.Context, argUuid uuid.UUID) error
@@ -263,8 +275,13 @@ type Querier interface {
 	DeleteWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) error
 	DeleteWebAuthnCredentialByUUID(ctx context.Context, arg DeleteWebAuthnCredentialByUUIDParams) error
 	DeleteWebhookEndpoint(ctx context.Context, arg DeleteWebhookEndpointParams) (int64, error)
+	// Expo answered DeviceNotRegistered (ticket or receipt): the app was uninstalled or the token
+	// is dead. Registering again from a live session re-enables the row.
+	DisablePushDeviceNotRegistered(ctx context.Context, id int64) (int64, error)
 	DistinctVisitorsPerDay(ctx context.Context, arg DistinctVisitorsPerDayParams) ([]DistinctVisitorsPerDayRow, error)
 	DistinctVisitorsPerHour(ctx context.Context, arg DistinctVisitorsPerHourParams) ([]DistinctVisitorsPerHourRow, error)
+	// First device registration opts the user into push (the OS permission prompt is the consent).
+	EnablePushPreference(ctx context.Context, userID int64) error
 	ExtensionExists(ctx context.Context, extname string) (bool, error)
 	// account-lint: cross-account payment provider callback / init failure: session id from that flow
 	FailCheckoutSession(ctx context.Context, arg FailCheckoutSessionParams) (PaymentCheckoutSession, error)
@@ -386,6 +403,9 @@ type Querier interface {
 	GetNotificationPreferences(ctx context.Context, userID int64) (NotificationPreference, error)
 	GetOAuthAccountByProviderAccount(ctx context.Context, arg GetOAuthAccountByProviderAccountParams) (GetOAuthAccountByProviderAccountRow, error)
 	GetOAuthAccountByUserProvider(ctx context.Context, arg GetOAuthAccountByUserProviderParams) (GetOAuthAccountByUserProviderRow, error)
+	// Apple token revocation (TEC-1181): the stored, encrypted refresh token and
+	// the client it was issued to. Never served to a client.
+	GetOAuthAccountTokenByUserProvider(ctx context.Context, arg GetOAuthAccountTokenByUserProviderParams) (GetOAuthAccountTokenByUserProviderRow, error)
 	GetOAuthProviderSettings(ctx context.Context, provider string) (OauthProviderSetting, error)
 	// account-lint: cross-account platform order lookup by number (platform.orders.read)
 	GetOrderByOrderNumber(ctx context.Context, orderNumber string) (GetOrderByOrderNumberRow, error)
@@ -445,6 +465,10 @@ type Querier interface {
 	GetRoleByID(ctx context.Context, id int64) (Role, error)
 	GetRoleBySlug(ctx context.Context, slug string) (Role, error)
 	GetRoleByUUID(ctx context.Context, argUuid uuid.UUID) (Role, error)
+	// GetRotatedRefreshToken finds a refresh token that was already rotated (reuse detection,
+	// TEC-1179). within_race is true while the rotation is younger than race_seconds (two
+	// requests refreshing the same token concurrently).
+	GetRotatedRefreshToken(ctx context.Context, arg GetRotatedRefreshTokenParams) (GetRotatedRefreshTokenRow, error)
 	// account-lint: cross-account card id comes from an account-scoped card (no app caller takes it from input)
 	GetRouteByCardID(ctx context.Context, cardID pgtype.Int8) (Route, error)
 	// account-lint: cross-account public route resolver (/{path}); paths are globally unique
@@ -506,6 +530,7 @@ type Querier interface {
 	InsertOrderStatusHistory(ctx context.Context, arg InsertOrderStatusHistoryParams) error
 	InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventParams) (OutboxEvent, error)
 	InsertProfileBankAccount(ctx context.Context, arg InsertProfileBankAccountParams) error
+	InsertPushTicket(ctx context.Context, arg InsertPushTicketParams) error
 	InsertRolePermission(ctx context.Context, arg InsertRolePermissionParams) error
 	InsertRouteHistory(ctx context.Context, arg InsertRouteHistoryParams) error
 	InsertStorageActivity(ctx context.Context, arg InsertStorageActivityParams) (StorageActivity, error)
@@ -587,9 +612,13 @@ type Querier interface {
 	// Company media library and company branding (TEC-946). Every query is scoped by account_id.
 	ListCompanyMedia(ctx context.Context, arg ListCompanyMediaParams) ([]ListCompanyMediaRow, error)
 	ListCompanyMemberProfiles(ctx context.Context, arg ListCompanyMemberProfilesParams) ([]ListCompanyMemberProfilesRow, error)
+	// account-lint: cross-account one-off deleted-profile media backfill (TEC-1177): walks soft-deleted profiles of every account by id cursor and returns only ids, uuids, media columns and locales
+	ListDeletedProfilesForMediaBackfill(ctx context.Context, arg ListDeletedProfilesForMediaBackfillParams) ([]ListDeletedProfilesForMediaBackfillRow, error)
 	// Worker-only unscoped discovery. Manual/legacy subscriptions are deliberately excluded.
 	// account-lint: cross-account renewal worker, all accounts
 	ListDuePaymentSubscriptions(ctx context.Context, nowAt pgtype.Timestamptz) ([]int64, error)
+	// Tickets whose receipt can be read (Expo: about 15 minutes after sending), oldest first.
+	ListDuePushTickets(ctx context.Context, arg ListDuePushTicketsParams) ([]ListDuePushTicketsRow, error)
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListEventDefinitions(ctx context.Context, arg ListEventDefinitionsParams) ([]EventDefinition, error)
 	ListEventsPaginated(ctx context.Context, arg ListEventsPaginatedParams) ([]Event, error)
@@ -660,7 +689,14 @@ type Querier interface {
 	// Activation codes and passcodes are never selected.
 	// account-lint: cross-account search index builder: documents carry account_id and searches filter on it
 	ListProfilesForSearch(ctx context.Context, argUuid pgtype.UUID) ([]ListProfilesForSearchRow, error)
+	ListPushDevicesByUser(ctx context.Context, userID int64) ([]PushDevice, error)
 	ListPushSubscriptionsByUser(ctx context.Context, userID int64) ([]PushSubscription, error)
+	// Devices that may receive a notification's push (TEC-1187): not disabled, and the session
+	// family they registered from still has a live refresh token. A family that simply expired is
+	// not marked disabled (auth.md, "Push devices follow the session"), so the check is here.
+	// Devices that already hold a ticket for the notification are skipped, so a retried send task
+	// does not push twice.
+	ListPushTargetsForNotification(ctx context.Context, arg ListPushTargetsForNotificationParams) ([]PushDevice, error)
 	ListRolePermissionSlugsByRoleUUID(ctx context.Context, argUuid uuid.UUID) ([]string, error)
 	ListRoleUUIDsForBulk(ctx context.Context, q_ pgtype.Text) ([]uuid.UUID, error)
 	ListRolesFiltered(ctx context.Context, arg ListRolesFilteredParams) ([]Role, error)
@@ -856,6 +892,8 @@ type Querier interface {
 	// Platform-wide distinct visitors (TEC-953) for today, the last 7 and the last 30 local days,
 	// from the hourly visitor rollup. Windows end at to_before.
 	PlatformUniqueVisitors(ctx context.Context, arg PlatformUniqueVisitorsParams) (PlatformUniqueVisitorsRow, error)
+	// account-lint: cross-account media cleanup worker (TEC-1176): only says whether a profile uuid is still live; returns no row data
+	ProfileIsLive(ctx context.Context, argUuid uuid.UUID) (bool, error)
 	// account-lint: cross-account webhook retention worker
 	PruneWebhookDeliveries(ctx context.Context, before pgtype.Timestamptz) (int64, error)
 	PutRouteQR(ctx context.Context, arg PutRouteQRParams) (int64, error)
@@ -886,22 +924,31 @@ type Querier interface {
 	// account-lint: cross-account route id is a retired route of the same profile (PathOwner check)
 	ReviveCanonicalRoute(ctx context.Context, arg ReviveCanonicalRouteParams) error
 	RevokeAccountInvite(ctx context.Context, arg RevokeAccountInviteParams) (int64, error)
+	// RevokeAllRefreshTokensForUser ends every session of the user (password change / reset) and
+	// disables all of the user's push devices (TEC-1186).
 	RevokeAllRefreshTokensForUser(ctx context.Context, userID int64) error
 	// TEC-1104: a removed member's open invites to the account stop working too.
 	RevokeOpenAccountInvitesForUser(ctx context.Context, arg RevokeOpenAccountInvitesForUserParams) (int64, error)
+	// RevokeOtherRefreshFamiliesForUser keeps one session and revokes the rest, disabling every
+	// push device that is not tied to the kept session (TEC-1186).
 	RevokeOtherRefreshFamiliesForUser(ctx context.Context, arg RevokeOtherRefreshFamiliesForUserParams) error
 	// account-lint: cross-account platform /v1/platform/profile-verifications revoke
 	RevokeProfileVerificationByUUID(ctx context.Context, arg RevokeProfileVerificationByUUIDParams) (ProfileVerificationRequest, error)
 	// account-lint: cross-account profile id resolved through GetProfileIDForAccount (account-scoped)
 	RevokeProfileVerificationForProfile(ctx context.Context, arg RevokeProfileVerificationForProfileParams) (ProfileVerificationRequest, error)
-	// RevokeRefreshFamilyByHash revokes every live token in the family of the given token (logout).
+	// RevokeRefreshFamilyByHash revokes every live token in the family of the given token (logout)
+	// and disables the family's push devices (TEC-1186).
 	RevokeRefreshFamilyByHash(ctx context.Context, tokenHash string) error
+	// RevokeRefreshFamilyForUser revokes one device session (sessions list, refresh reuse, end of
+	// impersonation) and disables its push devices (TEC-1186). The row count is the refresh tokens'.
 	RevokeRefreshFamilyForUser(ctx context.Context, arg RevokeRefreshFamilyForUserParams) (int64, error)
 	RevokeStorageLink(ctx context.Context, argUuid uuid.UUID) (StorageLink, error)
 	// RotateRefreshFamilyWithAccount re-issues the active token of a family with a new active account.
 	RotateRefreshFamilyWithAccount(ctx context.Context, arg RotateRefreshFamilyWithAccountParams) (RefreshToken, error)
 	// RotateRefreshTokenByHash atomically revokes a valid refresh token and issues its
-	// successor in the same family (no window without an active row).
+	// successor in the same family (no window without an active row). The old row is marked
+	// rotated (reuse detection, TEC-1179). The family keeps its client_type and device_name;
+	// expires_at follows the family's client type, app_version follows the latest request.
 	RotateRefreshTokenByHash(ctx context.Context, arg RotateRefreshTokenByHashParams) (RefreshToken, error)
 	RotateWebhookEndpointSecret(ctx context.Context, arg RotateWebhookEndpointSecretParams) (WebhookEndpoint, error)
 	// account-lint: cross-account renewal worker
@@ -918,6 +965,9 @@ type Querier interface {
 	SetCompanyMemberProfile(ctx context.Context, arg SetCompanyMemberProfileParams) (int64, error)
 	SetCompanySector(ctx context.Context, arg SetCompanySectorParams) (int64, error)
 	SetDefaultPaymentSavedCard(ctx context.Context, arg SetDefaultPaymentSavedCardParams) (PaymentSavedCard, error)
+	// Stores (or, with NULLs, clears) the encrypted refresh token of one linked
+	// identity and the client id it belongs to (TEC-1181).
+	SetOAuthAccountRefreshToken(ctx context.Context, arg SetOAuthAccountRefreshTokenParams) (int64, error)
 	SetPrimaryProfileByUUID(ctx context.Context, arg SetPrimaryProfileByUUIDParams) error
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetStructureAssignment(ctx context.Context, arg SetStructureAssignmentParams) (int64, error)
@@ -1023,8 +1073,18 @@ type Querier interface {
 	UpsertPaymentProviderCustomer(ctx context.Context, arg UpsertPaymentProviderCustomerParams) (PaymentProviderCustomer, error)
 	UpsertPaymentSavedCard(ctx context.Context, arg UpsertPaymentSavedCardParams) (PaymentSavedCard, error)
 	UpsertPlanLimit(ctx context.Context, arg UpsertPlanLimitParams) error
+	// Registers the token for the caller's live session family. No row comes back when the family
+	// is revoked or expired, so an access token outliving its session cannot re-enable a device.
+	// A token registered by another user moves to the caller (the device changed hands). Devices
+	// are user-level, not account-owned; auth_tokens.sql disables them with their session family.
+	UpsertPushDeviceForSession(ctx context.Context, arg UpsertPushDeviceForSessionParams) (PushDevice, error)
 	UpsertPushSubscription(ctx context.Context, arg UpsertPushSubscriptionParams) (PushSubscription, error)
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
+	// Cheap check before queueing a mobile push (TEC-1187). The send task re-checks the session.
+	UserHasActivePushDevices(ctx context.Context, userID int64) (bool, error)
+	// Any device, disabled ones included: a user who registered before is not "first" again, so an
+	// explicit push_enabled = false survives signing in on the phone again.
+	UserHasPushDevices(ctx context.Context, userID int64) (bool, error)
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)
 }
 

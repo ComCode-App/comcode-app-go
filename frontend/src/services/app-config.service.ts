@@ -20,6 +20,8 @@ export type AppPublicConfig = {
     facebook: AuthMethodFlags;
     apple: AuthMethodFlags;
   };
+  /** Store pages of the mobile app (TEC-1178); "" when not set. */
+  mobile_store_urls: { ios: string; android: string };
 };
 
 const defaultMethods = (): AppPublicConfig["auth_methods"] => ({
@@ -48,7 +50,9 @@ export async function fetchAppPublicConfig(
 
   const json = (await response.json()) as {
     success?: boolean;
-    data?: Partial<AppPublicConfig>;
+    data?: Partial<AppPublicConfig> & {
+      mobile?: { store_urls?: { ios?: string; android?: string } };
+    };
   };
 
   if (!json.data) {
@@ -68,5 +72,19 @@ export async function fetchAppPublicConfig(
       methods.github.login || Boolean(json.data.github_auth_enabled),
     registration_enabled: Boolean(json.data.registration_enabled),
     auth_methods: methods,
+    mobile_store_urls: {
+      ios: httpsUrlOrEmpty(json.data.mobile?.store_urls?.ios),
+      android: httpsUrlOrEmpty(json.data.mobile?.store_urls?.android),
+    },
   };
+}
+
+/** Store links are rendered as `href`: only https URLs pass. */
+function httpsUrlOrEmpty(raw: string | undefined): string {
+  if (!raw) return "";
+  try {
+    return new URL(raw).protocol === "https:" ? raw : "";
+  } catch {
+    return "";
+  }
 }

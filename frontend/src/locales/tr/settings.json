@@ -126,5 +126,16 @@
   "error_tracking.test.sent": "Test hatası gönderildi (event: {{id}}).",
   "error_tracking.test.backend_off": "Backend hata izleme kapalı.",
   "error_tracking.test.frontend_off": "Frontend hata izleme kapalı.",
-  "error_tracking.test.failed": "Test hatası gönderilemedi."
+  "error_tracking.test.failed": "Test hatası gönderilemedi.",
+  "mobile.section": "Mobil uygulama",
+  "mobile.hint": "ComCode mobil uygulaması için sürüm kontrolü ve mağaza bağlantıları. Kapatmak için boş bırakın.",
+  "mobile.min_version": "Asgari sürüm",
+  "mobile.min_version_hint": "Daha eski sürümler API'yi kullanmadan önce güncellenmelidir (426).",
+  "mobile.latest_version": "Güncel sürüm",
+  "mobile.latest_version_hint": "Mağazalardaki en yeni sürüm; uygulama güncelleme önerebilir.",
+  "mobile.ios_store_url": "App Store bağlantısı",
+  "mobile.android_store_url": "Google Play bağlantısı",
+  "mobile.validation.version": "1.2.3 biçiminde bir sürüm girin.",
+  "mobile.validation.store_url": "https ile başlayan bir bağlantı girin.",
+  "mobile.validation.latest_below_min": "Güncel sürüm asgari sürümden düşük olamaz."
 }

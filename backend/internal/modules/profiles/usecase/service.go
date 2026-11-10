@@ -59,6 +59,9 @@ type Service struct {
 
 	// search keeps profiles in the account-scoped Cmd+K index (TEC-951); nil = not indexed.
 	search searchengine.Enqueuer
+
+	// mediaCleaner deletes a deleted profile's storage objects (TEC-1176); nil = vCards only.
+	mediaCleaner *MediaCleaner
 }
 
 func NewService(repo repository.Repository, store storage.Driver) *Service {
@@ -353,13 +356,12 @@ func (s *Service) Delete(ctx context.Context, p authctx.Principal, profileUUID u
 		return err
 	}
 
-	// Clean up cached vCards from S3
-	if s.storage != nil {
-		for _, tr := range detail.Translations {
-			_ = s.storage.Delete(ctx, storage.ProfileVCardObjectKey(profileUUID.String(), tr.Locale))
-		}
-		_ = s.storage.Delete(ctx, storage.ProfileVCardObjectKey(profileUUID.String(), detail.PrimaryLocale))
+	// Collect the object keys the row points at before it is deleted (TEC-1176).
+	locales := []string{detail.PrimaryLocale}
+	for _, tr := range detail.Translations {
+		locales = append(locales, tr.Locale)
 	}
+	keys := s.profileMediaKeys(profileUUID, detail.AvatarURL, detail.CoverURL, locales)
 
 	if err := s.repo.Delete(ctx, p.Account.ID, profileUUID); err != nil {
 		return err
@@ -367,6 +369,16 @@ func (s *Service) Delete(ctx context.Context, p authctx.Principal, profileUUID u
 	s.routeCache.InvalidateProfile(ctx, profileUUID)
 	if s.search != nil {
 		s.search.EnqueueDelete(ctx, "profiles", profileUUID.String())
+	}
+
+	// The delete has committed: remove the profile's media from object storage. Failures are
+	// logged by the cleaner and never undo the delete.
+	if s.mediaCleaner != nil {
+		s.mediaCleaner.Schedule(ctx, profileUUID, keys)
+	} else if s.storage != nil {
+		for _, loc := range locales {
+			_ = s.storage.Delete(ctx, storage.ProfileVCardObjectKey(profileUUID.String(), loc))
+		}
 	}
 	return nil
 }
@@ -666,6 +678,15 @@ func profileMediaPrefix(profileUUID uuid.UUID) string {
 // mediaKey returns the object key behind an API-owned media URL (our storage public URL, the
 // stream proxy path or a bare key), or "" when the URL was not produced by our storage.
 func (s *Service) mediaKey(raw string) string {
+	var publicURL func(string) string
+	if s.storage != nil {
+		publicURL = s.storage.PublicURL
+	}
+	return mediaObjectKey(publicURL, raw)
+}
+
+// mediaObjectKey is mediaKey with the storage's PublicURL passed in (nil = no storage).
+func mediaObjectKey(publicURL func(string) string, raw string) string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return ""
@@ -683,11 +704,11 @@ func (s *Service) mediaKey(raw string) string {
 				idx = i
 			}
 		}
-		if idx < 0 || s.storage == nil {
+		if idx < 0 || publicURL == nil {
 			return ""
 		}
 		key = raw[idx:]
-		if s.storage.PublicURL(key) != raw {
+		if publicURL(key) != raw {
 			return ""
 		}
 	}

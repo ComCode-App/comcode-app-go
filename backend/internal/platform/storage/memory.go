@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -89,6 +90,36 @@ func (m *Memory) Exists(_ context.Context, objectPath string) (bool, error) {
 	defer m.mu.RUnlock()
 	_, ok := m.data[key]
 	return ok, nil
+}
+
+// List returns the keys under input.Prefix in key order. Delimiter is not supported; MaxKeys pages
+// the result and the continuation token is the last key of the previous page.
+func (m *Memory) List(_ context.Context, input ListObjectsInput) (ListObjectsResult, error) {
+	prefix, err := sanitizePrefix(input.Prefix)
+	if err != nil {
+		return ListObjectsResult{}, err
+	}
+	m.mu.RLock()
+	keys := make([]string, 0, len(m.data))
+	sizes := make(map[string]int64, len(m.data))
+	for key, obj := range m.data {
+		if strings.HasPrefix(key, prefix) && key > input.ContinuationToken {
+			keys = append(keys, key)
+			sizes[key] = int64(len(obj.Body))
+		}
+	}
+	m.mu.RUnlock()
+	sort.Strings(keys)
+	var res ListObjectsResult
+	if input.MaxKeys > 0 && len(keys) > int(input.MaxKeys) {
+		keys = keys[:input.MaxKeys]
+		res.IsTruncated = true
+		res.NextContinuationToken = keys[len(keys)-1]
+	}
+	for _, key := range keys {
+		res.Objects = append(res.Objects, ObjectInfo{Key: key, Size: sizes[key]})
+	}
+	return res, nil
 }
 
 // PublicURL returns a mock public URL for memory storage.

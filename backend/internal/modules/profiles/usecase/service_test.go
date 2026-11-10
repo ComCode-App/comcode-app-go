@@ -285,6 +285,10 @@ func (d memoryDriver) Delete(ctx context.Context, path string) error { return d.
 
 func (d memoryDriver) PublicURL(path string) string { return d.mem.PublicURL(path) }
 
+func (d memoryDriver) List(ctx context.Context, in storage.ListObjectsInput) (storage.ListObjectsResult, error) {
+	return d.mem.List(ctx, in)
+}
+
 func TestProfileMediaURLsMustBeAPIOwned(t *testing.T) {
 	store := memoryDriver{mem: storage.NewMemory()}
 	repo := newMockRepo()

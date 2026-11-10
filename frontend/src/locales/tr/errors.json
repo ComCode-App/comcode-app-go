@@ -14,6 +14,7 @@
   "codes.password_reset_failed": "Şifre sıfırlanamadı.",
   "codes.no_tenant_membership": "Bu hesabın üyesi değilsiniz.",
   "codes.step_up_required": "Devam etmek için kimliğinizi yeniden doğrulayın.",
+  "codes.app_update_required": "Uygulamanın bu sürümü artık desteklenmiyor. Lütfen mağazadan güncelleyin.",
   "codes.mfa_required": "İki adımlı doğrulama gerekiyor.",
   "codes.mfa_not_enrolled": "İki adımlı doğrulama kurulu değil.",
   "codes.invalid_mfa_code": "Doğrulama kodu hatalı.",
@@ -35,5 +36,18 @@
   "continue": "Devam et",
   "area_requires": "Bu alan yalnızca {{area}} erişimi gerektirir.",
   "area_app": "Uygulama",
-  "redirecting_to_login": "Giriş sayfasına yönlendiriliyor…"
+  "redirecting_to_login": "Giriş sayfasına yönlendiriliyor…",
+  "codes.invalid_email_code": "Giriş kodu hatalı veya süresi dolmuş.",
+  "codes.qr_session_not_found": "Bu QR kodun süresi doldu ya da kullanıldı. Kodu yenileyip tekrar deneyin.",
+  "codes.qr_session_resolved": "Bu giriş isteği zaten yanıtlandı.",
+  "codes.qr_session_claimed": "Bu QR kod başka bir hesapla açıldı.",
+  "codes.qr_login_invalid": "QR ile giriş doğrulanamadı. QR kodu yenileyip tekrar deneyin.",
+  "codes.refresh_race": "Oturumunuz başka bir istekte az önce yenilendi. Lütfen tekrar deneyin.",
+  "codes.push_session_inactive": "Bu oturum sona erdi. Bu cihazda bildirimleri açmak için yeniden giriş yapın.",
+  "codes.push_impersonation": "Başka bir kullanıcı olarak görüntülerken bildirim cihazları değiştirilemez.",
+  "codes.oauth_provider_disabled": "Bu sağlayıcıyla giriş şu anda kullanılamıyor.",
+  "codes.oauth_invalid_token": "Giriş doğrulanamadı. Lütfen tekrar deneyin.",
+  "codes.oauth_account_not_linked": "Bu e-posta adresiyle bir hesap zaten var. Mevcut yönteminizle giriş yapın, ardından bu sağlayıcıyı profilinizden bağlayın.",
+  "codes.oauth_email_unverified": "Bu sağlayıcı doğrulanmış bir e-posta adresi bildirmedi, bu yüzden girişte kullanılamaz.",
+  "codes.registration_disabled": "Yeni kayıtlar şu anda kapalı."
 }

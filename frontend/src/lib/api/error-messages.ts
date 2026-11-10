@@ -30,7 +30,25 @@ export const API_ERROR_MESSAGE_KEYS: Readonly<Record<string, string>> = {
   MFA_NOT_ENROLLED: "errors.codes.mfa_not_enrolled",
   INVALID_MFA_CODE: "errors.codes.invalid_mfa_code",
   LAST_SIGN_IN_METHOD: "auth.oauth.last_sign_in_method",
+  INVALID_EMAIL_CODE: "errors.codes.invalid_email_code",
+  REFRESH_RACE: "errors.codes.refresh_race",
   REALTIME_DISABLED: "errors.codes.realtime_disabled",
+  // QR sign-in (TEC-1184).
+  QR_SESSION_NOT_FOUND: "errors.codes.qr_session_not_found",
+  QR_SESSION_RESOLVED: "errors.codes.qr_session_resolved",
+  QR_SESSION_CLAIMED: "errors.codes.qr_session_claimed",
+  QR_LOGIN_INVALID: "errors.codes.qr_login_invalid",
+  // Native Apple / Google sign-in from the mobile app (TEC-1180).
+  OAUTH_PROVIDER_DISABLED: "errors.codes.oauth_provider_disabled",
+  OAUTH_INVALID_TOKEN: "errors.codes.oauth_invalid_token",
+  OAUTH_ACCOUNT_NOT_LINKED: "errors.codes.oauth_account_not_linked",
+  OAUTH_EMAIL_UNVERIFIED: "errors.codes.oauth_email_unverified",
+  REGISTRATION_DISABLED: "errors.codes.registration_disabled",
+  // Mobile app older than mobile.min_version (426, TEC-1178).
+  APP_UPDATE_REQUIRED: "errors.codes.app_update_required",
+  // Mobile push devices (TEC-1186).
+  PUSH_SESSION_INACTIVE: "errors.codes.push_session_inactive",
+  PUSH_IMPERSONATION: "errors.codes.push_impersonation",
   // Routes / public profile.
   INVALID_PASSCODE: "errors.codes.invalid_passcode",
   // Company invites (accounts module).

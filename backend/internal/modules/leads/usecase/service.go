@@ -249,6 +249,7 @@ func (s *Service) notify(ctx context.Context, accountID int64, leadUUID uuid.UUI
 		uid := id
 		if _, err := s.notifier.Enqueue(ctx, notifmodel.EnqueueInput{
 			UserID:       &uid,
+			AccountID:    &accountID,
 			Channels:     []string{notifmodel.ChannelInapp, notifmodel.ChannelRealtime},
 			TemplateCode: template,
 			TemplateVars: map[string]string{"name": name, "source": "/" + path},

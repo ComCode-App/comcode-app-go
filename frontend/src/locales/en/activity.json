@@ -41,6 +41,7 @@
   "resources.platform.integrations.apple": "Apple integration",
   "resources.auth.step_up": "Step-up verification",
   "actions.auth.account_switched": "Switched active account",
+  "actions.auth.identity.linked": "Linked a sign-in method",
   "resources.auth.accounts": "Accounts",
   "actions.accounts.created": "Account created",
   "actions.accounts.updated": "Account updated",

@@ -18,6 +18,12 @@ export type ProviderBuild<T> = {
   value: T;
   /** False when a backend call failed and defaults were used. */
   complete: boolean;
+  /**
+   * Epoch ms after which this build must not be served, e.g. a generated Apple
+   * client secret's expiry minus a margin (TEC-1123). The cache keeps the build
+   * until the earlier of this and the TTL.
+   */
+  expiresAt?: number | null;
 };
 
 export function createProviderCache<T>(
@@ -25,15 +31,21 @@ export function createProviderCache<T>(
   ttlMs: number = PROVIDERS_CACHE_TTL_MS,
   now: () => number = Date.now,
 ) {
-  let cached: { value: T; builtAt: number } | null = null;
+  let cached: { value: T; expiresAt: number } | null = null;
   let inflight: Promise<T> | null = null;
 
   async function get(): Promise<T> {
-    if (cached && now() - cached.builtAt < ttlMs) return cached.value;
+    if (cached && now() < cached.expiresAt) return cached.value;
     if (!inflight) {
       inflight = build()
         .then((result) => {
-          if (result.complete) cached = { value: result.value, builtAt: now() };
+          if (result.complete) {
+            let expiresAt = now() + ttlMs;
+            if (typeof result.expiresAt === "number") {
+              expiresAt = Math.min(expiresAt, result.expiresAt);
+            }
+            cached = { value: result.value, expiresAt };
+          }
           return result.value;
         })
         .finally(() => {

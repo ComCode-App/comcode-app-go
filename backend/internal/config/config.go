@@ -29,6 +29,7 @@ type Config struct {
 	JWT        JWTConfig
 	Log        LogConfig
 	VAPID      VAPIDConfig
+	Expo       ExpoConfig
 	Search     SearchConfig
 	Observe    ObservabilityConfig
 }
@@ -49,6 +50,9 @@ type AuthConfig struct {
 	AdapterSecret string
 	WebAuthnRPID  string
 	FrontendURL   string
+	// ReviewAccounts maps a lower-cased email to its fixed App Store / Play review sign-in
+	// code (AUTH_REVIEW_ACCOUNTS=email:code,...). Empty = disabled (TEC-1182).
+	ReviewAccounts map[string]string
 }
 
 // VAPIDConfig holds Web Push keys (empty = push disabled).
@@ -58,12 +62,20 @@ type VAPIDConfig struct {
 	Subject    string
 }
 
+// ExpoConfig holds the Expo Push Service settings (mobile push, TEC-1187). AccessToken is
+// optional: needed only with Expo "enhanced push security"; sent as a Bearer header.
+type ExpoConfig struct {
+	AccessToken string
+}
+
 // JWTConfig holds access JWT and opaque refresh token settings.
 type JWTConfig struct {
 	AccessSecret  string
 	RefreshSecret string
 	AccessTTL     time.Duration
 	RefreshTTL    time.Duration
+	// RefreshTTLMobile is the refresh lifetime of mobile app sessions (TEC-1179).
+	RefreshTTLMobile time.Duration
 }
 
 type AppConfig struct {
@@ -259,6 +271,8 @@ func Load() (Config, error) {
 			RefreshSecret: getEnv("JWT_REFRESH_SECRET", defaultJWTRefreshSecret),
 			AccessTTL:     getDuration("JWT_ACCESS_TTL", 15*time.Minute),
 			RefreshTTL:    getDuration("JWT_REFRESH_TTL", 168*time.Hour),
+			// Mobile sessions slide on every refresh; 60 days keeps a rarely opened app signed in.
+			RefreshTTLMobile: getDuration("JWT_REFRESH_TTL_MOBILE", 60*24*time.Hour),
 		},
 		Log: LogConfig{
 			Level:  getEnv("LOG_LEVEL", "debug"),
@@ -275,6 +289,9 @@ func Load() (Config, error) {
 			PrivateKey: getEnv("VAPID_PRIVATE_KEY", ""),
 			Subject:    getEnv("VAPID_SUBJECT", "mailto:noreply@example.com"),
 		},
+		Expo: ExpoConfig{
+			AccessToken: getEnv("EXPO_ACCESS_TOKEN", ""),
+		},
 		Search: SearchConfig{
 			Enabled:     getBool("SEARCH_ENABLED", true),
 			Driver:      strings.ToLower(getEnv("SEARCH_DRIVER", "meilisearch")),
@@ -283,6 +300,12 @@ func Load() (Config, error) {
 			IndexPrefix: getEnv("MEILI_INDEX_PREFIX", "app"),
 		},
 	}
+
+	reviewAccounts, err := parseReviewAccounts(getEnv("AUTH_REVIEW_ACCOUNTS", ""))
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.Auth.ReviewAccounts = reviewAccounts
 
 	if err := cfg.validate(); err != nil {
 		return Config{}, err
@@ -316,7 +339,7 @@ func (c Config) validate() error {
 	if c.Queue.Concurrency <= 0 {
 		return fmt.Errorf("config: QUEUE_CONCURRENCY must be positive")
 	}
-	if c.JWT.AccessTTL <= 0 || c.JWT.RefreshTTL <= 0 {
+	if c.JWT.AccessTTL <= 0 || c.JWT.RefreshTTL <= 0 || c.JWT.RefreshTTLMobile <= 0 {
 		return fmt.Errorf("config: JWT TTLs must be positive")
 	}
 	if err := c.secretGuard(); err != nil {

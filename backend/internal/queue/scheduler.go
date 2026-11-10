@@ -13,8 +13,8 @@ const (
 	analyticsMaintenanceCron = "@every 6h"
 )
 
-// StartLogPurgeScheduler registers the periodic maintenance sweeps: log retention rules and
-// analytics partitions/retention.
+// StartLogPurgeScheduler registers the periodic maintenance sweeps: log retention rules,
+// analytics partitions/retention, billing renewals and Expo push receipts.
 func StartLogPurgeScheduler(cfg config.Config, log *slog.Logger) (*asynq.Scheduler, error) {
 	if log == nil {
 		log = slog.Default()
@@ -43,5 +43,10 @@ func StartLogPurgeScheduler(cfg config.Config, log *slog.Logger) (*asynq.Schedul
 	if _, err := scheduler.Register("@every 5m", asynq.NewTask(TaskBillingRenewalSweep, nil), asynq.Queue(QueueMaintenance)); err != nil {
 		return nil, fmt.Errorf("queue: register billing renewal: %w", err)
 	}
+	// Expo push receipts (TEC-1187).
+	if err := registerPushReceiptsSchedule(scheduler); err != nil {
+		return nil, err
+	}
+	log.Info("queue_push_receipts_scheduler_registered", "cron", pushReceiptsCron)
 	return scheduler, nil
 }
