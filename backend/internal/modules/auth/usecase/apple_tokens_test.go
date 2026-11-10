@@ -63,7 +63,9 @@ func (s *fakeAppleStore) SetOAuthAccountRefreshToken(_ context.Context, userID i
 	return nil
 }
 
-type fakeAppleCreds struct{ creds oauthproviderusecase.AppleTokenCredentials }
+type fakeAppleCreds struct {
+	creds oauthproviderusecase.AppleTokenCredentials
+}
 
 func (f fakeAppleCreds) AppleTokenCredentials(context.Context) (oauthproviderusecase.AppleTokenCredentials, error) {
 	return f.creds, nil
