@@ -38,5 +38,7 @@
   "area_app": "Uygulama",
   "redirecting_to_login": "Giriş sayfasına yönlendiriliyor…",
   "codes.invalid_email_code": "Giriş kodu hatalı veya süresi dolmuş.",
-  "codes.refresh_race": "Oturumunuz başka bir istekte az önce yenilendi. Lütfen tekrar deneyin."
+  "codes.refresh_race": "Oturumunuz başka bir istekte az önce yenilendi. Lütfen tekrar deneyin.",
+  "codes.push_session_inactive": "Bu oturum sona erdi. Bu cihazda bildirimleri açmak için yeniden giriş yapın.",
+  "codes.push_impersonation": "Başka bir kullanıcı olarak görüntülerken bildirim cihazları değiştirilemez."
 }

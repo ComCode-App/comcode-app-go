@@ -35,6 +35,9 @@ export const API_ERROR_MESSAGE_KEYS: Readonly<Record<string, string>> = {
   REALTIME_DISABLED: "errors.codes.realtime_disabled",
   // Mobile app older than mobile.min_version (426, TEC-1178).
   APP_UPDATE_REQUIRED: "errors.codes.app_update_required",
+  // Mobile push devices (TEC-1186).
+  PUSH_SESSION_INACTIVE: "errors.codes.push_session_inactive",
+  PUSH_IMPERSONATION: "errors.codes.push_impersonation",
   // Routes / public profile.
   INVALID_PASSCODE: "errors.codes.invalid_passcode",
   // Company invites (accounts module).

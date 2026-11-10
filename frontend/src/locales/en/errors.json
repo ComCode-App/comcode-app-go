@@ -38,5 +38,7 @@
   "area_app": "App",
   "redirecting_to_login": "Redirecting to sign in…",
   "codes.invalid_email_code": "The sign-in code is incorrect or has expired.",
-  "codes.refresh_race": "Your session was just renewed in another request. Please try again."
+  "codes.refresh_race": "Your session was just renewed in another request. Please try again.",
+  "codes.push_session_inactive": "This session has ended. Sign in again to turn on notifications on this device.",
+  "codes.push_impersonation": "Push notification devices cannot be changed while you are viewing as another user."
 }
