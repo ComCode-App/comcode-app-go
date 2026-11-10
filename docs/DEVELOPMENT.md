@@ -82,6 +82,10 @@ Set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` in `.env`. The 
 
 Closed-browser push does not work until these three are set.
 
+## Mobile push (Expo)
+
+The worker sends mobile pushes through the Expo Push Service (`app:push:send`, receipts every 15 minutes with `app:push:receipts`). Nothing needs configuring: `EXPO_ACCESS_TOKEN` is only needed when "enhanced push security" is on for the Expo project. Pushes use the fixed lock-screen texts of `backend/internal/modules/notifications/pushtext`; a notification code without an entry there is not pushed. Design: [docs/design/mobile.md](./design/mobile.md) §4.
+
 `TRUSTED_PROXIES` (CIDRs, default loopback + private ranges) lists the peers whose `X-Forwarded-For` the API honours; see `backend/docs/auth.md` → Rate limits.
 
 Optional frontend public vars (root `.env`): `NEXT_PUBLIC_BFF_BASE_URL`, `NEXT_PUBLIC_REALTIME_ENABLED`, `NEXT_PUBLIC_CENTRIFUGO_URL`, `NEXT_PUBLIC_DEFAULT_LOCALE`, `NEXT_PUBLIC_FALLBACK_LOCALE`.

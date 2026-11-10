@@ -161,7 +161,7 @@ A mobile push device (`push_devices`, `/v1/notifications/push-devices`) stores t
 | Sign out other sessions (devices of the kept session stay) | `RevokeOtherRefreshFamiliesForUser` | `session_revoked` |
 | Password change / reset (every session) | `RevokeAllRefreshTokensForUser` | `all_sessions_revoked` |
 
-Registration only succeeds while the family is live (`409 PUSH_SESSION_INACTIVE` otherwise), so an access token that outlives its session cannot re-enable the device; signing in again and registering moves the device to the new session. A family that simply expires is not marked; the sender (B10) must skip devices whose family has no live refresh token. A new revocation path must disable push devices the same way.
+Registration only succeeds while the family is live (`409 PUSH_SESSION_INACTIVE` otherwise), so an access token that outlives its session cannot re-enable the device; signing in again and registering moves the device to the new session. A family that simply expires is not marked; the sender skips it instead (TEC-1187: `ListPushTargetsForNotification` in `queries/push_devices.sql` only returns devices whose family still has a live refresh token). Expo's `DeviceNotRegistered` (ticket or receipt) disables a device with `device_not_registered`; registering again from a live session re-enables it. A new revocation path must disable push devices the same way.
 ## Mobile clients (TEC-1178)
 
 The mobile app does not use cookies. It reaches the private Go API through the Next.js **mobile

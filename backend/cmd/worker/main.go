@@ -157,6 +157,7 @@ func main() {
 		PrivateKey: cfg.VAPID.PrivateKey,
 		Subject:    cfg.VAPID.Subject,
 	})
+	notifSvc.WithExpo(notifusecase.ExpoConfig{AccessToken: cfg.Expo.AccessToken})
 
 	eventBus := events.NewBus(log)
 	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log)
@@ -219,6 +220,8 @@ func main() {
 	// Outbound webhooks (TEC-603): the worker sends deliveries and schedules its own retries.
 	queueClient := queue.NewClient(cfg.Redis)
 	defer func() { _ = queueClient.Close() }()
+	// Deliveries run inline here; mobile pushes go through the queue so Expo outages retry.
+	notifSvc.WithPushQueue(queueClient)
 	// Deleted profiles' media cleanup (TEC-1176): import rollbacks delete profiles here too.
 	profileMediaCleaner := profilesusecase.NewMediaCleaner(store, queries, queueClient, log)
 	profilesSvc.SetMediaCleaner(profileMediaCleaner)
@@ -230,12 +233,19 @@ func main() {
 		WithExport(exportSvc.ProcessExport).
 		WithImport(importSvc.ProcessImport).
 		WithBulk(bulkSvc.ProcessBulk).
+		WithMobilePush(notifSvc.SendMobilePush, notifSvc.ProcessPushReceipts).
 		WithLogPurge(func(ctx context.Context) error {
 			if _, err := webhooksSvc.Prune(ctx, 0); err != nil {
 				log.Warn("webhook_prune_failed", "error", err)
 			}
 			if _, err := webhooksSvc.Sweep(ctx); err != nil {
 				log.Warn("webhook_sweep_failed", "error", err)
+			}
+			if n, err := notifSvc.PrunePushData(ctx); err != nil {
+				log.Warn("push_cleanup_failed", "error", err)
+			} else if n.Tickets+n.DisabledDevices+n.StaleDevices > 0 {
+				log.Info("push_cleanup_completed", "tickets", n.Tickets,
+					"disabled_devices", n.DisabledDevices, "stale_devices", n.StaleDevices)
 			}
 			return logsSvc.ApplyDueRules(ctx)
 		}).
