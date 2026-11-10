@@ -31,6 +31,17 @@ func RegisterRoutes(
 		http.HandlerFunc(h.DeletePushSubscription), authn,
 	))
 
+	// Mobile push devices (TEC-1186): per-user limit in the handler (SetRateLimiter).
+	mux.Handle("GET /v1/notifications/push-devices", middleware.Chain(
+		http.HandlerFunc(h.ListPushDevices), authn,
+	))
+	mux.Handle("POST /v1/notifications/push-devices", middleware.Chain(
+		http.HandlerFunc(h.RegisterPushDevice), authn,
+	))
+	mux.Handle("DELETE /v1/notifications/push-devices/{token}", middleware.Chain(
+		http.HandlerFunc(h.DeletePushDevice), authn,
+	))
+
 	mux.Handle("GET /v1/notifications/meta", middleware.Chain(
 		http.HandlerFunc(h.Meta), authn, requirePerm(rbac.PermNotificationsRead),
 	))
