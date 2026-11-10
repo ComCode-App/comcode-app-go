@@ -73,6 +73,24 @@ export function isMobileGatewayRefusedPath(
 const MOBILE_REFUSED_PATHS = new Set(["auth/qr/exchange"]);
 
 /**
+ * Cookie BFF (`/api/v1/*`) refusals on top of `isForbiddenProxyPath`: native
+ * Apple / Google sign-in (`auth/oauth/{provider}/native`, TEC-1180) returns the
+ * token pair in the JSON body for the mobile app. The web app never calls it,
+ * and the BFF must not hand tokens to browser JavaScript, so it is mobile
+ * gateway only. Compared case-insensitively.
+ */
+export function isCookieBffRefusedPath(segments: readonly string[]): boolean {
+  if (isForbiddenProxyPath(segments)) return true;
+  const lower = segments.map((s) => s.toLowerCase());
+  return (
+    lower.length === 4 &&
+    lower[0] === "auth" &&
+    lower[1] === "oauth" &&
+    lower[3] === "native"
+  );
+}
+
+/**
  * Mutating paths that are POSTed cross-site on purpose, so they skip the CSRF
  * origin check. Keep this list minimal and comment every entry.
  *
