@@ -37,5 +37,6 @@
   "area_requires": "This area requires {{area}} access.",
   "area_app": "App",
   "redirecting_to_login": "Redirecting to sign in…",
-  "codes.invalid_email_code": "The sign-in code is incorrect or has expired."
+  "codes.invalid_email_code": "The sign-in code is incorrect or has expired.",
+  "codes.refresh_race": "Your session was just renewed in another request. Please try again."
 }

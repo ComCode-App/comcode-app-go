@@ -33,10 +33,12 @@ type memRepo struct {
 }
 
 type memSession struct {
-	row     model.RefreshSession
-	hash    string
-	revoked bool
-	expires time.Time
+	row       model.RefreshSession
+	hash      string
+	revoked   bool
+	expires   time.Time
+	rotatedAt time.Time // zero: never rotated
+	meta      model.SessionMeta
 }
 
 type memAccount struct {
@@ -324,11 +326,16 @@ func (r *memRepo) ResolveRoleIDsByUUIDs(_ context.Context, roleUUIDs []uuid.UUID
 }
 
 func (r *memRepo) SaveRefresh(_ context.Context, userID int64, hash string, exp time.Time, meta model.SessionMeta) (model.RefreshSession, error) {
+	ct := meta.ClientType
+	if ct == "" {
+		ct = model.ClientWeb
+	}
 	row := model.RefreshSession{
 		UUID: uuid.New(), FamilyUUID: uuid.New(), UserID: userID,
 		ImpersonatorUserID: meta.ImpersonatorUserID, ActiveAccountID: meta.ActiveAccountID,
+		ClientType: ct, ExpiresAt: exp,
 	}
-	r.sessions = append(r.sessions, &memSession{row: row, hash: hash, expires: exp})
+	r.sessions = append(r.sessions, &memSession{row: row, hash: hash, expires: exp, meta: meta})
 	return row, nil
 }
 
@@ -341,29 +348,48 @@ func (r *memRepo) liveSession(match func(*memSession) bool) *memSession {
 	return nil
 }
 
-func (r *memRepo) RotateRefresh(_ context.Context, oldHash, newHash string, exp time.Time, _ model.SessionMeta) (model.RefreshSession, error) {
+// rotate mirrors the SQL: the old row is revoked and marked rotated, the successor keeps the
+// family's client type and gets the matching expiry.
+func (r *memRepo) rotate(old *memSession, newHash string, exp model.RefreshExpiry) model.RefreshSession {
+	old.revoked = true
+	old.rotatedAt = time.Now()
+	row := old.row
+	row.UUID = uuid.New()
+	row.ExpiresAt = exp.Web
+	if row.ClientType == model.ClientMobile {
+		row.ExpiresAt = exp.Mobile
+	}
+	r.sessions = append(r.sessions, &memSession{row: row, hash: newHash, expires: row.ExpiresAt, meta: old.meta})
+	return row
+}
+
+func (r *memRepo) RotateRefresh(_ context.Context, oldHash, newHash string, exp model.RefreshExpiry, _ model.SessionMeta) (model.RefreshSession, error) {
 	old := r.liveSession(func(s *memSession) bool { return s.hash == oldHash })
 	if old == nil {
 		return model.RefreshSession{}, repository.ErrNotFound
 	}
-	old.revoked = true
-	row := old.row
-	row.UUID = uuid.New()
-	r.sessions = append(r.sessions, &memSession{row: row, hash: newHash, expires: exp})
-	return row, nil
+	return r.rotate(old, newHash, exp), nil
 }
 
-func (r *memRepo) RotateRefreshFamilyWithAccount(_ context.Context, family uuid.UUID, userID int64, newHash string, exp time.Time, accountID int64) (model.RefreshSession, error) {
+func (r *memRepo) RotateRefreshFamilyWithAccount(_ context.Context, family uuid.UUID, userID int64, newHash string, exp model.RefreshExpiry, accountID int64) (model.RefreshSession, error) {
 	old := r.liveSession(func(s *memSession) bool { return s.row.FamilyUUID == family && s.row.UserID == userID })
 	if old == nil {
 		return model.RefreshSession{}, repository.ErrNotFound
 	}
-	old.revoked = true
-	row := old.row
-	row.UUID = uuid.New()
-	row.ActiveAccountID = &accountID
-	r.sessions = append(r.sessions, &memSession{row: row, hash: newHash, expires: exp})
-	return row, nil
+	old.row.ActiveAccountID = &accountID
+	return r.rotate(old, newHash, exp), nil
+}
+
+func (r *memRepo) FindRotatedRefresh(_ context.Context, hash string, window time.Duration) (model.RotatedRefresh, error) {
+	for _, s := range r.sessions {
+		if s.hash == hash && !s.rotatedAt.IsZero() {
+			return model.RotatedRefresh{
+				UserID: s.row.UserID, FamilyUUID: s.row.FamilyUUID, ClientType: s.row.ClientType,
+				WithinRace: time.Since(s.rotatedAt) < window,
+			}, nil
+		}
+	}
+	return model.RotatedRefresh{}, repository.ErrNotFound
 }
 
 func (r *memRepo) GetActiveSessionFamily(_ context.Context, family uuid.UUID, userID int64) (model.RefreshSession, error) {

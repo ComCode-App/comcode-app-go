@@ -110,6 +110,25 @@ Each device session is a refresh-token **family**: refresh rotates the token ato
 | DELETE | `/v1/auth/sessions/{uuid}` | Bearer (own session) |
 | POST | `/v1/auth/sessions/revoke-others` | Bearer (keeps current `sid`) |
 
+`GET /v1/auth/sessions` items carry `client_type` (`web` | `mobile`) and, for mobile sessions, `device_name` and the latest `app_version`; the account page's sessions list shows them.
+
+### Client type and refresh lifetime (TEC-1179)
+
+- The mobile app sends `X-Client: mobile` (`comcode-mobile` is accepted too), `X-Device-Name` and `X-App-Version` on every request. Every handler that starts a session (login, email code verify, the adapter session used by OAuth / passkey) reads them through `sessionMeta`; other `X-Client` values, or none, mean `web`. Labels are cut to printable characters (device name max 100, app version max 32) and are display-only.
+- The web BFF builds its upstream headers from an allowlist (`frontend/src/lib/server/upstream.ts`, `bff-proxy.ts`) and never forwards these headers, so browser sessions are always `web`. Impersonation sessions are always `web`.
+- `refresh_tokens.client_type` is fixed when the family starts. Web sessions live `JWT_REFRESH_TTL` (default 7 days), mobile sessions `JWT_REFRESH_TTL_MOBILE` (default 60 days). Both slide: every refresh (and account switch) issues a token with a fresh lifetime of the family's type. A refresh request cannot change the type, so a stolen web token cannot be turned into a 60-day one; `X-App-Version` on a refresh updates the session's app version, the device name stays as set at sign-in.
+
+### Refresh token reuse detection (TEC-1179)
+
+Rotation marks the old token `rotated_at` (in addition to `revoked_at`). When `POST /v1/auth/refresh` gets a token it cannot rotate:
+
+| Token state | Answer | Effect |
+|-------------|--------|--------|
+| Unknown, expired, or revoked by logout / session revocation / password change | `401` | none |
+| Rotated less than 30 s ago (database clock) | `409 REFRESH_RACE` | none: a concurrent refresh of the same client won; use its token |
+| Rotated earlier | `401` | the whole family is revoked, `auth_refresh_reuse_detected` is logged (WARN) and the owner gets the `auth.refresh_reuse` security email |
+
+The email is only sent when the family still had a live token, so replaying a token of an already revoked session sends nothing. Clients refresh single-flight (web: `refresh-single-flight.ts`); the browser's refresh flow treats `409` as "renewed elsewhere" and retries the request.
 ## Mobile clients (TEC-1178)
 
 The mobile app does not use cookies. It reaches the private Go API through the Next.js **mobile
@@ -170,7 +189,7 @@ Login and forgot-password keep a per-email cap across IPs so a botnet cannot gue
 
 ## Security emails
 
-Email verification and password reset codes (`SecurityEmail`) and account invitation links (`SecretVars: invite_url`) never sit readable on `notifications` rows (TEC-1099). The row keeps a masked rendering (`••••••` in place of the code or link, `action_url` dropped), so `GET /v1/platform/notifications`, the platform detail `GET /v1/platform/notifications/{uuid}` (any channel, email included; TEC-1120), its search, the export and backups never see it. The real subject and body are AES-GCM encrypted with `APP_ENCRYPTION_KEY` in `notifications.sealed_content`; the delivery worker decrypts them in memory, so retries and stuck-row reclaims send the real code, and a successful send sets the column to NULL. Without a usable key (none, or the built-in development key outside development/test) such notifications are refused instead of stored in plaintext. `GET /v1/notifications` and `GET /v1/notifications/{uuid}` serve `inapp` rows only, so an account cannot read its own verification code back. Migration `000072` masked older rows and cancelled unsent ones.
+Email verification and password reset codes (`SecurityEmail`) and account invitation links (`SecretVars: invite_url`) never sit readable on `notifications` rows (TEC-1099). The row keeps a masked rendering (`••••••` in place of the code or link, `action_url` dropped), so `GET /v1/platform/notifications`, the platform detail `GET /v1/platform/notifications/{uuid}` (any channel, email included; TEC-1120), its search, the export and backups never see it. The real subject and body are AES-GCM encrypted with `APP_ENCRYPTION_KEY` in `notifications.sealed_content`; the delivery worker decrypts them in memory, so retries and stuck-row reclaims send the real code, and a successful send sets the column to NULL. Without a usable key (none, or the built-in development key outside development/test) such notifications are refused instead of stored in plaintext. `GET /v1/notifications` and `GET /v1/notifications/{uuid}` serve `inapp` rows only, so an account cannot read its own verification code back. Migration `000072` masked older rows and cancelled unsent ones. The refresh reuse notice (`auth.refresh_reuse`, see Sessions) is also a `SecurityEmail`, so it ignores email preferences.
 
 ## `/v1/auth/me`
 

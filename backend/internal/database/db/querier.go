@@ -449,6 +449,10 @@ type Querier interface {
 	GetRoleByID(ctx context.Context, id int64) (Role, error)
 	GetRoleBySlug(ctx context.Context, slug string) (Role, error)
 	GetRoleByUUID(ctx context.Context, argUuid uuid.UUID) (Role, error)
+	// GetRotatedRefreshToken finds a refresh token that was already rotated (reuse detection,
+	// TEC-1179). within_race is true while the rotation is younger than race_seconds (two
+	// requests refreshing the same token concurrently).
+	GetRotatedRefreshToken(ctx context.Context, arg GetRotatedRefreshTokenParams) (GetRotatedRefreshTokenRow, error)
 	// account-lint: cross-account card id comes from an account-scoped card (no app caller takes it from input)
 	GetRouteByCardID(ctx context.Context, cardID pgtype.Int8) (Route, error)
 	// account-lint: cross-account public route resolver (/{path}); paths are globally unique
@@ -909,7 +913,9 @@ type Querier interface {
 	// RotateRefreshFamilyWithAccount re-issues the active token of a family with a new active account.
 	RotateRefreshFamilyWithAccount(ctx context.Context, arg RotateRefreshFamilyWithAccountParams) (RefreshToken, error)
 	// RotateRefreshTokenByHash atomically revokes a valid refresh token and issues its
-	// successor in the same family (no window without an active row).
+	// successor in the same family (no window without an active row). The old row is marked
+	// rotated (reuse detection, TEC-1179). The family keeps its client_type and device_name;
+	// expires_at follows the family's client type, app_version follows the latest request.
 	RotateRefreshTokenByHash(ctx context.Context, arg RotateRefreshTokenByHashParams) (RefreshToken, error)
 	RotateWebhookEndpointSecret(ctx context.Context, arg RotateWebhookEndpointSecretParams) (WebhookEndpoint, error)
 	// account-lint: cross-account renewal worker

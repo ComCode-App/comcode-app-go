@@ -2386,6 +2386,10 @@ type RefreshToken struct {
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	ActiveAccountID    pgtype.Int8        `json:"active_account_id"`
 	FamilyUuid         uuid.UUID          `json:"family_uuid"`
+	ClientType         string             `json:"client_type"`
+	DeviceName         pgtype.Text        `json:"device_name"`
+	AppVersion         pgtype.Text        `json:"app_version"`
+	RotatedAt          pgtype.Timestamptz `json:"rotated_at"`
 }
 
 type Role struct {

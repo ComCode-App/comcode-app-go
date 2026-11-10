@@ -67,6 +67,8 @@ type JWTConfig struct {
 	RefreshSecret string
 	AccessTTL     time.Duration
 	RefreshTTL    time.Duration
+	// RefreshTTLMobile is the refresh lifetime of mobile app sessions (TEC-1179).
+	RefreshTTLMobile time.Duration
 }
 
 type AppConfig struct {
@@ -262,6 +264,8 @@ func Load() (Config, error) {
 			RefreshSecret: getEnv("JWT_REFRESH_SECRET", defaultJWTRefreshSecret),
 			AccessTTL:     getDuration("JWT_ACCESS_TTL", 15*time.Minute),
 			RefreshTTL:    getDuration("JWT_REFRESH_TTL", 168*time.Hour),
+			// Mobile sessions slide on every refresh; 60 days keeps a rarely opened app signed in.
+			RefreshTTLMobile: getDuration("JWT_REFRESH_TTL_MOBILE", 60*24*time.Hour),
 		},
 		Log: LogConfig{
 			Level:  getEnv("LOG_LEVEL", "debug"),
@@ -325,7 +329,7 @@ func (c Config) validate() error {
 	if c.Queue.Concurrency <= 0 {
 		return fmt.Errorf("config: QUEUE_CONCURRENCY must be positive")
 	}
-	if c.JWT.AccessTTL <= 0 || c.JWT.RefreshTTL <= 0 {
+	if c.JWT.AccessTTL <= 0 || c.JWT.RefreshTTL <= 0 || c.JWT.RefreshTTLMobile <= 0 {
 		return fmt.Errorf("config: JWT TTLs must be positive")
 	}
 	if err := c.secretGuard(); err != nil {

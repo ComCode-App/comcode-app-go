@@ -36,6 +36,9 @@ const (
 	CodeInvalidPasscode     = "INVALID_PASSCODE"
 	CodeLastSignInMethod    = "LAST_SIGN_IN_METHOD"
 	CodeInvalidEmailCode    = "INVALID_EMAIL_CODE"
+	// CodeRefreshRace: the refresh token was rotated moments ago by a concurrent request
+	// (409); the session is still live (TEC-1179).
+	CodeRefreshRace = "REFRESH_RACE"
 	// CodeAppUpdateRequired: 426, the mobile app is older than mobile.min_version (TEC-1178).
 	CodeAppUpdateRequired = "APP_UPDATE_REQUIRED"
 )

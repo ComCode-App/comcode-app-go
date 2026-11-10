@@ -28,12 +28,13 @@
 ## longer read. compose.prod.yml-only knobs (COMPOSE_PROJECT_NAME, APP_NETWORK_NAME,
 ## *_VOLUME_NAME, IMAGE_PULL_POLICY) keep their compose defaults; .env.example documents them.
 
-@version 3
+@version 4
 
 ## v2 (TEC-1095): compose.prod.yml builds the image names from IMAGE_REPO / IMAGE_TAG.
 @remove BACKEND_IMAGE 2
 @remove FRONTEND_IMAGE 2
 ## v3 (TEC-1182): optional AUTH_REVIEW_ACCOUNTS (app store review sign-in).
+## v4 (TEC-1179): optional JWT_REFRESH_TTL_MOBILE (mobile app refresh lifetime).
 
 @norotate APP_ENCRYPTION_KEY
 @norotate DB_PASSWORD
@@ -180,6 +181,8 @@ DB_MAX_CONNS | empty
 # [15m] [168h]
 JWT_ACCESS_TTL | empty
 JWT_REFRESH_TTL | empty
+# Refresh lifetime of mobile app sessions, sliding on every refresh [1440h] (60 days).
+JWT_REFRESH_TTL_MOBILE | empty
 # Realtime connection token lifetime [1h].
 CENTRIFUGO_TOKEN_TTL | empty
 # Object storage driver [s3]; S3_ENDPOINT is the bundled SeaweedFS.

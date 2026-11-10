@@ -37,8 +37,13 @@ type Manager struct {
 	accessSecret []byte
 	accessTTL    time.Duration
 	refreshTTL   time.Duration
-	now          func() time.Time
+	// mobileRefreshTTL is the refresh lifetime of mobile app sessions (TEC-1179).
+	mobileRefreshTTL time.Duration
+	now              func() time.Time
 }
+
+// DefaultMobileRefreshTTL is the mobile app refresh lifetime when none is configured (60 days).
+const DefaultMobileRefreshTTL = 60 * 24 * time.Hour
 
 // NewManager creates a token manager from a non-empty access signing secret.
 func NewManager(accessSecret string, accessTTL, refreshTTL time.Duration) (*Manager, error) {
@@ -52,15 +57,30 @@ func NewManager(accessSecret string, accessTTL, refreshTTL time.Duration) (*Mana
 		accessSecret: []byte(accessSecret),
 		accessTTL:    accessTTL,
 		refreshTTL:   refreshTTL,
-		now:          time.Now,
+		// The mobile lifetime is set separately (SetMobileRefreshTTL), so the many callers of
+		// NewManager that only issue web sessions stay unchanged.
+		mobileRefreshTTL: DefaultMobileRefreshTTL,
+		now:              time.Now,
 	}, nil
 }
 
 // AccessTTL returns the configured access token lifetime.
 func (m *Manager) AccessTTL() time.Duration { return m.accessTTL }
 
-// RefreshTTL returns the configured opaque refresh token lifetime.
+// RefreshTTL returns the configured opaque refresh token lifetime (web sessions).
 func (m *Manager) RefreshTTL() time.Duration { return m.refreshTTL }
+
+// MobileRefreshTTL returns the refresh token lifetime of mobile app sessions.
+func (m *Manager) MobileRefreshTTL() time.Duration { return m.mobileRefreshTTL }
+
+// SetMobileRefreshTTL sets the mobile app refresh lifetime (JWT_REFRESH_TTL_MOBILE).
+func (m *Manager) SetMobileRefreshTTL(ttl time.Duration) error {
+	if ttl <= 0 {
+		return errors.New("jwt: mobile refresh TTL must be positive")
+	}
+	m.mobileRefreshTTL = ttl
+	return nil
+}
 
 // IssueAccess creates a short-lived access token.
 func (m *Manager) IssueAccess(in AccessInput) (string, time.Time, error) {

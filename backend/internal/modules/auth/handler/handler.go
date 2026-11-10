@@ -129,6 +129,10 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 			response.Unauthorized(w, r, "Refresh token is invalid")
 			return
 		}
+		if errors.Is(err, usecase.ErrRefreshRace) {
+			response.Conflict(w, r, response.CodeRefreshRace, "Refresh token was just rotated by another request")
+			return
+		}
 		writeUsecaseError(w, r, err)
 		return
 	}
@@ -537,7 +541,13 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 }
 
 func sessionMeta(r *http.Request) model.SessionMeta {
-	return model.SessionMeta{UserAgent: r.UserAgent(), IP: clientip.String(r)}
+	meta := model.SessionMeta{UserAgent: r.UserAgent(), IP: clientip.String(r), ClientType: model.ClientWeb}
+	if isMobileClient(r.Header.Get(headerClient)) {
+		meta.ClientType = model.ClientMobile
+		meta.DeviceName = clientLabel(r.Header.Get(headerDeviceName), maxDeviceNameLen)
+		meta.AppVersion = clientLabel(r.Header.Get(headerAppVersion), maxAppVersionLen)
+	}
+	return meta
 }
 
 func writeUsecaseError(w http.ResponseWriter, r *http.Request, err error) {

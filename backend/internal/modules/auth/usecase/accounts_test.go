@@ -90,8 +90,12 @@ func TestRefreshKeepsSessionFamilyAndRejectsOldToken(t *testing.T) {
 	if _, err := f.principal(t, first.AccessToken); err != nil {
 		t.Fatalf("pre-rotation access token rejected: %v", err)
 	}
-	if _, err := f.uc.Refresh(context.Background(), first.RefreshToken, model.SessionMeta{}); !errors.Is(err, ErrInvalidCredentials) {
-		t.Fatalf("reused refresh token: expected ErrInvalidCredentials, got %v", err)
+	// Presented again right after rotation: a concurrent refresh, not a replay (TEC-1179).
+	if _, err := f.uc.Refresh(context.Background(), first.RefreshToken, model.SessionMeta{}); !errors.Is(err, ErrRefreshRace) {
+		t.Fatalf("reused refresh token within the race window: expected ErrRefreshRace, got %v", err)
+	}
+	if _, err := f.principal(t, second.AccessToken); err != nil {
+		t.Fatalf("race must not revoke the family: %v", err)
 	}
 }
 

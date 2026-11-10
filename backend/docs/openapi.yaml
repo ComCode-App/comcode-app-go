@@ -160,7 +160,15 @@ paths:
         Authenticates with email/password and returns a token pair. An unknown email and a wrong
         password get the same `401 INVALID_CREDENTIALS`; a disabled account is reported (403) only
         after the correct password. Rate limited per IP + email, per IP and per email.
+
+        The mobile app sends `X-Client: mobile` (plus `X-Device-Name`, `X-App-Version`): the new
+        session gets the mobile refresh lifetime (`JWT_REFRESH_TTL_MOBILE`, default 60 days)
+        instead of `JWT_REFRESH_TTL` (7 days).
       security: []
+      parameters:
+        - $ref: "#/components/parameters/XClient"
+        - $ref: "#/components/parameters/XDeviceName"
+        - $ref: "#/components/parameters/XAppVersion"
       requestBody:
         required: true
         content:
@@ -192,8 +200,23 @@ paths:
       tags: [Auth]
       operationId: postAuthRefresh
       summary: Refresh tokens
-      description: Rotates an opaque refresh token and returns a new token pair.
+      description: |
+        Rotates an opaque refresh token and returns a new token pair. The new refresh token's
+        lifetime restarts (sliding) and follows the session's client type, fixed at sign-in:
+        `JWT_REFRESH_TTL` for web, `JWT_REFRESH_TTL_MOBILE` for the mobile app. `X-Client` on
+        this call cannot change it; `X-App-Version` updates the session's app version.
+
+        Reuse detection: presenting a refresh token that was already rotated
+        - less than 30 seconds after its rotation answers `409 REFRESH_RACE` (a concurrent
+          refresh; the session stays live, use the token the other request received);
+        - later revokes the whole session (every token of the family) and emails the owner a
+          security notice (`auth.refresh_reuse`); the answer is `401`.
+        A token revoked by logout or session revocation simply answers `401`.
       security: []
+      parameters:
+        - $ref: "#/components/parameters/XClient"
+        - $ref: "#/components/parameters/XDeviceName"
+        - $ref: "#/components/parameters/XAppVersion"
       requestBody:
         required: true
         content:
@@ -211,6 +234,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "409":
+          $ref: "#/components/responses/RefreshRace"
         "426":
           $ref: "#/components/responses/AppUpdateRequired"
         "500":
@@ -1598,7 +1623,13 @@ paths:
         closed no account is created (`400 INVALID_EMAIL_CODE`).
 
         Rate limited per client IP (30) and per email (10) in a 15-minute window.
+
+        Mobile clients send the same client headers as `POST /v1/auth/login`.
       security: []
+      parameters:
+        - $ref: "#/components/parameters/XClient"
+        - $ref: "#/components/parameters/XDeviceName"
+        - $ref: "#/components/parameters/XAppVersion"
       requestBody:
         required: true
         content:
@@ -2215,6 +2246,8 @@ paths:
       description: >-
         Device sessions for the current user, one per refresh-token family (rotation keeps the family).
         `uuid` is the family id; `current` is the session bound to this access token.
+        `client_type` is `web` or `mobile`; mobile sessions carry the app's `device_name` and
+        latest `app_version`.
       security:
         - bearerAuth: []
       responses:
@@ -12003,6 +12036,26 @@ components:
       in: query
       description: Comma-separated fields; prefix `-` for descending
       schema: { type: string }
+    XClient:
+      name: X-Client
+      in: header
+      required: false
+      description: |
+        `mobile` (or `comcode-mobile`) for the mobile app; anything else is a web session. Fixes
+        the refresh lifetime of a new session (TEC-1179). The web BFF never forwards it.
+      schema: { type: string, enum: [mobile, comcode-mobile] }
+    XDeviceName:
+      name: X-Device-Name
+      in: header
+      required: false
+      description: Mobile app only. Device label shown in the sessions list (printable, max 100 characters).
+      schema: { type: string, maxLength: 100 }
+    XAppVersion:
+      name: X-App-Version
+      in: header
+      required: false
+      description: Mobile app only. App version shown in the sessions list (max 32 characters).
+      schema: { type: string, maxLength: 32 }
 
   responses:
     AppUpdateRequired:
@@ -12057,6 +12110,14 @@ components:
             $ref: "#/components/schemas/Error"
     Conflict:
       description: Conflict (duplicate / constraint)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    RefreshRace:
+      description: |
+        `REFRESH_RACE`: the refresh token was rotated less than 30 seconds ago by a concurrent
+        request. The session is still live; retry with the newest refresh token.
       content:
         application/json:
           schema:
@@ -14114,7 +14175,7 @@ components:
 
     AuthSession:
       type: object
-      required: [uuid, current, created_at, expires_at]
+      required: [uuid, current, created_at, expires_at, client_type]
       properties:
         uuid: { type: string, format: uuid }
         current: { type: boolean }
@@ -14123,6 +14184,9 @@ components:
         created_at: { type: string, format: date-time }
         expires_at: { type: string, format: date-time }
         impersonated: { type: boolean }
+        client_type: { type: string, enum: [web, mobile] }
+        device_name: { type: string, maxLength: 100, description: Mobile app device name (display only) }
+        app_version: { type: string, maxLength: 32, description: Latest mobile app version of the session }
 
     SessionList:
       type: object
