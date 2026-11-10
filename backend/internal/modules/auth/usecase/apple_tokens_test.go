@@ -128,10 +128,10 @@ func (f *appleFixture) lastCall() appleCall {
 	f.t.Helper()
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	if f.callCount() == 0 {
+	if len(f.calls) == 0 {
 		f.t.Fatal("no Apple call")
 	}
-	return f.calls[f.callCount()-1]
+	return f.calls[len(f.calls)-1]
 }
 
 func (f *appleFixture) noSecretsLogged() {
