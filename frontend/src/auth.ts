@@ -15,6 +15,7 @@ import {
   adapterGetOAuthAccountUser,
   adapterGetUserByEmail,
   adapterIssueSession,
+  exchangeQRLogin,
   loginWithEmailCode,
   loginWithPassword,
   type OAuthConfigPayload,
@@ -255,6 +256,52 @@ async function buildProviders(): Promise<{
         } catch (error) {
           // Code + status only: never the email or either code.
           logCredentialsFailure(error);
+          return throwSignInCode(error);
+        }
+      },
+    }),
+  );
+
+  // QR sign-in (TEC-1185, docs/design/mobile.md §3): the login tab redeems an
+  // approval made in the mobile app. It sends its browser secret plus the
+  // one-time exchange token from its realtime channel; the Go API enforces
+  // single use, expiry and the attempt limit. Always registered, like
+  // email-code: the token pair stays in the NextAuth JWT, never in browser JS.
+  providers.push(
+    Credentials({
+      id: "qr-login",
+      name: "QR code",
+      credentials: {
+        session_id: { label: "Session", type: "text" },
+        browser_secret: { label: "Browser secret", type: "text" },
+        exchange_token: { label: "Exchange token", type: "text" },
+      },
+      async authorize(credentials) {
+        const sessionId = String(credentials?.session_id ?? "").trim();
+        const browserSecret = String(credentials?.browser_secret ?? "").trim();
+        const exchangeToken = String(credentials?.exchange_token ?? "").trim();
+        if (!sessionId || !browserSecret || !exchangeToken) return null;
+        try {
+          const result = await exchangeQRLogin(
+            sessionId,
+            browserSecret,
+            exchangeToken,
+          );
+          return {
+            id: result.user.uuid,
+            email: result.user.email,
+            name: result.user.name,
+            accessToken: result.access_token,
+            refreshToken: result.refresh_token,
+            expiresIn: result.expires_in,
+          };
+        } catch (error) {
+          // Code + status only: never the session id, secret or token.
+          logCredentialsFailure(error);
+          const status = (error as Error & { status?: number }).status;
+          if (status === 401 || status === 403) {
+            throw new SignInCodeError("QR_ACCOUNT_UNAVAILABLE");
+          }
           return throwSignInCode(error);
         }
       },

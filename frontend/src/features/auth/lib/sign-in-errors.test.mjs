@@ -52,6 +52,18 @@ test("sign-in codes map to their own message", () => {
     "auth.totp.login_not_enrolled",
   );
   assert.equal(signInErrorKey("RATE_LIMITED", "x"), "auth.login.rate_limited");
+  assert.equal(
+    signInErrorKey("QR_SESSION_NOT_FOUND", "x"),
+    "auth.qr.exchange_failed",
+  );
+  assert.equal(
+    signInErrorKey("QR_LOGIN_INVALID", "x"),
+    "auth.qr.exchange_failed",
+  );
+  assert.equal(
+    signInErrorKey("QR_ACCOUNT_UNAVAILABLE", "x"),
+    "auth.qr.account_unavailable",
+  );
   assert.equal(signInErrorKey("CredentialsSignin", "fallback"), "fallback");
   assert.equal(signInErrorKey(null, "fallback"), "fallback");
 });

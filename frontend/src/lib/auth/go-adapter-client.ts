@@ -297,3 +297,30 @@ export async function loginWithEmailCode(
   });
   return unwrap<GoTokensPayload>(result);
 }
+
+export type QRLoginExchangePayload = GoTokensPayload & {
+  user: { uuid: string; email: string; name: string };
+};
+
+/**
+ * Redeems an approved QR sign-in (TEC-1185). Server-side only: the NextAuth
+ * `qr-login` provider calls it, so the token pair never reaches browser JS
+ * (the cookie BFF refuses this path). `fetchUpstream` forwards the browser's
+ * address chain and User-Agent from the incoming sign-in request.
+ */
+export async function exchangeQRLogin(
+  sessionId: string,
+  browserSecret: string,
+  exchangeToken: string,
+) {
+  const result = await fetchUpstream("auth/qr/exchange", {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_id: sessionId,
+      browser_secret: browserSecret,
+      exchange_token: exchangeToken,
+    }),
+  });
+  return unwrap<QRLoginExchangePayload>(result);
+}
