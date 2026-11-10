@@ -390,6 +390,9 @@ type Querier interface {
 	GetNotificationPreferences(ctx context.Context, userID int64) (NotificationPreference, error)
 	GetOAuthAccountByProviderAccount(ctx context.Context, arg GetOAuthAccountByProviderAccountParams) (GetOAuthAccountByProviderAccountRow, error)
 	GetOAuthAccountByUserProvider(ctx context.Context, arg GetOAuthAccountByUserProviderParams) (GetOAuthAccountByUserProviderRow, error)
+	// Apple token revocation (TEC-1181): the stored, encrypted refresh token and
+	// the client it was issued to. Never served to a client.
+	GetOAuthAccountTokenByUserProvider(ctx context.Context, arg GetOAuthAccountTokenByUserProviderParams) (GetOAuthAccountTokenByUserProviderRow, error)
 	GetOAuthProviderSettings(ctx context.Context, provider string) (OauthProviderSetting, error)
 	// account-lint: cross-account platform order lookup by number (platform.orders.read)
 	GetOrderByOrderNumber(ctx context.Context, orderNumber string) (GetOrderByOrderNumberRow, error)
@@ -932,6 +935,9 @@ type Querier interface {
 	SetCompanyMemberProfile(ctx context.Context, arg SetCompanyMemberProfileParams) (int64, error)
 	SetCompanySector(ctx context.Context, arg SetCompanySectorParams) (int64, error)
 	SetDefaultPaymentSavedCard(ctx context.Context, arg SetDefaultPaymentSavedCardParams) (PaymentSavedCard, error)
+	// Stores (or, with NULLs, clears) the encrypted refresh token of one linked
+	// identity and the client id it belongs to (TEC-1181).
+	SetOAuthAccountRefreshToken(ctx context.Context, arg SetOAuthAccountRefreshTokenParams) (int64, error)
 	SetPrimaryProfileByUUID(ctx context.Context, arg SetPrimaryProfileByUUIDParams) error
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetStructureAssignment(ctx context.Context, arg SetStructureAssignmentParams) (int64, error)

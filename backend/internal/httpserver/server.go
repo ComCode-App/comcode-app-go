@@ -175,6 +175,7 @@ import (
 	analyticsrealtime "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/analytics/realtime"
 	analyticsregistry "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/analytics/registry"
 	analyticsstorage "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/analytics/storage"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/appleauth"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/bulkengine"
 	bulkadapters "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/bulkengine/adapters"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/crypto"
@@ -358,6 +359,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// Native Apple / Google id_token sign-in (TEC-1180): audiences come from the admin panel.
 	uc.SetNativeOAuth(oidc.New(oidc.DefaultProviders(), nil), oauthProvSvc)
 	oauthUC := authusecase.NewOAuth(repo, secretBox)
+	// Apple authorization code exchange and token revocation (TEC-1181), signed with the panel .p8.
+	appleTokens := authusecase.NewAppleTokens(repo, secretBox, oauthProvSvc, appleauth.NewTokenClient(appleauth.DefaultBaseURL, nil), log)
+	uc.SetAppleTokens(appleTokens)
+	oauthUC.SetAppleTokens(appleTokens)
 	s.githubSvc = githubSvc
 	s.oauthProvSvc = oauthProvSvc
 	s.authSettings = authSettingsSvc

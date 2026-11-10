@@ -79,3 +79,21 @@ WHERE user_id = sqlc.arg(user_id)
 DELETE FROM oauth_accounts
 WHERE provider = sqlc.arg(provider)
   AND provider_account_id = sqlc.arg(provider_account_id);
+
+-- name: GetOAuthAccountTokenByUserProvider :one
+-- Apple token revocation (TEC-1181): the stored, encrypted refresh token and
+-- the client it was issued to. Never served to a client.
+SELECT oa.id, oa.provider_account_id, oa.refresh_token_enc, oa.client_id
+FROM oauth_accounts oa
+WHERE oa.user_id = sqlc.arg(user_id)
+  AND oa.provider = sqlc.arg(provider);
+
+-- name: SetOAuthAccountRefreshToken :execrows
+-- Stores (or, with NULLs, clears) the encrypted refresh token of one linked
+-- identity and the client id it belongs to (TEC-1181).
+UPDATE oauth_accounts
+SET refresh_token_enc = sqlc.narg(refresh_token_enc),
+    client_id = sqlc.narg(client_id)
+WHERE user_id = sqlc.arg(user_id)
+  AND provider = sqlc.arg(provider)
+  AND provider_account_id = sqlc.arg(provider_account_id);

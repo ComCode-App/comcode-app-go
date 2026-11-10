@@ -16,7 +16,12 @@ import (
 type OAuthUseCase struct {
 	repo Repository
 	box  *crypto.SecretBox
+	// appleTokens revokes the stored Apple refresh token on unlink (TEC-1181); nil = off.
+	appleTokens *AppleTokens
 }
+
+// SetAppleTokens attaches Apple token revocation for unlinking an Apple identity.
+func (u *OAuthUseCase) SetAppleTokens(a *AppleTokens) { u.appleTokens = a }
 
 // NewOAuth creates an OAuth use case.
 func NewOAuth(repo Repository, box *crypto.SecretBox) *OAuthUseCase {
@@ -146,11 +151,21 @@ func (u *OAuthUseCase) UnlinkOAuthAccountForUser(ctx context.Context, userUUID u
 	if err := ensureSignInMethodLeft(ctx, u.repo, user, signInMethodRemoval{provider: provider}); err != nil {
 		return err
 	}
+	// Apple: read the stored refresh token first, revoke it once the row is gone. A failed
+	// revoke is logged and never blocks the unlink (TEC-1181).
+	var appleTok model.OAuthAccountToken
+	revokeApple := false
+	if provider == model.OAuthProviderApple {
+		appleTok, revokeApple = u.appleTokens.loadForUnlink(ctx, user.ID)
+	}
 	if err := u.repo.DeleteOAuthAccountByUserProvider(ctx, user.ID, provider); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			return ErrNotFound
 		}
 		return err
+	}
+	if revokeApple {
+		u.appleTokens.revokeLogged(ctx, appleTok)
 	}
 	return nil
 }

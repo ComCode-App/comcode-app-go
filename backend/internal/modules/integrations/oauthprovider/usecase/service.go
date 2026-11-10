@@ -278,6 +278,41 @@ func hasCredentials(row db.OauthProviderSetting) bool {
 		row.AppleTeamID != "" && row.AppleKeyID != ""
 }
 
+// AppleTokenCredentials is what Apple's token endpoints (code exchange, revocation; TEC-1181)
+// need from the 'apple' row. Internal only: it carries the decrypted signing key.
+type AppleTokenCredentials struct {
+	// Key signs client_secret JWTs for any client id (bundle id or Services ID); nil when no
+	// complete .p8 key (key + Team ID + Key ID) is stored.
+	Key *appleauth.SigningKey
+	// WebClientID is the web Services ID (revokes tokens stored by the web flow).
+	WebClientID string
+	// WebClientSecret is the pasted web client secret JWT, "" when none; a fallback for
+	// revoking web tokens without a stored key.
+	WebClientSecret string
+}
+
+// AppleTokenCredentials returns the Apple token credentials whatever the login flags are:
+// revocation must keep working after Apple sign-in is switched off.
+func (s *Service) AppleTokenCredentials(ctx context.Context) (AppleTokenCredentials, error) {
+	row, err := s.q.GetOAuthProviderSettings(ctx, providerApple)
+	if err != nil {
+		return AppleTokenCredentials{}, err
+	}
+	key, err := s.appleSigningKey(row)
+	if err != nil {
+		return AppleTokenCredentials{}, err
+	}
+	out := AppleTokenCredentials{Key: key, WebClientID: strings.TrimSpace(row.ClientID)}
+	if hasStoredSecret(row) {
+		secret, err := s.box.Decrypt(row.ClientSecretEnc.String)
+		if err != nil {
+			return AppleTokenCredentials{}, errors.New("decrypt apple client secret failed")
+		}
+		out.WebClientSecret = secret
+	}
+	return out, nil
+}
+
 // Get returns masked settings for one provider.
 func (s *Service) Get(ctx context.Context, provider string) (Settings, error) {
 	p, err := normalizeProvider(provider)

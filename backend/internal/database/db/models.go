@@ -1881,6 +1881,7 @@ type OauthAccount struct {
 	GithubLogin       pgtype.Text        `json:"github_login"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	ClientID          pgtype.Text        `json:"client_id"`
 }
 
 type OauthProviderSetting struct {

@@ -81,3 +81,16 @@ type CreateOAuthAccountInput struct {
 	Scope             *string
 	GitHubLogin       *string
 }
+
+// OAuthAccountToken is the stored provider refresh token of one linked identity
+// (Apple token revocation, TEC-1181). RefreshTokenEnc is SecretBox ciphertext.
+type OAuthAccountToken struct {
+	ID                int64
+	UserID            int64
+	Provider          string
+	ProviderAccountID string
+	RefreshTokenEnc   *string
+	// ClientID is the client the token was issued to (the iOS bundle id for a
+	// native sign-in); nil for rows written by the web flow.
+	ClientID *string
+}
