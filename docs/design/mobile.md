@@ -400,14 +400,46 @@ Asynq periyodik app:push:receipts (15 dk)         YENİ
   └─ makbuzlar; DeviceNotRegistered → cihaz disabled; diğer hatalar loglanır
 ```
 
+**Uygulandı (B10, TEC-1187):** `usecase/expo.go`, `pushtext` paketi, `queue/push.go`. Migration yok
+(B9'un `idx_push_tickets_device` ve `idx_push_tickets_created_at` dizinleri yeterli). Ayrıntılar:
+
+- Tetik: `Deliver` in-app (ya da `push` kanalı) satırını teslim edince, web push'un yanında
+  `scheduleMobilePush` çalışır. Satırın `template_code`'u `pushtext` kataloğunda yoksa, satırda
+  `sealed_content` varsa ya da kullanıcının etkin cihazı yoksa kuyruğa hiçbir şey girmez.
+  Worker'da teslim satır içi çalıştığı için push `WithPushQueue` ile kuyruğa gider
+  (`app:push:send`, `notifications` kuyruğu, görev kimliği `push:<notification_id>`, 5 yeniden
+  deneme). Kuyruk kapalıysa (yerel geliştirme) push satır içi gönderilir.
+- Gönderim: `push_enabled` kapalıysa hiçbir şey gönderilmez. Hedefler `ListPushTargetsForNotification`:
+  `disabled_at` boş **ve** oturum ailesinin canlı (iptal edilmemiş, süresi dolmamış) refresh
+  token'ı var. Bu bildirim için zaten ticket'ı olan cihaz atlanır, böylece Asynq'in yeniden
+  denemesi aynı telefona ikinci kez push göndermez. 100'lük paketler; `EXPO_ACCESS_TOKEN` doluysa
+  `Authorization: Bearer` başlığı. 429 / 5xx / ağ hatasında istemci 3 kez dener (1 sn'den
+  katlanarak, `Retry-After` öncelikli, en çok 30 sn), sonra hata Asynq'e döner. 429 dışındaki
+  4xx yeniden denenmez (`SkipRetry`).
+- Ticket: `ok` → `push_tickets`; `DeviceNotRegistered` → cihaz `device_not_registered` ile kapanır;
+  `InvalidCredentials` loglanır (EAS'ta APNs / FCM kimliği eksik), cihaz kapanmaz.
+- `app:push:receipts` 15 dakikada bir (`maintenance` kuyruğu): 15 dakikadan eski ticket'ların
+  makbuzları 1000'lik paketlerle okunur, `DeviceNotRegistered` cihazı kapatır, işlenen ticket'lar
+  silinir; henüz hazır olmayan makbuz bir sonraki çalışmaya kalır.
+- Expo adresi `ExpoConfig.BaseURL` ile değişir (varsayılan `https://exp.host/--/api/v2`); testler
+  sahte sunucu kullanır.
+- Loglar push token'ı ve erişim token'ını taşımaz: Expo hata mesajları `logredact`'tan geçer
+  (`ExponentPushToken[...]` → `[push-token]`), HTTP hata metnine yanıt gövdesi konmaz.
+
 - Gönderim API sürecinde değil **worker'da** ve kuyrukta (boilerplate `065375f`): Expo
   erişilemezse Asynq yeniden dener.
-- **Kilit ekranı metni** (`pushtext` kataloğu): her bildirim kodu için tr/en başlık + gövde, yalnız
-  izinli şablon değişkenleriyle, kullanıcının diliyle (yoksa cihaz dili). Kişisel veri yok:
-  `lead.created` → "Yeni bir iletişim talebi aldınız", lead'in adı / telefonu **yazılmaz**.
-  Güvenlik e-postaları (kod, sıfırlama) push'a hiç düşmez.
-- `data`: `{url, notification_uuid, account_uuid?}`. Uygulama dokunulunca ilgili ekranı açar; bildirim
-  başka hesaba aitse önce hesap değiştirir.
+- **Kilit ekranı metni** (`pushtext` kataloğu): her bildirim kodu için sabit tr/en başlık + gövde,
+  **hiç şablon değişkeni yok** (ad, e-posta, kod, tutar, sipariş numarası yazılmaz). Dil cihazın
+  `locale`'i, yoksa kullanıcının dili, yoksa `tr`. Örnek: `leads.received` → "Yeni bir iletişim
+  talebi aldınız", lead'in adı / telefonu **yazılmaz**. Katalogda olmayan kod push'a düşmez.
+  Güvenlik e-postaları (kod, sıfırlama, doğrulama, davet) ve onlarla giden güvenlik bildirimi
+  (`auth.qr_login_approved`, in-app satırı olsa da) katalogda yoktur;
+  `sealed_content` taşıyan satır da hiç push edilmez. `pushtext_test.go` her push'a uygun kodun
+  tr/en metnini ve metinlerde değişken / rakam / e-posta olmadığını denetler.
+- `data`: `{url, notification_uuid, account_uuid}`. `url` aksiyon adresinin uygulama içi yoludur
+  (mutlak adres yola indirgenir). `account_uuid`, `EnqueueInput.AccountID` verilen bildirimlerde
+  (lead, profil doğrulama, kota, faturalama) payload'a yazılır ve push'a geçer; diğerlerinde yoktur.
+  Uygulama dokunulunca ilgili ekranı açar; bildirim başka hesaba aitse önce hesap değiştirir.
 - iOS rozet sayısı: `unread-count` ile.
 
 ### 4.3 Tercihler
@@ -423,8 +455,9 @@ Asynq periyodik app:push:receipts (15 dk)         YENİ
 - Makbuzda `DeviceNotRegistered` → `disabled_at`, `disabled_reason = 'device_not_registered'`.
 - Gönderim yanıtında `InvalidCredentials` → loglanır ve hata takibine gider (APNs / FCM
   kimlikleri EAS'ta eksik demektir); cihaz kapatılmaz.
-- Bakım işi (mevcut günlük bakım kuyruğu): 30 günden eski `disabled` cihazlar ve 270 günden uzun
-  süre `last_seen_at` güncellenmemiş cihazlar silinir; işlenmemiş `push_tickets` 24 saat sonra
+- Bakım işi (mevcut bakım taraması, `app:logs:purge_sweep` ile birlikte, 5 dakikada bir;
+  `PrunePushData`): 30 günden uzun süredir `disabled` cihazlar ve 270 günden uzun süre
+  `last_seen_at` güncellenmemiş cihazlar silinir; işlenmemiş `push_tickets` 24 saat sonra
   silinir.
 - Uygulama her açılışta token'ı yeniden kaydeder (`last_seen_at` günceller); token değişirse eski
   token'ı siler.

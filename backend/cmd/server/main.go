@@ -113,9 +113,11 @@ func main() {
 	if cfg.Queue.Enabled {
 		queueClient = queue.NewClient(cfg.Redis)
 		notifSvc := notifusecase.New(queries, queueClient, provs, log).
-			WithEncryptionKey(cfg.App.Env, cfg.Encryption.Key)
+			WithEncryptionKey(cfg.App.Env, cfg.Encryption.Key).
+			WithExpo(notifusecase.ExpoConfig{AccessToken: cfg.Expo.AccessToken})
 		if cfg.Queue.WorkerInProcess {
 			worker = queue.NewWorker(cfg, log, notifSvc.Deliver).
+				WithMobilePush(notifSvc.SendMobilePush, notifSvc.ProcessPushReceipts).
 				WithLogPurge(logsSvc.ApplyDueRules)
 			if n, err := notifSvc.ReclaimStuck(ctx, notifusecase.DefaultStuckProcessingMinutes); err != nil {
 				log.Error("notification_reclaim_failed", "error", err)

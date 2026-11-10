@@ -294,6 +294,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		PrivateKey: cfg.VAPID.PrivateKey,
 		Subject:    cfg.VAPID.Subject,
 	})
+	// Queue off (inline delivery): mobile pushes are sent inline too (TEC-1187).
+	notifSvc.WithExpo(notifusecase.ExpoConfig{AccessToken: cfg.Expo.AccessToken})
 
 	repo := authrepo.NewPostgres(deps.DB, deps.Queries)
 	uc := authusecase.New(repo, tokens)

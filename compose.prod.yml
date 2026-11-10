@@ -81,6 +81,8 @@ x-backend-environment: &backend-environment
   VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
   VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
   VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:noreply@example.com}
+  # Mobile push: optional Expo access token (enhanced push security); blank = none.
+  EXPO_ACCESS_TOKEN: ${EXPO_ACCESS_TOKEN:-}
   SEARCH_ENABLED: ${SEARCH_ENABLED:-true}
   SEARCH_DRIVER: ${SEARCH_DRIVER:-meilisearch}
   MEILI_HOST: http://${NAME_PREFIX:-app}-meilisearch:7700

@@ -19,6 +19,9 @@ func TestStringRemovesPersonalDataAndSecrets(t *testing.T) {
 		{in: "refresh_token=r3fr3sh&x=1", mustNot: []string{"r3fr3sh"}, want: "refresh_token=" + redacted},
 		{in: "sms to +90 532 123 45 67 failed", mustNot: []string{"532 123"}, want: "[phone]"},
 		{in: "sms to 0532 123 45 67 failed", mustNot: []string{"123 45 67"}, want: "[phone]"},
+		// Expo push tokens (TEC-1187), as Expo quotes them in error messages.
+		{in: `"ExponentPushToken[xXyY-123_abc]" is not a registered push notification recipient`, mustNot: []string{"xXyY-123_abc"}, want: "[push-token]"},
+		{in: "to=ExpoPushToken[abcdef] failed", mustNot: []string{"abcdef"}, want: "[push-token]"},
 		// Apple .p8 / GitHub App keys (TEC-1123): multi-line, one-line with literal \n, unterminated.
 		{in: "bad key -----BEGIN PRIVATE KEY-----\nMIGTAgEAMBMGByqGSM49\nAgEG-----END PRIVATE KEY----- end", mustNot: []string{"MIGT", "AgEG"}, want: "[private-key] end"},
 		{in: `body {"private_key":"-----BEGIN PRIVATE KEY-----\nMIGTAgEAMBMG\n-----END PRIVATE KEY-----\n"}`, mustNot: []string{"MIGT"}, want: "[private-key]"},
