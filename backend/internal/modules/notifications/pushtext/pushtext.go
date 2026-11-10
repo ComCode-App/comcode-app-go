@@ -4,7 +4,8 @@
 // A push is shown on a locked screen and passes through Expo, Apple and Google, so it only ever
 // uses the fixed tr/en texts below: no template variables, no names, emails, codes or amounts.
 // A notification code without an entry here is not pushed at all. Security emails (sign-in
-// codes, password reset, verification, invitations) are email-only and never get an entry.
+// codes, password reset, verification, invitations) and the security notices sent with them
+// (auth.qr_login_approved) never get an entry.
 package pushtext
 
 import "strings"

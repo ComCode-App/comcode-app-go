@@ -22,10 +22,11 @@ var pushEligible = []string{
 	"auth.welcome", "auth.profile_updated", "notifications.test",
 }
 
-// Security emails and secret-bearing emails are never pushed.
+// Security emails and secret-bearing emails are never pushed. auth.qr_login_approved also has
+// an in-app row, but it is a security notice sent with the security email: left out of push.
 var neverPushed = []string{
 	"auth.password_reset", "auth.email_verification", "auth.login_code", "auth.refresh_reuse",
-	"accounts.invite", "leads.exchange_copy",
+	"auth.qr_login_approved", "accounts.invite", "leads.exchange_copy",
 }
 
 // A push text must not be able to carry personal data: no placeholders of any template syntax,

@@ -432,7 +432,8 @@ Asynq periyodik app:push:receipts (15 dk)         YENİ
   **hiç şablon değişkeni yok** (ad, e-posta, kod, tutar, sipariş numarası yazılmaz). Dil cihazın
   `locale`'i, yoksa kullanıcının dili, yoksa `tr`. Örnek: `leads.received` → "Yeni bir iletişim
   talebi aldınız", lead'in adı / telefonu **yazılmaz**. Katalogda olmayan kod push'a düşmez.
-  Güvenlik e-postaları (kod, sıfırlama, doğrulama, davet) e-posta kanalındadır ve katalogda yoktur;
+  Güvenlik e-postaları (kod, sıfırlama, doğrulama, davet) ve onlarla giden güvenlik bildirimi
+  (`auth.qr_login_approved`, in-app satırı olsa da) katalogda yoktur;
   `sealed_content` taşıyan satır da hiç push edilmez. `pushtext_test.go` her push'a uygun kodun
   tr/en metnini ve metinlerde değişken / rakam / e-posta olmadığını denetler.
 - `data`: `{url, notification_uuid, account_uuid}`. `url` aksiyon adresinin uygulama içi yoludur
