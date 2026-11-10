@@ -32,8 +32,9 @@ const (
 type nativeTokenBody struct {
 	IDToken string `json:"id_token"`
 	Nonce   string `json:"nonce"`
-	// AuthorizationCode (Apple) is accepted for the Apple token exchange that follows in a
-	// later change; it is not used yet.
+	// AuthorizationCode (Apple, optional) is exchanged at Apple for a refresh token, stored
+	// encrypted to revoke it on unlink / account deletion (TEC-1181). Best effort: a failed
+	// exchange never fails the request. Ignored for Google.
 	AuthorizationCode string `json:"authorization_code"`
 }
 
@@ -68,6 +69,7 @@ func (h *Handler) NativeOAuthSignIn(w http.ResponseWriter, r *http.Request) {
 	}
 	tokens, err := h.uc.SignInWithNativeIdentity(r.Context(), id, usecase.NativeSignInInput{
 		GivenName: in.GivenName, FamilyName: in.FamilyName, TOTPCode: in.TOTPCode,
+		AuthorizationCode: in.AuthorizationCode,
 	}, meta)
 	if err != nil {
 		writeNativeError(w, r, err)
@@ -120,6 +122,7 @@ func (h *Handler) NativeLinkIdentity(w http.ResponseWriter, r *http.Request) {
 		writeNativeError(w, r, err)
 		return
 	}
+	h.uc.StoreNativeAppleToken(r.Context(), p.UserInternal, id, in.AuthorizationCode)
 	if h.activity != nil {
 		uid := p.UserInternal
 		h.activity.Record(r.Context(), &uid, "auth.identity.linked", "auth.identities."+provider, nil,

@@ -48,6 +48,24 @@ func (u *AuthUseCase) SetNativeOAuth(verifier IDTokenVerifier, settings NativePr
 	u.nativeSettings = settings
 }
 
+// SetAppleTokens attaches the Apple authorization code exchange (TEC-1181). Without it a
+// native Apple authorization_code is ignored.
+func (u *AuthUseCase) SetAppleTokens(a *AppleTokens) { u.appleTokens = a }
+
+// AppleTokens returns the attached Apple token helper (nil when off), for the account
+// deletion cleanup (TEC-1122) and the identity unlink.
+func (u *AuthUseCase) AppleTokens() *AppleTokens { return u.appleTokens }
+
+// StoreNativeAppleToken exchanges the authorization_code of a verified native Apple identity
+// linked to userID and stores the refresh token (best effort, never fails; TEC-1181). The
+// client id is the bundle id the id_token's aud matched, not the web Services ID.
+func (u *AuthUseCase) StoreNativeAppleToken(ctx context.Context, userID int64, id NativeIdentity, code string) {
+	if u.appleTokens == nil || id.Claims.Provider != model.OAuthProviderApple {
+		return
+	}
+	u.appleTokens.StoreFromCode(ctx, userID, id.Claims.Subject, id.Claims.Audience, code)
+}
+
 // NativeIdentity is a verified native id_token.
 type NativeIdentity struct {
 	Claims oidc.Claims
@@ -62,6 +80,9 @@ type NativeSignInInput struct {
 	GivenName  string
 	FamilyName string
 	TOTPCode   string
+	// AuthorizationCode (Apple) is exchanged for a refresh token after a successful sign-in
+	// (TEC-1181); a failed exchange never fails the sign-in.
+	AuthorizationCode string
 }
 
 // IsNativeOAuthProvider reports whether provider has native sign-in (apple, google).
@@ -117,7 +138,7 @@ func (u *AuthUseCase) SignInWithNativeIdentity(ctx context.Context, id NativeIde
 	c := id.Claims
 	linked, err := u.repo.GetOAuthAccountByProviderAccount(ctx, c.Provider, c.Subject)
 	if err == nil {
-		return u.signInLinkedNative(ctx, linked.UserUUID, in.TOTPCode, meta)
+		return u.signInLinkedNative(ctx, linked.UserUUID, id, in, meta)
 	}
 	if !errors.Is(err, repository.ErrNotFound) {
 		return model.Tokens{}, err
@@ -140,7 +161,7 @@ func (u *AuthUseCase) SignInWithNativeIdentity(ctx context.Context, id NativeIde
 	if errors.Is(err, ErrConflict) {
 		// Created concurrently (double submit): sign in only if that request linked this identity.
 		if linked, lerr := u.repo.GetOAuthAccountByProviderAccount(ctx, c.Provider, c.Subject); lerr == nil {
-			return u.signInLinkedNative(ctx, linked.UserUUID, in.TOTPCode, meta)
+			return u.signInLinkedNative(ctx, linked.UserUUID, id, in, meta)
 		}
 		return model.Tokens{}, ErrOAuthAccountNotLinked
 	}
@@ -155,10 +176,22 @@ func (u *AuthUseCase) SignInWithNativeIdentity(ctx context.Context, id NativeIde
 	if err := u.repo.UpdateLastLogin(ctx, user.ID); err != nil {
 		return model.Tokens{}, err
 	}
-	return u.issueTokensForUser(ctx, user, meta)
+	return u.issueNativeTokens(ctx, user, id, in.AuthorizationCode, meta)
 }
 
-func (u *AuthUseCase) signInLinkedNative(ctx context.Context, userUUID uuid.UUID, totpCode string, meta model.SessionMeta) (model.Tokens, error) {
+// issueNativeTokens issues the token pair and, once it exists, stores the Apple refresh token
+// for the authorization code (only a successful sign-in uses the code: an MFA round resends it).
+func (u *AuthUseCase) issueNativeTokens(ctx context.Context, user model.User, id NativeIdentity, code string, meta model.SessionMeta) (model.Tokens, error) {
+	tokens, err := u.issueTokensForUser(ctx, user, meta)
+	if err != nil {
+		return model.Tokens{}, err
+	}
+	u.StoreNativeAppleToken(ctx, user.ID, id, code)
+	return tokens, nil
+}
+
+func (u *AuthUseCase) signInLinkedNative(ctx context.Context, userUUID uuid.UUID, id NativeIdentity, in NativeSignInInput, meta model.SessionMeta) (model.Tokens, error) {
+	totpCode := in.TOTPCode
 	user, err := u.repo.FindUserByUUID(ctx, userUUID)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
@@ -189,7 +222,7 @@ func (u *AuthUseCase) signInLinkedNative(ctx context.Context, userUUID uuid.UUID
 	if err := u.repo.UpdateLastLogin(ctx, user.ID); err != nil {
 		return model.Tokens{}, err
 	}
-	return u.issueTokensForUser(ctx, user, meta)
+	return u.issueNativeTokens(ctx, user, id, in.AuthorizationCode, meta)
 }
 
 // NativeLinkRequirements enforces what linking a native identity to a signed-in user needs:

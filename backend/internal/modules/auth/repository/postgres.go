@@ -308,6 +308,14 @@ func textParam(v string) pgtype.Text {
 	return pgtype.Text{String: v, Valid: true}
 }
 
+// optText maps nil (or "") to SQL NULL.
+func optText(v *string) pgtype.Text {
+	if v == nil || *v == "" {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: *v, Valid: true}
+}
+
 func textPtr(v pgtype.Text) *string {
 	if !v.Valid || v.String == "" {
 		return nil
@@ -1085,6 +1093,40 @@ func (r *Postgres) DeleteOAuthAccountByUserProvider(ctx context.Context, userID 
 	return r.q.DeleteOAuthAccountByUserProvider(ctx, db.DeleteOAuthAccountByUserProviderParams{
 		UserID: userID, Provider: provider,
 	})
+}
+
+// GetOAuthAccountToken returns the stored refresh token of the user's identity of provider
+// (TEC-1181). ErrNotFound when the user has no such identity.
+func (r *Postgres) GetOAuthAccountToken(ctx context.Context, userID int64, provider string) (model.OAuthAccountToken, error) {
+	row, err := r.q.GetOAuthAccountTokenByUserProvider(ctx, db.GetOAuthAccountTokenByUserProviderParams{
+		UserID: userID, Provider: provider,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.OAuthAccountToken{}, ErrNotFound
+		}
+		return model.OAuthAccountToken{}, err
+	}
+	return model.OAuthAccountToken{
+		ID: row.ID, UserID: userID, Provider: provider, ProviderAccountID: row.ProviderAccountID,
+		RefreshTokenEnc: textPtr(row.RefreshTokenEnc), ClientID: textPtr(row.ClientID),
+	}, nil
+}
+
+// SetOAuthAccountRefreshToken stores (nil clears) the encrypted refresh token and its client
+// id on one linked identity (TEC-1181). ErrNotFound when the identity is gone.
+func (r *Postgres) SetOAuthAccountRefreshToken(ctx context.Context, userID int64, provider, providerAccountID string, refreshTokenEnc, clientID *string) error {
+	n, err := r.q.SetOAuthAccountRefreshToken(ctx, db.SetOAuthAccountRefreshTokenParams{
+		RefreshTokenEnc: optText(refreshTokenEnc), ClientID: optText(clientID),
+		UserID: userID, Provider: provider, ProviderAccountID: providerAccountID,
+	})
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (r *Postgres) GetUserTOTP(ctx context.Context, userID int64) (model.UserTOTP, error) {
