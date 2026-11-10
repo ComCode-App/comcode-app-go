@@ -28,13 +28,14 @@
 ## longer read. compose.prod.yml-only knobs (COMPOSE_PROJECT_NAME, APP_NETWORK_NAME,
 ## *_VOLUME_NAME, IMAGE_PULL_POLICY) keep their compose defaults; .env.example documents them.
 
-@version 4
+@version 5
 
 ## v2 (TEC-1095): compose.prod.yml builds the image names from IMAGE_REPO / IMAGE_TAG.
 @remove BACKEND_IMAGE 2
 @remove FRONTEND_IMAGE 2
 ## v3 (TEC-1182): optional AUTH_REVIEW_ACCOUNTS (app store review sign-in).
 ## v4 (TEC-1179): optional JWT_REFRESH_TTL_MOBILE (mobile app refresh lifetime).
+## v5 (TEC-1183): optional MOBILE_* keys (frontend: AASA / assetlinks.json).
 
 @norotate APP_ENCRYPTION_KEY
 @norotate DB_PASSWORD
@@ -139,6 +140,18 @@ SMTP_TLS | empty
 # ...) stop the API at boot. Rotate the code after each store review and blank it when no
 # review is pending. See backend/docs/auth.md.
 AUTH_REVIEW_ACCOUNTS | empty
+
+# --- Mobile app domain files (optional; blank = off, the file answers 404) ---
+# Read by the frontend at runtime: /.well-known/apple-app-site-association and
+# /.well-known/assetlinks.json (universal links for /login/qr/*, shared credentials).
+# Apple Developer Team ID (10 characters, e.g. ABCDE12345).
+MOBILE_APPLE_TEAM_ID | empty
+# [software.technowide.comcode] [software.technowide.comcode]
+MOBILE_IOS_BUNDLE_ID | empty
+MOBILE_ANDROID_PACKAGE | empty
+# SHA-256 fingerprints of the Android signing certs (Play App Signing, plus the upload
+# or debug key if needed), comma-separated, e.g. 14:6D:E9:...:44:E5.
+MOBILE_ANDROID_SHA256_CERTS | empty
 
 # --- Billing ---
 # iyzico / PayTR credentials are not env vars: enter them in the admin panel

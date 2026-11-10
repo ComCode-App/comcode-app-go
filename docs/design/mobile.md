@@ -242,6 +242,15 @@ kullanılabilir, ama şunlar gerekir:
 - Next.js'in `/.well-known/apple-app-site-association` ve `/.well-known/assetlinks.json` sunması
   (QR evrensel bağlantısı için de gerekli, §3).
 
+  **Uygulandı (TEC-1183, B6):** Next.js iki dosyayı da sunar (`frontend/src/app/.well-known/*`,
+  üretici `frontend/src/lib/mobile/associated-domains.ts`). AASA: `applinks` yalnız `/login/qr/*`,
+  `webcredentials` `<TeamID>.<bundle>`; assetlinks: `handle_all_urls` + `get_login_creds`.
+  Değerler frontend konteynerinin çalışma zamanı env'inden gelir (image önceden derlendiği için
+  `NEXT_PUBLIC_*` değil): `MOBILE_APPLE_TEAM_ID`, `MOBILE_IOS_BUNDLE_ID` ve `MOBILE_ANDROID_PACKAGE`
+  (boş = `software.technowide.comcode`), `MOBILE_ANDROID_SHA256_CERTS` (virgülle ayrılmış).
+  Team ID / sertifika boş ya da geçersizse dosya 404 döner (geçersiz dosya yerine). Yanıt
+  `application/json`, yönlendirme ve oturum kontrolü yok, `Cache-Control: public, max-age=3600`.
+
 Öneri: v1'de passkey girişi yok, e-posta kodu + Apple + Google yeterli; v1.1'de eklenir.
 
 ### 2.6 Rate limit
@@ -492,8 +501,9 @@ düzenleme düğmelerini görmez (`/auth/me` `permissions` + aktif hesabın `rol
    kişisel değil robot erişim token'ı → GitHub secret `EXPO_TOKEN`.
 6. GitHub → Settings → Secrets and variables → Actions → Variables: `MOBILE_ENABLED=true`
    (iskelet merge edildikten sonra).
-7. **Domain dosyaları**: Apple Team ID ve Android imza SHA-256'sı (AASA / assetlinks için) ajana
-   iletilir.
+7. **Domain dosyaları**: Apple Team ID ve Android imza SHA-256'sı (AASA / assetlinks için) prod
+   env'e `MOBILE_APPLE_TEAM_ID` / `MOBILE_ANDROID_SHA256_CERTS` olarak girilir (TEC-1183,
+   [OWNER_CHECKLIST.md](../OWNER_CHECKLIST.md)).
 8. **Mağaza kayıtları**: uygulama adı, açıklamalar, ekran görüntüleri, gizlilik politikası URL'si,
    App Privacy / Data safety formları, yaş derecelendirmesi, inceleme notu ve **inceleme hesabı**
    (`AUTH_REVIEW_ACCOUNTS` ile sabit kodlu e-posta).
@@ -516,7 +526,7 @@ sonra özellikler. Boyut: S ≈ 1 gün, M ≈ 2-4 gün, L ≈ 1 hafta+.
 | B3 | id_token doğrulayıcı ve native Apple / Google girişi | L | B2, KARAR-4 |
 | B4 | Apple token takası ve iptali | S | B3; TEC-1122 (silme kancası) |
 | B5 | App Store / Play inceleme hesapları | S | — |
-| B6 | Associated domains: AASA ve assetlinks | S | KARAR-2, sahip §6.2-7 |
+| B6 | Associated domains: AASA ve assetlinks (TEC-1183, uygulandı; değerler sahipten, §6.2-7) | S | KARAR-2, sahip §6.2-7 |
 | B7 | QR ile giriş: backend | L | — |
 | B8 | QR ile giriş: web giriş paneli | M | B7 |
 | B9 | Push cihaz kaydı (tablolar + uçlar) | M | B2 (oturum ailesi) |
