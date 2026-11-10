@@ -7451,6 +7451,87 @@ paths:
               schema: { $ref: "#/components/schemas/EnvelopeGeneric" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
 
+  /v1/notifications/push-devices:
+    get:
+      tags: [Notifications]
+      operationId: listNotificationPushDevices
+      summary: List the caller's mobile push devices
+      description: |
+        Expo push devices of the signed-in user (TEC-1186), active ones first. `current` marks the
+        device registered from the caller's own session. Disabled devices stay listed with
+        `disabled_at` / `disabled_reason` until the app registers again or deletes them.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Devices
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePushDeviceList" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    post:
+      tags: [Notifications]
+      operationId: registerNotificationPushDevice
+      summary: Register a mobile push device
+      description: |
+        Upserts the caller's Expo push token (TEC-1186), on sign-in and on every app start. The
+        device is tied to the caller's session (the access token's refresh token family): logout,
+        revoking that session (sessions list, refresh token reuse), "sign out other sessions" and
+        password change / reset disable it. Registering again from a live session re-enables it.
+        A token registered earlier by another user moves to the caller. The user's first device
+        turns `push_enabled` on in the notification preferences; later registrations keep the
+        preference as it is. 10 requests per minute per user, shared with DELETE.
+
+        - `409 PUSH_SESSION_INACTIVE`: the access token's session was revoked or expired.
+        - `403 PUSH_IMPERSONATION`: an impersonating admin cannot register devices.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PushDeviceRegisterRequest" }
+      responses:
+        "200":
+          description: Registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePushDeviceRegistered" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /v1/notifications/push-devices/{token}:
+    delete:
+      tags: [Notifications]
+      operationId: deleteNotificationPushDevice
+      summary: Delete one of the caller's push devices
+      description: |
+        Removes the caller's own Expo token (app sign-out, notification permission withdrawn).
+        `404` when the token is unknown or belongs to another user. URL-encode the token
+        (`ExponentPushToken%5B...%5D`). Shares the 10 per minute per user limit with POST;
+        `403 PUSH_IMPERSONATION` while impersonating.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string, maxLength: 255 }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStatus" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
   /v1/platform/activity:
     get:
       tags: [Activity]
@@ -14561,6 +14642,62 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/NotificationPreferences" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PushDevice:
+      type: object
+      required: [uuid, token, platform, locale, app_version, device_name, current, last_seen_at, disabled_at, disabled_reason, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        token: { type: string, description: "Expo push token (`ExponentPushToken[...]`)" }
+        platform: { type: string, enum: [ios, android] }
+        locale: { type: [string, "null"], enum: [tr, en, null] }
+        app_version: { type: [string, "null"] }
+        device_name: { type: [string, "null"] }
+        current: { type: boolean, description: Registered from the caller's own session }
+        last_seen_at: { type: string, format: date-time }
+        disabled_at: { type: [string, "null"], format: date-time }
+        disabled_reason:
+          type: [string, "null"]
+          enum: [signed_out, session_revoked, all_sessions_revoked, device_not_registered, null]
+        created_at: { type: string, format: date-time }
+
+    PushDeviceRegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [token, platform]
+      properties:
+        token: { type: string, maxLength: 255, description: "`ExponentPushToken[...]` or `ExpoPushToken[...]`" }
+        platform: { type: string, enum: [ios, android] }
+        locale: { type: string, description: "Device language; `tr-TR` / `en_US` are reduced to tr / en, others are dropped" }
+        app_version: { type: string, maxLength: 32 }
+        device_name: { type: string, maxLength: 100 }
+
+    EnvelopePushDeviceRegistered:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [device, push_enabled]
+          properties:
+            device: { $ref: "#/components/schemas/PushDevice" }
+            push_enabled: { type: boolean, description: The user's push preference after the registration }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePushDeviceList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/PushDevice" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeResourceMeta:

@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/notifications/usecase"
@@ -16,10 +18,31 @@ import (
 	"github.com/google/uuid"
 )
 
+// Push device error codes (TEC-1186).
+const (
+	codePushSessionInactive = "PUSH_SESSION_INACTIVE"
+	codePushImpersonation   = "PUSH_IMPERSONATION"
+)
+
+// Push device registration and removal share one budget per signed-in user.
+const (
+	pushDeviceLimit  = 10
+	pushDeviceWindow = time.Minute
+)
+
+// Limiter is a fixed-window rate limiter (ratelimit.Limiter).
+type Limiter interface {
+	Allow(ctx context.Context, action, subject string, limit int, window time.Duration) (bool, time.Duration)
+}
+
 // Handler exposes notification HTTP endpoints.
 type Handler struct {
-	svc *usecase.Service
+	svc     *usecase.Service
+	limiter Limiter
 }
+
+// SetRateLimiter enables the per-user limit on the push device routes.
+func (h *Handler) SetRateLimiter(l Limiter) { h.limiter = l }
 
 // New creates a notification handler.
 func New(svc *usecase.Service) *Handler {
@@ -295,6 +318,10 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 		response.NotFound(w, r, "Notification was not found")
 	case errors.Is(err, usecase.ErrForbidden):
 		response.Forbidden(w, r, "You do not have access to this resource")
+	case errors.Is(err, usecase.ErrPushSessionInactive):
+		response.Conflict(w, r, codePushSessionInactive, "This session is no longer active. Sign in again to register the device.")
+	case errors.Is(err, usecase.ErrPushImpersonation):
+		response.Error(w, r, http.StatusForbidden, codePushImpersonation, "Push devices cannot be changed while impersonating a user")
 	case errors.Is(err, usecase.ErrInvalidRequest):
 		response.BadRequest(w, r, response.CodeValidationError, err.Error())
 	default:
@@ -348,4 +375,97 @@ func (h *Handler) DeletePushSubscription(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	response.JSON(w, r, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// pushRateLimited writes 429 RATE_LIMITED (with Retry-After) once the user is over the push
+// device budget.
+func (h *Handler) pushRateLimited(w http.ResponseWriter, r *http.Request, p authctx.Principal) bool {
+	if h.limiter == nil || p.UserInternal <= 0 {
+		return false
+	}
+	allowed, retry := h.limiter.Allow(r.Context(), "push_device", strconv.FormatInt(p.UserInternal, 10), pushDeviceLimit, pushDeviceWindow)
+	if allowed {
+		return false
+	}
+	if retry > 0 {
+		w.Header().Set("Retry-After", strconv.Itoa(int(retry.Seconds())+1))
+	}
+	response.TooManyRequests(w, r, "Too many push device requests. Try again in a moment.")
+	return true
+}
+
+// RegisterPushDevice upserts the caller's Expo push token for the current session (login and
+// every app start).
+func (h *Handler) RegisterPushDevice(w http.ResponseWriter, r *http.Request) {
+	p := authctx.MustPrincipal(r.Context())
+	if h.pushRateLimited(w, r, p) {
+		return
+	}
+	var body struct {
+		Token      string `json:"token"`
+		Platform   string `json:"platform"`
+		Locale     string `json:"locale"`
+		AppVersion string `json:"app_version"`
+		DeviceName string `json:"device_name"`
+	}
+	if err := decodeJSON(w, r, &body); err != nil {
+		return
+	}
+	in := usecase.PushDeviceInput{
+		Token: body.Token, Platform: body.Platform, Locale: body.Locale,
+		AppVersion: body.AppVersion, DeviceName: body.DeviceName,
+	}
+	if errs := usecase.ValidatePushDevice(in); len(errs) > 0 {
+		details := make([]response.Detail, 0, len(errs))
+		if code, ok := errs["token"]; ok {
+			details = append(details, response.Detail{Field: "token", Message: "must be an Expo push token (ExponentPushToken[...])", Code: code})
+		}
+		if code, ok := errs["platform"]; ok {
+			details = append(details, response.Detail{Field: "platform", Message: "must be ios or android", Code: code})
+		}
+		response.ValidationError(w, r, details)
+		return
+	}
+	dev, pushEnabled, err := h.svc.RegisterPushDevice(r.Context(), p, in)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{
+		"device":       dev,
+		"push_enabled": pushEnabled,
+	})
+}
+
+// DeletePushDevice removes the caller's own token (app sign-out, OS permission withdrawn).
+func (h *Handler) DeletePushDevice(w http.ResponseWriter, r *http.Request) {
+	p := authctx.MustPrincipal(r.Context())
+	if h.pushRateLimited(w, r, p) {
+		return
+	}
+	token := strings.TrimSpace(r.PathValue("token"))
+	if token == "" {
+		response.ValidationError(w, r, []response.Detail{{Field: "token", Message: "required", Code: "required"}})
+		return
+	}
+	if err := h.svc.UnregisterPushDevice(r.Context(), p, token); err != nil {
+		if errors.Is(err, usecase.ErrNotFound) {
+			response.NotFound(w, r, "Push device was not found")
+			return
+		}
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// ListPushDevices lists the caller's push devices (notification settings).
+func (h *Handler) ListPushDevices(w http.ResponseWriter, r *http.Request) {
+	p := authctx.MustPrincipal(r.Context())
+	items, err := h.svc.ListPushDevices(r.Context(), p)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
 }

@@ -374,6 +374,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)
 
 	nh := notifhandler.New(notifSvc)
+	nh.SetRateLimiter(ratelimit.New(deps.Redis, cfg.App.Env))
 	notifmodule.RegisterRoutes(mux, nh, tokens, loader)
 	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log)
 	notifmodule.RegisterBillingHandlers(eventBus, notifSvc, deps.Queries)

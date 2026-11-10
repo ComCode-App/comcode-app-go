@@ -78,18 +78,37 @@ WHERE token_hash = $1
   AND revoked_at IS NULL
   AND expires_at > NOW();
 
--- RevokeRefreshFamilyByHash revokes every live token in the family of the given token (logout).
+-- RevokeRefreshFamilyByHash revokes every live token in the family of the given token (logout)
+-- and disables the family's push devices (TEC-1186).
 -- name: RevokeRefreshFamilyByHash :exec
+WITH family AS (
+    SELECT r.family_uuid, r.user_id FROM refresh_tokens r WHERE r.token_hash = sqlc.arg(token_hash)
+), devices AS (
+    UPDATE push_devices d
+    SET disabled_at = NOW(), disabled_reason = 'signed_out'
+    FROM family
+    WHERE d.session_family_uuid = family.family_uuid
+      AND d.user_id = family.user_id
+      AND d.disabled_at IS NULL
+)
 UPDATE refresh_tokens
 SET revoked_at = NOW()
-WHERE family_uuid = (SELECT r.family_uuid FROM refresh_tokens r WHERE r.token_hash = $1)
+WHERE family_uuid = (SELECT family.family_uuid FROM family)
   AND revoked_at IS NULL;
 
+-- RevokeAllRefreshTokensForUser ends every session of the user (password change / reset) and
+-- disables all of the user's push devices (TEC-1186).
 -- name: RevokeAllRefreshTokensForUser :exec
+WITH devices AS (
+    UPDATE push_devices
+    SET disabled_at = NOW(), disabled_reason = 'all_sessions_revoked'
+    WHERE push_devices.user_id = sqlc.arg(user_id)
+      AND push_devices.disabled_at IS NULL
+)
 UPDATE refresh_tokens
 SET revoked_at = NOW()
-WHERE user_id = $1
-  AND revoked_at IS NULL;
+WHERE refresh_tokens.user_id = sqlc.arg(user_id)
+  AND refresh_tokens.revoked_at IS NULL;
 
 -- name: ListActiveRefreshTokensByUserID :many
 SELECT DISTINCT ON (family_uuid) *
@@ -99,16 +118,34 @@ WHERE user_id = $1
   AND expires_at > NOW()
 ORDER BY family_uuid, created_at DESC;
 
+-- RevokeRefreshFamilyForUser revokes one device session (sessions list, refresh reuse, end of
+-- impersonation) and disables its push devices (TEC-1186). The row count is the refresh tokens'.
 -- name: RevokeRefreshFamilyForUser :execrows
+WITH devices AS (
+    UPDATE push_devices
+    SET disabled_at = NOW(), disabled_reason = 'session_revoked'
+    WHERE push_devices.session_family_uuid = sqlc.arg(family_uuid)::uuid
+      AND push_devices.user_id = sqlc.arg(user_id)
+      AND push_devices.disabled_at IS NULL
+)
 UPDATE refresh_tokens
 SET revoked_at = NOW()
-WHERE family_uuid = $1
-  AND user_id = $2
-  AND revoked_at IS NULL;
+WHERE refresh_tokens.family_uuid = sqlc.arg(family_uuid)
+  AND refresh_tokens.user_id = sqlc.arg(user_id)
+  AND refresh_tokens.revoked_at IS NULL;
 
+-- RevokeOtherRefreshFamiliesForUser keeps one session and revokes the rest, disabling every
+-- push device that is not tied to the kept session (TEC-1186).
 -- name: RevokeOtherRefreshFamiliesForUser :exec
+WITH devices AS (
+    UPDATE push_devices
+    SET disabled_at = NOW(), disabled_reason = 'session_revoked'
+    WHERE push_devices.user_id = sqlc.arg(user_id)
+      AND push_devices.session_family_uuid IS DISTINCT FROM sqlc.arg(family_uuid)::uuid
+      AND push_devices.disabled_at IS NULL
+)
 UPDATE refresh_tokens
 SET revoked_at = NOW()
-WHERE user_id = $1
-  AND family_uuid <> $2
-  AND revoked_at IS NULL;
+WHERE refresh_tokens.user_id = sqlc.arg(user_id)
+  AND refresh_tokens.family_uuid <> sqlc.arg(family_uuid)
+  AND refresh_tokens.revoked_at IS NULL;
