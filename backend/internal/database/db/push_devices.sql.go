@@ -12,6 +12,33 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const deleteDisabledPushDevices = `-- name: DeleteDisabledPushDevices :execrows
+DELETE FROM push_devices
+WHERE disabled_at IS NOT NULL AND disabled_at < NOW() - interval '30 days'
+`
+
+// Maintenance: devices disabled for more than 30 days (signed out, revoked, not registered).
+func (q *Queries) DeleteDisabledPushDevices(ctx context.Context) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteDisabledPushDevices)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteExpiredPushTickets = `-- name: DeleteExpiredPushTickets :execrows
+DELETE FROM push_tickets WHERE created_at < NOW() - interval '24 hours'
+`
+
+// Maintenance: Expo keeps receipts about 24 hours; an unprocessed ticket after that is useless.
+func (q *Queries) DeleteExpiredPushTickets(ctx context.Context) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteExpiredPushTickets)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deletePushDeviceForUser = `-- name: DeletePushDeviceForUser :execrows
 DELETE FROM push_devices
 WHERE user_id = $1 AND token = $2
@@ -30,6 +57,44 @@ func (q *Queries) DeletePushDeviceForUser(ctx context.Context, arg DeletePushDev
 	return result.RowsAffected(), nil
 }
 
+const deletePushTickets = `-- name: DeletePushTickets :exec
+DELETE FROM push_tickets WHERE id = ANY($1::bigint[])
+`
+
+func (q *Queries) DeletePushTickets(ctx context.Context, ids []int64) error {
+	_, err := q.db.Exec(ctx, deletePushTickets, ids)
+	return err
+}
+
+const deleteStalePushDevices = `-- name: DeleteStalePushDevices :execrows
+DELETE FROM push_devices WHERE last_seen_at < NOW() - interval '270 days'
+`
+
+// Maintenance: the app re-registers on every start, so a device not seen for 270 days is gone.
+func (q *Queries) DeleteStalePushDevices(ctx context.Context) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteStalePushDevices)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const disablePushDeviceNotRegistered = `-- name: DisablePushDeviceNotRegistered :execrows
+UPDATE push_devices
+SET disabled_at = NOW(), disabled_reason = 'device_not_registered'
+WHERE id = $1 AND disabled_at IS NULL
+`
+
+// Expo answered DeviceNotRegistered (ticket or receipt): the app was uninstalled or the token
+// is dead. Registering again from a live session re-enables the row.
+func (q *Queries) DisablePushDeviceNotRegistered(ctx context.Context, id int64) (int64, error) {
+	result, err := q.db.Exec(ctx, disablePushDeviceNotRegistered, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const enablePushPreference = `-- name: EnablePushPreference :exec
 INSERT INTO notification_preferences (user_id, push_enabled)
 VALUES ($1, TRUE)
@@ -42,6 +107,69 @@ func (q *Queries) EnablePushPreference(ctx context.Context, userID int64) error 
 	return err
 }
 
+const insertPushTicket = `-- name: InsertPushTicket :exec
+INSERT INTO push_tickets (ticket_id, push_device_id, notification_id)
+VALUES ($1, $2, $3)
+ON CONFLICT (ticket_id) DO NOTHING
+`
+
+type InsertPushTicketParams struct {
+	TicketID       string      `json:"ticket_id"`
+	PushDeviceID   int64       `json:"push_device_id"`
+	NotificationID pgtype.Int8 `json:"notification_id"`
+}
+
+func (q *Queries) InsertPushTicket(ctx context.Context, arg InsertPushTicketParams) error {
+	_, err := q.db.Exec(ctx, insertPushTicket, arg.TicketID, arg.PushDeviceID, arg.NotificationID)
+	return err
+}
+
+const listDuePushTickets = `-- name: ListDuePushTickets :many
+SELECT id, ticket_id, push_device_id, created_at
+FROM push_tickets
+WHERE created_at <= $1
+ORDER BY id
+LIMIT $2
+`
+
+type ListDuePushTicketsParams struct {
+	BeforeAt   pgtype.Timestamptz `json:"before_at"`
+	LimitCount int32              `json:"limit_count"`
+}
+
+type ListDuePushTicketsRow struct {
+	ID           int64              `json:"id"`
+	TicketID     string             `json:"ticket_id"`
+	PushDeviceID int64              `json:"push_device_id"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+// Tickets whose receipt can be read (Expo: about 15 minutes after sending), oldest first.
+func (q *Queries) ListDuePushTickets(ctx context.Context, arg ListDuePushTicketsParams) ([]ListDuePushTicketsRow, error) {
+	rows, err := q.db.Query(ctx, listDuePushTickets, arg.BeforeAt, arg.LimitCount)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDuePushTicketsRow{}
+	for rows.Next() {
+		var i ListDuePushTicketsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TicketID,
+			&i.PushDeviceID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPushDevicesByUser = `-- name: ListPushDevicesByUser :many
 SELECT id, uuid, user_id, token, platform, locale, app_version, device_name, session_family_uuid, last_seen_at, disabled_at, disabled_reason, created_at, updated_at FROM push_devices
 WHERE user_id = $1
@@ -50,6 +178,69 @@ ORDER BY (disabled_at IS NULL) DESC, last_seen_at DESC, id DESC
 
 func (q *Queries) ListPushDevicesByUser(ctx context.Context, userID int64) ([]PushDevice, error) {
 	rows, err := q.db.Query(ctx, listPushDevicesByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PushDevice{}
+	for rows.Next() {
+		var i PushDevice
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.UserID,
+			&i.Token,
+			&i.Platform,
+			&i.Locale,
+			&i.AppVersion,
+			&i.DeviceName,
+			&i.SessionFamilyUuid,
+			&i.LastSeenAt,
+			&i.DisabledAt,
+			&i.DisabledReason,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPushTargetsForNotification = `-- name: ListPushTargetsForNotification :many
+SELECT d.id, d.uuid, d.user_id, d.token, d.platform, d.locale, d.app_version, d.device_name, d.session_family_uuid, d.last_seen_at, d.disabled_at, d.disabled_reason, d.created_at, d.updated_at FROM push_devices d
+WHERE d.user_id = $1
+  AND d.disabled_at IS NULL
+  AND EXISTS (
+      SELECT 1 FROM refresh_tokens r
+      WHERE r.family_uuid = d.session_family_uuid
+        AND r.user_id = d.user_id
+        AND r.revoked_at IS NULL
+        AND r.expires_at > NOW()
+  )
+  AND NOT EXISTS (
+      SELECT 1 FROM push_tickets t
+      WHERE t.push_device_id = d.id AND t.notification_id = $2
+  )
+ORDER BY d.id
+`
+
+type ListPushTargetsForNotificationParams struct {
+	UserID         int64       `json:"user_id"`
+	NotificationID pgtype.Int8 `json:"notification_id"`
+}
+
+// Devices that may receive a notification's push (TEC-1187): not disabled, and the session
+// family they registered from still has a live refresh token. A family that simply expired is
+// not marked disabled (auth.md, "Push devices follow the session"), so the check is here.
+// Devices that already hold a ticket for the notification are skipped, so a retried send task
+// does not push twice.
+func (q *Queries) ListPushTargetsForNotification(ctx context.Context, arg ListPushTargetsForNotificationParams) ([]PushDevice, error) {
+	rows, err := q.db.Query(ctx, listPushTargetsForNotification, arg.UserID, arg.NotificationID)
 	if err != nil {
 		return nil, err
 	}
@@ -149,6 +340,20 @@ func (q *Queries) UpsertPushDeviceForSession(ctx context.Context, arg UpsertPush
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const userHasActivePushDevices = `-- name: UserHasActivePushDevices :one
+SELECT EXISTS (
+    SELECT 1 FROM push_devices WHERE user_id = $1 AND disabled_at IS NULL
+)::bool AS has_devices
+`
+
+// Cheap check before queueing a mobile push (TEC-1187). The send task re-checks the session.
+func (q *Queries) UserHasActivePushDevices(ctx context.Context, userID int64) (bool, error) {
+	row := q.db.QueryRow(ctx, userHasActivePushDevices, userID)
+	var has_devices bool
+	err := row.Scan(&has_devices)
+	return has_devices, err
 }
 
 const userHasPushDevices = `-- name: UserHasPushDevices :one

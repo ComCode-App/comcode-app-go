@@ -28,7 +28,7 @@
 ## longer read. compose.prod.yml-only knobs (COMPOSE_PROJECT_NAME, APP_NETWORK_NAME,
 ## *_VOLUME_NAME, IMAGE_PULL_POLICY) keep their compose defaults; .env.example documents them.
 
-@version 5
+@version 6
 
 ## v2 (TEC-1095): compose.prod.yml builds the image names from IMAGE_REPO / IMAGE_TAG.
 @remove BACKEND_IMAGE 2
@@ -36,6 +36,7 @@
 ## v3 (TEC-1182): optional AUTH_REVIEW_ACCOUNTS (app store review sign-in).
 ## v4 (TEC-1179): optional JWT_REFRESH_TTL_MOBILE (mobile app refresh lifetime).
 ## v5 (TEC-1183): optional MOBILE_* keys (frontend: AASA / assetlinks.json).
+## v6 (TEC-1187): optional EXPO_ACCESS_TOKEN (mobile push).
 
 @norotate APP_ENCRYPTION_KEY
 @norotate DB_PASSWORD
@@ -121,6 +122,11 @@ MEILI_MASTER_KEY | secret:hex:32
 VAPID_PUBLIC_KEY | vapid:public
 VAPID_PRIVATE_KEY | vapid:private
 VAPID_SUBJECT | derive:mailto:noreply@{APP_HOST}
+
+# --- Mobile push (Expo Push Service) ---
+# secret, optional: an Expo access token, needed only when "enhanced push security" is on for
+# the Expo project (expo.dev -> Access tokens). Blank: pushes are sent without one.
+EXPO_ACCESS_TOKEN | empty
 
 # --- Mail (fill in your SMTP provider) ---
 MAIL_FROM | derive:noreply@{APP_HOST}

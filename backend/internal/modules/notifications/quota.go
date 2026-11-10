@@ -94,6 +94,7 @@ func (a *QuotaAlerter) QuotaAlert(ctx context.Context, alert entitlement.QuotaAl
 		}
 		if _, err := a.svc.Enqueue(ctx, model.EnqueueInput{
 			UserID:       &uid,
+			AccountID:    &alert.AccountID,
 			Language:     lang,
 			Channels:     []string{model.ChannelInapp, model.ChannelRealtime, model.ChannelEmail},
 			Priority:     model.PriorityHigh,

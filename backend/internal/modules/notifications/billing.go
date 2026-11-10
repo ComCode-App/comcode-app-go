@@ -33,7 +33,7 @@ func RegisterBillingHandlers(bus events.Bus, svc *usecase.Service, q *db.Queries
 				userID := id
 				actionURL := "/billing"
 				_, err := svc.Enqueue(ctx, model.EnqueueInput{
-					UserID: &userID, Channels: []string{model.ChannelEmail, model.ChannelInapp},
+					UserID: &userID, AccountID: &accountID, Channels: []string{model.ChannelEmail, model.ChannelInapp},
 					TemplateCode: event.Name, TemplateVars: map[string]string{}, ActionURL: &actionURL,
 					SourceEvent: fmt.Sprintf("billing:%s:%d", event.EventID, userID),
 					Payload:     map[string]any{"account_id": accountID, "subscription_uuid": event.Payload["subscription_uuid"]},
