@@ -27,7 +27,11 @@ Branch on `error.code`, not on message text. `details` is optional (field-level 
 | `INVALID_CREDENTIALS` | 401 | Login or change-password: wrong password |
 | `FORBIDDEN` | 403 | Missing permission or disabled user |
 | `NOT_FOUND` | 404 | Resource does not exist or is not visible |
+| `QR_LOGIN_INVALID` | 400 | QR sign-in state / exchange: wrong browser secret or exchange token, or not approved yet (5 wrong attempts delete the session) (TEC-1184) |
+| `QR_SESSION_NOT_FOUND` | 404 | QR sign-in session unknown, expired, burned or already exchanged (TEC-1184) |
 | `CONFLICT` | 409 | Unique constraint / duplicate (e.g. email already registered) |
+| `QR_SESSION_CLAIMED` | 409 | QR sign-in session was opened by another user (TEC-1184) |
+| `QR_SESSION_RESOLVED` | 409 | QR sign-in session was already approved or rejected (TEC-1184) |
 | `APP_UPDATE_REQUIRED` | 426 | Mobile app (`X-Client: comcode-mobile`) older than `mobile.min_version`; every `/v1` route except `GET /v1/app/config` (TEC-1178) |
 | `RATE_LIMITED` | 429 | Auth endpoints: login, register, forgot-password, reset-password |
 | `PASSWORD_RESET_FAILED` | 500 | Forgot/reset persist or enqueue failure |

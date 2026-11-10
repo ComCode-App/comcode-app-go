@@ -69,3 +69,13 @@ func stripPrefix(channel, prefix string) (string, bool) {
 	}
 	return raw, true
 }
+
+// QRLoginChannelPrefix is the Centrifugo namespace for QR sign-in (TEC-1184). One channel per
+// QR session / browser tab, named by a random id unrelated to the session id; only the backend
+// publishes.
+const QRLoginChannelPrefix = "qrlogin:"
+
+// QRLoginChannel returns the channel for an opaque QR channel id.
+func QRLoginChannel(channelID string) string {
+	return QRLoginChannelPrefix + channelID
+}

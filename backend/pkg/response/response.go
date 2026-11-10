@@ -36,6 +36,11 @@ const (
 	CodeInvalidPasscode     = "INVALID_PASSCODE"
 	CodeLastSignInMethod    = "LAST_SIGN_IN_METHOD"
 	CodeInvalidEmailCode    = "INVALID_EMAIL_CODE"
+	// QR sign-in (TEC-1184).
+	CodeQRSessionNotFound = "QR_SESSION_NOT_FOUND"
+	CodeQRSessionResolved = "QR_SESSION_RESOLVED"
+	CodeQRSessionClaimed  = "QR_SESSION_CLAIMED"
+	CodeQRLoginInvalid    = "QR_LOGIN_INVALID"
 	// CodeRefreshRace: the refresh token was rotated moments ago by a concurrent request
 	// (409); the session is still live (TEC-1179).
 	CodeRefreshRace = "REFRESH_RACE"
