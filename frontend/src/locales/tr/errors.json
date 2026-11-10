@@ -14,6 +14,7 @@
   "codes.password_reset_failed": "Şifre sıfırlanamadı.",
   "codes.no_tenant_membership": "Bu hesabın üyesi değilsiniz.",
   "codes.step_up_required": "Devam etmek için kimliğinizi yeniden doğrulayın.",
+  "codes.app_update_required": "Uygulamanın bu sürümü artık desteklenmiyor. Lütfen mağazadan güncelleyin.",
   "codes.mfa_required": "İki adımlı doğrulama gerekiyor.",
   "codes.mfa_not_enrolled": "İki adımlı doğrulama kurulu değil.",
   "codes.invalid_mfa_code": "Doğrulama kodu hatalı.",
@@ -36,5 +37,6 @@
   "area_requires": "Bu alan yalnızca {{area}} erişimi gerektirir.",
   "area_app": "Uygulama",
   "redirecting_to_login": "Giriş sayfasına yönlendiriliyor…",
-  "codes.invalid_email_code": "Giriş kodu hatalı veya süresi dolmuş."
+  "codes.invalid_email_code": "Giriş kodu hatalı veya süresi dolmuş.",
+  "codes.refresh_race": "Oturumunuz başka bir istekte az önce yenilendi. Lütfen tekrar deneyin."
 }

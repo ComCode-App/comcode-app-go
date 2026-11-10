@@ -3,8 +3,11 @@ package usecase
 import (
 	"context"
 	"errors"
+	"net/url"
+	"strings"
 
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/database/db"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/appversion"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -40,6 +43,24 @@ type Settings struct {
 	FooterText   string  `json:"footer_text"`
 	PaperSize    string  `json:"paper_size"`
 	LogoURL      *string `json:"logo_url,omitempty"`
+	// Mobile app version gate and store links (TEC-1178); "" = not set.
+	MobileMinVersion      string `json:"mobile_min_version"`
+	MobileLatestVersion   string `json:"mobile_latest_version"`
+	MobileIOSStoreURL     string `json:"mobile_ios_store_url"`
+	MobileAndroidStoreURL string `json:"mobile_android_store_url"`
+}
+
+// MobileStoreURLs are the store pages the app opens on an update prompt.
+type MobileStoreURLs struct {
+	IOS     string `json:"ios"`
+	Android string `json:"android"`
+}
+
+// MobileConfig is the `mobile` object of GET /v1/app/config (TEC-1178).
+type MobileConfig struct {
+	MinVersion    string          `json:"min_version"`
+	LatestVersion string          `json:"latest_version"`
+	StoreURLs     MobileStoreURLs `json:"store_urls"`
 }
 
 func mapSettings(row db.AppSetting) Settings {
@@ -52,7 +73,28 @@ func mapSettings(row db.AppSetting) Settings {
 		CompanyName: row.CompanyName, Tagline: row.Tagline, PrimaryColor: row.PrimaryColor,
 		Address: row.Address, Phone: row.Phone, Email: row.Email, Website: row.Website,
 		FooterText: row.FooterText, PaperSize: row.PaperSize, LogoURL: logo,
+		MobileMinVersion: row.MobileMinVersion, MobileLatestVersion: row.MobileLatestVersion,
+		MobileIOSStoreURL: row.MobileIosStoreUrl, MobileAndroidStoreURL: row.MobileAndroidStoreUrl,
 	}
+}
+
+// Mobile returns the mobile app version settings published in GET /v1/app/config.
+func (s *Service) Mobile(ctx context.Context) (MobileConfig, error) {
+	row, err := s.q.GetAppSettings(ctx)
+	if err != nil {
+		return MobileConfig{}, err
+	}
+	return MobileConfig{
+		MinVersion:    row.MobileMinVersion,
+		LatestVersion: row.MobileLatestVersion,
+		StoreURLs:     MobileStoreURLs{IOS: row.MobileIosStoreUrl, Android: row.MobileAndroidStoreUrl},
+	}, nil
+}
+
+// MinMobileVersion is the appversion.Gate source: the configured minimum ("" = no gate).
+func (s *Service) MinMobileVersion(ctx context.Context) (string, error) {
+	m, err := s.Mobile(ctx)
+	return m.MinVersion, err
 }
 
 // Get returns current settings.
@@ -92,6 +134,81 @@ type PatchInput struct {
 	Website      *string `json:"website"`
 	FooterText   *string `json:"footer_text"`
 	PaperSize    *string `json:"paper_size"`
+
+	MobileMinVersion      *string `json:"mobile_min_version"`
+	MobileLatestVersion   *string `json:"mobile_latest_version"`
+	MobileIOSStoreURL     *string `json:"mobile_ios_store_url"`
+	MobileAndroidStoreURL *string `json:"mobile_android_store_url"`
+}
+
+// FieldError is one invalid PatchInput field.
+type FieldError struct {
+	Field   string
+	Message string
+}
+
+// Validate checks the mobile fields: versions are "" or major[.minor[.patch]], store URLs are ""
+// or an absolute https URL, and latest_version is not below min_version. current fills in the
+// fields the patch leaves out, so the min/latest order is checked against the stored values.
+func (in PatchInput) Validate(current Settings) []FieldError {
+	var out []FieldError
+	minV, latestV := current.MobileMinVersion, current.MobileLatestVersion
+	for _, f := range []struct {
+		name string
+		val  *string
+		dst  *string
+	}{
+		{"mobile_min_version", in.MobileMinVersion, &minV},
+		{"mobile_latest_version", in.MobileLatestVersion, &latestV},
+	} {
+		if f.val == nil {
+			continue
+		}
+		v := strings.TrimSpace(*f.val)
+		if v != "" && !appversion.Valid(v) {
+			out = append(out, FieldError{f.name, "must look like 1.2.3"})
+			continue
+		}
+		*f.dst = v
+	}
+	if len(out) == 0 && minV != "" && latestV != "" {
+		a, _ := appversion.Parse(latestV)
+		b, _ := appversion.Parse(minV)
+		if a.Less(b) {
+			out = append(out, FieldError{"mobile_latest_version", "must not be lower than mobile_min_version"})
+		}
+	}
+	for _, f := range []struct {
+		name string
+		val  *string
+	}{
+		{"mobile_ios_store_url", in.MobileIOSStoreURL},
+		{"mobile_android_store_url", in.MobileAndroidStoreURL},
+	} {
+		if f.val == nil {
+			continue
+		}
+		if v := strings.TrimSpace(*f.val); v != "" && !isStoreURL(v) {
+			out = append(out, FieldError{f.name, "must be an https URL"})
+		}
+	}
+	return out
+}
+
+func isStoreURL(v string) bool {
+	if len(v) > 512 {
+		return false
+	}
+	u, err := url.Parse(v)
+	return err == nil && u.Scheme == "https" && u.Host != "" && u.User == nil
+}
+
+func trimmed(p *string) *string {
+	if p == nil {
+		return nil
+	}
+	v := strings.TrimSpace(*p)
+	return &v
 }
 
 // Patch updates settings.
@@ -101,6 +218,10 @@ func (s *Service) Patch(ctx context.Context, in PatchInput) (Settings, error) {
 		PrimaryColor: textNarg(in.PrimaryColor), Address: textNarg(in.Address),
 		Phone: textNarg(in.Phone), Email: textNarg(in.Email), Website: textNarg(in.Website),
 		FooterText: textNarg(in.FooterText), PaperSize: textNarg(in.PaperSize),
+		MobileMinVersion:      textNarg(trimmed(in.MobileMinVersion)),
+		MobileLatestVersion:   textNarg(trimmed(in.MobileLatestVersion)),
+		MobileIosStoreUrl:     textNarg(trimmed(in.MobileIOSStoreURL)),
+		MobileAndroidStoreUrl: textNarg(trimmed(in.MobileAndroidStoreURL)),
 	})
 	if err != nil {
 		return Settings{}, err

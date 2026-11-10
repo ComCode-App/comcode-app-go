@@ -188,6 +188,34 @@ type RefreshSession struct {
 	UserID             int64
 	ImpersonatorUserID *int64
 	ActiveAccountID    *int64
+	// ClientType is fixed when the family starts (ClientWeb or ClientMobile).
+	ClientType string
+	// ExpiresAt is the stored expiry of this refresh token.
+	ExpiresAt time.Time
+}
+
+// Client types of a session family (refresh_tokens.client_type, TEC-1179).
+const (
+	ClientWeb    = "web"
+	ClientMobile = "mobile"
+)
+
+// RefreshExpiry carries both possible expiries of a rotated token; the repository picks the
+// one matching the family's stored client type, so a refresh request can never change it.
+type RefreshExpiry struct {
+	Web    time.Time
+	Mobile time.Time
+}
+
+// RotatedRefresh is a refresh token presented again after it was rotated (reuse detection).
+type RotatedRefresh struct {
+	UserID     int64
+	FamilyUUID uuid.UUID
+	ClientType string
+	DeviceName *string
+	UserAgent  *string
+	// WithinRace: the rotation is recent enough to be a concurrent refresh, not a replay.
+	WithinRace bool
 }
 
 // DeviceSession is a user-visible refresh session (token never included).
@@ -199,6 +227,10 @@ type DeviceSession struct {
 	CreatedAt    time.Time `json:"created_at"`
 	ExpiresAt    time.Time `json:"expires_at"`
 	Impersonated bool      `json:"impersonated"`
+	// ClientType is "web" or "mobile"; DeviceName / AppVersion come from the mobile app.
+	ClientType string  `json:"client_type"`
+	DeviceName *string `json:"device_name,omitempty"`
+	AppVersion *string `json:"app_version,omitempty"`
 }
 
 // SessionMeta carries optional request metadata for refresh tokens.
@@ -207,6 +239,12 @@ type SessionMeta struct {
 	IP                 string
 	ImpersonatorUserID *int64
 	ActiveAccountID    *int64
+	// ClientType is ClientMobile for the mobile app (X-Client header), else ClientWeb. It only
+	// takes effect when a session family starts; rotation keeps the family's type.
+	ClientType string
+	// DeviceName / AppVersion are display-only labels from the mobile app's headers.
+	DeviceName string
+	AppVersion string
 }
 
 // SessionSwitch tells clients which identity the issued tokens represent.

@@ -15,6 +15,7 @@ import (
 	assetshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companyassets/handler"
 	assetsrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companyassets/repository"
 	assetsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/companyassets/usecase"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/appversion"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/clientip"
 	"log/slog"
 	"net/http"
@@ -265,6 +266,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 
 	tokens, err := jwt.NewManager(cfg.JWT.AccessSecret, cfg.JWT.AccessTTL, cfg.JWT.RefreshTTL)
 	if err != nil {
+		return nil, fmt.Errorf("httpserver: jwt: %w", err)
+	}
+	if err := tokens.SetMobileRefreshTTL(cfg.JWT.RefreshTTLMobile); err != nil {
 		return nil, fmt.Errorf("httpserver: jwt: %w", err)
 	}
 
@@ -652,6 +656,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			middleware.ServerErrors(log),
 			middleware.Recover,
 			clientip.New(trustedProxies).Middleware,
+			// Outdated mobile apps (X-Client + X-App-Version below mobile_min_version) get 426.
+			appversion.Gate(appversion.Cached(settingsusecase.New(deps.Queries).MinMobileVersion, 30*time.Second, nil)),
 		),
 		ReadTimeout:  cfg.HTTP.ReadTimeout,
 		WriteTimeout: cfg.HTTP.WriteTimeout,
@@ -710,6 +716,8 @@ func (s *Server) Shutdown(ctx context.Context) error {
 func (s *Server) handleAppConfig(w http.ResponseWriter, r *http.Request) {
 	settingsSvc := settingsusecase.New(s.queries)
 	letterhead, _ := settingsSvc.PublicLetterhead(r.Context())
+	// Mobile app version gate and store links (TEC-1178); empty values when unset or unreadable.
+	mobile, _ := settingsSvc.Mobile(r.Context())
 
 	registrationEnabled := false
 	passwordLogin := true
@@ -759,6 +767,7 @@ func (s *Server) handleAppConfig(w http.ResponseWriter, r *http.Request) {
 			"apple":    oauthMethod("apple"),
 		},
 		"letterhead": letterhead,
+		"mobile":     mobile,
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"success": true,

@@ -38,6 +38,7 @@ This repo is a two-app monorepo plus Compose files. Dependencies point inward: H
 │   ├── src/app/[username]        public profile page (SSR), outside (shell): keep it lean
 │   ├── src/app/c, src/app/s      card and smart link redirects, outside (shell)
 │   ├── src/app/api/v1            BFF proxy → Go
+│   ├── src/app/api/mobile/v1     mobile gateway → Go (Bearer only, no cookies)
 │   └── src/features/             product: profiles, profile-verifications,
 │                                 public-profile, cards, smart-links, route-qr,
 │                                 analytics, background-studio, bank-accounts,
@@ -74,9 +75,14 @@ Browser
   → same-origin /api/v1/*          Next.js BFF (HttpOnly session)
   → $API_URL/...                   Go API (Bearer JWT)
   → use case → repository (sqlc)   PostgreSQL
+
+Mobile app
+  → /api/mobile/v1/*               Next.js mobile gateway (app's own Bearer, no cookies)
+  → $API_URL/v1/...                Go API (same routes)
 ```
 
 - Access and refresh tokens never enter JavaScript. The BFF stores them in HttpOnly cookies and strips them from JSON responses.
+- The mobile gateway (TEC-1178, `lib/server/mobile-gateway.ts`) is a separate route: it never reads or sets cookies, forwards only the app's `Authorization: Bearer`, keeps the token pair in login / refresh / email-code JSON (the app stores it), drops upstream `Set-Cookie`, and refuses `/v1/internal/*`, the payment callbacks and `auth/qr/exchange` (404). It forwards `X-Forwarded-For` / `User-Agent` (client IP via `TRUSTED_PROXIES`) and `X-Client` / `X-App-Version` / `X-Platform`; Go answers outdated apps `426 APP_UPDATE_REQUIRED` (`mobile.min_version` in `GET /v1/app/config`). Go itself stays private. See [backend/docs/auth.md](../backend/docs/auth.md#mobile-clients-tec-1178).
 - NextAuth is the frontend session layer; the Go adapter talks to `/v1/internal/auth/*`.
 - OpenAPI types are generated into `frontend/src/generated/api.d.ts` via `pnpm api:generate`.
 - Security headers for every Next route live in `frontend/src/config/security-headers.ts` (TEC-1102). No page can be framed (`X-Frame-Options: DENY`, `frame-ancestors 'none'`), public profiles included (TEC-1119); only the storage previews the app frames itself allow `'self'`. The PayTR result pages (`/billing/checkout/{uuid}`, `/billing/cards/add/{uuid}`, `/orders/checkout/{uuid}`) allow `'self' https://www.paytr.com` without `X-Frame-Options`, because PayTR opens them inside its iFrame (TEC-1125). Invite-token pages add `Referrer-Policy: no-referrer` in `next.config.ts` (TEC-1104).

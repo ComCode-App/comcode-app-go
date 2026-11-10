@@ -19,6 +19,7 @@ const REWRITE = {
   "@/lib/server/upstream": "./upstream.mjs",
   "@/lib/server/bff-guard": "./bff-guard.mjs",
   "@/lib/server/refresh-single-flight": "./refresh-single-flight.mjs",
+  "@/lib/server/proxy-body": "./proxy-body.mjs",
   "@/lib/observability/redact": "./redact.mjs",
 };
 
@@ -40,6 +41,7 @@ function transpile(name, dir = here) {
 transpile("bff-proxy");
 transpile("bff-guard");
 transpile("refresh-single-flight");
+transpile("proxy-body");
 transpile("redact", path.join(here, "..", "observability"));
 
 // --- stubs -----------------------------------------------------------------
@@ -273,6 +275,44 @@ test("Content-Length / Content-Encoding are not forwarded on a rewritten body", 
   const json = await res.json();
   assert.equal(json.data.access_token, undefined, "tokens stripped");
   assert.equal(json.data.authenticated, true);
+});
+
+test("cookie BFF keeps the token pair out of the browser on every token path (TEC-1178 regression)", async () => {
+  for (const segs of [
+    ["auth", "refresh"],
+    ["auth", "accounts", "switch"],
+    ["auth", "impersonation", "stop"],
+    ["platform", "users", "u2", "impersonate"],
+  ]) {
+    state.handler = async () => ({
+      status: 200,
+      headers: {
+        "content-type": "application/json",
+        "set-cookie": "upstream=1; Path=/",
+      },
+      body: JSON.stringify({
+        success: true,
+        data: {
+          access_token: "new-a",
+          refresh_token: "new-r",
+          expires_in: 900,
+        },
+      }),
+    });
+    const res = await proxy.handleProxyRequest(
+      segs,
+      browser(segs.join("/"), {
+        method: "POST",
+        headers: { origin: APP, "content-type": "application/json" },
+        body: "{}",
+      }),
+    );
+    assert.equal(res.status, 200, segs.join("/"));
+    assert.equal(res.headers.get("set-cookie"), null, segs.join("/"));
+    const text = await res.text();
+    assert.ok(!text.includes("new-a"), `${segs.join("/")}: ${text}`);
+    assert.ok(!text.includes("new-r"), `${segs.join("/")}: ${text}`);
+  }
 });
 
 test("buffered stream fallback and SSE drop Content-Length; binary passthrough keeps it", async () => {

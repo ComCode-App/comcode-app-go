@@ -28,6 +28,7 @@ Branch on `error.code`, not on message text. `details` is optional (field-level 
 | `FORBIDDEN` | 403 | Missing permission or disabled user |
 | `NOT_FOUND` | 404 | Resource does not exist or is not visible |
 | `CONFLICT` | 409 | Unique constraint / duplicate (e.g. email already registered) |
+| `APP_UPDATE_REQUIRED` | 426 | Mobile app (`X-Client: comcode-mobile`) older than `mobile.min_version`; every `/v1` route except `GET /v1/app/config` (TEC-1178) |
 | `RATE_LIMITED` | 429 | Auth endpoints: login, register, forgot-password, reset-password |
 | `PASSWORD_RESET_FAILED` | 500 | Forgot/reset persist or enqueue failure |
 | `INTERNAL_ERROR` | 500 | Unexpected server failure |

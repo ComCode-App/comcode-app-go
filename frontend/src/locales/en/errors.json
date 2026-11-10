@@ -14,6 +14,7 @@
   "codes.password_reset_failed": "Password could not be reset.",
   "codes.no_tenant_membership": "You are not a member of this account.",
   "codes.step_up_required": "Please verify your identity again to continue.",
+  "codes.app_update_required": "This version of the app is no longer supported. Please update it from the store.",
   "codes.mfa_required": "Two-factor verification is required.",
   "codes.mfa_not_enrolled": "Two-factor verification is not set up.",
   "codes.invalid_mfa_code": "The verification code is incorrect.",
@@ -36,5 +37,6 @@
   "area_requires": "This area requires {{area}} access.",
   "area_app": "App",
   "redirecting_to_login": "Redirecting to sign in…",
-  "codes.invalid_email_code": "The sign-in code is incorrect or has expired."
+  "codes.invalid_email_code": "The sign-in code is incorrect or has expired.",
+  "codes.refresh_race": "Your session was just renewed in another request. Please try again."
 }

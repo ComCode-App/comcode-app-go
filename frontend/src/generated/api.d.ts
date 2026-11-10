@@ -79,6 +79,10 @@ export interface paths {
          * @description Authenticates with email/password and returns a token pair. An unknown email and a wrong
          *     password get the same `401 INVALID_CREDENTIALS`; a disabled account is reported (403) only
          *     after the correct password. Rate limited per IP + email, per IP and per email.
+         *
+         *     The mobile app sends `X-Client: mobile` (plus `X-Device-Name`, `X-App-Version`): the new
+         *     session gets the mobile refresh lifetime (`JWT_REFRESH_TTL_MOBILE`, default 60 days)
+         *     instead of `JWT_REFRESH_TTL` (7 days).
          */
         post: operations["postAuthLogin"];
         delete?: never;
@@ -98,7 +102,17 @@ export interface paths {
         put?: never;
         /**
          * Refresh tokens
-         * @description Rotates an opaque refresh token and returns a new token pair.
+         * @description Rotates an opaque refresh token and returns a new token pair. The new refresh token's
+         *     lifetime restarts (sliding) and follows the session's client type, fixed at sign-in:
+         *     `JWT_REFRESH_TTL` for web, `JWT_REFRESH_TTL_MOBILE` for the mobile app. `X-Client` on
+         *     this call cannot change it; `X-App-Version` updates the session's app version.
+         *
+         *     Reuse detection: presenting a refresh token that was already rotated
+         *     - less than 30 seconds after its rotation answers `409 REFRESH_RACE` (a concurrent
+         *       refresh; the session stays live, use the token the other request received);
+         *     - later revokes the whole session (every token of the family) and emails the owner a
+         *       security notice (`auth.refresh_reuse`); the answer is `401`.
+         *     A token revoked by logout or session revocation simply answers `401`.
          */
         post: operations["postAuthRefresh"];
         delete?: never;
@@ -975,6 +989,8 @@ export interface paths {
          *     closed no account is created (`400 INVALID_EMAIL_CODE`).
          *
          *     Rate limited per client IP (30) and per email (10) in a 15-minute window.
+         *
+         *     Mobile clients send the same client headers as `POST /v1/auth/login`.
          */
         post: operations["postAuthEmailCodeVerify"];
         delete?: never;
@@ -1333,7 +1349,12 @@ export interface paths {
         };
         /**
          * Public app config
-         * @description Unauthenticated bootstrap payload (auth methods, branding).
+         * @description Unauthenticated bootstrap payload (auth methods, branding, mobile app versions).
+         *
+         *     `mobile` comes from the platform settings (Settings → General → Mobile app). It is the one
+         *     `/v1` route an outdated mobile app can still call: every other request with
+         *     `X-Client: comcode-mobile` and an `X-App-Version` below `mobile.min_version` is answered
+         *     `426 APP_UPDATE_REQUIRED` (TEC-1178).
          */
         get: operations["getAppConfig"];
         put?: never;
@@ -1393,7 +1414,7 @@ export interface paths {
         };
         /**
          * List active sessions
-         * @description Device sessions for the current user, one per refresh-token family (rotation keeps the family). `uuid` is the family id; `current` is the session bound to this access token.
+         * @description Device sessions for the current user, one per refresh-token family (rotation keeps the family). `uuid` is the family id; `current` is the session bound to this access token. `client_type` is `web` or `mobile`; mobile sessions carry the app's `device_name` and latest `app_version`.
          */
         get: operations["listAuthSessions"];
         put?: never;
@@ -5252,6 +5273,11 @@ export interface paths {
         /**
          * PATCH /v1/platform/settings
          * @description Registered in `internal/modules/settings/routes.go`. Requires `platform.settings.write`.
+         *     Partial update of the branding / letterhead fields and the mobile app version gate
+         *     (`mobile_*`, published in `GET /v1/app/config` as `mobile`). Versions are `""` or
+         *     `major[.minor[.patch]]` and `mobile_latest_version` may not be lower than
+         *     `mobile_min_version`; store URLs are `""` or an `https` URL. Invalid values answer
+         *     `400 VALIDATION_ERROR` with field details.
          */
         patch: operations["patchPlatformSettings"];
         trace?: never;
@@ -9125,6 +9151,12 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
             impersonated?: boolean;
+            /** @enum {string} */
+            client_type: "web" | "mobile";
+            /** @description Mobile app device name (display only) */
+            device_name?: string;
+            /** @description Latest mobile app version of the session */
+            app_version?: string;
         };
         SessionList: {
             items: components["schemas"]["AuthSession"][];
@@ -9160,6 +9192,40 @@ export interface components {
             success: true;
             data: components["schemas"]["ImpersonationResult"];
             meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAppConfig: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AppConfig"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description Public bootstrap config. Fields other than `mobile` are described in `handleAppConfig` (server.go). */
+        AppConfig: {
+            mode?: string;
+            name?: string;
+            registration_enabled?: boolean;
+            mobile: components["schemas"]["MobileAppConfig"];
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description Mobile app version gate and store links (TEC-1178). Empty strings mean "not set". */
+        MobileAppConfig: {
+            /**
+             * @description Older apps get `426 APP_UPDATE_REQUIRED` on every `/v1` request except this config. "" = no gate.
+             * @example 1.2.0
+             */
+            min_version: string;
+            /**
+             * @description Newest store version; the app may suggest (not force) an update below it.
+             * @example 1.4.1
+             */
+            latest_version: string;
+            store_urls: {
+                /** @description App Store page (https) or "" */
+                ios: string;
+                /** @description Google Play page (https) or "" */
+                android: string;
+            };
         };
         EnvelopeStatus: {
             /** @enum {boolean} */
@@ -12253,6 +12319,20 @@ export interface components {
         };
     };
     responses: {
+        /**
+         * @description The mobile app (`X-Client: comcode-mobile`) sent an `X-App-Version` below the configured
+         *     `mobile.min_version` (`GET /v1/app/config`). Code `APP_UPDATE_REQUIRED`; `error.details[0]`
+         *     is `{field: "min_version", message: "<min version>"}`. Applies to every `/v1` route except
+         *     `GET /v1/app/config`; web requests never carry `X-Client` and are not affected.
+         */
+        AppUpdateRequired: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description Validation or malformed request */
         BadRequest: {
             headers: {
@@ -12321,6 +12401,18 @@ export interface components {
             };
         };
         /**
+         * @description `REFRESH_RACE`: the refresh token was rotated less than 30 seconds ago by a concurrent
+         *     request. The session is still live; retry with the newest refresh token.
+         */
+        RefreshRace: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /**
          * @description `LAST_SIGN_IN_METHOD`: the change would leave the user without any way to sign in.
          *     Set a password (password reset) or add another sign-in method first.
          */
@@ -12380,6 +12472,15 @@ export interface components {
         Q: string;
         /** @description Comma-separated fields; prefix `-` for descending */
         Sort: string;
+        /**
+         * @description `mobile` (or `comcode-mobile`) for the mobile app; anything else is a web session. Fixes
+         *     the refresh lifetime of a new session (TEC-1179). The web BFF never forwards it.
+         */
+        XClient: "mobile" | "comcode-mobile";
+        /** @description Mobile app only. Device label shown in the sessions list (printable, max 100 characters). */
+        XDeviceName: string;
+        /** @description Mobile app only. App version shown in the sessions list (max 32 characters). */
+        XAppVersion: string;
     };
     requestBodies: never;
     headers: never;
@@ -12467,7 +12568,17 @@ export interface operations {
     postAuthLogin: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description `mobile` (or `comcode-mobile`) for the mobile app; anything else is a web session. Fixes
+                 *     the refresh lifetime of a new session (TEC-1179). The web BFF never forwards it.
+                 */
+                "X-Client"?: components["parameters"]["XClient"];
+                /** @description Mobile app only. Device label shown in the sessions list (printable, max 100 characters). */
+                "X-Device-Name"?: components["parameters"]["XDeviceName"];
+                /** @description Mobile app only. App version shown in the sessions list (max 32 characters). */
+                "X-App-Version"?: components["parameters"]["XAppVersion"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -12489,6 +12600,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            426: components["responses"]["AppUpdateRequired"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
         };
@@ -12496,7 +12608,17 @@ export interface operations {
     postAuthRefresh: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description `mobile` (or `comcode-mobile`) for the mobile app; anything else is a web session. Fixes
+                 *     the refresh lifetime of a new session (TEC-1179). The web BFF never forwards it.
+                 */
+                "X-Client"?: components["parameters"]["XClient"];
+                /** @description Mobile app only. Device label shown in the sessions list (printable, max 100 characters). */
+                "X-Device-Name"?: components["parameters"]["XDeviceName"];
+                /** @description Mobile app only. App version shown in the sessions list (max 32 characters). */
+                "X-App-Version"?: components["parameters"]["XAppVersion"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -12517,6 +12639,8 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
+            409: components["responses"]["RefreshRace"];
+            426: components["responses"]["AppUpdateRequired"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -12566,6 +12690,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            426: components["responses"]["AppUpdateRequired"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -13916,7 +14041,17 @@ export interface operations {
     postAuthEmailCodeVerify: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description `mobile` (or `comcode-mobile`) for the mobile app; anything else is a web session. Fixes
+                 *     the refresh lifetime of a new session (TEC-1179). The web BFF never forwards it.
+                 */
+                "X-Client"?: components["parameters"]["XClient"];
+                /** @description Mobile app only. Device label shown in the sessions list (printable, max 100 characters). */
+                "X-Device-Name"?: components["parameters"]["XDeviceName"];
+                /** @description Mobile app only. App version shown in the sessions list (max 32 characters). */
+                "X-App-Version"?: components["parameters"]["XAppVersion"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -13938,6 +14073,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            426: components["responses"]["AppUpdateRequired"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
         };
@@ -14461,7 +14597,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EnvelopeStatus"];
+                    "application/json": components["schemas"]["EnvelopeAppConfig"];
                 };
             };
             500: components["responses"]["InternalError"];
@@ -21411,6 +21547,15 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
+                    /** @example 1.2.0 */
+                    mobile_min_version?: string;
+                    /** @example 1.4.1 */
+                    mobile_latest_version?: string;
+                    /** @example https://apps.apple.com/app/id0000000000 */
+                    mobile_ios_store_url?: string;
+                    /** @example https://play.google.com/store/apps/details?id=software.technowide.comcode */
+                    mobile_android_store_url?: string;
+                } & {
                     [key: string]: unknown;
                 };
             };
@@ -21425,6 +21570,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeGeneric"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };

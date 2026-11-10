@@ -29,6 +29,9 @@ async function refreshSession(): Promise<boolean> {
     body: JSON.stringify({}),
   });
 
+  // REFRESH_RACE: another request rotated the token moments ago and the session is
+  // still live; retrying the original request picks up the newer pair (TEC-1179).
+  if (response.status === 409) return true;
   if (!response.ok) return false;
 
   const json = (await response.json()) as Envelope<{ authenticated?: boolean }>;
