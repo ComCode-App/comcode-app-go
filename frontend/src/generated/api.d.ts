@@ -1176,8 +1176,8 @@ export interface paths {
         /**
          * Redeem an approved QR sign-in (web server only)
          * @description Called by the web server (NextAuth `qr-login` credentials provider), never by browser JS
-         *     or the mobile app (the mobile gateway refuses it; the browser BFF refusal ships with the
-         *     web panel). Needs the session id, the tab's `browser_secret` and the `exchange_token`
+         *     or the mobile app (the mobile gateway and the cookie BFF `/api/v1` both refuse it with
+         *     `404`, TEC-1185). Needs the session id, the tab's `browser_secret` and the `exchange_token`
          *     from the approval event. Single use: the session is deleted on success.
          *
          *     Returns the same token pair as `/v1/auth/login` plus the signed-in user. The session

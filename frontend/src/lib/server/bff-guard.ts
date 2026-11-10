@@ -73,15 +73,22 @@ export function isMobileGatewayRefusedPath(
 const MOBILE_REFUSED_PATHS = new Set(["auth/qr/exchange"]);
 
 /**
- * Cookie BFF (`/api/v1/*`) refusals on top of `isForbiddenProxyPath`: native
- * Apple / Google sign-in (`auth/oauth/{provider}/native`, TEC-1180) returns the
- * token pair in the JSON body for the mobile app. The web app never calls it,
- * and the BFF must not hand tokens to browser JavaScript, so it is mobile
- * gateway only. Compared case-insensitively.
+ * Cookie BFF (`/api/v1/*`) refusals on top of `isForbiddenProxyPath`. Both
+ * return a raw API token pair in the JSON body, and the BFF must never hand
+ * tokens to browser JavaScript:
+ *
+ * - `auth/oauth/{provider}/native`: native Apple / Google sign-in (TEC-1180)
+ *   for the mobile app; the web app never calls it (mobile gateway only).
+ * - `auth/qr/exchange`: the QR sign-in exchange (TEC-1185). Only the NextAuth
+ *   server (`qr-login` credentials provider in `auth.ts`) calls it with
+ *   `fetchUpstream`; the mobile gateway refuses it too.
+ *
+ * Compared case-insensitively.
  */
 export function isCookieBffRefusedPath(segments: readonly string[]): boolean {
   if (isForbiddenProxyPath(segments)) return true;
   const lower = segments.map((s) => s.toLowerCase());
+  if (COOKIE_BFF_REFUSED_PATHS.has(lower.join("/"))) return true;
   return (
     lower.length === 4 &&
     lower[0] === "auth" &&
@@ -89,6 +96,8 @@ export function isCookieBffRefusedPath(segments: readonly string[]): boolean {
     lower[3] === "native"
   );
 }
+
+const COOKIE_BFF_REFUSED_PATHS = new Set(["auth/qr/exchange"]);
 
 /**
  * Mutating paths that are POSTed cross-site on purpose, so they skip the CSRF

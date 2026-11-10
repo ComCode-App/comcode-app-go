@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { signIn as signInPasskey } from "next-auth/webauthn";
 import { useQuery } from "@tanstack/react-query";
-import { Fingerprint, Mail, ShieldCheck } from "lucide-react";
+import { Fingerprint, Mail, QrCode, ShieldCheck } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { AppleIcon } from "@/components/icons/apple-icon";
@@ -16,6 +16,7 @@ import { AppForm, AppInput, AppPassword } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup } from "@/components/ui/field";
 import { Separator } from "@/components/ui/separator";
+import { realtimeConfig } from "@/config/realtime";
 import { routes } from "@/config/routes";
 import {
   createLoginSchema,
@@ -36,6 +37,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { AuthCard } from "./auth-card";
+import { QRLoginPanel } from "./qr-login-panel";
 
 type OAuthId = "github" | "google" | "facebook" | "apple";
 
@@ -91,6 +93,9 @@ export function LoginForm() {
   const emailCodeSchema = useMemo(() => createEmailCodeSchema(t), [t]);
   const [emailCodeStep, setEmailCodeStep] = useState<EmailCodeStep>("off");
   const [emailCodeEmail, setEmailCodeEmail] = useState("");
+  /** QR sign-in with the mobile app (TEC-1185); needs Centrifugo. */
+  const [qrStep, setQrStep] = useState(false);
+  const showQR = realtimeConfig.enabled;
 
   const { data: appConfig } = useQuery({
     queryKey: ["app", "config", locale],
@@ -425,6 +430,35 @@ export function LoginForm() {
     );
   }
 
+  if (qrStep) {
+    return (
+      <AuthCard
+        title={t("auth.qr.title")}
+        description={t("auth.qr.description")}
+      >
+        <div className="space-y-4">
+          {displayError ? (
+            <Field data-invalid={true}>
+              <FieldError>{displayError}</FieldError>
+            </Field>
+          ) : null}
+          <QRLoginPanel onSignedIn={finishLogin} />
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              setFormError(null);
+              setQrStep(false);
+            }}
+          >
+            {t("common.back")}
+          </Button>
+        </div>
+      </AuthCard>
+    );
+  }
+
   if (emailCodeStep !== "off") {
     const errorBlock = displayError ? (
       <Field data-invalid={true}>
@@ -636,6 +670,22 @@ export function LoginForm() {
           <Mail aria-hidden />
           {t("auth.email_code.sign_in")}
         </Button>
+
+        {showQR ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full"
+            disabled={authPending}
+            onClick={() => {
+              setFormError(null);
+              setQrStep(true);
+            }}
+          >
+            <QrCode aria-hidden />
+            {t("auth.qr.sign_in")}
+          </Button>
+        ) : null}
 
         {showRegisterLink ? (
           <p className="text-muted-foreground text-center text-sm">

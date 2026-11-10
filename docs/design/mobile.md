@@ -561,7 +561,7 @@ sonra özellikler. Boyut: S ≈ 1 gün, M ≈ 2-4 gün, L ≈ 1 hafta+.
 | B5 | App Store / Play inceleme hesapları | S | — |
 | B6 | Associated domains: AASA ve assetlinks (TEC-1183, uygulandı; değerler sahipten, §6.2-7) | S | KARAR-2, sahip §6.2-7 |
 | B7 | QR ile giriş: backend | L | — |
-| B8 | QR ile giriş: web giriş paneli | M | B7 |
+| B8 | QR ile giriş: web giriş paneli (TEC-1185, uygulandı; [auth.md](../../backend/docs/auth.md) → QR sign-in) | M | B7 |
 | B9 | Push cihaz kaydı (tablolar + uçlar) | M | B2 (oturum ailesi) |
 | B10 | Expo push gönderimi, makbuzlar, temizlik | L | B9 |
 | A1 | `mobile/` iskeleti, CI ve mobile-ci skill'i | L | B1 (adres), sahip §6.2-5/6 |

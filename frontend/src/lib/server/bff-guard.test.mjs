@@ -223,3 +223,34 @@ test("cookie BFF refuses native OAuth sign-in (token pair stays mobile-only)", (
     false,
   );
 });
+
+test("cookie BFF refuses the QR sign-in exchange (tokens stay on the web server)", () => {
+  for (const segs of [
+    ["auth", "qr", "exchange"],
+    ["Auth", "QR", "Exchange"],
+  ]) {
+    assert.equal(
+      guard.isCookieBffRefusedPath(segs),
+      true,
+      JSON.stringify(segs),
+    );
+    assert.equal(
+      guard.isMobileGatewayRefusedPath(segs),
+      true,
+      JSON.stringify(segs),
+    );
+  }
+  // The tab itself creates the session and reads its state through the BFF.
+  for (const segs of [
+    ["auth", "qr", "sessions"],
+    ["auth", "qr", "sessions", "abc", "state"],
+    ["auth", "qr", "sessions", "abc"],
+    ["auth", "qr", "sessions", "abc", "approve"],
+  ]) {
+    assert.equal(
+      guard.isCookieBffRefusedPath(segs),
+      false,
+      JSON.stringify(segs),
+    );
+  }
+});
