@@ -33,6 +33,11 @@ export const API_ERROR_MESSAGE_KEYS: Readonly<Record<string, string>> = {
   INVALID_EMAIL_CODE: "errors.codes.invalid_email_code",
   REFRESH_RACE: "errors.codes.refresh_race",
   REALTIME_DISABLED: "errors.codes.realtime_disabled",
+  // QR sign-in (TEC-1184).
+  QR_SESSION_NOT_FOUND: "errors.codes.qr_session_not_found",
+  QR_SESSION_RESOLVED: "errors.codes.qr_session_resolved",
+  QR_SESSION_CLAIMED: "errors.codes.qr_session_claimed",
+  QR_LOGIN_INVALID: "errors.codes.qr_login_invalid",
   // Mobile app older than mobile.min_version (426, TEC-1178).
   APP_UPDATE_REQUIRED: "errors.codes.app_update_required",
   // Routes / public profile.

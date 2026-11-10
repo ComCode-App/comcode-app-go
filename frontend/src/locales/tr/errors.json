@@ -38,5 +38,9 @@
   "area_app": "Uygulama",
   "redirecting_to_login": "Giriş sayfasına yönlendiriliyor…",
   "codes.invalid_email_code": "Giriş kodu hatalı veya süresi dolmuş.",
+  "codes.qr_session_not_found": "Bu QR kodun süresi doldu ya da kullanıldı. Kodu yenileyip tekrar deneyin.",
+  "codes.qr_session_resolved": "Bu giriş isteği zaten yanıtlandı.",
+  "codes.qr_session_claimed": "Bu QR kod başka bir hesapla açıldı.",
+  "codes.qr_login_invalid": "QR ile giriş doğrulanamadı. QR kodu yenileyip tekrar deneyin.",
   "codes.refresh_race": "Oturumunuz başka bir istekte az önce yenilendi. Lütfen tekrar deneyin."
 }
