@@ -197,7 +197,7 @@ sütunu eklemek ve Platform → Entegrasyonlar → Apple / Google sayfasında y�
 anahtarı da panelden yönetiliyor). Env (`AUTH_*_NATIVE_CLIENT_IDS`) yalnız boilerplate uyumu için
 alternatif.
 
-Apple token'ları:
+Apple token'ları (TEC-1181 ile uygulandı, ayrıntı [auth.md](../../backend/docs/auth.md) → Apple tokens):
 
 - `authorization_code` gelirse ve panelde `.p8` anahtarı varsa Go kodu Apple'da takas eder
   (`client_id` = bundle id, `client_secret` = `.p8` ile imzalanmış ES256 JWT), dönen refresh token'ı

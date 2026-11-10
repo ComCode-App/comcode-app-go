@@ -647,6 +647,8 @@ export interface paths {
          * Unlink an OAuth identity
          * @description `409 LAST_SIGN_IN_METHOD` when the user has no password, no passkey and this is
          *     their last linked identity (TEC-1105).
+         *     Apple: a stored Apple refresh token is revoked at Apple after the identity is
+         *     removed (TEC-1181); a failed revocation is logged and does not fail the unlink.
          */
         delete: operations["deleteAuthIdentity"];
         options?: never;
@@ -9067,7 +9069,7 @@ export interface components {
             id_token: string;
             /** @description The raw nonce the app generated for this sign-in. The token's `nonce` claim must equal it or its hex SHA-256. */
             nonce: string;
-            /** @description Apple only. Accepted and currently ignored (reserved for the Apple token exchange). */
+            /** @description Apple only, optional. Exchanged at Apple for a refresh token that is stored encrypted and revoked when the Apple identity is unlinked or the account is deleted. Best effort; a failed exchange never fails the request. Ignored for Google. */
             authorization_code?: string;
         };
         NativeOAuthSignInRequest: components["schemas"]["NativeOAuthTokenRequest"] & {

@@ -258,7 +258,8 @@ sayılmayabilir. Resmî başvurularda destek, bekleme süresini atlayıp temizli
      `push_subscriptions` satırları silinir. Başka satırlarda kalan `recipient` e-postaları
      maskelenir.
   7. Kimlik: `refresh_tokens`, `webauthn_credentials`, `oauth_accounts` (saklanan Apple refresh
-     token'ı varsa önce iptal edilir, boilerplate `revokeAppleTokens`), `user_totp`, `otp_codes`,
+     token'ı varsa önce iptal edilir: `usecase.AppleTokens.RevokeForUser`, TEC-1181; hata
+     loglanır, temizliği durdurmaz), `user_totp`, `otp_codes`,
      `user_roles` silinir, step-up grant iptal edilir.
   8. Şirket üyelikleri silinir, KARAR-2 uygulanır.
   9. Kişisel hesap: `status = closed`, ad ve slug anonimleştirilir (`deleted-{uuid8}`).

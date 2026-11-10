@@ -156,6 +156,8 @@ type AuthUseCase struct {
 	// Native Apple / Google id_token sign-in (TEC-1180); nil = off.
 	idTokens       IDTokenVerifier
 	nativeSettings NativeProviderSettings
+	// Apple authorization code exchange (TEC-1181); nil = codes are ignored.
+	appleTokens *AppleTokens
 }
 
 // InviteChecker reports open company invites (accounts usecase.Invites, TEC-945).

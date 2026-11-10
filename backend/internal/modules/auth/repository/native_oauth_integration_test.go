@@ -62,6 +62,7 @@ type nativeEnv struct {
 	gate    *registrationGate
 	oauthPS *oauthproviderusecase.Service
 	key     *rsa.PrivateKey
+	box     *crypto.SecretBox
 }
 
 func newNativeEnv(t *testing.T) *nativeEnv {
@@ -114,7 +115,7 @@ func newNativeEnv(t *testing.T) *nativeEnv {
 			t.Fatal(err)
 		}
 	}
-	return &nativeEnv{t: t, d: d, repo: repo, tokens: tokens, uc: uc, h: h, gate: gate, oauthPS: oauthPS, key: key}
+	return &nativeEnv{t: t, d: d, repo: repo, tokens: tokens, uc: uc, h: h, gate: gate, oauthPS: oauthPS, key: key, box: box}
 }
 
 func ptr[T any](v T) *T { return &v }
