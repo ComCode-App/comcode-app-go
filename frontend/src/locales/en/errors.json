@@ -40,5 +40,10 @@
   "codes.invalid_email_code": "The sign-in code is incorrect or has expired.",
   "codes.refresh_race": "Your session was just renewed in another request. Please try again.",
   "codes.push_session_inactive": "This session has ended. Sign in again to turn on notifications on this device.",
-  "codes.push_impersonation": "Push notification devices cannot be changed while you are viewing as another user."
+  "codes.push_impersonation": "Push notification devices cannot be changed while you are viewing as another user.",
+  "codes.oauth_provider_disabled": "Sign-in with this provider is not available.",
+  "codes.oauth_invalid_token": "The sign-in could not be verified. Please try again.",
+  "codes.oauth_account_not_linked": "An account with this email already exists. Sign in with your existing method, then link this provider from your profile.",
+  "codes.oauth_email_unverified": "This provider did not confirm a verified email address, so it cannot be used to sign in.",
+  "codes.registration_disabled": "New sign-ups are currently closed."
 }

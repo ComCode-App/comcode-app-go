@@ -9,7 +9,7 @@ import {
   bffErrorResponse,
   isCrossSiteMutation,
   isCsrfExemptPath,
-  isForbiddenProxyPath,
+  isCookieBffRefusedPath,
   jwtExpiresAt,
 } from "@/lib/server/bff-guard";
 import {
@@ -388,7 +388,7 @@ export async function proxyToUpstream(
 ): Promise<Response> {
   const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
 
-  if (isForbiddenProxyPath(pathSegments)) {
+  if (isCookieBffRefusedPath(pathSegments)) {
     return bffErrorResponse(404, "NOT_FOUND", "not found", requestId);
   }
   const path = pathSegments.join("/");

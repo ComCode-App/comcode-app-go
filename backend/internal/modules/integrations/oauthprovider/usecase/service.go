@@ -36,7 +36,22 @@ type settingsStore interface {
 	UpdateOAuthProviderSettings(ctx context.Context, arg db.UpdateOAuthProviderSettingsParams) (db.OauthProviderSetting, error)
 }
 
-const providerApple = "apple"
+const (
+	providerApple  = "apple"
+	providerGoogle = "google"
+)
+
+// Native (mobile) audience limits (TEC-1180).
+const (
+	maxNativeClientIDs   = 10
+	maxNativeClientIDLen = 255
+)
+
+// SupportsNative reports whether provider has native (mobile) sign-in: Apple and Google.
+func SupportsNative(provider string) bool {
+	p := strings.ToLower(strings.TrimSpace(provider))
+	return p == providerApple || p == providerGoogle
+}
 
 // AppleWebClientSecretTTL is the lifetime of the Apple client_secret JWT
 // generated for the web (Auth.js) client from the uploaded signing key. Far
@@ -72,6 +87,19 @@ type Settings struct {
 	// ClientSecretSource is what the web client uses at runtime: "signing_key"
 	// (generated from the .p8), "client_secret" (pasted JWT) or "none".
 	ClientSecretSource *string `json:"client_secret_source,omitempty"`
+	// NativeClientIDs (Apple and Google only) are the audiences accepted for
+	// id_tokens from the mobile app: the iOS bundle id, Google iOS / Android
+	// client ids. Empty = native sign-in is off (TEC-1180).
+	NativeClientIDs *[]string `json:"native_client_ids,omitempty"`
+}
+
+// NativeConfig is what native (mobile) id_token sign-in needs from a provider row.
+type NativeConfig struct {
+	// Enabled: login is switched on and at least one audience is configured.
+	Enabled bool
+	// RegisterAllowed: the provider's register flag (registration_enabled is checked by the caller).
+	RegisterAllowed bool
+	Audiences       []string
 }
 
 // Apple client secret sources reported in Settings.ClientSecretSource.
@@ -103,6 +131,8 @@ type PatchInput struct {
 	KeyID            *string `json:"key_id"`
 	PrivateKey       *string `json:"private_key"` // .p8 PEM text, write-only
 	RemovePrivateKey *bool   `json:"remove_private_key"`
+	// Apple and Google: replaces the native audience list (TEC-1180).
+	NativeClientIDs *[]string `json:"native_client_ids"`
 }
 
 func (in PatchInput) touchesAppleKey() bool {
@@ -143,7 +173,70 @@ func (s *Service) mapSettings(row db.OauthProviderSetting) Settings {
 		out.PrivateKeyConfigured, out.PrivateKeyFingerprint = &configured, &fingerprint
 		out.ClientSecretSource = &source
 	}
+	if SupportsNative(row.Provider) {
+		ids := append([]string{}, row.NativeClientIds...)
+		out.NativeClientIDs = &ids
+	}
 	return out
+}
+
+// NativeConfig returns the native (mobile) sign-in settings of provider. Native
+// sign-in needs no client secret: an id_token is verified against the
+// provider's public keys and the configured audiences only.
+func (s *Service) NativeConfig(ctx context.Context, provider string) (NativeConfig, error) {
+	p, err := normalizeProvider(provider)
+	if err != nil {
+		return NativeConfig{}, err
+	}
+	if !SupportsNative(p) {
+		return NativeConfig{}, nil
+	}
+	row, err := s.q.GetOAuthProviderSettings(ctx, p)
+	if err != nil {
+		return NativeConfig{}, err
+	}
+	audiences := cleanNativeIDs(row.NativeClientIds)
+	return NativeConfig{
+		Enabled:         row.LoginEnabled && len(audiences) > 0,
+		RegisterAllowed: row.RegisterEnabled,
+		Audiences:       audiences,
+	}, nil
+}
+
+func cleanNativeIDs(in []string) []string {
+	out := make([]string, 0, len(in))
+	for _, id := range in {
+		if id = strings.TrimSpace(id); id != "" {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// normalizeNativeIDs trims, de-duplicates and validates a submitted audience list.
+func normalizeNativeIDs(in []string) ([]string, error) {
+	out := make([]string, 0, len(in))
+	seen := map[string]struct{}{}
+	for _, raw := range in {
+		id := strings.TrimSpace(raw)
+		if id == "" {
+			continue
+		}
+		if len(id) > maxNativeClientIDLen || strings.ContainsFunc(id, func(r rune) bool {
+			return r <= ' ' || r == ',' || r == 0x7f
+		}) {
+			return nil, fmt.Errorf("%w: native_client_ids entries must be single ids without spaces or commas (at most %d characters)", ErrInvalidRequest, maxNativeClientIDLen)
+		}
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	if len(out) > maxNativeClientIDs {
+		return nil, fmt.Errorf("%w: at most %d native_client_ids", ErrInvalidRequest, maxNativeClientIDs)
+	}
+	return out, nil
 }
 
 func hasStoredSecret(row db.OauthProviderSetting) bool {
@@ -313,6 +406,19 @@ func (s *Service) Patch(ctx context.Context, provider string, in PatchInput) (Se
 		return Settings{}, fmt.Errorf("%w: team_id, key_id and private_key are only supported for apple", ErrInvalidRequest)
 	}
 
+	nextNative := cleanNativeIDs(current.NativeClientIds)
+	if in.NativeClientIDs != nil {
+		if !SupportsNative(p) {
+			return Settings{}, fmt.Errorf("%w: native_client_ids are only supported for apple and google", ErrInvalidRequest)
+		}
+		nextNative, err = normalizeNativeIDs(*in.NativeClientIDs)
+		if err != nil {
+			return Settings{}, err
+		}
+		params.SetNativeClientIds = true
+		params.NativeClientIds = nextNative // never nil: an empty list clears the column
+	}
+
 	nextLogin := current.LoginEnabled
 	if in.LoginEnabled != nil {
 		nextLogin = *in.LoginEnabled
@@ -329,9 +435,14 @@ func (s *Service) Patch(ctx context.Context, provider string, in PatchInput) (Se
 	if in.ClientSecret != nil && strings.TrimSpace(*in.ClientSecret) != "" {
 		hasSecret = true
 	}
-	if (nextLogin || nextRegister) && (nextClientID == "" || (!hasSecret && !keyAvailable)) {
+	webReady := nextClientID != "" && (hasSecret || keyAvailable)
+	// Native sign-in needs only audiences, so a provider may be switched on for the app alone.
+	if (nextLogin || nextRegister) && !webReady && len(nextNative) == 0 {
 		if p == providerApple {
-			return Settings{}, fmt.Errorf("%w: client_id and either a signing key (.p8) or client_secret are required to enable Apple sign-in", ErrInvalidRequest)
+			return Settings{}, fmt.Errorf("%w: client_id and either a signing key (.p8) or client_secret, or a native client id, are required to enable Apple sign-in", ErrInvalidRequest)
+		}
+		if p == providerGoogle {
+			return Settings{}, fmt.Errorf("%w: client_id and client_secret, or a native client id, are required to enable Google sign-in", ErrInvalidRequest)
 		}
 		return Settings{}, fmt.Errorf("%w: client_id and client_secret are required to enable OAuth", ErrInvalidRequest)
 	}

@@ -193,3 +193,33 @@ test("jwtExpiresAt reads exp without verifying", () => {
   assert.equal(guard.jwtExpiresAt("garbage"), null);
   assert.equal(guard.jwtExpiresAt(null), null);
 });
+
+test("cookie BFF refuses native OAuth sign-in (token pair stays mobile-only)", () => {
+  for (const segs of [
+    ["auth", "oauth", "google", "native"],
+    ["auth", "oauth", "apple", "native"],
+    ["Auth", "OAuth", "Apple", "Native"],
+    ["internal", "auth", "users"],
+  ]) {
+    assert.equal(
+      guard.isCookieBffRefusedPath(segs),
+      true,
+      JSON.stringify(segs),
+    );
+  }
+  for (const segs of [
+    ["auth", "identities", "google", "native"],
+    ["auth", "oauth", "google", "callback"],
+    ["auth", "refresh"],
+  ]) {
+    assert.equal(
+      guard.isCookieBffRefusedPath(segs),
+      false,
+      JSON.stringify(segs),
+    );
+  }
+  assert.equal(
+    guard.isMobileGatewayRefusedPath(["auth", "oauth", "apple", "native"]),
+    false,
+  );
+});

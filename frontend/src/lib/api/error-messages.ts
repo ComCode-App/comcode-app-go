@@ -33,6 +33,12 @@ export const API_ERROR_MESSAGE_KEYS: Readonly<Record<string, string>> = {
   INVALID_EMAIL_CODE: "errors.codes.invalid_email_code",
   REFRESH_RACE: "errors.codes.refresh_race",
   REALTIME_DISABLED: "errors.codes.realtime_disabled",
+  // Native Apple / Google sign-in from the mobile app (TEC-1180).
+  OAUTH_PROVIDER_DISABLED: "errors.codes.oauth_provider_disabled",
+  OAUTH_INVALID_TOKEN: "errors.codes.oauth_invalid_token",
+  OAUTH_ACCOUNT_NOT_LINKED: "errors.codes.oauth_account_not_linked",
+  OAUTH_EMAIL_UNVERIFIED: "errors.codes.oauth_email_unverified",
+  REGISTRATION_DISABLED: "errors.codes.registration_disabled",
   // Mobile app older than mobile.min_version (426, TEC-1178).
   APP_UPDATE_REQUIRED: "errors.codes.app_update_required",
   // Mobile push devices (TEC-1186).
