@@ -419,6 +419,8 @@ jobs:
           context: ${{ matrix.image.context }}
           file: ${{ matrix.image.context }}/${{ matrix.image.dockerfile }}
           push: false
+          # Resolve FROM tags from the registry on every build (no stale base image).
+          pull: true
           build-args: |
             APP_VERSION=${{ steps.meta.outputs.version }}
             APP_COMMIT=${{ github.sha }}
@@ -563,6 +565,8 @@ jobs:
           context: ${{ matrix.image.context }}
           file: ${{ matrix.image.context }}/${{ matrix.image.dockerfile }}
           push: true
+          # Resolve FROM tags from the registry on every build (no stale base image).
+          pull: true
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             APP_VERSION=${{ needs.release-meta.outputs.version }}
@@ -675,6 +679,8 @@ jobs:
           context: ${{ matrix.image.context }}
           file: ${{ matrix.image.context }}/${{ matrix.image.dockerfile }}
           push: true
+          # Resolve FROM tags from the registry on every build (no stale base image).
+          pull: true
           tags: ${{ steps.meta.outputs.tag }}
           build-args: |
             APP_VERSION=${{ steps.meta.outputs.version }}
