@@ -64,6 +64,8 @@ logo) with the v1 renderer and the new one: only anti-aliased edge pixels differ
 
 IDs are descriptive names; the order is the editor's order.
 
+![Shape catalog drawn by the engine](./images/qr-shapes.png)
+
 - **Body (22):** `square`, `rounded-square`, `circle`, `small-dot`, `mosaic`, `spaced-square`,
   `diamond`, `star`, `fluid`, `chamfer`, `chamfer-soft`, `rounded-in`, `rounded-in-soft`,
   `pointed-in`, `pointed-in-soft`, `pointed`, `pointed-soft`, `leaf`, `rounded-pointed`,
