@@ -553,16 +553,21 @@ require `app.routes.write` and an owner/admin account role. Another account's ro
 Styles may be set on canonical, card, smart-link and legacy routes without changing their identities.
 
 Defaults are black on white, square modules/eyes, a four-module quiet zone, and M error correction.
-Supported modules: square/rounded/dots; eyes: square/rounded/circle. Colors are opaque `#RRGGBB`,
-dark-on-light, with at least 4.5:1 relative luminance contrast. Quiet zone is 4–16 modules. Files
-are 256–2048 pixels per edge and require at least four pixels per module including the quiet zone.
-SVG is vector geometry; PDF is A4 with a 160 mm PNG at the requested raster resolution.
+The design (TEC-1268: 22 body shapes, 15 eye frames, 18 eye balls, per-eye colors and flips,
+linear/radial gradients, transparent background, logo size and clean/overlay mode) is described in
+[QR_DESIGN.md](./QR_DESIGN.md); version 1 styles (`module`/`eye` only) still render unchanged.
+Colors are opaque `#RRGGBB`, dark-on-light, with at least 4.5:1 relative luminance contrast for
+every dark color in use. Quiet zone is 4–16 modules. Files are 256–2048 pixels per edge and require
+at least four pixels per module including the quiet zone. SVG is vector geometry, PNG is
+anti-aliased, and PDF draws the same vector design 160 mm wide on A4. `GET /qr` also returns the
+encoded `matrices` (M and H) so the browser engine reproduces `/qr/render` exactly.
 
 A logo uses `logo_profile_uuid` plus `logo_field: avatar|cover`, referencing existing media of a
 profile in the active account. No URL or object key is accepted from the client. Storage URLs and
 keys are resolved server-side and account ownership is checked again on every render. Logos must
-be PNG/JPEG, at most 2 MiB and 2048 pixels per edge. They occupy the central 15% of the symbol width
-with a one-module backing margin and automatically select H correction. Null `logo_profile_uuid`
+be PNG/JPEG, at most 2 MiB and 2048 pixels per edge. They occupy the central `logo_size` percent
+(10–30, default 15) of the symbol width; `clean` mode adds a one-module backing margin. A logo
+automatically selects H correction. Null `logo_profile_uuid`
 and an empty/omitted `logo_field` remove the logo. Profile media changes affect future renders.
 
 **Server preview (TEC-954).** `POST /v1/routes/{uuid}/qr/preview?format=svg|png&size=512` takes an

@@ -19,6 +19,14 @@ type RouteQR struct {
 	Style           qr.Style `json:"style"`
 	Payload         string   `json:"payload"`
 	ErrorCorrection string   `json:"error_correction"`
+	// Matrices are the encoded modules (rows of '0'/'1') for both correction levels, so the
+	// browser engine draws exactly the modules the server renders: M without, H with a logo.
+	Matrices QRMatrices `json:"matrices"`
+}
+
+type QRMatrices struct {
+	M []string `json:"M"`
+	H []string `json:"H"`
 }
 
 type QRStore interface {
@@ -35,15 +43,16 @@ func (r *PostgresRepository) GetQR(ctx context.Context, id uuid.UUID, accountID 
 	if err != nil {
 		return nil, err
 	}
-	style := qr.DefaultStyle()
-	if err := json.Unmarshal(row.QrStyle, &style); err != nil {
+	// v1 documents (module/eye only) and the '{}' column default normalize to the v2 shape.
+	style, err := qr.ParseStored(row.QrStyle)
+	if err != nil {
 		return nil, err
 	}
 	return &RouteQR{Path: row.Path, Style: style}, nil
 }
 
 func (r *PostgresRepository) PutQR(ctx context.Context, id uuid.UUID, accountID int64, style qr.Style) error {
-	raw, err := json.Marshal(style)
+	raw, err := json.Marshal(style.Normalize())
 	if err != nil {
 		return err
 	}
