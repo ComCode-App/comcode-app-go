@@ -19,7 +19,7 @@ endef
 FRONTEND_PORT ?= 54002
 
 .PHONY: infra infra-down infra-logs infra-ps migrate-up backend-dev frontend-dev local-dev \
-	free-dev-ports prod-env-init prod-env-upgrade prod-env-check env-check compose-env-check prod-config prod-up prod-build-local prod-up-local prod-down tools create-super-admin search-reindex seed check-i18n
+	free-dev-ports prod-env-init prod-env-upgrade prod-env-check env-check compose-env-check prod-config prod-up prod-build-local prod-up-local prod-down tools create-super-admin search-reindex seed check-i18n qr-fixtures
 
 infra:
 	@if [ -n "$(ENV_FILE)" ]; then \
@@ -208,3 +208,9 @@ seed:
 
 check-i18n:
 	node scripts/check-i18n.mjs
+
+# Rewrite the QR design golden fixtures (Go renderer), then check the TypeScript engine against them.
+# Run after an intentional geometry change; see docs/QR_DESIGN.md.
+qr-fixtures:
+	cd backend && go test ./internal/platform/qr -run TestGoldenFixtures -count=1 -update
+	cd frontend && node --test src/features/route-qr/lib/qr-engine.test.mjs
