@@ -1,0 +1,169 @@
+[
+  {
+    "id": "classic",
+    "style": {
+      "foreground": "#000000",
+      "background": "#ffffff",
+      "body_shape": "square",
+      "eye_frame_shape": "square",
+      "eye_ball_shape": "square"
+    }
+  },
+  {
+    "id": "soft",
+    "style": {
+      "foreground": "#111827",
+      "background": "#ffffff",
+      "body_shape": "rounded-in-soft",
+      "eye_frame_shape": "rounded-large",
+      "eye_ball_shape": "rounded"
+    }
+  },
+  {
+    "id": "ocean",
+    "style": {
+      "foreground": "#0c4a6e",
+      "background": "#f0f9ff",
+      "body_shape": "fluid",
+      "eye_frame_shape": "rounded-large",
+      "eye_ball_shape": "circle",
+      "fill_mode": "linear",
+      "gradient_start": "#0c4a6e",
+      "gradient_end": "#1e3a8a",
+      "gradient_angle": 45,
+      "gradient_on_eyes": true
+    }
+  },
+  {
+    "id": "sunset",
+    "style": {
+      "foreground": "#7c2d12",
+      "background": "#fff7ed",
+      "body_shape": "rounded-pointed",
+      "eye_frame_shape": "leaf",
+      "eye_ball_shape": "leaf",
+      "fill_mode": "radial",
+      "gradient_start": "#9f1239",
+      "gradient_end": "#7c2d12",
+      "eyes": [
+        {
+          "flip_h": false,
+          "flip_v": false,
+          "frame_color": "",
+          "ball_color": ""
+        },
+        {
+          "flip_h": true,
+          "flip_v": false,
+          "frame_color": "",
+          "ball_color": ""
+        },
+        { "flip_h": false, "flip_v": true, "frame_color": "", "ball_color": "" }
+      ]
+    }
+  },
+  {
+    "id": "forest",
+    "style": {
+      "foreground": "#14532d",
+      "background": "#f0fdf4",
+      "body_shape": "leaf",
+      "eye_frame_shape": "leaf",
+      "eye_ball_shape": "leaf",
+      "eyes": [
+        {
+          "flip_h": false,
+          "flip_v": false,
+          "frame_color": "",
+          "ball_color": ""
+        },
+        {
+          "flip_h": true,
+          "flip_v": false,
+          "frame_color": "",
+          "ball_color": ""
+        },
+        { "flip_h": false, "flip_v": true, "frame_color": "", "ball_color": "" }
+      ]
+    }
+  },
+  {
+    "id": "dots",
+    "style": {
+      "foreground": "#312e81",
+      "background": "#ffffff",
+      "body_shape": "circle",
+      "eye_frame_shape": "dotted",
+      "eye_ball_shape": "dots-3x3"
+    }
+  },
+  {
+    "id": "capsule",
+    "style": {
+      "foreground": "#1e3a8a",
+      "background": "#ffffff",
+      "body_shape": "capsule-horizontal",
+      "eye_frame_shape": "rounded-outer",
+      "eye_ball_shape": "capsules-horizontal",
+      "fill_mode": "linear",
+      "gradient_start": "#1e3a8a",
+      "gradient_end": "#6b21a8",
+      "gradient_angle": 0,
+      "gradient_on_eyes": true
+    }
+  },
+  {
+    "id": "ink",
+    "style": {
+      "foreground": "#000000",
+      "background": "#ffffff",
+      "body_shape": "chamfer",
+      "eye_frame_shape": "chamfer",
+      "eye_ball_shape": "chamfer"
+    }
+  },
+  {
+    "id": "royal",
+    "style": {
+      "foreground": "#1f2937",
+      "background": "#faf5ff",
+      "body_shape": "chamfer-soft",
+      "eye_frame_shape": "chamfer-leaf",
+      "eye_ball_shape": "chamfer-leaf",
+      "eyes": [
+        {
+          "flip_h": false,
+          "flip_v": false,
+          "frame_color": "#6b21a8",
+          "ball_color": "#1f2937"
+        },
+        {
+          "flip_h": true,
+          "flip_v": false,
+          "frame_color": "#6b21a8",
+          "ball_color": "#1f2937"
+        },
+        {
+          "flip_h": false,
+          "flip_v": true,
+          "frame_color": "#6b21a8",
+          "ball_color": "#1f2937"
+        }
+      ]
+    }
+  },
+  {
+    "id": "candy",
+    "style": {
+      "foreground": "#4c1d95",
+      "background": "#fdf2f8",
+      "body_shape": "pointed-in-soft",
+      "eye_frame_shape": "circle",
+      "eye_ball_shape": "clover",
+      "fill_mode": "radial",
+      "gradient_start": "#9d174d",
+      "gradient_end": "#4c1d95",
+      "gradient_on_eyes": true
+    }
+  }
+]

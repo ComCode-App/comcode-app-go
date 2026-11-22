@@ -575,8 +575,8 @@ unsaved `RouteQRStyle` body and returns the image inline (`private, no-store`). 
 `qr.Render` as `/qr/render`, so a saved style downloads byte-identical to its preview. Same read scope
 as `/qr/render` (nothing is stored, so no owner/admin role); validation and logo ownership match `PUT`.
 Size is capped at 256–1024, the body at 4 KiB, and requests at 600 per user per 15 minutes (Redis,
-fails open). The style editor calls it debounced (400 ms); the browser-side drawing is only an
-instant sketch shown until the server image for the current draft arrives.
+fails open). The editor no longer needs it while editing: since TEC-1270 it draws the draft with the shared
+engine and the server's matrices, which equals this endpoint's SVG (see QR_DESIGN.md → Editor).
 
 The QR payload is a **route identity**, never `direct_url` or a profile target:
 `{frontend}/{route.path}?src=qr` (e.g. `/c/abc123?src=qr`, `/s/example?src=qr`,
