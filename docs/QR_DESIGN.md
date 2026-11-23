@@ -36,10 +36,16 @@ The style lives in `routes.qr_style` (JSONB, no migration). The OpenAPI schema i
 ### Default design
 
 A route that was never styled (`qr_style = '{}'`, the column default) is drawn with the default
-design (TEC-1273): `body_shape: rounded-pointed`, `eye_frame_shape: rounded-large`,
+design (TEC-1273, body changed in TEC-1296): `body_shape: smooth`, `eye_frame_shape: rounded-large`,
 `eye_ball_shape: rounded`, black on white, quiet zone 4, no logo. The editor's "Reset to default"
 selects the same style. It is defined twice, `qr.DefaultStyle` in Go and `DEFAULT_QR_STYLE` in TS,
 and a test on each side pins it.
+
+TEC-1296 replaced the default body `rounded-pointed` (two corners cut at 45°, which read as
+clipped modules) with `smooth`: modules merge with their neighbors and every outer corner is
+rounded (radius 0.3 module). Styles that saved `rounded-pointed` keep it.
+
+![Default before (rounded-pointed) and after (smooth)](./images/qr-default-before-after.png)
 
 Any saved style, even a partial one, is decoded over the v1 defaults (square shapes) as below, so
 codes saved before TEC-1273 keep their look.
@@ -77,8 +83,8 @@ IDs are descriptive names; the order is the editor's order.
 
 ![Shape catalog drawn by the engine](./images/qr-shapes.png)
 
-- **Body (22):** `square`, `rounded-square`, `circle`, `small-dot`, `mosaic`, `spaced-square`,
-  `diamond`, `star`, `fluid`, `chamfer`, `chamfer-soft`, `rounded-in`, `rounded-in-soft`,
+- **Body (23):** `square`, `rounded-square`, `circle`, `small-dot`, `mosaic`, `spaced-square`,
+  `diamond`, `star`, `fluid`, `smooth`, `chamfer`, `chamfer-soft`, `rounded-in`, `rounded-in-soft`,
   `pointed-in`, `pointed-in-soft`, `pointed`, `pointed-soft`, `leaf`, `rounded-pointed`,
   `chamfer-leaf`, `capsule-horizontal`, `capsule-vertical`.
 - **Eye frame (15):** `square`, `rounded`, `circle`, `rounded-large`, `rounded-outer`,
@@ -88,7 +94,7 @@ IDs are descriptive names; the order is the editor's order.
   `rounded-three`, `chamfer`, `chamfer-leaf`, `dots-3x3`, `capsules-horizontal`,
   `capsules-vertical`, `clover`, `star`, `concave`, `rough`, `cushion`, `cross`.
 
-Connected body shapes (`fluid`, `chamfer*`, `rounded-in*`, `pointed*`, `leaf`, `rounded-pointed`,
+Connected body shapes (`fluid`, `smooth`, `chamfer*`, `rounded-in*`, `pointed*`, `leaf`, `rounded-pointed`,
 `chamfer-leaf`) look at the four orthogonal neighbors: only a corner with no dark neighbor on
 either side is shaped, so runs of modules merge into one outline. The `-in` shapes also fill the
 inner corner of a light cell that sits inside an L of three dark modules. Capsules merge along

@@ -19,7 +19,7 @@ export const DEFAULT_QR_STYLE: QrStyle = {
   background: "#ffffff",
   module: "",
   eye: "",
-  body_shape: "rounded-pointed",
+  body_shape: "smooth",
   eye_frame_shape: "rounded-large",
   eye_ball_shape: "rounded",
   quiet_zone: 4,
