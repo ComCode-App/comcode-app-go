@@ -19,3 +19,4 @@ export {
 } from "./create-form-sections";
 export { FormSection } from "./form-section";
 export { FormActions } from "./form-actions";
+export { NumberFieldError } from "./number-field-error";

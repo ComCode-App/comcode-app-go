@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+/** At most two decimal places, matching NUMERIC(…, 2) columns. */
+const twoDecimals = (v: number) =>
+  Math.abs(Math.round(v * 100) - v * 100) < 1e-6;
+
 export const productFormSchema = z.object({
   name: z.string().min(1, "Ürün adı zorunludur").max(200),
   slug: z.string().max(150).optional(),
@@ -8,9 +12,12 @@ export const productFormSchema = z.object({
   description: z.string().optional(),
   status: z.enum(["active", "draft", "archived"]),
   product_type: z.string(),
-  base_price: z.number().min(0, "Fiyat 0 veya daha büyük olmalıdır"),
+  base_price: z
+    .number()
+    .min(0, "Fiyat 0 veya daha büyük olmalıdır")
+    .refine(twoDecimals),
   currency: z.string(),
-  tax_rate: z.number().min(0).max(100),
+  tax_rate: z.number().min(0).max(100).refine(twoDecimals),
   stock_quantity: z.number().int().min(0),
   sku: z.string().max(64).optional(),
   allow_custom_print: z.boolean(),

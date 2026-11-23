@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { NumberFieldError } from "@/components/forms";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
@@ -60,6 +61,29 @@ interface ProductDialogProps {
   product: ProductSummary | ProductDetail | null;
 }
 
+const PRICING_FIELDS = new Set([
+  "base_price",
+  "currency",
+  "tax_rate",
+  "stock_quantity",
+  "sku",
+]);
+const SEO_FIELDS = new Set([
+  "meta_title",
+  "meta_description",
+  "meta_keywords",
+  "canonical_url",
+  "og_image_url",
+]);
+
+function tabWithError(errors: object): string {
+  const fields = Object.keys(errors);
+  if (fields.some((f) => !PRICING_FIELDS.has(f) && !SEO_FIELDS.has(f)))
+    return "general";
+  if (fields.some((f) => PRICING_FIELDS.has(f))) return "pricing";
+  return "seo";
+}
+
 export function ProductDialog({
   open,
   onOpenChange,
@@ -82,6 +106,7 @@ export function ProductDialog({
   const [newVariantColor, setNewVariantColor] = useState("#000000");
   const [newVariantMaterial] = useState("matte_pvc");
   const [newVariantDelta, setNewVariantDelta] = useState(0);
+  const [tab, setTab] = useState("general");
   const [newVariantStock] = useState(50);
 
   const categoriesQuery = useQuery({
@@ -190,6 +215,11 @@ export function ProductDialog({
     }
   }, [product, reset]);
 
+  // Every opening starts on the first tab, as before the tabs became controlled.
+  useEffect(() => {
+    if (open) setTab("general");
+  }, [open]);
+
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   const onSubmit = async (values: ProductFormValues) => {
@@ -243,8 +273,15 @@ export function ProductDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Tabs defaultValue="general" className="w-full">
+          <form
+            noValidate
+            onSubmit={handleSubmit(onSubmit, (invalid) =>
+              // Errors on a hidden tab would block saving silently: open the first tab with one.
+              setTab(tabWithError(invalid)),
+            )}
+            className="space-y-4"
+          >
+            <Tabs value={tab} onValueChange={setTab} className="w-full">
               <TabsList className="bg-muted mb-4 grid grid-cols-4">
                 <TabsTrigger value="general">
                   {t("products.tabs.general")}
@@ -384,7 +421,14 @@ export function ProductDialog({
                     <Input
                       type="number"
                       step="0.01"
-                      {...register("base_price")}
+                      inputMode="decimal"
+                      aria-invalid={!!errors.base_price}
+                      {...register("base_price", { valueAsNumber: true })}
+                    />
+                    <NumberFieldError
+                      error={errors.base_price}
+                      min={0}
+                      decimals={2}
                     />
                   </div>
 
@@ -413,14 +457,36 @@ export function ProductDialog({
 
                   <div className="space-y-2">
                     <Label>{t("products.fields.tax_rate")}</Label>
-                    <Input type="number" {...register("tax_rate")} />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      inputMode="decimal"
+                      aria-invalid={!!errors.tax_rate}
+                      {...register("tax_rate", { valueAsNumber: true })}
+                    />
+                    <NumberFieldError
+                      error={errors.tax_rate}
+                      min={0}
+                      max={100}
+                      decimals={2}
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>{t("products.fields.stock")}</Label>
-                    <Input type="number" {...register("stock_quantity")} />
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      aria-invalid={!!errors.stock_quantity}
+                      {...register("stock_quantity", { valueAsNumber: true })}
+                    />
+                    <NumberFieldError
+                      error={errors.stock_quantity}
+                      min={0}
+                      integer
+                    />
                   </div>
 
                   <div className="space-y-2">

@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { NumberFieldError } from "@/components/forms";
 import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -97,7 +98,11 @@ export function OfficeDialog({
             {t("company_structure.offices.dialog.description")}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form
+          noValidate
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-4"
+        >
           <div className="space-y-1.5">
             <Label htmlFor="office-name">
               {t("company_structure.offices.fields.name")}
@@ -146,8 +151,16 @@ export function OfficeDialog({
               id="office-sort"
               type="number"
               min={0}
+              inputMode="numeric"
               className="w-32"
+              aria-invalid={!!errors.sort_order}
               {...register("sort_order", { valueAsNumber: true })}
+            />
+            <NumberFieldError
+              error={errors.sort_order}
+              min={0}
+              max={100000}
+              integer
             />
             <p className="text-muted-foreground text-xs">
               {t("company_structure.offices.fields.sort_order_hint")}

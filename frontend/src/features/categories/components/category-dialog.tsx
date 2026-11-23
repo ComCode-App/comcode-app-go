@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { NumberFieldError } from "@/components/forms";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -120,7 +121,11 @@ export function CategoryDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form
+          noValidate
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-4"
+        >
           <div className="space-y-2">
             <Label>{t("categories.fields.name")}</Label>
             <Input placeholder="Örn. Metal Kartlar" {...register("name")} />
@@ -169,7 +174,13 @@ export function CategoryDialog({
           <div className="grid grid-cols-2 items-center gap-4">
             <div className="space-y-2">
               <Label>{t("categories.fields.display_order")}</Label>
-              <Input type="number" {...register("display_order")} />
+              <Input
+                type="number"
+                inputMode="numeric"
+                aria-invalid={!!errors.display_order}
+                {...register("display_order", { valueAsNumber: true })}
+              />
+              <NumberFieldError error={errors.display_order} integer />
             </div>
 
             <div className="mt-4 flex flex-row items-center justify-between rounded-lg border p-3">

@@ -14,5 +14,10 @@
   "command_title": "Command / pick",
   "command_description": "Search and select an item",
   "command_group_default": "Results",
-  "combobox_use_value": "Use “{{value}}”"
+  "combobox_use_value": "Use “{{value}}”",
+  "number_invalid": "Enter a valid number",
+  "number_integer": "Enter a whole number",
+  "number_min": "Must be at least {{min}}",
+  "number_max": "Must be at most {{max}}",
+  "number_decimals": "Use at most {{decimals}} decimal places"
 }
