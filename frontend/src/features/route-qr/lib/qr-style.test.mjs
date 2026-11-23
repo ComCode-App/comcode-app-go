@@ -17,6 +17,7 @@ import {
 } from "./qr-engine.ts";
 import {
   applyTemplate,
+  DEFAULT_QR_STYLE,
   eyeColorMode,
   matchesTemplate,
   matrixFor,
@@ -171,4 +172,20 @@ test("every dynamic editor key resolves (check-i18n cannot expand them)", () => 
   ];
   for (const l of locales)
     for (const k of keys) assert.ok(l[`qr.${k}`], `missing qr.${k}`);
+});
+
+test("default design matches qr.DefaultStyle (TEC-1273)", () => {
+  const d = normalizeQrStyle(DEFAULT_QR_STYLE);
+  assert.equal(d.body_shape, "rounded-pointed");
+  assert.equal(d.eye_frame_shape, "rounded-large");
+  assert.equal(d.eye_ball_shape, "rounded");
+  assert.equal(d.foreground, "#000000");
+  assert.equal(d.background, "#ffffff");
+  assert.equal(d.fill_mode, "solid");
+  assert.equal(d.quiet_zone, 4);
+  assert.equal(d.logo_profile_uuid, null);
+  assert.ok(BODY_SHAPES.includes(d.body_shape));
+  assert.ok(EYE_FRAME_SHAPES.includes(d.eye_frame_shape));
+  assert.ok(EYE_BALL_SHAPES.includes(d.eye_ball_shape));
+  assert.deepEqual(qrStyleProblems(d), []);
 });

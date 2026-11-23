@@ -33,6 +33,17 @@ The style lives in `routes.qr_style` (JSONB, no migration). The OpenAPI schema i
 | `logo_size` | Logo width, 10–30 % of the symbol width (quiet zone excluded). Default 15. |
 | `logo_mode` | `clean` removes the modules under the logo plus a one-module margin; `overlay` draws the logo over the modules. |
 
+### Default design
+
+A route that was never styled (`qr_style = '{}'`, the column default) is drawn with the default
+design (TEC-1273): `body_shape: rounded-pointed`, `eye_frame_shape: rounded-large`,
+`eye_ball_shape: rounded`, black on white, quiet zone 4, no logo. The editor's "Reset to default"
+selects the same style. It is defined twice, `qr.DefaultStyle` in Go and `DEFAULT_QR_STYLE` in TS,
+and a test on each side pins it.
+
+Any saved style, even a partial one, is decoded over the v1 defaults (square shapes) as below, so
+codes saved before TEC-1273 keep their look.
+
 ### Version 1 compatibility
 
 Version 1 stored only `foreground`, `background`, `module`, `eye`, `quiet_zone` and the logo
