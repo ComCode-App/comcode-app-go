@@ -28,6 +28,19 @@ func newMockRepo() *mockRepo {
 	}
 }
 
+// cloneDetail returns a copy the caller owns, like a real repository that scans a fresh row.
+// Sharing the stored pointer made the service's background vCard pre-cache race with later
+// in-place updates of the same mock record (go test -race, TEC-1207).
+func cloneDetail(p *model.ProfileDetail) *model.ProfileDetail {
+	c := *p
+	c.CompletionSuggestions = append([]model.CompletionSuggestion(nil), p.CompletionSuggestions...)
+	c.Translations = append([]model.ProfileTranslationDTO(nil), p.Translations...)
+	c.Addresses = append([]model.AddressDTO(nil), p.Addresses...)
+	c.ContactDetails = append([]model.ContactDetailDTO(nil), p.ContactDetails...)
+	c.SocialLinks = append([]model.SocialLinkDTO(nil), p.SocialLinks...)
+	return &c
+}
+
 func (m *mockRepo) find(accountID int64, profileUUID uuid.UUID) (*model.ProfileDetail, error) {
 	p, ok := m.profiles[profileUUID]
 	if !ok || m.accounts[profileUUID] != accountID {
@@ -53,13 +66,17 @@ func (m *mockRepo) ListByAccountID(ctx context.Context, accountID int64, limit, 
 }
 
 func (m *mockRepo) GetByUUID(ctx context.Context, accountID int64, profileUUID uuid.UUID) (*model.ProfileDetail, error) {
-	return m.find(accountID, profileUUID)
+	p, err := m.find(accountID, profileUUID)
+	if err != nil {
+		return nil, err
+	}
+	return cloneDetail(p), nil
 }
 
 func (m *mockRepo) GetPrimaryByAccountID(ctx context.Context, accountID int64) (*model.ProfileDetail, error) {
 	for id, p := range m.profiles {
 		if p.IsPrimary && m.accounts[id] == accountID {
-			return p, nil
+			return cloneDetail(p), nil
 		}
 	}
 	return nil, repository.ErrNotFound
@@ -84,7 +101,7 @@ func (m *mockRepo) Create(ctx context.Context, accountID, creatorUserID int64, u
 	}
 	m.profiles[newID] = p
 	m.accounts[newID] = accountID
-	return p, nil
+	return cloneDetail(p), nil
 }
 
 func (m *mockRepo) Update(ctx context.Context, accountID int64, profileUUID uuid.UUID, userUUID uuid.UUID, in model.UpsertProfileInput, completionRate int) (*model.ProfileDetail, error) {
@@ -96,7 +113,7 @@ func (m *mockRepo) Update(ctx context.Context, accountID int64, profileUUID uuid
 	p.IsPrimary = in.IsPrimary
 	p.CompletionRate = completionRate
 	p.Translations = translationsOf(in)
-	return p, nil
+	return cloneDetail(p), nil
 }
 
 func (m *mockRepo) UpdateAvatar(ctx context.Context, accountID int64, profileUUID uuid.UUID, avatarURL string) (*model.ProfileDetail, error) {
@@ -105,7 +122,7 @@ func (m *mockRepo) UpdateAvatar(ctx context.Context, accountID int64, profileUUI
 		return nil, err
 	}
 	p.AvatarURL = avatarURL
-	return p, nil
+	return cloneDetail(p), nil
 }
 
 func (m *mockRepo) UpdateCover(ctx context.Context, accountID int64, profileUUID uuid.UUID, coverURL string) (*model.ProfileDetail, error) {
@@ -114,7 +131,7 @@ func (m *mockRepo) UpdateCover(ctx context.Context, accountID int64, profileUUID
 		return nil, err
 	}
 	p.CoverURL = coverURL
-	return p, nil
+	return cloneDetail(p), nil
 }
 
 func (m *mockRepo) Delete(ctx context.Context, accountID int64, profileUUID uuid.UUID) error {
