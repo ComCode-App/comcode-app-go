@@ -146,7 +146,6 @@ export default function DateTimeComponent({
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
-          captionLayout="dropdown"
           mode="single"
           selected={selected}
           onSelect={handleDaySelect}
