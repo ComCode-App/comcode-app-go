@@ -58,7 +58,8 @@ func TestPNGEncodesIdentityPayload(t *testing.T) {
 	}
 	matrix := code.Bitmap()
 	size := len(matrix) * 8
-	data, ct, err := Render(payload, "png", size, DefaultStyle(), nil)
+	// Square shapes fill every module center, so each sampled pixel is exactly one bit.
+	data, ct, err := Render(payload, "png", size, legacyStyle().Normalize(), nil)
 	if err != nil || ct != "image/png" {
 		t.Fatalf("render: %s %v", ct, err)
 	}
@@ -227,9 +228,23 @@ func TestNormalizeMapsV1Fields(t *testing.T) {
 		s.FillMode != FillSolid || s.LogoMode != LogoClean || s.LogoSize != LogoSizeDefault || s.QuietZone != 6 {
 		t.Fatalf("v1 mapping: %+v", s)
 	}
-	empty, err := ParseStored([]byte(`{}`))
-	if err != nil || empty != DefaultStyle() {
-		t.Fatalf("column default must be the default style: %+v %v", empty, err)
+	for _, raw := range []string{`{}`, ``, ` { } `} {
+		empty, err := ParseStored([]byte(raw))
+		if err != nil || empty != DefaultStyle() {
+			t.Fatalf("column default %q must be the default style: %+v %v", raw, empty, err)
+		}
+	}
+	if d := DefaultStyle(); d.BodyShape != "rounded-pointed" || d.EyeFrameShape != "rounded-large" || d.EyeBallShape != "rounded" ||
+		d.Foreground != "#000000" || d.Background != "#ffffff" || d.QuietZone != 4 || d.LogoProfileUUID != nil || d.Validate() != nil {
+		t.Fatalf("default design (TEC-1273): %+v", d)
+	}
+	// A style saved before the default changed keeps its look, even when it only names the old defaults.
+	saved, err := ParseStored([]byte(`{"foreground":"#000000","background":"#ffffff","module":"square","eye":"square","quiet_zone":4}`))
+	if err != nil || saved.BodyShape != "square" || saved.EyeFrameShape != "square" || saved.EyeBallShape != "square" {
+		t.Fatalf("saved v1 square style: %+v %v", saved, err)
+	}
+	if partial, err := ParseStored([]byte(`{"foreground":"#1f2937"}`)); err != nil || partial.BodyShape != "square" {
+		t.Fatalf("a saved partial style decodes over v1 defaults: %+v %v", partial, err)
 	}
 	// v2-only clients get the v1 fields derived, so older readers keep working.
 	v2 := Style{Foreground: "#000000", Background: "#ffffff", BodyShape: "rounded-square", EyeFrameShape: "circle", EyeBallShape: "circle", QuietZone: 4}.Normalize()

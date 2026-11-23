@@ -74,23 +74,44 @@ type Style struct {
 	LogoMode              string      `json:"logo_mode"`
 }
 
-// legacyStyle holds the v1 defaults a stored style is decoded over ('{}' is the column default).
+// legacyStyle holds the v1 defaults a saved style is decoded over.
 func legacyStyle() Style {
 	return Style{Foreground: "#000000", Background: "#ffffff", Module: "square", Eye: "square", QuietZone: 4}
 }
 
-// DefaultStyle is black on white, square shapes, a four-module quiet zone and no logo.
+// Default design shapes (TEC-1273): what a route without a saved style is drawn with and what
+// the editor's "reset to default" selects.
+const (
+	DefaultBodyShape     = "rounded-pointed"
+	DefaultEyeFrameShape = "rounded-large"
+	DefaultEyeBallShape  = "rounded"
+)
+
+// DefaultStyle is black on white with the default design shapes, a four-module quiet zone and
+// no logo.
 func DefaultStyle() Style {
-	return legacyStyle().Normalize()
+	s := legacyStyle()
+	s.Module, s.Eye = "", ""
+	s.BodyShape, s.EyeFrameShape, s.EyeBallShape = DefaultBodyShape, DefaultEyeFrameShape, DefaultEyeBallShape
+	return s.Normalize()
 }
 
 // ParseStored decodes a stored routes.qr_style document (v1 or v2) into a normalized style.
+// An empty document ('{}', the column default) means the route was never styled and gets
+// DefaultStyle; anything saved is decoded over the v1 defaults so it renders as before.
 func ParseStored(raw []byte) (Style, error) {
-	style := legacyStyle()
+	var fields map[string]json.RawMessage
 	if len(raw) > 0 {
-		if err := json.Unmarshal(raw, &style); err != nil {
+		if err := json.Unmarshal(raw, &fields); err != nil {
 			return Style{}, err
 		}
+	}
+	if len(fields) == 0 {
+		return DefaultStyle(), nil
+	}
+	style := legacyStyle()
+	if err := json.Unmarshal(raw, &style); err != nil {
+		return Style{}, err
 	}
 	return style.Normalize(), nil
 }

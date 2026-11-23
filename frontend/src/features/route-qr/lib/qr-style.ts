@@ -10,11 +10,18 @@ export const DOWNLOAD_FORMATS = ["svg", "png", "pdf"] as const;
 export const DOWNLOAD_SIZES = [512, 1024, 2048] as const;
 export type DownloadFormat = (typeof DOWNLOAD_FORMATS)[number];
 
+/**
+ * The default design (TEC-1273), equal to qr.DefaultStyle in Go: what a never-styled route is
+ * drawn with and what "reset to default" selects. v1 fields stay empty; the normalizer derives them.
+ */
 export const DEFAULT_QR_STYLE: QrStyle = {
   foreground: "#000000",
   background: "#ffffff",
-  module: "square",
-  eye: "square",
+  module: "",
+  eye: "",
+  body_shape: "rounded-pointed",
+  eye_frame_shape: "rounded-large",
+  eye_ball_shape: "rounded",
   quiet_zone: 4,
   logo_profile_uuid: null,
   logo_field: "",

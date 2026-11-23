@@ -18200,15 +18200,15 @@ components:
         body_shape:
           type: string
           enum: [square, rounded-square, circle, small-dot, mosaic, spaced-square, diamond, star, fluid, chamfer, chamfer-soft, rounded-in, rounded-in-soft, pointed-in, pointed-in-soft, pointed, pointed-soft, leaf, rounded-pointed, chamfer-leaf, capsule-horizontal, capsule-vertical]
-          description: Data module shape. Connected shapes merge with orthogonal neighbors.
+          description: Data module shape. Connected shapes merge with orthogonal neighbors. A route without a saved style uses rounded-pointed.
         eye_frame_shape:
           type: string
           enum: [square, rounded, circle, rounded-large, rounded-outer, rounded-inner, leaf, rounded-corner, rounded-three, chamfer, chamfer-leaf, dotted, beaded, concave, rough]
-          description: Shape of the 7x7 finder ring.
+          description: Shape of the 7x7 finder ring. A route without a saved style uses rounded-large.
         eye_ball_shape:
           type: string
           enum: [square, rounded, circle, rounded-soft, leaf, rounded-corner, rounded-three, chamfer, chamfer-leaf, dots-3x3, capsules-horizontal, capsules-vertical, clover, star, concave, rough, cushion, cross]
-          description: Shape of the 3x3 finder center.
+          description: Shape of the 3x3 finder center. A route without a saved style uses rounded.
         eyes:
           type: array
           minItems: 3
