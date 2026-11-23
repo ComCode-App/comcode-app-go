@@ -44,5 +44,13 @@
   "theme": "Theme",
   "theme_light": "Light",
   "theme_dark": "Dark",
-  "theme_system": "System"
+  "theme_system": "System",
+  "color_picker_open": "Pick a color",
+  "color_picker_presets": "Preset colors",
+  "color_picker_hex": "Hex",
+  "time_picker_label": "Time",
+  "time_picker_hour": "Hour",
+  "time_picker_minute": "Minute",
+  "file_choose": "Choose file",
+  "file_none": "No file chosen"
 }

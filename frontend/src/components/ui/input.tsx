@@ -10,6 +10,9 @@ export const Input = React.forwardRef<
     type={type}
     className={cn(
       "border-border bg-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-xl border px-3.5 py-2 text-sm shadow-sm transition-[color,box-shadow,border-color] duration-200 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+      // No native spinner arrows on number fields (TEC-1275).
+      type === "number" &&
+        "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
       className,
     )}
     ref={ref}

@@ -44,5 +44,13 @@
   "theme": "Tema",
   "theme_light": "Açık",
   "theme_dark": "Koyu",
-  "theme_system": "Sistem"
+  "theme_system": "Sistem",
+  "color_picker_open": "Renk seç",
+  "color_picker_presets": "Hazır renkler",
+  "color_picker_hex": "Hex",
+  "time_picker_label": "Saat",
+  "time_picker_hour": "Saat",
+  "time_picker_minute": "Dakika",
+  "file_choose": "Dosya seç",
+  "file_none": "Dosya seçilmedi"
 }
