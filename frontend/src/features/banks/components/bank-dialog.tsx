@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { NumberFieldError } from "@/components/forms";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Landmark, Loader2, UploadCloud } from "lucide-react";
@@ -172,7 +173,11 @@ export function BankDialog({ open, onOpenChange, bank }: BankDialogProps) {
             {t("common.loading")}
           </div>
         ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            noValidate
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-4"
+          >
             {/* Live Preview Bar */}
             <div
               className="flex items-center gap-3 rounded-xl border p-3 transition-colors"
@@ -314,7 +319,14 @@ export function BankDialog({ open, onOpenChange, bank }: BankDialogProps) {
                 <Input
                   id="disp-order"
                   type="number"
+                  inputMode="numeric"
+                  aria-invalid={!!errors.display_order}
                   {...register("display_order", { valueAsNumber: true })}
+                />
+                <NumberFieldError
+                  error={errors.display_order}
+                  min={0}
+                  integer
                 />
               </div>
 
