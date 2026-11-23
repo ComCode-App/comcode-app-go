@@ -14,5 +14,10 @@
   "command_title": "Komut / seçim",
   "command_description": "Ara ve bir öğe seç",
   "command_group_default": "Sonuçlar",
-  "combobox_use_value": "“{{value}}” kullan"
+  "combobox_use_value": "“{{value}}” kullan",
+  "number_invalid": "Geçerli bir sayı girin",
+  "number_integer": "Tam sayı girin",
+  "number_min": "En az {{min}} olmalı",
+  "number_max": "En fazla {{max}} olabilir",
+  "number_decimals": "En fazla {{decimals}} ondalık basamak girin"
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { NumberFieldError } from "@/components/forms";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Globe, Loader2, Sparkles, UploadCloud } from "lucide-react";
@@ -201,7 +202,11 @@ export function SocialPlatformDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form
+          noValidate
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-4"
+        >
           {/* Icon Picker */}
           <div className="space-y-2">
             <Label className="text-xs">
@@ -338,7 +343,14 @@ export function SocialPlatformDialog({
               </Label>
               <Input
                 type="number"
+                inputMode="numeric"
+                aria-invalid={!!form.formState.errors.display_order}
                 {...form.register("display_order", { valueAsNumber: true })}
+              />
+              <NumberFieldError
+                error={form.formState.errors.display_order}
+                min={0}
+                integer
               />
             </div>
           </div>

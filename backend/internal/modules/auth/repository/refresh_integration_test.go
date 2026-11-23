@@ -94,6 +94,11 @@ func (f refreshFixture) storedExpiry(t *testing.T, raw string) time.Duration {
 	return time.Duration(until * float64(time.Second))
 }
 
+// clockSkew tolerates the app and Postgres clocks disagreeing: expires_at is set from the Go
+// clock and read back against Postgres NOW(), and slow runs (go test -race) widen the gap
+// (TEC-1207). It is far below the 1h/48h TTL difference the upper bounds guard.
+const clockSkew = time.Minute
+
 var mobileMeta = model.SessionMeta{ClientType: model.ClientMobile, DeviceName: "iPhone 15", AppVersion: "1.0.3"}
 
 // Mobile sessions get JWT_REFRESH_TTL_MOBILE and slide on refresh; web keeps JWT_REFRESH_TTL,
@@ -103,7 +108,7 @@ func TestIntegrationMobileAndWebRefreshTTL(t *testing.T) {
 	ctx := context.Background()
 
 	mobile := f.signIn(t, mobileMeta)
-	if d := f.storedExpiry(t, mobile.RefreshToken); d < 47*time.Hour || d > 48*time.Hour {
+	if d := f.storedExpiry(t, mobile.RefreshToken); d < 47*time.Hour || d > 48*time.Hour+clockSkew {
 		t.Fatalf("mobile login expiry %v, want ~48h", d)
 	}
 	next, err := f.uc.Refresh(ctx, mobile.RefreshToken, model.SessionMeta{})
@@ -118,14 +123,14 @@ func TestIntegrationMobileAndWebRefreshTTL(t *testing.T) {
 	}
 
 	web := f.signIn(t, model.SessionMeta{})
-	if d := f.storedExpiry(t, web.RefreshToken); d > time.Hour || d < 59*time.Minute {
+	if d := f.storedExpiry(t, web.RefreshToken); d > time.Hour+clockSkew || d < 59*time.Minute {
 		t.Fatalf("web login expiry %v, want ~1h", d)
 	}
 	upgraded, err := f.uc.Refresh(ctx, web.RefreshToken, mobileMeta)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d := f.storedExpiry(t, upgraded.RefreshToken); d > time.Hour {
+	if d := f.storedExpiry(t, upgraded.RefreshToken); d > time.Hour+clockSkew {
 		t.Fatalf("a refresh must not turn a web session into a mobile one: %v", d)
 	}
 	var ct string
