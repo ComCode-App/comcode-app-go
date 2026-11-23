@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "next-themes";
 import { useLocale } from "@/providers/locale-provider";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 export interface CameraOrbitConfig {
   pitch?: number; // deg (polar angle)
@@ -439,43 +440,55 @@ export function Bounded3DStage({
         </div>
 
         <div className="pointer-events-auto flex items-center gap-1.5">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="bg-background/85 border-border/80 hover:bg-muted text-foreground h-8 w-8 rounded-lg border shadow-xs backdrop-blur-md dark:bg-zinc-900/80"
-            onClick={() => setIsRotating(!isRotating)}
-            title={
+          <TooltipHint
+            label={
               isRotating
                 ? t("products.stage.stop_rotation")
                 : t("products.stage.start_rotation")
             }
           >
-            <RotateCw
-              className={`h-4 w-4 ${isRotating ? "text-primary animate-spin" : ""}`}
-              style={{ animationDuration: "6s" }}
-            />
-          </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="bg-background/85 border-border/80 hover:bg-muted text-foreground h-8 w-8 rounded-lg border shadow-xs backdrop-blur-md dark:bg-zinc-900/80"
+              onClick={() => setIsRotating(!isRotating)}
+              aria-label={
+                isRotating
+                  ? t("products.stage.stop_rotation")
+                  : t("products.stage.start_rotation")
+              }
+            >
+              <RotateCw
+                className={`h-4 w-4 ${isRotating ? "text-primary animate-spin" : ""}`}
+                style={{ animationDuration: "6s" }}
+              />
+            </Button>
+          </TooltipHint>
 
-          <Button
-            size="icon"
-            variant="ghost"
-            className="bg-background/85 border-border/80 hover:bg-muted text-foreground h-8 w-8 rounded-lg border shadow-xs backdrop-blur-md dark:bg-zinc-900/80"
-            onClick={resetView}
-            title={t("products.stage.reset_camera")}
-          >
-            <Maximize2 className="h-4 w-4" />
-          </Button>
+          <TooltipHint label={t("products.stage.reset_camera")}>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="bg-background/85 border-border/80 hover:bg-muted text-foreground h-8 w-8 rounded-lg border shadow-xs backdrop-blur-md dark:bg-zinc-900/80"
+              onClick={resetView}
+              aria-label={t("products.stage.reset_camera")}
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
+          </TooltipHint>
 
           {usdzUrl && supportsAR && (
-            <a
-              href={usdzUrl}
-              rel="ar"
-              className="bg-primary text-primary-foreground inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-medium shadow-xs transition-opacity hover:opacity-90"
-              title={t("products.stage.ar_quicklook")}
-            >
-              <Smartphone className="h-3.5 w-3.5" />
-              <span>AR</span>
-            </a>
+            <TooltipHint label={t("products.stage.ar_quicklook")}>
+              <a
+                href={usdzUrl}
+                rel="ar"
+                className="bg-primary text-primary-foreground inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-medium shadow-xs transition-opacity hover:opacity-90"
+                aria-label={t("products.stage.ar_quicklook")}
+              >
+                <Smartphone className="h-3.5 w-3.5" />
+                <span>AR</span>
+              </a>
+            </TooltipHint>
           )}
         </div>
       </div>

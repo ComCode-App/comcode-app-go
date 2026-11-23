@@ -9,6 +9,7 @@ import type {
   RealtimeDebugSnapshot,
 } from "@/lib/realtime";
 import { cn } from "@/lib/utils";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 const STORAGE_KEY = "app:realtime-debug-panel";
 const MODE_EVENT = "app:realtime-debug-panel-mode";
@@ -145,31 +146,32 @@ export function RealtimeDebugPanel() {
 
   if (mode === "collapsed") {
     return (
-      <button
-        type="button"
-        aria-label={`Realtime debug — ${tone.label}. Open panel`}
-        title={`Realtime · ${snapshot.state}`}
-        onClick={() => setPanelMode("open")}
-        className={cn(
-          "border-border bg-background/95 text-foreground",
-          "fixed bottom-3 left-3 z-[100] flex items-center gap-2 rounded-full",
-          "border px-2.5 py-1.5 font-mono text-[11px] shadow-md",
-          "hover:bg-accent transition-colors",
-        )}
-      >
-        <span
-          className={cn("size-2 shrink-0 rounded-full", tone.dot)}
-          aria-hidden
-        />
-        <Radio
-          className="text-muted-foreground size-3.5 shrink-0"
-          aria-hidden
-        />
-        <span className="font-medium tracking-wide">RT</span>
-        <span className="text-muted-foreground max-w-[7rem] truncate">
-          {snapshot.state}
-        </span>
-      </button>
+      <TooltipHint label={`Realtime · ${snapshot.state}`}>
+        <button
+          type="button"
+          aria-label={`Realtime debug — ${tone.label}. Open panel`}
+          onClick={() => setPanelMode("open")}
+          className={cn(
+            "border-border bg-background/95 text-foreground",
+            "fixed bottom-3 left-3 z-[100] flex items-center gap-2 rounded-full",
+            "border px-2.5 py-1.5 font-mono text-[11px] shadow-md",
+            "hover:bg-accent transition-colors",
+          )}
+        >
+          <span
+            className={cn("size-2 shrink-0 rounded-full", tone.dot)}
+            aria-hidden
+          />
+          <Radio
+            className="text-muted-foreground size-3.5 shrink-0"
+            aria-hidden
+          />
+          <span className="font-medium tracking-wide">RT</span>
+          <span className="text-muted-foreground max-w-[7rem] truncate">
+            {snapshot.state}
+          </span>
+        </button>
+      </TooltipHint>
     );
   }
 
@@ -190,24 +192,26 @@ export function RealtimeDebugPanel() {
         <span className="text-foreground flex-1 font-mono text-[11px] font-semibold tracking-wide">
           Realtime
         </span>
-        <button
-          type="button"
-          aria-label="Minimize realtime debug"
-          title="Minimize"
-          onClick={() => setPanelMode("collapsed")}
-          className="text-muted-foreground hover:bg-accent hover:text-foreground rounded p-1 transition-colors"
-        >
-          <Minus className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          aria-label="Hide realtime debug"
-          title="Hide for this session"
-          onClick={() => setPanelMode("hidden")}
-          className="text-muted-foreground hover:bg-accent hover:text-foreground rounded p-1 transition-colors"
-        >
-          <X className="size-3.5" />
-        </button>
+        <TooltipHint label="Minimize">
+          <button
+            type="button"
+            aria-label="Minimize realtime debug"
+            onClick={() => setPanelMode("collapsed")}
+            className="text-muted-foreground hover:bg-accent hover:text-foreground rounded p-1 transition-colors"
+          >
+            <Minus className="size-3.5" />
+          </button>
+        </TooltipHint>
+        <TooltipHint label="Hide for this session">
+          <button
+            type="button"
+            aria-label="Hide realtime debug"
+            onClick={() => setPanelMode("hidden")}
+            className="text-muted-foreground hover:bg-accent hover:text-foreground rounded p-1 transition-colors"
+          >
+            <X className="size-3.5" />
+          </button>
+        </TooltipHint>
       </header>
 
       <dl className="text-muted-foreground grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 p-3 font-mono text-[11px] leading-relaxed">
@@ -224,16 +228,15 @@ export function RealtimeDebugPanel() {
         <dt>reconnects</dt>
         <dd className="text-foreground">{snapshot.reconnectCount}</dd>
         <dt>user</dt>
-        <dd className="text-foreground truncate" title={userId ?? undefined}>
-          {userId ?? "—"}
-        </dd>
+        <TooltipHint label={userId ?? undefined}>
+          <dd className="text-foreground truncate">{userId ?? "—"}</dd>
+        </TooltipHint>
         <dt>token</dt>
-        <dd
-          className="text-foreground truncate"
-          title={snapshot.tokenExpiresAt ?? undefined}
-        >
-          {snapshot.tokenExpiresAt ?? "—"}
-        </dd>
+        <TooltipHint label={snapshot.tokenExpiresAt ?? undefined}>
+          <dd className="text-foreground truncate">
+            {snapshot.tokenExpiresAt ?? "—"}
+          </dd>
+        </TooltipHint>
         <dt>channels</dt>
         <dd className="text-foreground break-all">
           {snapshot.channels.length > 0 ? snapshot.channels.join(", ") : "—"}
@@ -243,12 +246,9 @@ export function RealtimeDebugPanel() {
           {snapshot.lastEvent?.type ?? "—"}
         </dd>
         <dt>ws</dt>
-        <dd
-          className="text-foreground truncate"
-          title={snapshot.wsUrl ?? undefined}
-        >
-          {snapshot.wsUrl ?? "—"}
-        </dd>
+        <TooltipHint label={snapshot.wsUrl ?? undefined}>
+          <dd className="text-foreground truncate">{snapshot.wsUrl ?? "—"}</dd>
+        </TooltipHint>
         <dt>error</dt>
         <dd
           className={cn(

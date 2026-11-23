@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Plus, X } from "lucide-react";
 import { useEffect, useId, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -61,6 +61,11 @@ export type AsyncComboboxProps = {
   hideSelected?: boolean;
   /** Show an inline clear control when a value is selected. */
   clearable?: boolean;
+  /**
+   * Free text: the typed query can be picked as the value, and a value that is
+   * not in the options still shows (options act as suggestions, like a datalist).
+   */
+  creatable?: boolean;
   id?: string;
   "aria-invalid"?: boolean;
 };
@@ -83,6 +88,7 @@ export function AsyncCombobox({
   selectedValues,
   hideSelected = false,
   clearable = false,
+  creatable = false,
   id,
   "aria-invalid": ariaInvalid,
 }: AsyncComboboxProps) {
@@ -131,9 +137,14 @@ export function AsyncCombobox({
     [options, remote, initialOptions],
   );
 
-  const selected = value
-    ? catalog.find((opt) => opt.value === value)
-    : undefined;
+  const selected = useMemo(
+    () =>
+      value
+        ? (catalog.find((opt) => opt.value === value) ??
+          (creatable ? { value, label: value } : undefined))
+        : undefined,
+    [catalog, value, creatable],
+  );
 
   const items = useMemo(() => {
     const base = isAsync
@@ -160,6 +171,10 @@ export function AsyncCombobox({
 
     return next;
   }, [isAsync, remote, options, query, selected, hideSelected, selectedSet]);
+
+  const typed = query.trim();
+  const canCreate =
+    creatable && typed !== "" && !items.some((opt) => opt.value === typed);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -227,10 +242,27 @@ export function AsyncCombobox({
               </div>
             ) : (
               <>
-                <CommandEmpty>
-                  {emptyText ?? t("form.combobox_empty")}
-                </CommandEmpty>
+                {canCreate ? null : (
+                  <CommandEmpty>
+                    {emptyText ?? t("form.combobox_empty")}
+                  </CommandEmpty>
+                )}
                 <CommandGroup>
+                  {canCreate ? (
+                    <CommandItem
+                      value={`__create__${typed}`}
+                      onSelect={() => {
+                        onValueChange?.(typed);
+                        setQuery("");
+                        setOpen(false);
+                      }}
+                    >
+                      <Plus className="size-4 shrink-0" aria-hidden />
+                      <span className="truncate">
+                        {t("form.combobox_use_value", { value: typed })}
+                      </span>
+                    </CommandItem>
+                  ) : null}
                   {items.map((opt) => {
                     const isSelected = selectedSet.has(opt.value);
                     return (

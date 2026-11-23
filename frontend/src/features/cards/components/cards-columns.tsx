@@ -14,6 +14,7 @@ import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { CardSummary } from "../services/cards.service";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 interface ColumnOptions {
   t: (key: string) => string;
@@ -124,33 +125,43 @@ export function createCardsColumns({
         const card = row.original;
         return (
           <div className="flex items-center justify-end gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-muted-foreground hover:text-foreground h-8 w-8"
-              onClick={() => onQRClick(card)}
-              title="QR Code"
+            <TooltipHint label="QR Code">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-muted-foreground hover:text-foreground h-8 w-8"
+                onClick={() => onQRClick(card)}
+                aria-label="QR Code"
+              >
+                <QrCode className="h-4 w-4" />
+              </Button>
+            </TooltipHint>
+            <TooltipHint
+              label={card.is_locked ? t("cards.unlock") : t("cards.lock")}
             >
-              <QrCode className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-muted-foreground hover:text-foreground h-8 w-8"
-              onClick={() => onToggleLock(card)}
-              title={card.is_locked ? t("cards.unlock") : t("cards.lock")}
-            >
-              <Lock className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-muted-foreground hover:text-foreground h-8 w-8"
-              onClick={() => onSettingsClick(card)}
-              title={t("common.edit")}
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-muted-foreground hover:text-foreground h-8 w-8"
+                onClick={() => onToggleLock(card)}
+                aria-label={
+                  card.is_locked ? t("cards.unlock") : t("cards.lock")
+                }
+              >
+                <Lock className="h-4 w-4" />
+              </Button>
+            </TooltipHint>
+            <TooltipHint label={t("common.edit")}>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-muted-foreground hover:text-foreground h-8 w-8"
+                onClick={() => onSettingsClick(card)}
+                aria-label={t("common.edit")}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </TooltipHint>
           </div>
         );
       },

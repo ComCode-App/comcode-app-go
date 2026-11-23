@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { profilesService } from "@/features/profiles/services/profiles.service";
 import { useCardMutations } from "../hooks/use-cards";
@@ -96,6 +97,7 @@ export function CardSettingsDialog({
   onSuccess,
 }: CardSettingsDialogProps) {
   const { t } = useLocale();
+  const { confirmDelete } = useDialogs();
   const { updateMutation, createMutation, deleteMutation } = useCardMutations();
 
   const isEdit = Boolean(card?.uuid);
@@ -190,7 +192,11 @@ export function CardSettingsDialog({
 
   const handleDelete = async () => {
     if (!card?.uuid) return;
-    if (confirm(t("cards.delete_confirm"))) {
+    const ok = await confirmDelete({
+      title: t("cards.delete_title"),
+      description: t("cards.delete_confirm"),
+    });
+    if (ok) {
       try {
         await deleteMutation.mutateAsync(card.uuid);
         onOpenChange(false);

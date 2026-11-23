@@ -13,6 +13,7 @@ import { FileTextIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/providers/locale-provider";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 export function MarkdownTogglePlugin({
   shouldPreserveNewLinesInMarkdown,
@@ -53,15 +54,16 @@ export function MarkdownTogglePlugin({
   }, [editor, shouldPreserveNewLinesInMarkdown]);
 
   return (
-    <Button
-      variant={"ghost"}
-      onClick={handleMarkdownToggle}
-      title={t("editor.markdown_toggle")}
-      aria-label={t("editor.markdown_toggle_aria")}
-      size={"sm"}
-      className="p-2"
-    >
-      <FileTextIcon className="size-4" />
-    </Button>
+    <TooltipHint label={t("editor.markdown_toggle")}>
+      <Button
+        variant={"ghost"}
+        onClick={handleMarkdownToggle}
+        aria-label={t("editor.markdown_toggle_aria")}
+        size={"sm"}
+        className="p-2"
+      >
+        <FileTextIcon className="size-4" />
+      </Button>
+    </TooltipHint>
   );
 }

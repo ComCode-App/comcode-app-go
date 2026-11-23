@@ -26,9 +26,6 @@ export function EditModeTogglePlugin() {
             editor.setEditable(!editor.isEditable());
             setIsEditable(editor.isEditable());
           }}
-          title={
-            isEditable ? t("editor.lock_readonly") : t("editor.unlock_readonly")
-          }
           aria-label={
             isEditable ? t("editor.lock_readonly") : t("editor.unlock_readonly")
           }

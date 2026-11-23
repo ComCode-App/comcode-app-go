@@ -12,6 +12,7 @@ import {
 } from "@/components/entity";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -49,6 +50,7 @@ import {
   companyBrandingKeys,
   companyBrandingService,
 } from "../services/company-branding.service";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 const NONE = "__none__";
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -325,13 +327,12 @@ function BrandingFormCard({
             {t("company_branding.branding.primary_color")}
           </Label>
           <div className="flex items-center gap-2">
-            <input
-              type="color"
+            <ColorPicker
               aria-label={t("company_branding.branding.primary_color")}
-              value={COLOR_RE.test(color) ? color : "#000000"}
-              onChange={(e) => set({ color: e.target.value })}
+              value={color}
+              onChange={(next) => set({ color: next })}
               disabled={disabled}
-              className="h-9 w-12 cursor-pointer rounded border bg-transparent p-1"
+              className="h-9 w-12"
             />
             <Input
               id="branding-color"
@@ -592,12 +593,11 @@ function MediaLibraryCard({ canWrite }: { canWrite: boolean }) {
                     )}
                   </div>
                   <div className="min-w-0 flex-1 space-y-1">
-                    <p
-                      className="truncate text-sm font-medium"
-                      title={item.name}
-                    >
-                      {item.name}
-                    </p>
+                    <TooltipHint label={item.name}>
+                      <p className="truncate text-sm font-medium">
+                        {item.name}
+                      </p>
+                    </TooltipHint>
                     <div className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
                       <Badge variant="secondary">
                         {t(`company_branding.kind.${item.kind}`)}
@@ -617,21 +617,29 @@ function MediaLibraryCard({ canWrite }: { canWrite: boolean }) {
                         </a>
                       </Button>
                       {canWrite ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => void confirmRemove(item)}
-                          disabled={remove.isPending || item.usage.length > 0}
-                          title={
+                        <TooltipHint
+                          label={
                             item.usage.length
                               ? t("company_branding.errors.in_use")
                               : undefined
                           }
                         >
-                          <Trash2 className="size-4" />
-                          {t("common.delete")}
-                        </Button>
+                          {/* span: a disabled button gets no pointer events, so it would never show why */}
+                          <span className="inline-flex">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void confirmRemove(item)}
+                              disabled={
+                                remove.isPending || item.usage.length > 0
+                              }
+                            >
+                              <Trash2 className="size-4" />
+                              {t("common.delete")}
+                            </Button>
+                          </span>
+                        </TooltipHint>
                       ) : null}
                     </div>
                   </div>

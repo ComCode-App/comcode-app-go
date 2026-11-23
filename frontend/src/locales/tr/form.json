@@ -13,5 +13,6 @@
   "combobox_selected": "Seçili",
   "command_title": "Komut / seçim",
   "command_description": "Ara ve bir öğe seç",
-  "command_group_default": "Sonuçlar"
+  "command_group_default": "Sonuçlar",
+  "combobox_use_value": "“{{value}}” kullan"
 }

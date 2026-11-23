@@ -20,6 +20,8 @@ import {
 } from "@/components/forms";
 import { FormFieldShell } from "@/components/forms/form-field";
 import { Button } from "@/components/ui/button";
+import { FileInput } from "@/components/ui/file-input";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { Input } from "@/components/ui/input";
 import { brand } from "@/config/brand";
 import { apiConfig } from "@/config/api";
@@ -167,9 +169,8 @@ function SettingsFormFields({
 
         <div className="flex flex-wrap items-end gap-2 sm:col-span-2">
           <FormFieldShell name="logo" label={t("settings.upload_logo")}>
-            <Input
+            <FileInput
               id="logo"
-              type="file"
               accept="image/png,image/jpeg,image/webp,image/svg+xml"
               className="max-w-md"
               disabled={!canWrite || isLogoUploading}
@@ -304,12 +305,12 @@ function ColorField({
           error={fieldState.error?.message}
         >
           <div className="flex items-center gap-2">
-            <Input
-              type="color"
+            <ColorPicker
               value={field.value}
               disabled={disabled}
-              className="h-9 w-14 shrink-0 cursor-pointer p-1"
-              onChange={(event) => field.onChange(event.target.value)}
+              aria-label={label}
+              className="h-9 w-14"
+              onChange={(next) => field.onChange(next)}
             />
             <Input
               value={field.value}

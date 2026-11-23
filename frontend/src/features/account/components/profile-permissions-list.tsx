@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { ALL_PERMISSIONS, isKnownPermission } from "@/config/permissions";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 type ProfilePermissionsListProps = {
   granted: string[] | undefined;
@@ -58,18 +59,16 @@ export function ProfilePermissionsList({
         const display = label === labelKey ? slug : label;
 
         return (
-          <li
-            key={slug}
-            className="bg-muted/40 flex min-w-0 flex-col gap-0.5 rounded-md px-2.5 py-1.5"
-            title={slug}
-          >
-            <span className="text-foreground truncate text-sm leading-snug">
-              {display}
-            </span>
-            <span className="text-muted-foreground truncate font-mono text-[10px]">
-              {slug}
-            </span>
-          </li>
+          <TooltipHint key={slug} label={slug}>
+            <li className="bg-muted/40 flex min-w-0 flex-col gap-0.5 rounded-md px-2.5 py-1.5">
+              <span className="text-foreground truncate text-sm leading-snug">
+                {display}
+              </span>
+              <span className="text-muted-foreground truncate font-mono text-[10px]">
+                {slug}
+              </span>
+            </li>
+          </TooltipHint>
         );
       })}
     </ul>

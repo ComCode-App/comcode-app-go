@@ -6,7 +6,7 @@ import { useFormContext } from "react-hook-form";
 import { AppInput } from "@/components/forms";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FileInput } from "@/components/ui/file-input";
 import { Label } from "@/components/ui/label";
 import type { OAuthProviderFormValues } from "@/features/integrations/oauth/schemas/oauth-provider-form";
 import type { OAuthProviderSettings } from "@/features/integrations/oauth/services/oauth-provider.service";
@@ -140,10 +140,10 @@ export function AppleSigningKeyFields({
           </Label>
           <Badge variant={status.variant}>{status.label}</Badge>
         </div>
-        <Input
+        <FileInput
           ref={fileInputRef}
           id={fileInputId}
-          type="file"
+          showFileName={false}
           accept=".p8"
           onChange={onFileChange}
           disabled={disabled}

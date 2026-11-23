@@ -13,5 +13,6 @@
   "combobox_selected": "Selected",
   "command_title": "Command / pick",
   "command_description": "Search and select an item",
-  "command_group_default": "Results"
+  "command_group_default": "Results",
+  "combobox_use_value": "Use “{{value}}”"
 }

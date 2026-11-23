@@ -28,8 +28,13 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { appToast } from "@/providers/toast-provider";
+import { useLocale } from "@/providers/locale-provider";
+
 export function ContextMenuPlugin(): JSX.Element {
   const [editor] = useLexicalComposerContext();
+  const { t } = useLocale();
+  const pasteDenied = t("editor.clipboard_paste_denied");
 
   const items = useMemo(() => {
     return [
@@ -71,7 +76,7 @@ export function ContextMenuPlugin(): JSX.Element {
               name: "clipboard-read",
             });
             if (permission.state === "denied") {
-              alert("Not allowed to paste from clipboard.");
+              appToast.error(pasteDenied);
               return;
             }
 
@@ -99,7 +104,7 @@ export function ContextMenuPlugin(): JSX.Element {
             });
 
             if (permission.state === "denied") {
-              alert("Not allowed to paste from clipboard.");
+              appToast.error(pasteDenied);
               return;
             }
 
@@ -140,7 +145,7 @@ export function ContextMenuPlugin(): JSX.Element {
         icon: <Trash2 className="size-4" />,
       }),
     ];
-  }, [editor]);
+  }, [editor, pasteDenied]);
 
   return (
     <NodeContextMenuPlugin

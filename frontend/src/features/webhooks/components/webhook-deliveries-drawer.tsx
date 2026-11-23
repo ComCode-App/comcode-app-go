@@ -31,6 +31,7 @@ import type {
 } from "@/features/webhooks/services/webhooks.service";
 import { datetime } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 const PAGE_SIZE = 20;
 const STATUSES: WebhookDeliveryStatus[] = [
@@ -112,12 +113,11 @@ export function WebhookDeliveriesDrawer({
               tone={TONE[row.original.status]}
             />
             {row.original.last_error ? (
-              <p
-                className="text-muted-foreground max-w-56 truncate text-[11px]"
-                title={row.original.last_error}
-              >
-                {row.original.last_error}
-              </p>
+              <TooltipHint label={row.original.last_error}>
+                <p className="text-muted-foreground max-w-56 truncate text-[11px]">
+                  {row.original.last_error}
+                </p>
+              </TooltipHint>
             ) : null}
             {row.original.status === "failed" &&
             row.original.next_attempt_at ? (

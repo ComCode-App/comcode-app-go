@@ -47,8 +47,15 @@ export function OrderRequestAssetDialog({
     t("orders.asset_modal.default_desc_logo"),
   );
 
+  const [missing, setMissing] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!title || !description) {
+      setMissing(true);
+      return;
+    }
+    setMissing(false);
     await createAssetRequestMutation.mutateAsync({
       orderUuid,
       payload: {
@@ -73,7 +80,7 @@ export function OrderRequestAssetDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4 pt-2">
           <div className="space-y-2">
             <Label>{t("orders.asset_modal.type_label")}</Label>
             <Select
@@ -118,7 +125,13 @@ export function OrderRequestAssetDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
+              aria-invalid={missing && !title ? true : undefined}
             />
+            {missing && !title ? (
+              <p role="alert" className="text-destructive text-xs">
+                {t("form.required")}
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-2">
@@ -128,7 +141,13 @@ export function OrderRequestAssetDialog({
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               required
+              aria-invalid={missing && !description ? true : undefined}
             />
+            {missing && !description ? (
+              <p role="alert" className="text-destructive text-xs">
+                {t("form.required")}
+              </p>
+            ) : null}
           </div>
 
           <DialogFooter className="pt-2">

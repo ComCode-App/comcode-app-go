@@ -55,7 +55,6 @@ export function ShareContentPlugin() {
               () => toast.error("URL could not be copied to clipboard"),
             )
           }
-          title="Share"
           aria-label="Share Playground link to current editor state"
           size={"sm"}
           className="p-2"

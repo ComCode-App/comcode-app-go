@@ -111,5 +111,6 @@
   "resolver_tagline": "ComCode Akıllı Kartvizit",
   "resolver_view_profile": "Profili Görüntüle",
   "resolver_retired_title": "Kart devre dışı",
-  "resolver_retired_desc": "Bu kart veya bağlantı artık kullanılmıyor."
+  "resolver_retired_desc": "Bu kart veya bağlantı artık kullanılmıyor.",
+  "delete_title": "Kartı sil"
 }

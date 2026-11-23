@@ -56,5 +56,6 @@
   "primary_action.email": "Send email",
   "primary_action.whatsapp": "WhatsApp",
   "primary_action.website": "Visit website",
-  "error.passcode_short": "Enter a passcode of at least {{min}} characters."
+  "error.passcode_short": "Enter a passcode of at least {{min}} characters.",
+  "error.slug_required": "Enter an address."
 }

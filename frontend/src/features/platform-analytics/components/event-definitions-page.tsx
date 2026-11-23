@@ -37,6 +37,7 @@ import type {
   EventDefinitionInput,
 } from "../services/platform-analytics.service";
 import { EventDefinitionDialog } from "./event-definition-dialog";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 type Flag = "enabled" | "is_public" | "aggregate_enabled";
 
@@ -155,9 +156,11 @@ export function EventDefinitionsPage() {
         filterVariant: "faceted",
         filterOptions: categoryOptions,
         cell: ({ row }) => (
-          <Badge variant="outline" title={row.original.category}>
-            {eventCategoryLabel(t, row.original.category)}
-          </Badge>
+          <TooltipHint label={row.original.category}>
+            <Badge variant="outline">
+              {eventCategoryLabel(t, row.original.category)}
+            </Badge>
+          </TooltipHint>
         ),
       }),
       createColumn<EventDefinition>({

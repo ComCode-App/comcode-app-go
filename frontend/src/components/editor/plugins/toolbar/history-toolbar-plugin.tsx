@@ -16,6 +16,7 @@ import { useToolbarContext } from "@/components/editor/context/toolbar-context";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { useLocale } from "@/providers/locale-provider";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 export function HistoryToolbarPlugin() {
   const { t } = useLocale();
@@ -56,34 +57,40 @@ export function HistoryToolbarPlugin() {
 
   return (
     <ButtonGroup>
-      <Button
-        disabled={!canUndo || !isEditable}
-        onClick={() => {
-          activeEditor.dispatchCommand(UNDO_COMMAND, undefined);
-        }}
-        title={
+      <TooltipHint
+        label={
           IS_APPLE ? t("editor.undo_shortcut_apple") : t("editor.undo_shortcut")
         }
-        aria-label={t("editor.undo")}
-        size="icon-sm"
-        variant={"outline"}
       >
-        <UndoIcon className="size-4" />
-      </Button>
-      <Button
-        disabled={!canRedo || !isEditable}
-        onClick={() => {
-          activeEditor.dispatchCommand(REDO_COMMAND, undefined);
-        }}
-        title={
+        <Button
+          disabled={!canUndo || !isEditable}
+          onClick={() => {
+            activeEditor.dispatchCommand(UNDO_COMMAND, undefined);
+          }}
+          aria-label={t("editor.undo")}
+          size="icon-sm"
+          variant={"outline"}
+        >
+          <UndoIcon className="size-4" />
+        </Button>
+      </TooltipHint>
+      <TooltipHint
+        label={
           IS_APPLE ? t("editor.redo_shortcut_apple") : t("editor.redo_shortcut")
         }
-        aria-label={t("editor.redo")}
-        variant={"outline"}
-        size="icon-sm"
       >
-        <RedoIcon className="size-4" />
-      </Button>
+        <Button
+          disabled={!canRedo || !isEditable}
+          onClick={() => {
+            activeEditor.dispatchCommand(REDO_COMMAND, undefined);
+          }}
+          aria-label={t("editor.redo")}
+          variant={"outline"}
+          size="icon-sm"
+        >
+          <RedoIcon className="size-4" />
+        </Button>
+      </TooltipHint>
     </ButtonGroup>
   );
 }

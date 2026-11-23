@@ -43,6 +43,8 @@ const accountKeys = {
 };
 
 const ROLES: AccountRole[] = ["owner", "admin", "office_manager", "member"];
+// Same check as the lead forms; the form opts out of the browser's own popup.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function errorMessage(err: unknown, fallback: string) {
   return err instanceof Error && err.message ? err.message : fallback;
@@ -77,6 +79,7 @@ export function AccountPage() {
     appToast.error(errorMessage(err, t("common.error_generic")));
 
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [role, setRole] = useState<AccountRole>("member");
   const addMember = useMutation({
     mutationFn: accountService.addMember,
@@ -124,6 +127,11 @@ export function AccountPage() {
   const onAdd = (event: FormEvent) => {
     event.preventDefault();
     if (!email.trim()) return;
+    if (!EMAIL_RE.test(email.trim())) {
+      setEmailError(t("auth.validation.email"));
+      return;
+    }
+    setEmailError(null);
     addMember.mutate({ email: email.trim(), role });
   };
 
@@ -286,6 +294,7 @@ export function AccountPage() {
           {isCompany && canManage ? (
             <EntitySectionCard title={t("accounts.add_member")}>
               <form
+                noValidate
                 onSubmit={onAdd}
                 className="flex flex-col gap-3 sm:flex-row sm:items-end"
               >
@@ -295,9 +304,18 @@ export function AccountPage() {
                     type="email"
                     autoComplete="off"
                     value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      setEmailError(null);
+                    }}
                     placeholder="name@example.com"
+                    aria-invalid={emailError ? true : undefined}
                   />
+                  {emailError ? (
+                    <span role="alert" className="text-destructive text-xs">
+                      {emailError}
+                    </span>
+                  ) : null}
                 </label>
                 <label className="grid gap-1.5 text-sm">
                   <span className="font-medium">{t("accounts.role")}</span>
