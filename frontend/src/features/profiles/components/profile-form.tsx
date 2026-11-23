@@ -36,6 +36,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -70,6 +71,7 @@ import {
   type VCardApplyOptions,
 } from "./vcard-import-dialog";
 import { isApiError, suppressApiErrorToast } from "@/lib/api";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 interface ProfileFormProps {
   initialData?: ProfileDetail;
@@ -1775,17 +1777,21 @@ export function ProfileForm({
                             </span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleFetchLinkMetadata(idx)}
-                              title={t("profiles.actions.fetch_icon")}
-                              className="text-muted-foreground hover:text-foreground h-7 px-2 text-xs"
+                            <TooltipHint
+                              label={t("profiles.actions.fetch_icon")}
                             >
-                              <Sparkles className="text-primary mr-1 h-3.5 w-3.5" />
-                              <span>{t("profiles.actions.fetch_icon")}</span>
-                            </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleFetchLinkMetadata(idx)}
+                                aria-label={t("profiles.actions.fetch_icon")}
+                                className="text-muted-foreground hover:text-foreground h-7 px-2 text-xs"
+                              >
+                                <Sparkles className="text-primary mr-1 h-3.5 w-3.5" />
+                                <span>{t("profiles.actions.fetch_icon")}</span>
+                              </Button>
+                            </TooltipHint>
                             <Button
                               type="button"
                               variant="ghost"
@@ -1877,12 +1883,20 @@ export function ProfileForm({
                           </div>
                           <div className="flex items-end pb-1 sm:col-span-6">
                             <label className="flex cursor-pointer items-center gap-2 text-xs font-medium">
-                              <input
-                                type="checkbox"
-                                {...form.register(
-                                  `social_links.${idx}.is_active`,
+                              <Controller
+                                control={form.control}
+                                name={`social_links.${idx}.is_active`}
+                                render={({ field }) => (
+                                  <Checkbox
+                                    ref={field.ref}
+                                    name={field.name}
+                                    checked={field.value === true}
+                                    onCheckedChange={(checked) =>
+                                      field.onChange(checked === true)
+                                    }
+                                    onBlur={field.onBlur}
+                                  />
                                 )}
-                                className="border-input text-primary focus:ring-primary rounded"
                               />
                               <span>{t("profiles.social.is_active")}</span>
                             </label>

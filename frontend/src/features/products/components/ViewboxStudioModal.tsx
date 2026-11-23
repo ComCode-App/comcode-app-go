@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { FileInput } from "@/components/ui/file-input";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -408,10 +409,8 @@ export function ViewboxStudioModal({
                     {t("products.viewbox.glb_label")}
                   </Label>
                   <div className="flex items-center gap-2">
-                    <Input
-                      type="file"
+                    <FileInput
                       accept=".glb,.gltf"
-                      className="bg-background border-input file:bg-muted file:text-foreground text-xs file:rounded-md file:border-0 file:text-xs"
                       onChange={(e) => handleUpload3DFile(e, false)}
                       disabled={isUploadingGLB}
                     />
@@ -428,10 +427,8 @@ export function ViewboxStudioModal({
                     {t("products.viewbox.usdz_label")}
                   </Label>
                   <div className="flex items-center gap-2">
-                    <Input
-                      type="file"
+                    <FileInput
                       accept=".usdz"
-                      className="bg-background border-input file:bg-muted file:text-foreground text-xs file:rounded-md file:border-0 file:text-xs"
                       onChange={(e) => handleUpload3DFile(e, true)}
                       disabled={isUploadingUSDZ}
                     />

@@ -39,6 +39,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { FileInput } from "@/components/ui/file-input";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -120,9 +121,8 @@ export function InsertImageUploadedDialogBody({
     <FieldGroup>
       <Field>
         <FieldLabel htmlFor="image-upload">Image Upload</FieldLabel>
-        <Input
+        <FileInput
           id="image-upload"
-          type="file"
           onChange={(e) => loadImage(e.target.files)}
           accept="image/*"
           data-test-id="image-modal-file-upload"

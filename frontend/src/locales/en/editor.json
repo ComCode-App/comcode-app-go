@@ -78,5 +78,7 @@
   "picker.date": "Date",
   "decrease_font": "Decrease font size",
   "increase_font": "Increase font size",
-  "copy": "Copy"
+  "copy": "Copy",
+  "include_time": "Include time",
+  "clipboard_paste_denied": "Not allowed to paste from clipboard."
 }

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -120,11 +121,11 @@ function ParamControl({
       <div className="space-y-2">
         <Label className="text-xs">{label}</Label>
         <div className="flex items-center gap-2">
-          <input
-            type="color"
+          <ColorPicker
             value={color}
-            onChange={(e) => onChange(e.target.value)}
-            className="h-9 w-12 cursor-pointer rounded border bg-transparent p-1"
+            onChange={onChange}
+            aria-label={label}
+            className="h-9 w-12"
           />
           <Input
             value={color}
@@ -157,15 +158,15 @@ function ParamControl({
         <div className="space-y-2">
           {colors.map((color, index) => (
             <div key={`${index}-${color}`} className="flex items-center gap-2">
-              <input
-                type="color"
+              <ColorPicker
                 value={color}
-                onChange={(e) => {
-                  const next = [...colors];
-                  next[index] = e.target.value;
-                  onChange(next);
+                onChange={(next) => {
+                  const list = [...colors];
+                  list[index] = next;
+                  onChange(list);
                 }}
-                className="h-8 w-10 cursor-pointer rounded border bg-transparent p-0.5"
+                aria-label={label}
+                className="h-8 w-10 p-0.5"
               />
               <Input
                 value={color}

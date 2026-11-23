@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -260,11 +261,11 @@ export function BankDialog({ open, onOpenChange, bank }: BankDialogProps) {
                   {t("banks.fields.brand_color")}
                 </Label>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={brandColor || "#1e3a8a"}
-                    onChange={(e) => setValue("brand_color", e.target.value)}
-                    className="h-9 w-9 shrink-0 cursor-pointer rounded-md border p-1"
+                  <ColorPicker
+                    value={brandColor}
+                    fallback="#1e3a8a"
+                    onChange={(next) => setValue("brand_color", next)}
+                    aria-label={t("banks.fields.brand_color")}
                   />
                   <Input
                     id="brand-color"
