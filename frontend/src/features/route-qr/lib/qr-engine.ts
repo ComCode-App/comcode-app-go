@@ -30,7 +30,7 @@ export type QrStyle = {
   body_shape?: string;
   eye_frame_shape?: string;
   eye_ball_shape?: string;
-  eyes?: QrEye[];
+  eyes?: Partial<QrEye>[];
   fill_mode?: string;
   gradient_start?: string;
   gradient_end?: string;
@@ -44,7 +44,10 @@ export type QrStyle = {
 };
 
 /** A style with every v2 field present (the result of normalizeQrStyle). */
-export type QrStyleFull = Required<Omit<QrStyle, "logo_profile_uuid">> & {
+export type QrStyleFull = Required<
+  Omit<QrStyle, "logo_profile_uuid" | "eyes">
+> & {
+  eyes: QrEye[];
   logo_profile_uuid: string | null;
 };
 

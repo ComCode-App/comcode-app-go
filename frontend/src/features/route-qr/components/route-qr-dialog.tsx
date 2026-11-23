@@ -10,7 +10,9 @@ import {
   Loader2,
   QrCode,
   RotateCcw,
+  Server,
 } from "lucide-react";
+import QRCode from "qrcode";
 import { useId, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -31,13 +33,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { permissions } from "@/config/permissions";
 import { profilesKeys } from "@/features/profiles/hooks/query-keys";
 import { profilesService } from "@/features/profiles/services/profiles.service";
-import { useDebounce } from "@/hooks/use-debounce";
-import { ApiError } from "@/lib/api/errors";
 import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
 import { canManageAccount } from "@/lib/auth/types";
 import { cn } from "@/lib/utils";
@@ -47,21 +45,29 @@ import { usePermission } from "@/providers/permission-provider";
 import { appToast } from "@/providers/toast-provider";
 
 import {
+  darkColors,
+  MIN_CONTRAST,
+  normalizeQrStyle,
+  qrContrast,
+  qrLogoBox,
+  qrStyleProblems,
+  type QrStyle,
+  type QrStyleProblem,
+  renderQrSvg,
+} from "../lib/qr-engine";
+import {
+  fetchAsDataUrl,
+  svgBlob,
+  svgDataUrl,
+  svgToPngBlob,
+} from "../lib/qr-export";
+import {
   DEFAULT_QR_STYLE,
   DOWNLOAD_FORMATS,
   DOWNLOAD_SIZES,
   type DownloadFormat,
-  EYE_STYLES,
-  isHexColor,
-  MIN_CONTRAST,
-  MODULE_STYLES,
-  normalizeStyle,
-  previewGeometry,
-  QUIET_ZONE_MAX,
-  QUIET_ZONE_MIN,
-  qrContrast,
-  sameStyle,
-  styleProblem,
+  matrixFor,
+  readabilityWarnings,
 } from "../lib/qr-style";
 import {
   type RouteQR,
@@ -69,6 +75,7 @@ import {
   routeQrKeys,
   routeQrService,
 } from "../services/route-qr.service";
+import { QrDesignControls } from "./qr-design-controls";
 
 type RouteQrDialogProps = {
   /** Route whose identity the QR encodes (card c/ route, smart link, canonical /{username}). */
@@ -83,7 +90,7 @@ type RouteQrDialogProps = {
   fileStem?: string;
 };
 
-/** Smart QR designer (TEC-569): appearance, live preview, save and server-rendered downloads. */
+/** Smart QR designer (TEC-569, TEC-1270): templates, shapes, colors, logo, downloads. */
 export function RouteQrDialog({
   routeUuid,
   title,
@@ -104,7 +111,7 @@ export function RouteQrDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-4xl">
+      <DialogContent className="max-h-[94vh] overflow-y-auto p-4 sm:max-w-5xl sm:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <QrCode className="text-primary size-5" />
@@ -140,6 +147,24 @@ export function RouteQrDialog({
   );
 }
 
+/** Fallback only: an older API without matrices. The mask may differ from the server's. */
+function localMatrix(payload: string, hasLogo: boolean): string[] | null {
+  try {
+    const m = QRCode.create(payload, {
+      errorCorrectionLevel: hasLogo ? "H" : "M",
+    }).modules;
+    const rows: string[] = [];
+    for (let y = 0; y < m.size; y++) {
+      let row = "";
+      for (let x = 0; x < m.size; x++) row += m.get(y, x) ? "1" : "0";
+      rows.push(row);
+    }
+    return rows;
+  } catch {
+    return null;
+  }
+}
+
 function QrDesigner({
   routeUuid,
   qr,
@@ -159,20 +184,21 @@ function QrDesigner({
   const queryClient = useQueryClient();
   const ids = useId();
 
-  const saved = useMemo(() => normalizeStyle(qr.style), [qr.style]);
-  const [draft, setDraft] = useState<RouteQRStyle>(saved);
-  const dirty = !sameStyle(draft, saved);
-  const problem = styleProblem(draft);
-  const set = (patch: Partial<RouteQRStyle>) =>
+  const saved = useMemo(() => normalizeQrStyle(qr.style), [qr.style]);
+  const [draft, setDraft] = useState<QrStyle>(saved);
+  const full = useMemo(() => normalizeQrStyle(draft), [draft]);
+  const dirty = JSON.stringify(full) !== JSON.stringify(saved);
+  const problems = useMemo(() => qrStyleProblems(draft), [draft]);
+  const set = (patch: Partial<QrStyle>) =>
     setDraft((d) => ({ ...d, ...patch }));
 
   // Logo: only media the API owns — an account profile's avatar or cover, picked by reference.
   const profilesQuery = useQuery({
     queryKey: profilesKeys.list({ picker: true }),
     queryFn: () => profilesService.list({ limit: 100, offset: 0 }),
-    enabled: canEdit || Boolean(draft.logo_profile_uuid),
+    enabled: canEdit || Boolean(full.logo_profile_uuid),
   });
-  const logoProfileUuid = draft.logo_profile_uuid ?? null;
+  const logoProfileUuid = full.logo_profile_uuid;
   const logoProfileQuery = useQuery({
     queryKey: profilesKeys.detail(logoProfileUuid ?? ""),
     queryFn: () => profilesService.get(logoProfileUuid!),
@@ -183,65 +209,52 @@ function QrDesigner({
     cover: logoProfileQuery.data?.cover_url || undefined,
   };
   const logoUrl =
-    draft.logo_field === "avatar" || draft.logo_field === "cover"
-      ? logoMedia[draft.logo_field]
+    full.logo_field === "avatar" || full.logo_field === "cover"
+      ? logoMedia[full.logo_field]
       : undefined;
-  const profileOptions = profilesQuery.data?.items ?? [];
   const logoMissing =
     Boolean(logoProfileUuid) && logoProfileQuery.isSuccess && !logoUrl;
-
-  const pickLogoProfile = (value: string) => {
-    if (value === "none") {
-      set({ logo_profile_uuid: null, logo_field: "" });
-      return;
-    }
-    set({ logo_profile_uuid: value, logo_field: draft.logo_field || "avatar" });
-  };
-
-  // Preview (TEC-954): the API renders the current draft with the same renderer as downloads and
-  // the print pack, debounced because it is rate limited. The local drawing is only an instant
-  // sketch while that render is pending (or if it fails); its bit pattern may differ.
-  const sketch = useDebounce(draft, 120);
-  const geometry = useMemo(
-    () => previewGeometry(qr.payload, sketch),
-    [qr.payload, sketch],
-  );
-  const settledDraft = useDebounce(draft, 400);
-  const settledStyle = useMemo(
-    () => normalizeStyle(settledDraft),
-    [settledDraft],
-  );
-  const signature = JSON.stringify(settledStyle);
-  const settled = signature === JSON.stringify(normalizeStyle(draft));
-  const serverPreview = useQuery({
-    queryKey: routeQrKeys.preview(routeUuid, signature),
-    queryFn: async ({ signal }) => {
-      try {
-        const svg = await (
-          await routeQrService.preview(
-            routeUuid,
-            settledStyle,
-            "svg",
-            512,
-            signal,
-          )
-        ).text();
-        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-      } catch (err) {
-        // Shown inline below the preview; keep it out of the global error toast.
-        throw new Error(err instanceof ApiError ? err.message : String(err));
-      }
-    },
-    // Styles the API would reject anyway are not sent; the contrast/logo hints explain why.
-    enabled: styleProblem(settledStyle) === null && !logoMissing,
+  // The logo as a data: URL makes browser files self-contained; null if the media is unreadable.
+  const logoData = useQuery({
+    queryKey: ["route-qr", "logo-data", logoUrl ?? ""],
+    queryFn: ({ signal }) => fetchAsDataUrl(logoUrl!, signal),
+    enabled: Boolean(logoUrl),
     staleTime: 5 * 60_000,
     retry: false,
   });
-  const serverUrl = settled ? serverPreview.data : undefined;
-  const serverFailed = settled && serverPreview.isError;
+
+  // The server's own modules (M, or H with a logo): the local SVG equals /qr/render.
+  const hasLogo = Boolean(logoProfileUuid);
+  const serverMatrix = matrixFor(qr.matrices, hasLogo);
+  const matrix = useMemo(
+    () => serverMatrix ?? localMatrix(qr.payload, hasLogo),
+    [serverMatrix, qr.payload, hasLogo],
+  );
+  const drawable = !problems.some(
+    (p) =>
+      p.kind === "color_format" || p.kind === "shape" || p.kind === "gradient",
+  );
+  const previewSvg = useMemo(
+    () =>
+      matrix && drawable
+        ? renderQrSvg(matrix, full, 512, logoData.data ?? "")
+        : null,
+    [matrix, drawable, full, logoData.data],
+  );
+  const logoBox =
+    matrix && hasLogo && logoUrl && !logoData.data
+      ? qrLogoBox(matrix.length, full)
+      : null;
+
+  const bg = full.transparent_background ? "#ffffff" : full.background;
+  const contrasts = darkColors(full)
+    .map((c) => qrContrast(c.color, bg))
+    .filter((c): c is number => c !== null);
+  const warnings = readabilityWarnings(full, contrasts);
 
   const save = useMutation({
-    mutationFn: () => routeQrService.put(routeUuid, normalizeStyle(draft)),
+    // Saving is only enabled without problems, so the enums hold.
+    mutationFn: () => routeQrService.put(routeUuid, full as RouteQRStyle),
     onSuccess: (next) => {
       queryClient.setQueryData(routeQrKeys.detail(routeUuid), next);
       appToast.success(t("routes.qr.saved"));
@@ -250,14 +263,25 @@ function QrDesigner({
 
   const [format, setFormat] = useState<DownloadFormat>("png");
   const [size, setSize] = useState<number>(1024);
-  const download = useMutation({
-    mutationFn: () => routeQrService.render(routeUuid, format, size),
-    onSuccess: ({ blob, filename }) => {
-      triggerBrowserDownload(
-        blob,
-        filename ?? `${fileStem || "qr"}-qr.${format}`,
-      );
+  const stem = fileStem || "qr";
+  // svg/png of the current draft are drawn here; PDF and saved-design files come from the API.
+  const localBlocked =
+    !matrix ||
+    !drawable ||
+    problems.length > 0 ||
+    (hasLogo && (!logoData.data || logoMissing));
+  const localDownload = useMutation({
+    mutationFn: async () => {
+      const svg = renderQrSvg(matrix!, full, size, logoData.data ?? "");
+      return format === "svg" ? svgBlob(svg) : svgToPngBlob(svg, size);
     },
+    onSuccess: (blob) => triggerBrowserDownload(blob, `${stem}-qr.${format}`),
+    onError: () => appToast.error(t("routes.qr.download_failed")),
+  });
+  const serverDownload = useMutation({
+    mutationFn: () => routeQrService.render(routeUuid, format, size),
+    onSuccess: ({ blob, filename }) =>
+      triggerBrowserDownload(blob, filename ?? `${stem}-qr.${format}`),
   });
 
   const [copied, setCopied] = useState(false);
@@ -268,53 +292,43 @@ function QrDesigner({
       window.setTimeout(() => setCopied(false), 2000);
     });
 
-  const ratio = qrContrast(draft.foreground, draft.background);
-  const errorCorrection = draft.logo_profile_uuid ? "H" : "M";
-
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      <div className="grid gap-6 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         {/* Preview + encoded URL */}
-        <div className="space-y-4">
-          <div className="bg-muted/40 rounded-xl border p-4">
-            <div className="mx-auto aspect-square w-full max-w-80 overflow-hidden rounded-lg shadow-sm">
-              {serverUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- data URL of the API-rendered SVG
-                <img
-                  src={serverUrl}
-                  alt={t("routes.qr.preview_alt")}
-                  className="size-full"
-                />
-              ) : geometry ? (
-                <svg
-                  viewBox={`0 0 ${geometry.total} ${geometry.total}`}
-                  className="size-full"
-                  role="img"
-                  aria-label={t("routes.qr.preview_alt")}
-                >
-                  <rect width="100%" height="100%" fill={sketch.background} />
-                  {geometry.shapes.map((s, i) => (
-                    <rect
-                      key={i}
-                      x={s.x}
-                      y={s.y}
-                      width={s.w}
-                      height={s.w}
-                      rx={s.r}
-                      fill={s.fill}
-                    />
-                  ))}
-                  {geometry.logo && logoUrl ? (
-                    <image
-                      x={geometry.logo.pos}
-                      y={geometry.logo.pos}
-                      width={geometry.logo.w}
-                      height={geometry.logo.w}
-                      href={logoUrl}
-                      preserveAspectRatio="xMidYMid meet"
+        <div className="min-w-0 space-y-4">
+          <div className="bg-muted/40 rounded-xl border p-3 sm:p-4 md:sticky md:top-0">
+            <div
+              className={cn(
+                "relative mx-auto aspect-square w-full max-w-56 overflow-hidden rounded-lg shadow-sm sm:max-w-80",
+                full.transparent_background &&
+                  "bg-[repeating-conic-gradient(#e5e7eb_0_25%,#fff_0_50%)] bg-[length:16px_16px]",
+              )}
+            >
+              {previewSvg ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- data URL of the engine's SVG */}
+                  <img
+                    src={svgDataUrl(previewSvg)}
+                    alt={t("routes.qr.preview_alt")}
+                    className="size-full"
+                  />
+                  {logoBox ? (
+                    // Media the browser cannot inline is shown on top; files then come from the API.
+                    // eslint-disable-next-line @next/next/no-img-element -- API-owned profile media URL
+                    <img
+                      src={logoUrl}
+                      alt=""
+                      className="absolute object-contain"
+                      style={{
+                        left: `${(logoBox.x / logoBox.total) * 100}%`,
+                        top: `${(logoBox.y / logoBox.total) * 100}%`,
+                        width: `${(logoBox.w / logoBox.total) * 100}%`,
+                        height: `${(logoBox.w / logoBox.total) * 100}%`,
+                      }}
                     />
                   ) : null}
-                </svg>
+                </>
               ) : (
                 <div className="bg-muted flex size-full items-center justify-center p-6 text-center text-sm">
                   {t("routes.qr.preview_invalid")}
@@ -322,19 +336,15 @@ function QrDesigner({
               )}
             </div>
             <p className="text-muted-foreground mt-3 text-center text-xs">
-              {!serverUrl && geometry && !serverFailed
-                ? t("routes.qr.preview_sketch")
-                : dirty
+              {serverMatrix
+                ? dirty
                   ? t("routes.qr.preview_unsaved")
-                  : t("routes.qr.preview_saved")}
+                  : t("routes.qr.preview_saved")
+                : t("routes.qr.preview_sketch")}
               {" · "}
-              {t("routes.qr.error_correction", { level: errorCorrection })}
+              {t("routes.qr.error_correction", { level: hasLogo ? "H" : "M" })}
             </p>
-            {serverFailed ? (
-              <p className="text-destructive mt-1 text-center text-xs">
-                {t("routes.qr.preview_server_failed")}
-              </p>
-            ) : null}
+            <QrChecks problems={problems} warnings={warnings} />
           </div>
 
           <div className="grid gap-1.5">
@@ -368,183 +378,18 @@ function QrDesigner({
           </div>
         </div>
 
-        {/* Controls */}
-        <fieldset
+        <QrDesignControls
+          style={full}
+          set={set}
+          canEdit={canEdit}
           disabled={!canEdit || save.isPending}
-          className="min-w-0 space-y-5"
-        >
-          {!canEdit ? (
-            <p className="text-muted-foreground text-sm">
-              {t("routes.qr.read_only")}
-            </p>
-          ) : null}
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <ColorField
-              id={`${ids}-fg`}
-              label={t("routes.qr.foreground")}
-              value={draft.foreground}
-              onChange={(foreground) => set({ foreground })}
-            />
-            <ColorField
-              id={`${ids}-bg`}
-              label={t("routes.qr.background")}
-              value={draft.background}
-              onChange={(background) => set({ background })}
-            />
-          </div>
-
-          <ContrastIndicator ratio={ratio} problem={problem} />
-
-          <div className="grid gap-1.5">
-            <Label>{t("routes.qr.module")}</Label>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              value={draft.module}
-              onValueChange={(v) =>
-                v && set({ module: v as RouteQRStyle["module"] })
-              }
-              disabled={!canEdit}
-            >
-              {MODULE_STYLES.map((m) => (
-                <ToggleGroupItem key={m} value={m}>
-                  {t(`routes.qr.module_${m}`)}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label>{t("routes.qr.eye")}</Label>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              value={draft.eye}
-              onValueChange={(v) => v && set({ eye: v as RouteQRStyle["eye"] })}
-              disabled={!canEdit}
-            >
-              {EYE_STYLES.map((e) => (
-                <ToggleGroupItem key={e} value={e}>
-                  {t(`routes.qr.eye_${e}`)}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </div>
-
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor={`${ids}-quiet`}>
-                {t("routes.qr.quiet_zone")}
-              </Label>
-              <span className="text-muted-foreground text-xs tabular-nums">
-                {t("routes.qr.quiet_zone_value", { count: draft.quiet_zone })}
-              </span>
-            </div>
-            <Slider
-              id={`${ids}-quiet`}
-              min={QUIET_ZONE_MIN}
-              max={QUIET_ZONE_MAX}
-              step={1}
-              value={[draft.quiet_zone]}
-              onValueChange={([v]) => set({ quiet_zone: v ?? QUIET_ZONE_MIN })}
-              disabled={!canEdit}
-            />
-            <p className="text-muted-foreground text-xs">
-              {t("routes.qr.quiet_zone_hint")}
-            </p>
-          </div>
-
-          <div className="grid gap-2">
-            <Label>{t("routes.qr.logo")}</Label>
-            <Select
-              value={logoProfileUuid ?? "none"}
-              onValueChange={pickLogoProfile}
-              disabled={!canEdit}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">{t("routes.qr.logo_none")}</SelectItem>
-                {profileOptions
-                  .slice()
-                  .sort(
-                    (a, b) =>
-                      Number(b.uuid === suggestedLogoProfileUuid) -
-                      Number(a.uuid === suggestedLogoProfileUuid),
-                  )
-                  .map((p) => (
-                    <SelectItem key={p.uuid} value={p.uuid}>
-                      {`${p.first_name} ${p.last_name}`.trim() ||
-                        p.username ||
-                        p.uuid}
-                    </SelectItem>
-                  ))}
-                {logoProfileUuid &&
-                !profileOptions.some((p) => p.uuid === logoProfileUuid) ? (
-                  <SelectItem value={logoProfileUuid}>
-                    {t("routes.qr.logo_profile_unknown")}
-                  </SelectItem>
-                ) : null}
-              </SelectContent>
-            </Select>
-            {logoProfileUuid ? (
-              <div className="grid grid-cols-2 gap-2">
-                {(["avatar", "cover"] as const).map((field) => {
-                  const url = logoMedia[field];
-                  const active = draft.logo_field === field;
-                  return (
-                    <button
-                      key={field}
-                      type="button"
-                      aria-pressed={active}
-                      disabled={
-                        !canEdit || (!url && !logoProfileQuery.isLoading)
-                      }
-                      onClick={() => set({ logo_field: field })}
-                      className={cn(
-                        "flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                        active
-                          ? "border-primary ring-primary/30 ring-2"
-                          : "hover:bg-muted",
-                      )}
-                    >
-                      <span className="bg-muted size-10 shrink-0 overflow-hidden rounded-md">
-                        {url ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- API-owned profile media URL
-                          <img
-                            src={url}
-                            alt=""
-                            className="size-full object-cover"
-                          />
-                        ) : null}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block font-medium">
-                          {t(`routes.qr.logo_${field}`)}
-                        </span>
-                        {!url && !logoProfileQuery.isLoading ? (
-                          <span className="text-muted-foreground block text-xs">
-                            {t("routes.qr.logo_missing")}
-                          </span>
-                        ) : null}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-            {logoMissing ? (
-              <p className="text-destructive text-xs">
-                {t("routes.qr.logo_pick_media")}
-              </p>
-            ) : null}
-            <p className="text-muted-foreground text-xs">
-              {t("routes.qr.logo_hint")}
-            </p>
-          </div>
-        </fieldset>
+          matrix={matrix}
+          profiles={profilesQuery.data?.items ?? []}
+          suggestedLogoProfileUuid={suggestedLogoProfileUuid}
+          logoMedia={logoMedia}
+          logoLoading={logoProfileQuery.isLoading}
+          logoMissing={logoMissing}
+        />
       </div>
 
       <DialogFooter className="flex-col gap-3 border-t pt-4 sm:flex-row sm:items-end sm:justify-between">
@@ -587,25 +432,47 @@ function QrDesigner({
               </SelectContent>
             </Select>
           </div>
+          {format !== "pdf" ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => localDownload.mutate()}
+              disabled={localBlocked || localDownload.isPending}
+              title={t("routes.qr.download_local_hint")}
+            >
+              {localDownload.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Download className="size-4" />
+              )}
+              {t("routes.qr.download")}
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="outline"
-            onClick={() => download.mutate()}
-            disabled={dirty || download.isPending}
-            title={dirty ? t("routes.qr.download_save_first") : undefined}
+            onClick={() => serverDownload.mutate()}
+            disabled={dirty || serverDownload.isPending}
+            title={
+              dirty
+                ? t("routes.qr.download_save_first")
+                : t("routes.qr.download_server_hint")
+            }
           >
-            {download.isPending ? (
+            {serverDownload.isPending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Download className="size-4" />
+              <Server className="size-4" />
             )}
-            {t("routes.qr.download")}
+            {t("routes.qr.download_server")}
           </Button>
-          {dirty ? (
-            <p className="text-muted-foreground w-full text-xs">
-              {t("routes.qr.download_save_first")}
-            </p>
-          ) : null}
+          <p className="text-muted-foreground w-full text-xs">
+            {hasLogo && !logoData.data && !logoData.isLoading
+              ? t("routes.qr.download_logo_server")
+              : dirty
+                ? t("routes.qr.download_dirty_hint")
+                : t("routes.qr.download_local_hint")}
+          </p>
         </div>
 
         {canEdit ? (
@@ -613,9 +480,14 @@ function QrDesigner({
             <Button
               type="button"
               variant="ghost"
-              onClick={() => setDraft(dirty ? saved : DEFAULT_QR_STYLE)}
+              onClick={() =>
+                setDraft(dirty ? saved : normalizeQrStyle(DEFAULT_QR_STYLE))
+              }
               disabled={
-                save.isPending || (!dirty && sameStyle(saved, DEFAULT_QR_STYLE))
+                save.isPending ||
+                (!dirty &&
+                  JSON.stringify(saved) ===
+                    JSON.stringify(normalizeQrStyle(DEFAULT_QR_STYLE)))
               }
             >
               <RotateCcw className="size-4" />
@@ -625,7 +497,7 @@ function QrDesigner({
               type="button"
               onClick={() => save.mutate()}
               disabled={
-                !dirty || problem !== null || logoMissing || save.isPending
+                !dirty || problems.length > 0 || logoMissing || save.isPending
               }
             >
               {save.isPending ? (
@@ -640,93 +512,78 @@ function QrDesigner({
   );
 }
 
-function ColorField({
-  id,
-  label,
-  value,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const valid = isHexColor(value);
-  return (
-    <div className="grid gap-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          aria-label={label}
-          value={valid ? value.toLowerCase() : "#000000"}
-          onChange={(e) => onChange(e.target.value)}
-          className="border-input size-9 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5 disabled:cursor-not-allowed"
-        />
-        <Input
-          id={id}
-          value={value}
-          onChange={(e) => {
-            const v = e.target.value.trim();
-            onChange(v.startsWith("#") ? v : `#${v}`);
-          }}
-          maxLength={7}
-          spellCheck={false}
-          autoComplete="off"
-          aria-invalid={!valid}
-          className="font-mono uppercase"
-        />
-      </div>
-    </div>
-  );
+function problemText(
+  t: (key: string, vars?: Record<string, string | number>) => string,
+  p: QrStyleProblem,
+  formatRatio: (r: number) => string,
+): string {
+  const where = (role: string, eye?: number) =>
+    eye === undefined
+      ? t(`routes.qr.role_${role}`)
+      : t("routes.qr.role_eye", {
+          part: t(`routes.qr.role_${role}`),
+          eye: t(`routes.qr.eye_name_${eye}`),
+        });
+  switch (p.kind) {
+    case "color_format":
+      return t("routes.qr.problem_color_format", {
+        where: where(p.role, p.eye),
+      });
+    case "inverted":
+      return t("routes.qr.problem_inverted", { where: where(p.role, p.eye) });
+    case "contrast":
+      return t("routes.qr.problem_contrast", {
+        where: where(p.role, p.eye),
+        ratio: formatRatio(p.ratio),
+        min: MIN_CONTRAST,
+      });
+    default:
+      return t(`routes.qr.problem_${p.kind}`);
+  }
 }
 
-function ContrastIndicator({
-  ratio,
-  problem,
+/** Hard problems (the API rejects the style) and readability advice. */
+function QrChecks({
+  problems,
+  warnings,
 }: {
-  ratio: number | null;
-  problem: ReturnType<typeof styleProblem>;
+  problems: QrStyleProblem[];
+  warnings: string[];
 }) {
   const { t, locale } = useLocale();
-  const colorProblem =
-    problem === "color_format" ||
-    problem === "contrast" ||
-    problem === "inverted";
   // Rounded down so a failing 4.46 never reads as "4.5:1".
-  const display =
-    ratio === null
-      ? "–"
-      : `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Math.floor(ratio * 10) / 10)}:1`;
+  const formatRatio = (r: number) =>
+    `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Math.floor(r * 10) / 10)}:1`;
+  if (problems.length === 0 && warnings.length === 0)
+    return (
+      <p
+        role="status"
+        className="mt-3 flex items-center justify-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400"
+      >
+        <Check className="size-3.5" />
+        {t("routes.qr.checks_ok")}
+      </p>
+    );
   return (
-    <div
-      role="status"
-      className={cn(
-        "flex items-start gap-2 rounded-lg border p-3 text-sm",
-        colorProblem ? "border-destructive/40 bg-destructive/5" : "bg-muted/40",
-      )}
-    >
-      {colorProblem ? (
-        <AlertTriangle className="text-destructive mt-0.5 size-4 shrink-0" />
-      ) : (
-        <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" />
-      )}
-      <div className="min-w-0">
-        <p className="font-medium">
-          {t("routes.qr.contrast", { ratio: display })}
-          {" · "}
-          {colorProblem
-            ? t("routes.qr.contrast_fail")
-            : t("routes.qr.contrast_pass")}
-        </p>
-        <p className="text-muted-foreground text-xs">
-          {problem === "color_format"
-            ? t("routes.qr.contrast_invalid_color")
-            : problem === "inverted"
-              ? t("routes.qr.contrast_inverted")
-              : t("routes.qr.contrast_hint", { min: MIN_CONTRAST })}
-        </p>
-      </div>
-    </div>
+    <ul role="status" className="mt-3 space-y-1.5 text-xs">
+      {problems.map((p, i) => (
+        <li
+          key={`p${i}`}
+          className="border-destructive/40 bg-destructive/5 flex gap-1.5 rounded-md border p-2"
+        >
+          <AlertTriangle className="text-destructive mt-0.5 size-3.5 shrink-0" />
+          {problemText(t, p, formatRatio)}
+        </li>
+      ))}
+      {warnings.map((w) => (
+        <li
+          key={w}
+          className="flex gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/5 p-2"
+        >
+          <Info className="mt-0.5 size-3.5 shrink-0 text-amber-600" />
+          {t(`routes.qr.warning_${w}`)}
+        </li>
+      ))}
+    </ul>
   );
 }

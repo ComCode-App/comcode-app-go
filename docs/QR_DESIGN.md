@@ -117,6 +117,33 @@ Every eye shape therefore keeps:
   logoHref)` then equals `/qr/render?format=svg` (with a logo only the embedded image bytes
   differ). The npm `qrcode` encoder may pick a different mask, so it is only a fallback.
 
+## Editor
+
+`frontend/src/features/route-qr/components/route-qr-dialog.tsx` (TEC-1270), opened from smart
+links, cards and the profile public page card:
+
+- **Preview:** the engine draws the draft with `GET /qr`'s `matrices` (H with a logo), so the
+  preview is the exact file; no server round trip while editing. A logo the browser cannot read
+  (for example a cross-origin bucket without CORS) is shown on top of the preview instead.
+- **Tabs:** templates (`data/qr-templates.json`, 10 own designs; a template keeps the logo, its
+  size and mode, and the quiet zone), shapes (swatches drawn by the engine, per-eye flips and
+  "make symmetric", quiet zone), colors (single color / linear / radial, angle, gradient on eyes,
+  eye colors inherited / shared / per eye, background or transparent), logo (profile avatar or
+  cover, size 10–30 %, clean or overlay).
+- **Checks:** `qrStyleProblems` lists what the API would reject (each color with its role and
+  contrast); `readabilityWarnings` adds advice (contrast below 7:1, logo above 22 %, overlay
+  logo, transparent background, small module shapes). Save is disabled while a problem exists.
+- **Downloads:** SVG and PNG of the current draft are made in the browser (`lib/qr-export.ts`:
+  the engine's SVG, rasterized on a canvas for PNG), byte-identical to `/qr/render` for SVG. The
+  server download (SVG, PNG, PDF) of the saved design stays; PDF is server-only.
+- Templates are checked in both languages: `qr-style.test.mjs` (valid, named, distinct) and the
+  Go `TestTemplatesAreReadable` (decoded with and without a 30 % logo).
+
+![Editor: templates](./images/qr-editor-templates.png)
+![Editor: shapes](./images/qr-editor-shapes.png)
+![Editor: colors](./images/qr-editor-colors.png)
+![Editor at phone width](./images/qr-editor-mobile.png)
+
 ## Fixtures
 
 `backend/internal/platform/qr/testdata/*.json` each hold a fixed matrix, a style (as a client would

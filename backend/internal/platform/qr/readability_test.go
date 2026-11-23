@@ -2,11 +2,14 @@ package qr
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
 	"image/png"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/uuid"
@@ -153,5 +156,36 @@ func TestColorAndLogoModesAreReadable(t *testing.T) {
 			l = logo
 		}
 		assertReadable(t, name, s, l)
+	}
+}
+
+// The editor's templates (frontend/src/features/route-qr/data/qr-templates.json) must be valid
+// and readable, with and without the largest logo.
+func TestTemplatesAreReadable(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "frontend", "src", "features", "route-qr", "data", "qr-templates.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var templates []struct {
+		ID    string          `json:"id"`
+		Style json.RawMessage `json:"style"`
+	}
+	if err := json.Unmarshal(raw, &templates); err != nil {
+		t.Fatal(err)
+	}
+	if len(templates) < 8 || len(templates) > 12 {
+		t.Fatalf("%d templates, want 8-12", len(templates))
+	}
+	logo := testLogo()
+	for _, tpl := range templates {
+		s := Style{QuietZone: 4}
+		if err := json.Unmarshal(tpl.Style, &s); err != nil {
+			t.Fatalf("%s: %v", tpl.ID, err)
+		}
+		if err := s.Validate(); err != nil {
+			t.Fatalf("%s: %v", tpl.ID, err)
+		}
+		assertReadable(t, tpl.ID, s, nil)
+		assertReadable(t, tpl.ID+"/logo", withLogo(s, true), logo)
 	}
 }
