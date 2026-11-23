@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { CardSummary } from "../services/cards.service";
 import { useLocale } from "@/providers/locale-provider";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 interface InteractiveNFCCardProps {
   card: CardSummary;
@@ -236,18 +237,20 @@ export function InteractiveNFCCard({
               </div>
 
               <div className="flex items-center gap-1.5">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 rounded-full bg-white/10 text-white hover:bg-white/20"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsFlipped(true);
-                  }}
-                  title={t("cards.flip_card")}
-                >
-                  <RotateCw className="h-3.5 w-3.5" />
-                </Button>
+                <TooltipHint label={t("cards.flip_card")}>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-full bg-white/10 text-white hover:bg-white/20"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsFlipped(true);
+                    }}
+                    aria-label={t("cards.flip_card")}
+                  >
+                    <RotateCw className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipHint>
               </div>
             </div>
           </div>

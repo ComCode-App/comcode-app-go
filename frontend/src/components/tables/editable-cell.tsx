@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { useLocale } from "@/providers/locale-provider";
 import { cn } from "@/lib/utils";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 export type CellEditPayload<TData> = {
   rowId: string;
@@ -63,24 +64,25 @@ export function EditableCell<TData>({
 
   if (!editing) {
     return (
-      <div
-        role="button"
-        tabIndex={0}
-        className="focus-visible:ring-ring min-w-0 cursor-text rounded-sm outline-none focus-visible:ring-2"
-        onDoubleClick={(e) => {
-          e.stopPropagation();
-          onStartEdit();
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
+      <TooltipHint label="Double-click to edit">
+        <div
+          role="button"
+          tabIndex={0}
+          className="focus-visible:ring-ring min-w-0 cursor-text rounded-sm outline-none focus-visible:ring-2"
+          onDoubleClick={(e) => {
+            e.stopPropagation();
             onStartEdit();
-          }
-        }}
-        title="Double-click to edit"
-      >
-        {children}
-      </div>
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              onStartEdit();
+            }
+          }}
+        >
+          {children}
+        </div>
+      </TooltipHint>
     );
   }
 

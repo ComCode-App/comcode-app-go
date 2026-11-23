@@ -19,7 +19,6 @@ export function ImportExportPlugin() {
           <Button
             variant={"ghost"}
             onClick={() => importFile(editor)}
-            title="Import"
             aria-label="Import editor state from JSON"
             size={"sm"}
             className="p-2"
@@ -40,7 +39,6 @@ export function ImportExportPlugin() {
                 source: "Editor",
               })
             }
-            title="Export"
             aria-label="Export editor state to JSON"
             size={"sm"}
             className="p-2"

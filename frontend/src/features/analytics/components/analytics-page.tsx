@@ -32,6 +32,7 @@ import {
 } from "@/features/smart-links/services/smart-links.service";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 const RANGES = [7, 30, 90, 365] as const;
 const DIMENSIONS = ["country", "city", "device", "browser", "referer"] as const;
@@ -291,24 +292,25 @@ export function AnalyticsPage() {
           {/* KPI tiles */}
           <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             {kpis.map((k) => (
-              <li
+              <TooltipHint
                 key={k.key}
-                className="bg-card rounded-xl border p-4"
-                title={
+                label={
                   k.key === "qr_scans" || k.key === "views"
                     ? t(`analytics.kpi.${k.key}_hint`)
                     : undefined
                 }
               >
-                <p className="text-muted-foreground text-xs">
-                  {t(`analytics.kpi.${k.key}`)}
-                </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">
-                  {summary.isLoading || ("loading" in k && k.loading)
-                    ? "–"
-                    : fmt.format(k.value)}
-                </p>
-              </li>
+                <li className="bg-card rounded-xl border p-4">
+                  <p className="text-muted-foreground text-xs">
+                    {t(`analytics.kpi.${k.key}`)}
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums">
+                    {summary.isLoading || ("loading" in k && k.loading)
+                      ? "–"
+                      : fmt.format(k.value)}
+                  </p>
+                </li>
+              </TooltipHint>
             ))}
           </ul>
 

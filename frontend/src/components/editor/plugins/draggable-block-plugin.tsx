@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/command";
 
 import { ComponentPickerOption } from "./picker/component-picker-option";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 const DRAGGABLE_BLOCK_MENU_CLASSNAME = "draggable-block-menu";
 
@@ -264,15 +265,17 @@ export function DraggableBlockPlugin({
             ref={menuRef}
             className="draggable-block-menu absolute top-0 left-0 flex items-center opacity-0 will-change-transform"
           >
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              title="Click to add below (Alt/Ctrl: add above)"
-              className="text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer rounded-sm"
-              onClick={openComponentPicker}
-            >
-              <PlusIcon />
-            </Button>
+            <TooltipHint label="Click to add below (Alt/Ctrl: add above)">
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Click to add below (Alt/Ctrl: add above)"
+                className="text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer rounded-sm"
+                onClick={openComponentPicker}
+              >
+                <PlusIcon />
+              </Button>
+            </TooltipHint>
             <Button
               variant="ghost"
               size="icon-xs"

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 
 import { shapeIconPath } from "../lib/qr-engine";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 type ShapeKind = "body" | "frame" | "ball";
 
@@ -40,26 +41,26 @@ export function QrShapePicker({
         const name = t(`routes.qr.shape_${kind}_${shape}`);
         const active = value === shape;
         return (
-          <button
-            key={shape}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            aria-label={name}
-            title={name}
-            disabled={disabled}
-            onClick={() => onChange(shape)}
-            className={cn(
-              "bg-background flex aspect-square items-center justify-center rounded-md border p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-              active
-                ? "border-primary ring-primary/30 ring-2"
-                : "hover:bg-muted",
-            )}
-          >
-            <svg viewBox="-0.5 -0.5 8 8" className="size-full" aria-hidden>
-              <path d={d} fill="currentColor" />
-            </svg>
-          </button>
+          <TooltipHint key={shape} label={name}>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={active}
+              aria-label={name}
+              disabled={disabled}
+              onClick={() => onChange(shape)}
+              className={cn(
+                "bg-background flex aspect-square items-center justify-center rounded-md border p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                active
+                  ? "border-primary ring-primary/30 ring-2"
+                  : "hover:bg-muted",
+              )}
+            >
+              <svg viewBox="-0.5 -0.5 8 8" className="size-full" aria-hidden>
+                <path d={d} fill="currentColor" />
+              </svg>
+            </button>
+          </TooltipHint>
         );
       })}
     </div>

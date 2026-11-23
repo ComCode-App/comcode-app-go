@@ -40,6 +40,7 @@ import {
   type RawEventParams,
 } from "../services/platform-analytics.service";
 import { RawEventDrawer } from "./raw-event-drawer";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 /** URL ⇄ filter keys. `from` / `to` are local `yyyy-MM-dd` days. */
 const FILTER_KEYS = [
@@ -238,15 +239,16 @@ export function RawEventsPage() {
         enableSorting: false,
         cell: ({ row }) => (
           <div className="flex min-w-0 items-center gap-2">
-            <Badge variant="outline" title={row.original.subject.type}>
-              {subjectTypeLabel(t, row.original.subject.type)}
-            </Badge>
-            <span
-              className="text-muted-foreground truncate font-mono text-xs"
-              title={row.original.subject.id}
-            >
-              {row.original.subject.id}
-            </span>
+            <TooltipHint label={row.original.subject.type}>
+              <Badge variant="outline">
+                {subjectTypeLabel(t, row.original.subject.type)}
+              </Badge>
+            </TooltipHint>
+            <TooltipHint label={row.original.subject.id}>
+              <span className="text-muted-foreground truncate font-mono text-xs">
+                {row.original.subject.id}
+              </span>
+            </TooltipHint>
           </div>
         ),
       }),

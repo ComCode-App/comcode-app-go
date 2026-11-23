@@ -30,6 +30,7 @@ import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 import { appToast } from "@/providers/toast-provider";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 type GeoIPStatusCardProps = {
   status: GeoIPStatus;
@@ -125,12 +126,11 @@ export function GeoIPStatusCard({ status, queryKey }: GeoIPStatusCardProps) {
               <p className="text-muted-foreground text-xs font-medium">
                 {t("geoip.status.database_version")}
               </p>
-              <p
-                className="truncate text-sm font-semibold"
-                title={status.database_version || "N/A"}
-              >
-                {status.database_version || "N/A"}
-              </p>
+              <TooltipHint label={status.database_version || "N/A"}>
+                <p className="truncate text-sm font-semibold">
+                  {status.database_version || "N/A"}
+                </p>
+              </TooltipHint>
             </div>
           </div>
 
