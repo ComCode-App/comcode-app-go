@@ -4,6 +4,7 @@ import { FlipHorizontal2, FlipVertical2, Sparkles } from "lucide-react";
 import { useId, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -47,6 +48,7 @@ import {
   type QrTemplate,
 } from "../lib/qr-style";
 import { QrShapePicker } from "./qr-shape-picker";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 const TEMPLATES = templatesJson as QrTemplate[];
 
@@ -218,30 +220,34 @@ function ShapesPanel({ style, set, disabled }: Props) {
                 {t(`routes.qr.eye_name_${i}`)}
               </span>
               <div className="flex gap-1">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant={style.eyes[i].flip_h ? "default" : "outline"}
-                  aria-pressed={style.eyes[i].flip_h}
-                  title={t("routes.qr.flip_h")}
-                  onClick={() => setEye(i, { flip_h: !style.eyes[i].flip_h })}
-                  className="size-8"
-                >
-                  <FlipHorizontal2 className="size-4" />
-                  <span className="sr-only">{t("routes.qr.flip_h")}</span>
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant={style.eyes[i].flip_v ? "default" : "outline"}
-                  aria-pressed={style.eyes[i].flip_v}
-                  title={t("routes.qr.flip_v")}
-                  onClick={() => setEye(i, { flip_v: !style.eyes[i].flip_v })}
-                  className="size-8"
-                >
-                  <FlipVertical2 className="size-4" />
-                  <span className="sr-only">{t("routes.qr.flip_v")}</span>
-                </Button>
+                <TooltipHint label={t("routes.qr.flip_h")}>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant={style.eyes[i].flip_h ? "default" : "outline"}
+                    aria-pressed={style.eyes[i].flip_h}
+                    aria-label={t("routes.qr.flip_h")}
+                    onClick={() => setEye(i, { flip_h: !style.eyes[i].flip_h })}
+                    className="size-8"
+                  >
+                    <FlipHorizontal2 className="size-4" />
+                    <span className="sr-only">{t("routes.qr.flip_h")}</span>
+                  </Button>
+                </TooltipHint>
+                <TooltipHint label={t("routes.qr.flip_v")}>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant={style.eyes[i].flip_v ? "default" : "outline"}
+                    aria-pressed={style.eyes[i].flip_v}
+                    aria-label={t("routes.qr.flip_v")}
+                    onClick={() => setEye(i, { flip_v: !style.eyes[i].flip_v })}
+                    className="size-8"
+                  >
+                    <FlipVertical2 className="size-4" />
+                    <span className="sr-only">{t("routes.qr.flip_v")}</span>
+                  </Button>
+                </TooltipHint>
               </div>
             </div>
           ))}
@@ -662,13 +668,11 @@ function ColorField({
     <div className="grid gap-1.5">
       <Label htmlFor={id}>{label}</Label>
       <div className="flex items-center gap-2">
-        <input
-          type="color"
+        <ColorPicker
           aria-label={label}
-          value={valid ? value.toLowerCase() : "#000000"}
-          onChange={(e) => onChange(e.target.value)}
+          value={value}
+          onChange={onChange}
           disabled={disabled}
-          className="border-input size-9 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5 disabled:cursor-not-allowed disabled:opacity-50"
         />
         <Input
           id={id}

@@ -14,4 +14,5 @@ For any date input in `frontend/`:
 - Do not use native `<input type="date" />`
 - Do not compose `Popover` + `Calendar` ad hoc for date selection; extend `DatePicker` instead
 - Store values as `yyyy-MM-dd`
+- Month/year navigation is built into `Calendar`: the caption ("November 2026") opens a year grid, then a month grid (TEC-1274). Keep the default `captionLayout="label"`; do not use `captionLayout="dropdown"` variants, they render native `<select>` elements
 - Calendar labels follow the active locale (`tr` / `en`) automatically

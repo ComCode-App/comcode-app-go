@@ -57,4 +57,43 @@ function TooltipContent({
   );
 }
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };
+/**
+ * One-line tooltip around a single focusable child; the app's replacement for
+ * the native `title=""` bubble (TEC-1275). Renders the child alone when
+ * `label` is empty. Icon-only triggers still need their own `aria-label`.
+ */
+function TooltipHint({
+  label,
+  children,
+  side,
+  align,
+  className,
+}: {
+  label: React.ReactNode;
+  children: React.ReactElement;
+  side?: React.ComponentProps<typeof TooltipPrimitive.Content>["side"];
+  align?: React.ComponentProps<typeof TooltipPrimitive.Content>["align"];
+  className?: string;
+}) {
+  if (label === null || label === undefined || label === "") return children;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent
+        side={side}
+        align={align}
+        className={cn("max-w-xs [overflow-wrap:anywhere]", className)}
+      >
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+export {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+  TooltipHint,
+};

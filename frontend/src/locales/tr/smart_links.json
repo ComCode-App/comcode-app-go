@@ -56,5 +56,6 @@
   "primary_action.email": "E-posta gönder",
   "primary_action.whatsapp": "WhatsApp",
   "primary_action.website": "Web sitesine git",
-  "error.passcode_short": "En az {{min}} karakterlik bir şifre girin."
+  "error.passcode_short": "En az {{min}} karakterlik bir şifre girin.",
+  "error.slug_required": "Bir adres girin."
 }

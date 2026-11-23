@@ -2,7 +2,13 @@
 
 import { useMemo } from "react";
 
-import { AppForm, AppInput, AppSwitch, AppTextarea } from "@/components/forms";
+import {
+  AppCombobox,
+  AppForm,
+  AppInput,
+  AppSwitch,
+  AppTextarea,
+} from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,7 +39,11 @@ type EventDefinitionDialogProps = {
 };
 
 const FORM_ID = "event-definition-form";
-const CATEGORY_LIST_ID = "event-definition-categories";
+// Known categories are suggestions; any other category can still be typed.
+const CATEGORY_OPTIONS = KNOWN_EVENT_CATEGORIES.map((c) => ({
+  value: c,
+  label: c,
+}));
 
 export function EventDefinitionDialog({
   open,
@@ -116,18 +126,14 @@ export function EventDefinitionDialog({
                 disabled={saving}
               />
             </div>
-            <AppInput
+            <AppCombobox
               name="category"
               label={t("platform_analytics.definitions.fields.category")}
-              list={CATEGORY_LIST_ID}
-              autoComplete="off"
+              options={CATEGORY_OPTIONS}
+              creatable
+              clearable
               disabled={saving}
             />
-            <datalist id={CATEGORY_LIST_ID}>
-              {KNOWN_EVENT_CATEGORIES.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
             <AppInput
               name="schema_version"
               type="number"

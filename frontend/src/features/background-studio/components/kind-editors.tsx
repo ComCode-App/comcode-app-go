@@ -2,6 +2,8 @@
 
 import { useLocale } from "@/providers/locale-provider";
 import { Label } from "@/components/ui/label";
+import { ColorPicker } from "@/components/ui/color-picker";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -33,16 +35,16 @@ export function SolidEditor({ doc, onChange }: SolidEditorProps) {
       <div className="space-y-2">
         <Label>{t("background_studio.solid.color")}</Label>
         <div className="flex items-center gap-3">
-          <input
-            type="color"
+          <ColorPicker
             value={doc.params.color}
-            onChange={(e) =>
+            onChange={(color) =>
               onChange({
                 ...doc,
-                params: { ...doc.params, color: e.target.value },
+                params: { ...doc.params, color },
               })
             }
-            className="h-10 w-14 cursor-pointer rounded border bg-transparent p-1"
+            aria-label={t("background_studio.solid.color")}
+            className="h-10 w-14"
           />
           <Input
             value={doc.params.color}
@@ -140,15 +142,14 @@ export function GradientEditor({ doc, onChange }: GradientEditorProps) {
         <div className="space-y-2">
           {doc.params.colors.map((color, index) => (
             <div key={`${index}-${color}`} className="flex items-center gap-2">
-              <input
-                type="color"
+              <ColorPicker
                 value={color}
-                onChange={(e) => {
+                onChange={(nextColor) => {
                   const next = [...doc.params.colors];
-                  next[index] = e.target.value;
+                  next[index] = nextColor;
                   updateColors(next);
                 }}
-                className="h-9 w-12 cursor-pointer rounded border bg-transparent p-1"
+                className="h-9 w-12"
               />
               <Input
                 value={color}
@@ -248,11 +249,9 @@ export function VideoEditor({ doc, onChange }: VideoEditorProps) {
             key={key}
             className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
           >
-            <input
-              type="checkbox"
+            <Checkbox
               checked={doc.params[key] !== false}
-              onChange={(e) => setParam(key, e.target.checked)}
-              className="accent-primary size-4"
+              onCheckedChange={(checked) => setParam(key, checked === true)}
             />
             {label}
           </label>

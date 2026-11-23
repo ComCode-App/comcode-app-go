@@ -76,6 +76,7 @@ import {
   routeQrService,
 } from "../services/route-qr.service";
 import { QrDesignControls } from "./qr-design-controls";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 type RouteQrDialogProps = {
   /** Route whose identity the QR encodes (card c/ route, smart link, canonical /{username}). */
@@ -356,20 +357,21 @@ function QrDesigner({
                 value={qr.payload}
                 className="bg-muted/50 font-mono text-xs"
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={copyPayload}
-                title={t("routes.qr.copy_payload")}
-              >
-                {copied ? (
-                  <Check className="size-4" />
-                ) : (
-                  <Copy className="size-4" />
-                )}
-                <span className="sr-only">{t("routes.qr.copy_payload")}</span>
-              </Button>
+              <TooltipHint label={t("routes.qr.copy_payload")}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={copyPayload}
+                >
+                  {copied ? (
+                    <Check className="size-4" />
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
+                  <span className="sr-only">{t("routes.qr.copy_payload")}</span>
+                </Button>
+              </TooltipHint>
             </div>
             <p className="text-muted-foreground flex gap-1.5 text-xs">
               <Info className="mt-0.5 size-3.5 shrink-0" />
@@ -433,39 +435,46 @@ function QrDesigner({
             </Select>
           </div>
           {format !== "pdf" ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => localDownload.mutate()}
-              disabled={localBlocked || localDownload.isPending}
-              title={t("routes.qr.download_local_hint")}
-            >
-              {localDownload.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Download className="size-4" />
-              )}
-              {t("routes.qr.download")}
-            </Button>
+            <TooltipHint label={t("routes.qr.download_local_hint")}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => localDownload.mutate()}
+                disabled={localBlocked || localDownload.isPending}
+              >
+                {localDownload.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Download className="size-4" />
+                )}
+                {t("routes.qr.download")}
+              </Button>
+            </TooltipHint>
           ) : null}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => serverDownload.mutate()}
-            disabled={dirty || serverDownload.isPending}
-            title={
+          <TooltipHint
+            label={
               dirty
                 ? t("routes.qr.download_save_first")
                 : t("routes.qr.download_server_hint")
             }
           >
-            {serverDownload.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Server className="size-4" />
-            )}
-            {t("routes.qr.download_server")}
-          </Button>
+            {/* span: the disabled button gets no pointer events, the hint still has to show */}
+            <span className="inline-flex">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => serverDownload.mutate()}
+                disabled={dirty || serverDownload.isPending}
+              >
+                {serverDownload.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Server className="size-4" />
+                )}
+                {t("routes.qr.download_server")}
+              </Button>
+            </span>
+          </TooltipHint>
           <p className="text-muted-foreground w-full text-xs">
             {hasLogo && !logoData.data && !logoData.isLoading
               ? t("routes.qr.download_logo_server")

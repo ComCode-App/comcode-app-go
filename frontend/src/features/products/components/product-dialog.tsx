@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -623,13 +624,10 @@ export function ProductDialog({
                             onChange={(e) => setNewVariantName(e.target.value)}
                           />
                           <div className="flex items-center gap-1.5">
-                            <input
-                              type="color"
-                              className="h-7 w-8 cursor-pointer rounded border p-0.5"
+                            <ColorPicker
                               value={newVariantColor}
-                              onChange={(e) =>
-                                setNewVariantColor(e.target.value)
-                              }
+                              onChange={setNewVariantColor}
+                              className="h-7 w-8 p-0.5"
                             />
                             <Input
                               placeholder={t(

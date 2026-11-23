@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FileInput } from "@/components/ui/file-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -374,9 +375,8 @@ export function ImportWizard({
             </div>
             <div className="space-y-2">
               <Label htmlFor="import-file">{t("imports.file")}</Label>
-              <Input
+              <FileInput
                 id="import-file"
-                type="file"
                 accept=".csv,.tsv,.xlsx,.json"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />

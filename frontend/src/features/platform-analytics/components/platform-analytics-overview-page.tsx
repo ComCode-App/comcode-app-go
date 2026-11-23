@@ -34,6 +34,7 @@ import {
 } from "../hooks/use-platform-analytics";
 import { dayStartIso, daysAgo } from "../lib/time-range";
 import { platformAnalyticsService } from "../services/platform-analytics.service";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 const CHART_DAYS = 7;
 const RECENT_LIMIT = 8;
@@ -366,13 +367,14 @@ export function PlatformAnalyticsOverviewPage() {
                     className="flex items-center justify-between gap-3 py-2"
                   >
                     <div className="min-w-0">
-                      <Link
-                        href={eventsHref({ event_type: e.type })}
-                        title={e.type}
-                        className="block truncate text-sm font-medium hover:underline"
-                      >
-                        {eventTypeLabel(t, e.type, defNames.get(e.type))}
-                      </Link>
+                      <TooltipHint label={e.type}>
+                        <Link
+                          href={eventsHref({ event_type: e.type })}
+                          className="block truncate text-sm font-medium hover:underline"
+                        >
+                          {eventTypeLabel(t, e.type, defNames.get(e.type))}
+                        </Link>
+                      </TooltipHint>
                       <p className="text-muted-foreground truncate text-xs">
                         <span className="font-mono">{e.type}</span> ·{" "}
                         {subjectTypeLabel(t, e.subject.type)} ·{" "}

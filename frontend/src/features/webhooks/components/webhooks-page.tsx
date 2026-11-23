@@ -34,6 +34,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 /** The active account's outbound webhooks (TEC-603). */
 export function WebhooksPage() {
@@ -99,9 +100,9 @@ export function WebhooksPage() {
         gridPrimary: true,
         cell: ({ row }) => (
           <div className="min-w-0">
-            <p className="truncate font-mono text-xs" title={row.original.url}>
-              {row.original.url}
-            </p>
+            <TooltipHint label={row.original.url}>
+              <p className="truncate font-mono text-xs">{row.original.url}</p>
+            </TooltipHint>
             {row.original.description ? (
               <p className="text-muted-foreground truncate text-xs">
                 {row.original.description}

@@ -21,14 +21,15 @@ import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { TimePicker } from "@/components/ui/time-picker";
 import { cn } from "@/lib/utils/index";
+import { useLocale } from "@/providers/locale-provider";
 
 import { $isDateTimeNode, type DateTimeNode } from "../nodes/date-time-node";
 
@@ -44,6 +45,7 @@ export default function DateTimeComponent({
   nodeKey: NodeKey;
 }): JSX.Element {
   const [editor] = useLexicalComposerContext();
+  const { t } = useLocale();
   const [selected, setSelected] = useState(dateTime);
   const [includeTime, setIncludeTime] = useState(() => {
     if (!dateTime) return false;
@@ -83,9 +85,8 @@ export default function DateTimeComponent({
     });
   };
 
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTimeChange = (time: string) => {
     withDateTimeNode((node) => {
-      const time = e.target.value;
       if (!selected) {
         setTimeValue(time);
         return;
@@ -146,7 +147,6 @@ export default function DateTimeComponent({
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
-          captionLayout="dropdown"
           mode="single"
           selected={selected}
           onSelect={handleDaySelect}
@@ -163,21 +163,18 @@ export default function DateTimeComponent({
                 handleCheckedChange(checked === true)
               }
             />
-            <Label
-              htmlFor={`include-time-${nodeKey}`}
-              className="flex items-center gap-2"
-            >
-              <Input
-                type="time"
-                value={timeValue}
-                onChange={handleTimeChange}
-                disabled={!includeTime}
-                className="h-7 w-28 px-1.5 text-xs"
-              />
-              <span className="text-muted-foreground text-xs">
-                {userTimeZone}
-              </span>
+            <Label htmlFor={`include-time-${nodeKey}`} className="sr-only">
+              {t("editor.include_time")}
             </Label>
+            <TimePicker
+              value={timeValue}
+              onChange={handleTimeChange}
+              disabled={!includeTime}
+              size="sm"
+            />
+            <span className="text-muted-foreground text-xs">
+              {userTimeZone}
+            </span>
           </div>
         </div>
       </PopoverContent>

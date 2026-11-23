@@ -24,6 +24,7 @@ import { formatPlanPrice } from "@/features/plans/lib/format-price";
 import { datetime } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 const PAGE_SIZE = 10;
 
@@ -144,17 +145,18 @@ export function BillingPaymentsCard({ accountUuid }: { accountUuid?: string }) {
         labelKey: "billing.payments.columns.receipt",
         enableSorting: false,
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={downloading === row.original.uuid}
-            onClick={() => void download(row.original)}
-            aria-label={`${t("billing.payments.download_receipt")} ${row.original.receipt_number}`}
-            title={t("billing.payments.download_receipt")}
-          >
-            <FileDown className="size-4" />
-            {row.original.receipt_number}
-          </Button>
+          <TooltipHint label={t("billing.payments.download_receipt")}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={downloading === row.original.uuid}
+              onClick={() => void download(row.original)}
+              aria-label={`${t("billing.payments.download_receipt")} ${row.original.receipt_number}`}
+            >
+              <FileDown className="size-4" />
+              {row.original.receipt_number}
+            </Button>
+          </TooltipHint>
         ),
       }),
     ],

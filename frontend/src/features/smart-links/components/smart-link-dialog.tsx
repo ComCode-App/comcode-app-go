@@ -232,6 +232,7 @@ function SmartLinkForm({
   const submit = (event: FormEvent) => {
     event.preventDefault();
     setError(null);
+    if (!slug) return setError(t("smart_links.error.slug_required"));
     if (needsProfile && !profileUuid)
       return setError(t("smart_links.error.profile_required"));
     if (target === "direct_url" && !/^https:\/\/\S+$/i.test(url.trim()))
@@ -248,7 +249,7 @@ function SmartLinkForm({
 
   return (
     <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
-      <form onSubmit={submit} className="space-y-4">
+      <form onSubmit={submit} noValidate className="space-y-4">
         <DialogHeader>
           <DialogTitle>
             {t(link ? "smart_links.edit" : "smart_links.create")}
