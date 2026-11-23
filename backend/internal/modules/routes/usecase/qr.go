@@ -37,6 +37,12 @@ func (s *Service) GetQR(ctx context.Context, id uuid.UUID, account authctx.Accou
 		return nil, err
 	}
 	result.Payload = qr.PayloadURL(s.frontendURL, result.Path)
+	if result.Matrices.M, err = qr.Matrix(result.Payload, false); err != nil {
+		return nil, err
+	}
+	if result.Matrices.H, err = qr.Matrix(result.Payload, true); err != nil {
+		return nil, err
+	}
 	result.ErrorCorrection = "M"
 	if result.Style.LogoProfileUUID != nil {
 		result.ErrorCorrection = "H"
@@ -52,6 +58,7 @@ func (s *Service) PutQR(ctx context.Context, id uuid.UUID, account authctx.Accou
 	if !account.CanWrite() {
 		return nil, ErrForbidden
 	}
+	style = style.Normalize()
 	if err := style.Validate(); err != nil {
 		return nil, err
 	}

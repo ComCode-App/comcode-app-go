@@ -13,6 +13,7 @@ Planning lives in Linear only (project ComCode); reference issues as COM-123 (fo
 - docs/TENANCY_AND_ACCESS.md — accounts, roles, entitlement
 - docs/PUBLIC_PROFILES.md — /{username}, usernames, backgrounds, visitor API
 - docs/URL_ROUTING_AND_SMART_LINKS_ARCHITECTURE.md — routes registry, cards, smart links
+- docs/QR_DESIGN.md — route QR design engine: style v2, shapes, Go/TS golden fixtures, readability
 - docs/ANALYTICS.md, docs/EVENTS.md, docs/GEOIP.md — events and analytics
 - docs/DEVELOPMENT.md — env, local-dev, Dokploy
 - docs/EXTENDING.md — how to add a module

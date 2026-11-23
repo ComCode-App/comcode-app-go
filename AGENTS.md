@@ -37,6 +37,7 @@ Canonical env is the **repo-root** `.env`. Compose files are `compose.local.yml`
 | [docs/ENTITLEMENTS.md](./docs/ENTITLEMENTS.md) | Plan limits, quota guards, adding a feature |
 | [docs/PROFILES.md](./docs/PROFILES.md) | Owner-side profile editing, media, vCard, completion rate |
 | [docs/URL_ROUTING_AND_SMART_LINKS_ARCHITECTURE.md](./docs/URL_ROUTING_AND_SMART_LINKS_ARCHITECTURE.md) | Routes registry, card routes, smart links |
+| [docs/QR_DESIGN.md](./docs/QR_DESIGN.md) | Route QR design engine: style schema v2, shape list, Go/TS golden fixtures (`make qr-fixtures`), readability rules |
 | [docs/ANALYTICS.md](./docs/ANALYTICS.md) · [ANALYTICS_ARCHITECTURE](./docs/ANALYTICS_ARCHITECTURE.md) · [ANALYTICS_CONFIGURATION](./docs/ANALYTICS_CONFIGURATION.md) | Visitor analytics, aggregates, dashboard |
 | [docs/EVENTS.md](./docs/EVENTS.md) | Event definitions, ingestion (`POST /v1/events`) |
 | [docs/GEOIP.md](./docs/GEOIP.md) | GeoIP resolution |

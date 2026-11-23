@@ -6758,7 +6758,8 @@ paths:
         Requires app.routes.write and an owner/admin active account role. Route identity and target
         remain unchanged. Logo media must be a current PNG/JPEG avatar or cover of a profile in the
         same account (max 2 MiB and 2048 pixels per edge). Missing or inaccessible logos are rejected.
-        Dark-on-light contrast must be at least 4.5:1. A logo automatically selects H error correction.
+        Every dark color needs at least 4.5:1 dark-on-light contrast. A logo automatically selects H
+        error correction. Accepts version 1 and version 2 styles and stores the normalized v2 style.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/ResourceUUID"
@@ -6786,7 +6787,9 @@ paths:
       description: >-
         Requires app.routes.read in the active account. Files encode the same marked route identity
         as new production manifest QR PNGs, never the mutable destination. Size must also provide
-        at least four pixels per module including the quiet zone. PDF places the PNG on A4 at 160 mm.
+        at least four pixels per module including the quiet zone. PNG is anti-aliased; SVG is the
+        shared design engine's output; PDF draws the same vector design (gradients as PDF shadings)
+        160 mm wide on A4, with the logo embedded at the requested raster resolution.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/ResourceUUID"
@@ -6795,7 +6798,7 @@ paths:
           schema: { type: string, enum: [svg, png, pdf], default: png }
         - name: size
           in: query
-          description: Image edge in pixels; SVG uses this width/height and PDF embeds this raster resolution.
+          description: Image edge in pixels; SVG uses this width/height and PDF embeds the logo at this raster resolution.
           schema: { type: integer, minimum: 256, maximum: 2048, default: 1024 }
       responses:
         "200":
@@ -18166,12 +18169,72 @@ components:
     RouteQRStyle:
       type: object
       additionalProperties: false
+      description: >-
+        Route QR design (docs/QR_DESIGN.md). Version 1 clients send only foreground, background,
+        module, eye, quiet_zone and the logo reference; omitted v2 fields are derived from them
+        (module/eye map to body/eye shapes), so v1 styles keep their look. Responses always carry
+        every field. Every dark color in use (foreground, both gradient colors when a gradient is
+        on, each explicit eye color) needs 4.5:1 contrast against the background (white when
+        transparent_background is true); light-on-dark is rejected.
       required: [foreground, background, module, eye, quiet_zone]
       properties:
-        foreground: { type: string, pattern: '^#[0-9a-fA-F]{6}$', default: '#000000' }
+        foreground:
+          type: string
+          pattern: '^#[0-9a-fA-F]{6}$'
+          default: '#000000'
+          description: Solid body color, and the color of eyes without their own color.
         background: { type: string, pattern: '^#[0-9a-fA-F]{6}$', default: '#ffffff' }
-        module: { type: string, enum: [square, rounded, dots], default: square }
-        eye: { type: string, enum: [square, rounded, circle], default: square }
+        transparent_background:
+          type: boolean
+          description: Leave the background unpainted (SVG/PNG/PDF). Contrast is checked against white. Default false.
+        module:
+          type: string
+          enum: [square, rounded, dots]
+          default: square
+          description: Version 1 body shape (rounded-square = rounded, circle = dots). Used when body_shape is empty.
+        eye:
+          type: string
+          enum: [square, rounded, circle]
+          default: square
+          description: Version 1 eye shape for both frame and ball. Used when eye_frame_shape/eye_ball_shape are empty.
+        body_shape:
+          type: string
+          enum: [square, rounded-square, circle, small-dot, mosaic, spaced-square, diamond, star, fluid, chamfer, chamfer-soft, rounded-in, rounded-in-soft, pointed-in, pointed-in-soft, pointed, pointed-soft, leaf, rounded-pointed, chamfer-leaf, capsule-horizontal, capsule-vertical]
+          description: Data module shape. Connected shapes merge with orthogonal neighbors.
+        eye_frame_shape:
+          type: string
+          enum: [square, rounded, circle, rounded-large, rounded-outer, rounded-inner, leaf, rounded-corner, rounded-three, chamfer, chamfer-leaf, dotted, beaded, concave, rough]
+          description: Shape of the 7x7 finder ring.
+        eye_ball_shape:
+          type: string
+          enum: [square, rounded, circle, rounded-soft, leaf, rounded-corner, rounded-three, chamfer, chamfer-leaf, dots-3x3, capsules-horizontal, capsules-vertical, clover, star, concave, rough, cushion, cross]
+          description: Shape of the 3x3 finder center.
+        eyes:
+          type: array
+          minItems: 3
+          maxItems: 3
+          description: Top-left, top-right and bottom-left eye. Empty colors inherit the body.
+          items: { $ref: "#/components/schemas/RouteQREye" }
+        fill_mode:
+          type: string
+          enum: [solid, linear, radial]
+          description: Body fill. linear runs across the symbol at gradient_angle; radial runs from the center to the corners. Default solid.
+        gradient_start:
+          type: string
+          pattern: '^#[0-9a-fA-F]{6}$'
+          description: First gradient color (defaults to foreground).
+        gradient_end:
+          type: string
+          pattern: '^#[0-9a-fA-F]{6}$'
+          description: Second gradient color (defaults to foreground).
+        gradient_angle:
+          type: integer
+          minimum: 0
+          maximum: 359
+          description: Linear gradient direction in degrees, clockwise; 0 runs left to right. Default 0.
+        gradient_on_eyes:
+          type: boolean
+          description: Eyes without their own color use the gradient instead of foreground. Default false.
         quiet_zone: { type: integer, minimum: 4, maximum: 16, default: 4 }
         logo_profile_uuid:
           type: [string, "null"]
@@ -18181,10 +18244,34 @@ components:
           type: string
           enum: ["", avatar, cover]
           description: Must be avatar or cover with a logo profile, otherwise empty or omitted.
+        logo_size:
+          type: integer
+          minimum: 10
+          maximum: 30
+          description: Logo width as a percentage of the symbol width (quiet zone excluded). Default 15.
+        logo_mode:
+          type: string
+          enum: [clean, overlay]
+          description: clean removes the modules under the logo plus a one-module margin; overlay draws the logo over the modules. Default clean.
+
+    RouteQREye:
+      type: object
+      additionalProperties: false
+      properties:
+        flip_h: { type: boolean, description: Mirror the eye left to right (default false). }
+        flip_v: { type: boolean, description: Mirror the eye top to bottom (default false). }
+        frame_color:
+          type: string
+          pattern: '^(#[0-9a-fA-F]{6})?$'
+          description: Frame color; empty inherits the body.
+        ball_color:
+          type: string
+          pattern: '^(#[0-9a-fA-F]{6})?$'
+          description: Ball color; empty inherits the body.
 
     RouteQR:
       type: object
-      required: [style, payload, error_correction]
+      required: [style, payload, error_correction, matrices]
       properties:
         style: { $ref: "#/components/schemas/RouteQRStyle" }
         payload:
@@ -18192,6 +18279,16 @@ components:
           format: uri
           description: Canonical public identity URL plus ?src=qr (for example /c/code?src=qr); never an API path or mutable destination.
         error_correction: { type: string, enum: [M, H] }
+        matrices:
+          type: object
+          required: [M, H]
+          description: >-
+            The payload's encoded modules as rows of "0"/"1" (no quiet zone), at M (no logo) and
+            H (with a logo) correction. Drawing them with the shared design engine reproduces
+            /qr/render's SVG exactly.
+          properties:
+            M: { type: array, items: { type: string, pattern: '^[01]+$' } }
+            H: { type: array, items: { type: string, pattern: '^[01]+$' } }
 
     EnvelopeRouteQR:
       type: object

@@ -1,18 +1,16 @@
-import QRCode from "qrcode";
+/**
+ * Route QR editor helpers (TEC-1270) on top of the shared design engine (qr-engine.ts).
+ * The API stays the authority: qrStyleProblems mirrors qr.Style.Validate for instant feedback.
+ *
+ * Type-only imports: node --test loads this file directly with type stripping.
+ */
+import type { QrEye, QrStyle, QrStyleFull } from "./qr-engine";
 
-import type { RouteQRStyle } from "../services/route-qr.service";
-
-/** Mirrors backend/internal/platform/qr: the API stays the authority, this is instant feedback. */
-export const MIN_CONTRAST = 4.5;
-export const QUIET_ZONE_MIN = 4;
-export const QUIET_ZONE_MAX = 16;
-export const MODULE_STYLES = ["square", "rounded", "dots"] as const;
-export const EYE_STYLES = ["square", "rounded", "circle"] as const;
 export const DOWNLOAD_FORMATS = ["svg", "png", "pdf"] as const;
 export const DOWNLOAD_SIZES = [512, 1024, 2048] as const;
 export type DownloadFormat = (typeof DOWNLOAD_FORMATS)[number];
 
-export const DEFAULT_QR_STYLE: RouteQRStyle = {
+export const DEFAULT_QR_STYLE: QrStyle = {
   foreground: "#000000",
   background: "#ffffff",
   module: "square",
@@ -22,156 +20,134 @@ export const DEFAULT_QR_STYLE: RouteQRStyle = {
   logo_field: "",
 };
 
-const HEX = /^#[0-9a-fA-F]{6}$/;
+export type QrTemplate = { id: string; style: Partial<QrStyle> };
 
-export function isHexColor(value: string): boolean {
-  return HEX.test(value);
-}
+const DESIGN_DEFAULTS: Partial<QrStyle> = {
+  transparent_background: false,
+  body_shape: "square",
+  eye_frame_shape: "square",
+  eye_ball_shape: "square",
+  fill_mode: "solid",
+  gradient_angle: 0,
+  gradient_on_eyes: false,
+};
 
-function luminance(hex: string): number {
-  const v = Number.parseInt(hex.slice(1), 16);
-  const linear = (c: number) => {
-    const x = c / 255;
-    return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
-  };
-  return (
-    0.2126 * linear((v >> 16) & 255) +
-    0.7152 * linear((v >> 8) & 255) +
-    0.0722 * linear(v & 255)
-  );
-}
+const blankEyes = (): QrEye[] =>
+  [0, 1, 2].map(() => ({
+    flip_h: false,
+    flip_v: false,
+    frame_color: "",
+    ball_color: "",
+  }));
 
 /**
- * Directional contrast (background over foreground), like the API: light-on-dark
- * ("inverted") codes score below 1 and are rejected because many scanners fail on them.
+ * A template replaces the look (shapes, colors, flips, background) and keeps what belongs to the
+ * route: the logo choice, its size and mode, and the quiet zone. v1 fields are cleared so the
+ * normalizer derives them from the template's v2 shapes.
  */
-export function qrContrast(
-  foreground: string,
-  background: string,
-): number | null {
-  if (!isHexColor(foreground) || !isHexColor(background)) return null;
-  return (luminance(background) + 0.05) / (luminance(foreground) + 0.05);
-}
-
-export type StyleProblem =
-  "color_format" | "contrast" | "inverted" | "logo_field";
-
-export function styleProblem(style: RouteQRStyle): StyleProblem | null {
-  const ratio = qrContrast(style.foreground, style.background);
-  if (ratio === null) return "color_format";
-  if (ratio < 1) return "inverted";
-  if (ratio < MIN_CONTRAST) return "contrast";
-  if (
-    style.logo_profile_uuid &&
-    style.logo_field !== "avatar" &&
-    style.logo_field !== "cover"
-  )
-    return "logo_field";
-  return null;
-}
-
-/** Normalizes the server's stored style (null/empty logo fields) for comparison and PUT. */
-export function normalizeStyle(style: RouteQRStyle): RouteQRStyle {
-  const hasLogo = Boolean(style.logo_profile_uuid);
+export function applyTemplate(current: QrStyle, template: QrTemplate): QrStyle {
+  const style = template.style;
   return {
-    foreground: style.foreground.toLowerCase(),
-    background: style.background.toLowerCase(),
-    module: style.module,
-    eye: style.eye,
-    quiet_zone: style.quiet_zone,
-    logo_profile_uuid: hasLogo ? style.logo_profile_uuid : null,
-    logo_field: hasLogo ? style.logo_field || "avatar" : "",
+    ...DESIGN_DEFAULTS,
+    foreground: "#000000",
+    background: "#ffffff",
+    ...style,
+    eyes: style.eyes ?? blankEyes(),
+    gradient_start: style.gradient_start ?? style.foreground ?? "#000000",
+    gradient_end: style.gradient_end ?? style.foreground ?? "#000000",
+    module: "",
+    eye: "",
+    quiet_zone: current.quiet_zone,
+    logo_profile_uuid: current.logo_profile_uuid ?? null,
+    logo_field: current.logo_field ?? "",
+    logo_size: current.logo_size,
+    logo_mode: current.logo_mode,
   };
 }
 
-export function sameStyle(a: RouteQRStyle, b: RouteQRStyle): boolean {
+/** Whether the normalized style looks like the template (for the picker's selected state). */
+export function matchesTemplate(
+  style: QrStyleFull,
+  template: QrStyleFull,
+): boolean {
+  const keys: (keyof QrStyleFull)[] = [
+    "foreground",
+    "background",
+    "transparent_background",
+    "body_shape",
+    "eye_frame_shape",
+    "eye_ball_shape",
+    "fill_mode",
+    "gradient_on_eyes",
+    "eyes",
+  ];
+  if (
+    keys.some((k) => JSON.stringify(style[k]) !== JSON.stringify(template[k]))
+  )
+    return false;
+  if (style.fill_mode === "solid") return true;
   return (
-    JSON.stringify(normalizeStyle(a)) === JSON.stringify(normalizeStyle(b))
+    style.gradient_start === template.gradient_start &&
+    style.gradient_end === template.gradient_end &&
+    (style.fill_mode === "radial" ||
+      style.gradient_angle === template.gradient_angle)
   );
 }
 
-export type QrShape = {
-  x: number;
-  y: number;
-  w: number;
-  r: number;
-  fill: string;
-};
-export type QrGeometry = {
-  total: number;
-  shapes: QrShape[];
-  logo: { pos: number; w: number } | null;
-};
+/** Mirrors the top-right eye horizontally and the bottom-left one vertically. */
+export function mirroredEyes(eyes: QrEye[]): QrEye[] {
+  return eyes.map((e, i) => ({
+    ...e,
+    flip_h: i === 1,
+    flip_v: i === 2,
+  }));
+}
+
+export type EyeColorMode = "inherit" | "shared" | "per_eye";
+
+export function eyeColorMode(eyes: QrEye[]): EyeColorMode {
+  if (eyes.every((e) => !e.frame_color && !e.ball_color)) return "inherit";
+  const [a, ...rest] = eyes;
+  if (
+    rest.every(
+      (e) => e.frame_color === a.frame_color && e.ball_color === a.ball_color,
+    )
+  )
+    return "shared";
+  return "per_eye";
+}
+
+export type QrWarning =
+  "low_margin" | "large_logo" | "transparent" | "logo_overlay" | "dense_shape";
+
+const BORDERLINE_CONTRAST = 7;
 
 /**
- * Local live preview with the same geometry as the server renderer: styled data modules,
- * three finder "eyes" drawn as 7/5/3 nested squares, and a background tile behind the logo.
- * The bit pattern may differ from the server's (mask choice), the look does not.
+ * Advice beyond the hard rules: the API accepts these styles, and the readability tests decode
+ * every shape, but each item narrows the margin real cameras have.
  */
-export function previewGeometry(
-  payload: string,
-  style: RouteQRStyle,
-): QrGeometry | null {
-  if (styleProblem(style) === "color_format") return null;
-  const hasLogo = Boolean(style.logo_profile_uuid);
-  let matrix: { size: number; get: (row: number, col: number) => number };
-  try {
-    matrix = QRCode.create(payload, {
-      errorCorrectionLevel: hasLogo ? "H" : "M",
-    }).modules;
-  } catch {
-    return null;
-  }
-  const n = matrix.size;
-  const q = style.quiet_zone;
-  const total = n + 2 * q;
-  const radius =
-    style.module === "rounded" ? 0.2 : style.module === "dots" ? 0.5 : 0;
-  const shapes: QrShape[] = [];
-  for (let y = 0; y < n; y++) {
-    for (let x = 0; x < n; x++) {
-      const finder =
-        (x < 7 && y < 7) || (x >= n - 7 && y < 7) || (x < 7 && y >= n - 7);
-      if (!finder && matrix.get(y, x))
-        shapes.push({
-          x: x + q,
-          y: y + q,
-          w: 1,
-          r: radius,
-          fill: style.foreground,
-        });
-    }
-  }
-  for (const [px, py] of [
-    [0, 0],
-    [n - 7, 0],
-    [0, n - 7],
-  ]) {
-    [7, 5, 3].forEach((w, i) => {
-      const r =
-        style.eye === "rounded"
-          ? Math.min(1, w / 2)
-          : style.eye === "circle"
-            ? w / 2
-            : 0;
-      shapes.push({
-        x: px + i + q,
-        y: py + i + q,
-        w,
-        r,
-        fill: i === 1 ? style.background : style.foreground,
-      });
-    });
-  }
-  if (!hasLogo) return { total, shapes, logo: null };
-  const logoW = n * 0.15;
-  const tile = logoW + 2;
-  shapes.push({
-    x: (total - tile) / 2,
-    y: (total - tile) / 2,
-    w: tile,
-    r: 0,
-    fill: style.background,
-  });
-  return { total, shapes, logo: { pos: (total - logoW) / 2, w: logoW } };
+export function readabilityWarnings(
+  s: QrStyleFull,
+  contrasts: number[],
+): QrWarning[] {
+  const out: QrWarning[] = [];
+  if (contrasts.some((c) => c >= 4.5 && c < BORDERLINE_CONTRAST))
+    out.push("low_margin");
+  if (s.logo_profile_uuid && s.logo_size > 22) out.push("large_logo");
+  if (s.logo_profile_uuid && s.logo_mode === "overlay")
+    out.push("logo_overlay");
+  if (s.transparent_background) out.push("transparent");
+  if (["small-dot", "spaced-square", "star", "diamond"].includes(s.body_shape))
+    out.push("dense_shape");
+  return out;
+}
+
+/** Matrix rows for the current correction level: H with a logo, M without. */
+export function matrixFor(
+  matrices: { M: string[]; H: string[] } | undefined,
+  hasLogo: boolean,
+): string[] | null {
+  if (!matrices) return null;
+  const rows = hasLogo ? matrices.H : matrices.M;
+  return rows && rows.length >= 21 ? rows : null;
 }

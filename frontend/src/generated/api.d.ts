@@ -4071,7 +4071,7 @@ export interface paths {
         get: operations["getRouteQR"];
         /**
          * Replace route QR appearance
-         * @description Requires app.routes.write and an owner/admin active account role. Route identity and target remain unchanged. Logo media must be a current PNG/JPEG avatar or cover of a profile in the same account (max 2 MiB and 2048 pixels per edge). Missing or inaccessible logos are rejected. Dark-on-light contrast must be at least 4.5:1. A logo automatically selects H error correction.
+         * @description Requires app.routes.write and an owner/admin active account role. Route identity and target remain unchanged. Logo media must be a current PNG/JPEG avatar or cover of a profile in the same account (max 2 MiB and 2048 pixels per edge). Missing or inaccessible logos are rejected. Every dark color needs at least 4.5:1 dark-on-light contrast. A logo automatically selects H error correction. Accepts version 1 and version 2 styles and stores the normalized v2 style.
          */
         put: operations["putRouteQR"];
         post?: never;
@@ -4090,7 +4090,7 @@ export interface paths {
         };
         /**
          * Download a branded QR file
-         * @description Requires app.routes.read in the active account. Files encode the same marked route identity as new production manifest QR PNGs, never the mutable destination. Size must also provide at least four pixels per module including the quiet zone. PDF places the PNG on A4 at 160 mm.
+         * @description Requires app.routes.read in the active account. Files encode the same marked route identity as new production manifest QR PNGs, never the mutable destination. Size must also provide at least four pixels per module including the quiet zone. PNG is anti-aliased; SVG is the shared design engine's output; PDF draws the same vector design (gradients as PDF shadings) 160 mm wide on A4, with the logo embedded at the requested raster resolution.
          */
         get: operations["renderRouteQR"];
         put?: never;
@@ -12462,21 +12462,59 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /** @description Route QR design (docs/QR_DESIGN.md). Version 1 clients send only foreground, background, module, eye, quiet_zone and the logo reference; omitted v2 fields are derived from them (module/eye map to body/eye shapes), so v1 styles keep their look. Responses always carry every field. Every dark color in use (foreground, both gradient colors when a gradient is on, each explicit eye color) needs 4.5:1 contrast against the background (white when transparent_background is true); light-on-dark is rejected. */
         RouteQRStyle: {
-            /** @default #000000 */
+            /**
+             * @description Solid body color, and the color of eyes without their own color.
+             * @default #000000
+             */
             foreground: string;
             /** @default #ffffff */
             background: string;
+            /** @description Leave the background unpainted (SVG/PNG/PDF). Contrast is checked against white. Default false. */
+            transparent_background?: boolean;
             /**
+             * @description Version 1 body shape (rounded-square = rounded, circle = dots). Used when body_shape is empty.
              * @default square
              * @enum {string}
              */
             module: "square" | "rounded" | "dots";
             /**
+             * @description Version 1 eye shape for both frame and ball. Used when eye_frame_shape/eye_ball_shape are empty.
              * @default square
              * @enum {string}
              */
             eye: "square" | "rounded" | "circle";
+            /**
+             * @description Data module shape. Connected shapes merge with orthogonal neighbors.
+             * @enum {string}
+             */
+            body_shape?: "square" | "rounded-square" | "circle" | "small-dot" | "mosaic" | "spaced-square" | "diamond" | "star" | "fluid" | "chamfer" | "chamfer-soft" | "rounded-in" | "rounded-in-soft" | "pointed-in" | "pointed-in-soft" | "pointed" | "pointed-soft" | "leaf" | "rounded-pointed" | "chamfer-leaf" | "capsule-horizontal" | "capsule-vertical";
+            /**
+             * @description Shape of the 7x7 finder ring.
+             * @enum {string}
+             */
+            eye_frame_shape?: "square" | "rounded" | "circle" | "rounded-large" | "rounded-outer" | "rounded-inner" | "leaf" | "rounded-corner" | "rounded-three" | "chamfer" | "chamfer-leaf" | "dotted" | "beaded" | "concave" | "rough";
+            /**
+             * @description Shape of the 3x3 finder center.
+             * @enum {string}
+             */
+            eye_ball_shape?: "square" | "rounded" | "circle" | "rounded-soft" | "leaf" | "rounded-corner" | "rounded-three" | "chamfer" | "chamfer-leaf" | "dots-3x3" | "capsules-horizontal" | "capsules-vertical" | "clover" | "star" | "concave" | "rough" | "cushion" | "cross";
+            /** @description Top-left, top-right and bottom-left eye. Empty colors inherit the body. */
+            eyes?: components["schemas"]["RouteQREye"][];
+            /**
+             * @description Body fill. linear runs across the symbol at gradient_angle; radial runs from the center to the corners. Default solid.
+             * @enum {string}
+             */
+            fill_mode?: "solid" | "linear" | "radial";
+            /** @description First gradient color (defaults to foreground). */
+            gradient_start?: string;
+            /** @description Second gradient color (defaults to foreground). */
+            gradient_end?: string;
+            /** @description Linear gradient direction in degrees, clockwise; 0 runs left to right. Default 0. */
+            gradient_angle?: number;
+            /** @description Eyes without their own color use the gradient instead of foreground. Default false. */
+            gradient_on_eyes?: boolean;
             /** @default 4 */
             quiet_zone: number;
             /**
@@ -12489,6 +12527,23 @@ export interface components {
              * @enum {string}
              */
             logo_field?: "" | "avatar" | "cover";
+            /** @description Logo width as a percentage of the symbol width (quiet zone excluded). Default 15. */
+            logo_size?: number;
+            /**
+             * @description clean removes the modules under the logo plus a one-module margin; overlay draws the logo over the modules. Default clean.
+             * @enum {string}
+             */
+            logo_mode?: "clean" | "overlay";
+        };
+        RouteQREye: {
+            /** @description Mirror the eye left to right (default false). */
+            flip_h?: boolean;
+            /** @description Mirror the eye top to bottom (default false). */
+            flip_v?: boolean;
+            /** @description Frame color; empty inherits the body. */
+            frame_color?: string;
+            /** @description Ball color; empty inherits the body. */
+            ball_color?: string;
         };
         RouteQR: {
             style: components["schemas"]["RouteQRStyle"];
@@ -12499,6 +12554,11 @@ export interface components {
             payload: string;
             /** @enum {string} */
             error_correction: "M" | "H";
+            /** @description The payload's encoded modules as rows of "0"/"1" (no quiet zone), at M (no logo) and H (with a logo) correction. Drawing them with the shared design engine reproduces /qr/render's SVG exactly. */
+            matrices: {
+                M: string[];
+                H: string[];
+            };
         };
         EnvelopeRouteQR: {
             success: boolean;
@@ -20067,7 +20127,7 @@ export interface operations {
         parameters: {
             query?: {
                 format?: "svg" | "png" | "pdf";
-                /** @description Image edge in pixels; SVG uses this width/height and PDF embeds this raster resolution. */
+                /** @description Image edge in pixels; SVG uses this width/height and PDF embeds the logo at this raster resolution. */
                 size?: number;
             };
             header?: never;
