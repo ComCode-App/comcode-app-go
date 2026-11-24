@@ -6818,39 +6818,34 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  /v1/routes/{uuid}/qr/preview:
-    post:
+  /v1/routes/{uuid}/qr/logo:
+    get:
       tags: [Global Routes]
-      operationId: previewRouteQR
-      summary: Preview an unsaved QR style with the server renderer
+      operationId: getRouteQRLogo
+      summary: Read a QR logo for the browser editor
       description: >-
-        Requires app.routes.read in the active account; nothing is stored, so no owner/admin role is
-        needed. Renders the request body style with the same renderer as /qr/render and the print
-        pack, so the editor shows exactly what will be printed. Validation matches PUT /qr: logos
-        reference a same-account profile avatar or cover (API-owned media, never a URL). Body is
-        capped at 4 KiB and unknown fields are rejected. Limited per user (429 with Retry-After).
+        Requires app.routes.read in the active account. Returns a same-account profile avatar or
+        cover (PNG or JPEG, at most 2 MB and 2048 px), with the same checks as server renders, so
+        the editor can embed the logo in SVG/PNG files it draws in the browser without reaching the
+        storage origin. Limited per user (429 with Retry-After).
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/ResourceUUID"
-        - name: format
+        - name: profile_uuid
           in: query
-          schema: { type: string, enum: [svg, png], default: png }
-        - name: size
+          required: true
+          schema: { type: string, format: uuid }
+        - name: field
           in: query
-          description: Image edge in pixels; previews are capped below the download maximum.
-          schema: { type: integer, minimum: 256, maximum: 1024, default: 512 }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/RouteQRStyle" }
+          required: true
+          schema: { type: string, enum: [avatar, cover] }
       responses:
         "200":
-          description: Inline image with private no-store caching
+          description: The logo image, privately cacheable for 5 minutes
           content:
-            image/svg+xml:
-              schema: { type: string, format: binary }
             image/png:
+              schema: { type: string, format: binary }
+            image/jpeg:
               schema: { type: string, format: binary }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }

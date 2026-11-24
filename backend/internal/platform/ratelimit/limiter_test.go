@@ -45,20 +45,20 @@ func TestNilRedisAllows(t *testing.T) {
 	}
 }
 
-func TestQRPreviewLimitIsPerUser(t *testing.T) {
+func TestQRLogoLimitIsPerUser(t *testing.T) {
 	t.Parallel()
 	mr := miniredis.RunT(t)
 	lim := ratelimit.New(redis.NewClient(&redis.Options{Addr: mr.Addr()}), "test")
 	ctx := context.Background()
-	for i := 0; i < 600; i++ {
-		if ok, _ := lim.AllowQRPreview(ctx, "user-a"); !ok {
-			t.Fatalf("preview %d should be allowed", i+1)
+	for i := 0; i < 300; i++ {
+		if ok, _ := lim.AllowQRLogo(ctx, "user-a"); !ok {
+			t.Fatalf("logo read %d should be allowed", i+1)
 		}
 	}
-	if ok, retry := lim.AllowQRPreview(ctx, "user-a"); ok || retry <= 0 {
-		t.Fatal("expected preview limit with retry-after")
+	if ok, retry := lim.AllowQRLogo(ctx, "user-a"); ok || retry <= 0 {
+		t.Fatal("expected logo limit with retry-after")
 	}
-	if ok, _ := lim.AllowQRPreview(ctx, "user-b"); !ok {
+	if ok, _ := lim.AllowQRLogo(ctx, "user-b"); !ok {
 		t.Fatal("another user should not share the bucket")
 	}
 }
@@ -106,7 +106,7 @@ func TestInviteLimits(t *testing.T) {
 	ctx := context.Background()
 	for i := 0; i < 60; i++ {
 		if ok, _ := lim.AllowInvitePreview(ctx, "1.1.1.1"); !ok {
-			t.Fatalf("preview %d should be allowed", i+1)
+			t.Fatalf("logo read %d should be allowed", i+1)
 		}
 	}
 	if ok, retry := lim.AllowInvitePreview(ctx, "1.1.1.1"); ok || retry <= 0 {

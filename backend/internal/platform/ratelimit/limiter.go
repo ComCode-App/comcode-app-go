@@ -25,9 +25,9 @@ const (
 	// Lead form submissions (POST /v1/public/leads) per client IP: a person leaves a lead or two;
 	// this stops scripted flooding of an account's lead inbox.
 	leadsIPLimit = 10
-	// Server QR previews (POST /v1/routes/{uuid}/qr/preview) per signed-in user: the style editor
-	// calls it debounced while settings change, so this is generous; it only stops render loops.
-	qrPreviewUserLimit = 600
+	// QR logo reads (GET /v1/routes/{uuid}/qr/logo) per signed-in user: the editor fetches one
+	// logo per profile/field and caches it, so this only stops scripted loops.
+	qrLogoUserLimit = 300
 
 	// Wrong smart link passcodes (TEC-556): per visitor and link, per visitor, and per link so
 	// many addresses cannot brute-force a short PIN together.
@@ -107,9 +107,9 @@ func (l *Limiter) AllowLeadSubmit(ctx context.Context, ip string) (bool, time.Du
 	return l.allow(ctx, "leads", ip, leadsIPLimit)
 }
 
-// AllowQRPreview limits server-rendered QR previews per user.
-func (l *Limiter) AllowQRPreview(ctx context.Context, userID string) (bool, time.Duration) {
-	return l.allow(ctx, "qr_preview", userID, qrPreviewUserLimit)
+// AllowQRLogo limits QR logo reads per user.
+func (l *Limiter) AllowQRLogo(ctx context.Context, userID string) (bool, time.Duration) {
+	return l.allow(ctx, "qr_logo", userID, qrLogoUserLimit)
 }
 
 // AllowInvitePreview limits public invite lookups (GET /v1/invites/{token}) per client IP.

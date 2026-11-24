@@ -19,9 +19,9 @@ import (
 )
 
 type Handler struct {
-	svc              *usecase.Service
-	qrPreviewLimiter QRPreviewLimiter
-	passcodeLimiter  PasscodeLimiter
+	svc             *usecase.Service
+	qrLogoLimiter   QRLogoLimiter
+	passcodeLimiter PasscodeLimiter
 }
 
 func New(svc *usecase.Service) *Handler {

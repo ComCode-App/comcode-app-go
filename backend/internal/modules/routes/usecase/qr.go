@@ -96,87 +96,84 @@ func (s *Service) RenderQR(ctx context.Context, id uuid.UUID, account authctx.Ac
 	return qr.Render(result.Payload, format, size, result.Style, logo)
 }
 
-// Preview size cap: enough for a crisp on-screen preview, well below the 2048 download maximum.
-const (
-	PreviewMinSize = 256
-	PreviewMaxSize = 1024
-)
-
-// PreviewQR renders an unsaved style for an owned route with the same renderer as RenderQR,
-// so the editor shows exactly what downloads and the print pack will produce. Nothing is stored.
-// Only PNG and SVG are offered; logos go through the same same-account media checks as PutQR.
-func (s *Service) PreviewQR(ctx context.Context, id uuid.UUID, account authctx.Account, style qr.Style, format string, size int) ([]byte, string, error) {
-	if format != "png" && format != "svg" {
+// QRLogo returns a QR logo candidate (a same-account profile avatar or cover) for an owned
+// route, so the browser editor can embed it in files it draws itself (TEC-1271). The media is
+// read through the API with the same checks as server renders; the browser never needs the
+// storage origin. Returns the original PNG/JPEG bytes and their content type.
+func (s *Service) QRLogo(ctx context.Context, id uuid.UUID, account authctx.Account, profileUUID uuid.UUID, field string) ([]byte, string, error) {
+	if _, err := s.qrStore.GetQR(ctx, id, account.ID); err != nil {
+		if errors.Is(err, repository.ErrQRNotFound) {
+			return nil, "", ErrRouteNotFound
+		}
+		return nil, "", err
+	}
+	if profileUUID == uuid.Nil || (field != "avatar" && field != "cover") {
 		return nil, "", qr.ErrInvalid
 	}
-	if size < PreviewMinSize || size > PreviewMaxSize {
-		return nil, "", qr.ErrInvalid
-	}
-	result, err := s.GetQR(ctx, id, account)
+	data, kind, err := s.qrLogoBytes(ctx, account.ID, profileUUID, field)
 	if err != nil {
 		return nil, "", err
 	}
-	if err := style.Validate(); err != nil {
-		return nil, "", err
-	}
-	var logo image.Image
-	if style.LogoProfileUUID != nil {
-		logo, err = s.qrLogo(ctx, account.ID, style)
-		if err != nil {
-			return nil, "", err
-		}
-	}
-	return qr.Render(result.Payload, format, size, style, logo)
+	return data, "image/" + kind, nil
 }
 
 // qrLogo accepts only a current, same-account profile avatar/cover and derives the
 // key from an API-owned URL. No arbitrary URLs are fetched. Reads and decode sizes are bounded.
 func (s *Service) qrLogo(ctx context.Context, accountID int64, style qr.Style) (image.Image, error) {
-	raw, err := s.qrStore.GetLogoURL(ctx, *style.LogoProfileUUID, accountID, style.LogoField)
-	if errors.Is(err, repository.ErrQRNotFound) {
-		return nil, qr.ErrInvalid
-	}
+	data, _, err := s.qrLogoBytes(ctx, accountID, *style.LogoProfileUUID, style.LogoField)
 	if err != nil {
 		return nil, err
-	}
-	if s.qrStorage == nil {
-		return nil, qr.ErrInvalid
-	}
-	prefix := "profiles/" + style.LogoProfileUUID.String() + "/" + style.LogoField + "."
-	idx := strings.Index(raw, prefix)
-	if idx < 0 {
-		return nil, qr.ErrInvalid
-	}
-	key := raw[idx:]
-	validURL := raw == s.qrStorage.PublicURL(key) || raw == "/api/v1/storage/stream/"+key || raw == key
-	if !validURL || strings.ContainsAny(strings.TrimPrefix(key, prefix), "/\\?#") || strings.Contains(key, "..") {
-		return nil, qr.ErrInvalid
-	}
-	reader, _, err := s.qrStorage.Download(ctx, key)
-	if err != nil {
-		return nil, fmt.Errorf("read QR logo: %w", err)
-	}
-	defer func() { _ = reader.Close() }()
-	const maxBytes = 2 << 20
-	data, err := io.ReadAll(io.LimitReader(reader, maxBytes+1))
-	if err != nil {
-		return nil, err
-	}
-	if len(data) > maxBytes {
-		return nil, qr.ErrInvalid
-	}
-	cfg, kind, err := image.DecodeConfig(bytes.NewReader(data))
-	if err != nil || (kind != "png" && kind != "jpeg") {
-		return nil, qr.ErrInvalid
-	}
-	if cfg.Width < 1 || cfg.Height < 1 || cfg.Width > 2048 || cfg.Height > 2048 {
-		return nil, qr.ErrInvalid
 	}
 	logo, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return nil, qr.ErrInvalid
 	}
 	return logo, nil
+}
+
+// qrLogoBytes reads and validates the logo media (PNG/JPEG, at most 2 MB and 2048 px).
+func (s *Service) qrLogoBytes(ctx context.Context, accountID int64, profileUUID uuid.UUID, field string) ([]byte, string, error) {
+	raw, err := s.qrStore.GetLogoURL(ctx, profileUUID, accountID, field)
+	if errors.Is(err, repository.ErrQRNotFound) {
+		return nil, "", qr.ErrInvalid
+	}
+	if err != nil {
+		return nil, "", err
+	}
+	if s.qrStorage == nil {
+		return nil, "", qr.ErrInvalid
+	}
+	prefix := "profiles/" + profileUUID.String() + "/" + field + "."
+	idx := strings.Index(raw, prefix)
+	if idx < 0 {
+		return nil, "", qr.ErrInvalid
+	}
+	key := raw[idx:]
+	validURL := raw == s.qrStorage.PublicURL(key) || raw == "/api/v1/storage/stream/"+key || raw == key
+	if !validURL || strings.ContainsAny(strings.TrimPrefix(key, prefix), "/\\?#") || strings.Contains(key, "..") {
+		return nil, "", qr.ErrInvalid
+	}
+	reader, _, err := s.qrStorage.Download(ctx, key)
+	if err != nil {
+		return nil, "", fmt.Errorf("read QR logo: %w", err)
+	}
+	defer func() { _ = reader.Close() }()
+	const maxBytes = 2 << 20
+	data, err := io.ReadAll(io.LimitReader(reader, maxBytes+1))
+	if err != nil {
+		return nil, "", err
+	}
+	if len(data) > maxBytes {
+		return nil, "", qr.ErrInvalid
+	}
+	cfg, kind, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil || (kind != "png" && kind != "jpeg") {
+		return nil, "", qr.ErrInvalid
+	}
+	if cfg.Width < 1 || cfg.Height < 1 || cfg.Width > 2048 || cfg.Height > 2048 {
+		return nil, "", qr.ErrInvalid
+	}
+	return data, kind, nil
 }
 
 // RecordQRScan attributes a marked public-profile visit without affecting its response.

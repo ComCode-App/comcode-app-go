@@ -4101,20 +4101,20 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/routes/{uuid}/qr/preview": {
+    "/v1/routes/{uuid}/qr/logo": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
         /**
-         * Preview an unsaved QR style with the server renderer
-         * @description Requires app.routes.read in the active account; nothing is stored, so no owner/admin role is needed. Renders the request body style with the same renderer as /qr/render and the print pack, so the editor shows exactly what will be printed. Validation matches PUT /qr: logos reference a same-account profile avatar or cover (API-owned media, never a URL). Body is capped at 4 KiB and unknown fields are rejected. Limited per user (429 with Retry-After).
+         * Read a QR logo for the browser editor
+         * @description Requires app.routes.read in the active account. Returns a same-account profile avatar or cover (PNG or JPEG, at most 2 MB and 2048 px), with the same checks as server renders, so the editor can embed the logo in SVG/PNG files it draws in the browser without reaching the storage origin. Limited per user (429 with Retry-After).
          */
-        post: operations["previewRouteQR"];
+        get: operations["getRouteQRLogo"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -20157,12 +20157,11 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    previewRouteQR: {
+    getRouteQRLogo: {
         parameters: {
-            query?: {
-                format?: "svg" | "png";
-                /** @description Image edge in pixels; previews are capped below the download maximum. */
-                size?: number;
+            query: {
+                profile_uuid: string;
+                field: "avatar" | "cover";
             };
             header?: never;
             path: {
@@ -20171,20 +20170,16 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RouteQRStyle"];
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description Inline image with private no-store caching */
+            /** @description The logo image, privately cacheable for 5 minutes */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "image/svg+xml": string;
                     "image/png": string;
+                    "image/jpeg": string;
                 };
             };
             400: components["responses"]["BadRequest"];
