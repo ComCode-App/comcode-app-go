@@ -570,13 +570,12 @@ be PNG/JPEG, at most 2 MiB and 2048 pixels per edge. They occupy the central `lo
 automatically selects H correction. Null `logo_profile_uuid`
 and an empty/omitted `logo_field` remove the logo. Profile media changes affect future renders.
 
-**Server preview (TEC-954).** `POST /v1/routes/{uuid}/qr/preview?format=svg|png&size=512` takes an
-unsaved `RouteQRStyle` body and returns the image inline (`private, no-store`). It calls the same
-`qr.Render` as `/qr/render`, so a saved style downloads byte-identical to its preview. Same read scope
-as `/qr/render` (nothing is stored, so no owner/admin role); validation and logo ownership match `PUT`.
-Size is capped at 256–1024, the body at 4 KiB, and requests at 600 per user per 15 minutes (Redis,
-fails open). The editor no longer needs it while editing: since TEC-1270 it draws the draft with the shared
-engine and the server's matrices, which equals this endpoint's SVG (see QR_DESIGN.md → Editor).
+**Logo read (TEC-1271).** `GET /v1/routes/{uuid}/qr/logo?profile_uuid=…&field=avatar|cover` returns
+a same-account profile avatar or cover (PNG/JPEG, at most 2 MB and 2048 px) with the same checks as
+`/qr/render`, `private, max-age=300`, and 300 requests per user per window (Redis, fails open). The
+editor embeds it in the SVG/PNG files it draws in the browser. The former server preview
+(`POST /qr/preview`, TEC-954) was removed in TEC-1272: since TEC-1270 the editor draws drafts with the
+shared engine and the server's matrices, which equals `/qr/render`.
 
 The QR payload is a **route identity**, never `direct_url` or a profile target:
 `{frontend}/{route.path}?src=qr` (e.g. `/c/abc123?src=qr`, `/s/example?src=qr`,

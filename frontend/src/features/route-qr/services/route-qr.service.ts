@@ -49,36 +49,13 @@ export const routeQrService = {
     };
   },
   /**
-   * Server render of an *unsaved* style (TEC-954): same renderer as downloads and the print pack,
-   * nothing is stored. Rate limited per user, so callers debounce.
+   * Same-origin URL of a QR logo (TEC-1271): a same-account profile avatar or cover, read through
+   * the API so browser-drawn files can embed it without access to the storage origin.
    */
-  async preview(
-    routeUuid: string,
-    style: RouteQRStyle,
-    format: "svg" | "png",
-    size: number,
-    signal?: AbortSignal,
-  ) {
+  logoUrl(routeUuid: string, profileUuid: string, field: "avatar" | "cover") {
     const base = apiConfig.baseUrl.replace(/\/$/, "");
-    const qs = new URLSearchParams({ format, size: String(size) });
-    const response = await fetch(
-      `${base}/v1/routes/${routeUuid}/qr/preview?${qs}`,
-      {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(style),
-        signal,
-      },
-    );
-    if (!response.ok) {
-      // 400 = style/logo rejected, 404 = not this account's route, 429 = too many previews.
-      throw parseApiError(
-        response.status,
-        await response.json().catch(() => undefined),
-      );
-    }
-    return response.blob();
+    const qs = new URLSearchParams({ profile_uuid: profileUuid, field });
+    return `${base}/v1/routes/${routeUuid}/qr/logo?${qs}`;
   },
   /** The canonical /{username} route of a profile (the QR subject of its public page). */
   async canonicalRoute(profileUuid: string, username?: string) {
@@ -108,8 +85,6 @@ export const routeQrService = {
 export const routeQrKeys = {
   all: ["route-qr"] as const,
   detail: (routeUuid: string) => ["route-qr", routeUuid] as const,
-  preview: (routeUuid: string, signature: string) =>
-    ["route-qr", routeUuid, "preview", signature] as const,
   canonical: (profileUuid: string, username?: string) =>
     ["route-qr", "canonical", profileUuid, username ?? ""] as const,
   canonicalAll: ["route-qr", "canonical", "all"] as const,

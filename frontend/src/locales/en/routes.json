@@ -196,6 +196,7 @@
   "qr.shape_body_diamond": "Diamond",
   "qr.shape_body_star": "Star",
   "qr.shape_body_fluid": "Fluid",
+  "qr.shape_body_smooth": "Smooth rounded",
   "qr.shape_body_chamfer": "Chamfer",
   "qr.shape_body_chamfer-soft": "Soft chamfer",
   "qr.shape_body_rounded-in": "Rounded inner corners",

@@ -216,10 +216,26 @@ function QrDesigner({
   const logoMissing =
     Boolean(logoProfileUuid) && logoProfileQuery.isSuccess && !logoUrl;
   // The logo as a data: URL makes browser files self-contained; null if the media is unreadable.
+  // It is read through the API (same origin), not from the storage URL (TEC-1271).
+  const logoField =
+    full.logo_field === "avatar" || full.logo_field === "cover"
+      ? full.logo_field
+      : null;
   const logoData = useQuery({
-    queryKey: ["route-qr", "logo-data", logoUrl ?? ""],
-    queryFn: ({ signal }) => fetchAsDataUrl(logoUrl!, signal),
-    enabled: Boolean(logoUrl),
+    queryKey: [
+      "route-qr",
+      "logo-data",
+      routeUuid ?? "",
+      logoProfileUuid ?? "",
+      logoField ?? "",
+      logoUrl ?? "",
+    ],
+    queryFn: ({ signal }) =>
+      fetchAsDataUrl(
+        routeQrService.logoUrl(routeUuid!, logoProfileUuid!, logoField!),
+        signal,
+      ),
+    enabled: Boolean(routeUuid && logoProfileUuid && logoField && logoUrl),
     staleTime: 5 * 60_000,
     retry: false,
   });

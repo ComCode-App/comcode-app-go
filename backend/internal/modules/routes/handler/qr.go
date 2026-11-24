@@ -30,13 +30,13 @@ func qrError(w http.ResponseWriter, r *http.Request, err error) {
 	}
 }
 
-// QRPreviewLimiter caps server-rendered QR previews per user (ratelimit.Limiter).
-type QRPreviewLimiter interface {
-	AllowQRPreview(ctx context.Context, userID string) (bool, time.Duration)
+// QRLogoLimiter caps QR logo reads per user (ratelimit.Limiter).
+type QRLogoLimiter interface {
+	AllowQRLogo(ctx context.Context, userID string) (bool, time.Duration)
 }
 
-// SetQRPreviewLimiter enables per-user limits on POST /v1/routes/{uuid}/qr/preview.
-func (h *Handler) SetQRPreviewLimiter(l QRPreviewLimiter) { h.qrPreviewLimiter = l }
+// SetQRLogoLimiter enables per-user limits on GET /v1/routes/{uuid}/qr/logo.
+func (h *Handler) SetQRLogoLimiter(l QRLogoLimiter) { h.qrLogoLimiter = l }
 
 // decodeQRStyle reads one strict, size-capped style object; it writes the 400 itself.
 func decodeQRStyle(w http.ResponseWriter, r *http.Request) (qr.Style, bool) {
@@ -120,50 +120,38 @@ func (h *Handler) RenderQR(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
-// PreviewQR renders an unsaved style (request body) inline. Same scope and renderer as
-// RenderQR; format is png|svg and size is capped at usecase.PreviewMaxSize.
-func (h *Handler) PreviewQR(w http.ResponseWriter, r *http.Request) {
+// QRLogo streams a same-account profile avatar or cover for the browser QR editor, so files
+// drawn in the browser can embed the logo without reaching the storage origin (TEC-1271).
+func (h *Handler) QRLogo(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(r.PathValue("uuid"))
 	if err != nil {
 		qrError(w, r, qr.ErrInvalid)
 		return
 	}
-	format := r.URL.Query().Get("format")
-	if format == "" {
-		format = "png"
-	}
-	size := 512
-	if raw := r.URL.Query().Get("size"); raw != "" {
-		size, err = strconv.Atoi(raw)
-		if err != nil {
-			qrError(w, r, qr.ErrInvalid)
-			return
-		}
+	profileUUID, err := uuid.Parse(r.URL.Query().Get("profile_uuid"))
+	if err != nil {
+		qrError(w, r, qr.ErrInvalid)
+		return
 	}
 	p := authctx.MustPrincipal(r.Context())
-	if h.qrPreviewLimiter != nil {
-		if ok, retry := h.qrPreviewLimiter.AllowQRPreview(r.Context(), p.UserID.String()); !ok {
+	if h.qrLogoLimiter != nil {
+		if ok, retry := h.qrLogoLimiter.AllowQRLogo(r.Context(), p.UserID.String()); !ok {
 			if retry > 0 {
 				w.Header().Set("Retry-After", strconv.Itoa(int(retry.Seconds())+1))
 			}
-			response.TooManyRequests(w, r, "Too many QR previews. Try again later.")
+			response.TooManyRequests(w, r, "Too many QR logo requests. Try again later.")
 			return
 		}
 	}
-	style, ok := decodeQRStyle(w, r)
-	if !ok {
-		return
-	}
-	data, ct, err := h.svc.PreviewQR(r.Context(), id, p.Account, style, format, size)
+	data, ct, err := h.svc.QRLogo(r.Context(), id, p.Account, profileUUID, r.URL.Query().Get("field"))
 	if err != nil {
 		qrError(w, r, err)
 		return
 	}
 	w.Header().Set("Content-Type", ct)
-	w.Header().Set("Cache-Control", "private, no-store")
+	w.Header().Set("Cache-Control", "private, max-age=300")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	// The SVG is inert markup with an inline data: logo; never let it run anything if opened directly.
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
 	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	_, _ = w.Write(data)
 }

@@ -176,7 +176,7 @@ test("every dynamic editor key resolves (check-i18n cannot expand them)", () => 
 
 test("default design matches qr.DefaultStyle (TEC-1273)", () => {
   const d = normalizeQrStyle(DEFAULT_QR_STYLE);
-  assert.equal(d.body_shape, "rounded-pointed");
+  assert.equal(d.body_shape, "smooth");
   assert.equal(d.eye_frame_shape, "rounded-large");
   assert.equal(d.eye_ball_shape, "rounded");
   assert.equal(d.foreground, "#000000");

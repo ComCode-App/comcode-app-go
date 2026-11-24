@@ -9,7 +9,7 @@ package qr
 // into one outline; "-in" shapes also fill the inner (concave) corners between modules.
 var BodyShapes = []string{
 	"square", "rounded-square", "circle", "small-dot", "mosaic", "spaced-square", "diamond", "star",
-	"fluid", "chamfer", "chamfer-soft", "rounded-in", "rounded-in-soft", "pointed-in", "pointed-in-soft",
+	"fluid", "smooth", "chamfer", "chamfer-soft", "rounded-in", "rounded-in-soft", "pointed-in", "pointed-in-soft",
 	"pointed", "pointed-soft", "leaf", "rounded-pointed", "chamfer-leaf",
 	"capsule-horizontal", "capsule-vertical",
 }
@@ -68,6 +68,7 @@ var bodySpecs = map[string]bodySpec{
 	"diamond":            {Kind: bodyDiamond},
 	"star":               {Kind: bodyStar},
 	"fluid":              {Kind: bodyConnected, Outer: all4(rnd(.5))},
+	"smooth":             {Kind: bodyConnected, Outer: all4(rnd(.3))}, // rounded square alone, merged in runs
 	"chamfer":            {Kind: bodyConnected, Outer: all4(cut(.3))},
 	"chamfer-soft":       {Kind: bodyConnected, Outer: all4(cut(.2)), Inner: cut(.2)},
 	"rounded-in":         {Kind: bodyConnected, Inner: rnd(.5)},

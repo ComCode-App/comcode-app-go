@@ -576,7 +576,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	profilesHandler.SetLegacyResolver(routesSvc)
 	profilesSvc.SetLinkPresentations(routesSvc)
 	routesHandler := routeshandler.New(routesSvc)
-	routesHandler.SetQRPreviewLimiter(ratelimit.New(deps.Redis, cfg.App.Env))
+	routesHandler.SetQRLogoLimiter(ratelimit.New(deps.Redis, cfg.App.Env))
 	routesHandler.SetPasscodeLimiter(ratelimit.New(deps.Redis, cfg.App.Env))
 	routesmodule.RegisterRoutes(mux, routesHandler, tokens, loader)
 	cardsRepo := cardsrepo.NewPostgres(deps.Queries)

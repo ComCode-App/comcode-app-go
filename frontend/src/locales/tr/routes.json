@@ -196,6 +196,7 @@
   "qr.shape_body_diamond": "Elmas",
   "qr.shape_body_star": "Yıldız",
   "qr.shape_body_fluid": "Akışkan",
+  "qr.shape_body_smooth": "Yumuşak yuvarlak",
   "qr.shape_body_chamfer": "Pah kırılmış",
   "qr.shape_body_chamfer-soft": "Yumuşak pah",
   "qr.shape_body_rounded-in": "İçe yuvarlak",

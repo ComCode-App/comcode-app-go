@@ -43,7 +43,7 @@ func (f *fakeQRStore) GetQR(_ context.Context, id uuid.UUID, accountID int64) (*
 	if !ok {
 		style = qr.DefaultStyle()
 	}
-	return &repository.RouteQR{Path: "s/preview", Style: style}, nil
+	return &repository.RouteQR{Path: "s/qr", Style: style}, nil
 }
 
 func (f *fakeQRStore) PutQR(_ context.Context, id uuid.UUID, _ int64, style qr.Style) error {
@@ -60,15 +60,16 @@ func (f *fakeQRStore) GetLogoURL(_ context.Context, id uuid.UUID, accountID int6
 	return l.url, nil
 }
 
-type previewFixture struct {
+type qrFixture struct {
 	svc     *usecase.Service
 	store   *fakeQRStore
 	route   uuid.UUID
 	account authctx.Account
 	logo    uuid.UUID
+	logoPNG []byte
 }
 
-func newPreviewFixture(t *testing.T) previewFixture {
+func newQRFixture(t *testing.T) qrFixture {
 	t.Helper()
 	mem := storage.NewMemory()
 	store := newFakeQRStore()
@@ -89,86 +90,68 @@ func newPreviewFixture(t *testing.T) previewFixture {
 		account int64
 		url     string
 	}{account.ID, mem.PublicURL(key)}
-	return previewFixture{svc: svc, store: store, route: route, account: account, logo: logo}
+	return qrFixture{svc: svc, store: store, route: route, account: account, logo: logo, logoPNG: encoded.Bytes()}
 }
 
-func TestPreviewQRMatchesSavedRender(t *testing.T) {
-	f := newPreviewFixture(t)
+func TestQRLogoReturnsTheStoredMedia(t *testing.T) {
+	f := newQRFixture(t)
+	data, ct, err := f.svc.QRLogo(context.Background(), f.route, f.account, f.logo, "avatar")
+	if err != nil || ct != "image/png" {
+		t.Fatalf("logo: %s %v", ct, err)
+	}
+	if !bytes.Equal(data, f.logoPNG) {
+		t.Fatal("logo bytes differ from the stored avatar")
+	}
+	// Account members without a write role can read it: the editor shows logos to every reader.
+	member := authctx.Account{ID: f.account.ID, Role: "member"}
+	if _, _, err := f.svc.QRLogo(context.Background(), f.route, member, f.logo, "avatar"); err != nil {
+		t.Fatalf("member: %v", err)
+	}
+}
+
+// The browser draws the saved style with this logo; the server render embeds the same media.
+func TestQRLogoIsTheMediaServerRendersUse(t *testing.T) {
+	f := newQRFixture(t)
 	ctx := context.Background()
 	style := qr.DefaultStyle()
-	style.Foreground = "#123456"
-	style.Module = "dots"
-	style.Eye = "circle"
-	style.QuietZone = 6
 	style.LogoProfileUUID = &f.logo
 	style.LogoField = "avatar"
-	for _, format := range []string{"png", "svg"} {
-		preview, ct, err := f.svc.PreviewQR(ctx, f.route, f.account, style, format, 512)
-		if err != nil {
-			t.Fatalf("%s preview: %v", format, err)
-		}
-		if f.store.puts != 0 {
-			t.Fatal("preview persisted the style")
-		}
-		// Saving the same style and downloading must give byte-identical output.
-		if _, err := f.svc.PutQR(ctx, f.route, f.account, style); err != nil {
-			t.Fatal(err)
-		}
-		rendered, renderCT, err := f.svc.RenderQR(ctx, f.route, f.account, format, 512)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if ct != renderCT || !bytes.Equal(preview, rendered) {
-			t.Fatalf("%s preview differs from download", format)
-		}
-		f.store.puts = 0
-		delete(f.store.saved, f.route)
+	if _, err := f.svc.PutQR(ctx, f.route, f.account, style); err != nil {
+		t.Fatal(err)
+	}
+	svg, _, err := f.svc.RenderQR(ctx, f.route, f.account, "svg", 512)
+	if err != nil || !strings.Contains(string(svg), "data:image/png;base64,") {
+		t.Fatalf("server render with logo: %v", err)
 	}
 }
 
-func TestPreviewQRRejectsOutOfScopeAndInvalid(t *testing.T) {
-	f := newPreviewFixture(t)
+func TestQRLogoRejectsOutOfScopeAndInvalid(t *testing.T) {
+	f := newQRFixture(t)
 	ctx := context.Background()
-	ok := qr.DefaultStyle()
 	foreign := authctx.Account{ID: 99, Role: authctx.AccountRoleOwner}
-	if _, _, err := f.svc.PreviewQR(ctx, f.route, foreign, ok, "png", 512); !errors.Is(err, usecase.ErrRouteNotFound) {
+	if _, _, err := f.svc.QRLogo(ctx, f.route, foreign, f.logo, "avatar"); !errors.Is(err, usecase.ErrRouteNotFound) {
 		t.Fatalf("foreign route: %v", err)
 	}
-	// Previews need no write role (nothing is stored) but stay account-scoped.
-	member := authctx.Account{ID: f.account.ID, Role: "member"}
-	if _, _, err := f.svc.PreviewQR(ctx, f.route, member, ok, "svg", 512); err != nil {
-		t.Fatalf("member preview: %v", err)
-	}
-	lowContrast := ok
-	lowContrast.Foreground = "#eeeeee"
-	foreignLogo := ok
 	other := uuid.New()
 	f.store.logos[other] = struct {
 		account int64
 		url     string
 	}{99, "/api/v1/storage/stream/profiles/" + other.String() + "/avatar.png"}
-	foreignLogo.LogoProfileUUID = &other
-	foreignLogo.LogoField = "avatar"
 	cases := []struct {
-		name   string
-		style  qr.Style
-		format string
-		size   int
+		name    string
+		profile uuid.UUID
+		field   string
 	}{
-		{"pdf not offered", ok, "pdf", 512},
-		{"unknown format", ok, "gif", 512},
-		{"too small", ok, "png", usecase.PreviewMinSize - 1},
-		{"too large", ok, "png", usecase.PreviewMaxSize + 1},
-		{"low contrast", lowContrast, "png", 512},
-		{"foreign logo", foreignLogo, "png", 512},
+		{"foreign profile", other, "avatar"},
+		{"unknown profile", uuid.New(), "avatar"},
+		{"nil profile", uuid.Nil, "avatar"},
+		{"unknown field", f.logo, "banner"},
+		{"empty field", f.logo, ""},
+		{"no cover uploaded", f.logo, "cover"},
 	}
 	for _, tc := range cases {
-		if _, _, err := f.svc.PreviewQR(ctx, f.route, f.account, tc.style, tc.format, tc.size); !errors.Is(err, qr.ErrInvalid) {
+		if _, _, err := f.svc.QRLogo(ctx, f.route, f.account, tc.profile, tc.field); !errors.Is(err, qr.ErrInvalid) {
 			t.Errorf("%s: %v", tc.name, err)
 		}
-	}
-	svg, _, err := f.svc.PreviewQR(ctx, f.route, f.account, ok, "svg", usecase.PreviewMaxSize)
-	if err != nil || !strings.HasPrefix(string(svg), "<svg") {
-		t.Fatalf("max size svg: %v", err)
 	}
 }

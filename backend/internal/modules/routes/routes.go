@@ -34,7 +34,7 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/routes/{uuid}/qr", authn(require(rbac.PermAppRoutesRead)(http.HandlerFunc(h.GetQR))))
 	mux.Handle("PUT /v1/routes/{uuid}/qr", authn(require(rbac.PermAppRoutesWrite)(http.HandlerFunc(h.PutQR))))
 	mux.Handle("GET /v1/routes/{uuid}/qr/render", authn(require(rbac.PermAppRoutesRead)(http.HandlerFunc(h.RenderQR))))
-	mux.Handle("POST /v1/routes/{uuid}/qr/preview", authn(require(rbac.PermAppRoutesRead)(http.HandlerFunc(h.PreviewQR))))
+	mux.Handle("GET /v1/routes/{uuid}/qr/logo", authn(require(rbac.PermAppRoutesRead)(http.HandlerFunc(h.QRLogo))))
 
 	// Public Resolvers
 	mux.HandleFunc("GET /v1/r/{path...}", h.Resolve)
