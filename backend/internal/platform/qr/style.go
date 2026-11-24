@@ -82,7 +82,7 @@ func legacyStyle() Style {
 // Default design shapes (TEC-1273): what a route without a saved style is drawn with and what
 // the editor's "reset to default" selects.
 const (
-	DefaultBodyShape     = "rounded-pointed"
+	DefaultBodyShape     = "smooth"
 	DefaultEyeFrameShape = "rounded-large"
 	DefaultEyeBallShape  = "rounded"
 )

@@ -39,7 +39,7 @@
     "style": {
       "foreground": "#7c2d12",
       "background": "#fff7ed",
-      "body_shape": "rounded-pointed",
+      "body_shape": "smooth",
       "eye_frame_shape": "leaf",
       "eye_ball_shape": "leaf",
       "fill_mode": "radial",

@@ -12486,10 +12486,10 @@ export interface components {
              */
             eye: "square" | "rounded" | "circle";
             /**
-             * @description Data module shape. Connected shapes merge with orthogonal neighbors. A route without a saved style uses rounded-pointed.
+             * @description Data module shape. Connected shapes merge with orthogonal neighbors. A route without a saved style uses smooth.
              * @enum {string}
              */
-            body_shape?: "square" | "rounded-square" | "circle" | "small-dot" | "mosaic" | "spaced-square" | "diamond" | "star" | "fluid" | "chamfer" | "chamfer-soft" | "rounded-in" | "rounded-in-soft" | "pointed-in" | "pointed-in-soft" | "pointed" | "pointed-soft" | "leaf" | "rounded-pointed" | "chamfer-leaf" | "capsule-horizontal" | "capsule-vertical";
+            body_shape?: "square" | "rounded-square" | "circle" | "small-dot" | "mosaic" | "spaced-square" | "diamond" | "star" | "fluid" | "smooth" | "chamfer" | "chamfer-soft" | "rounded-in" | "rounded-in-soft" | "pointed-in" | "pointed-in-soft" | "pointed" | "pointed-soft" | "leaf" | "rounded-pointed" | "chamfer-leaf" | "capsule-horizontal" | "capsule-vertical";
             /**
              * @description Shape of the 7x7 finder ring. A route without a saved style uses rounded-large.
              * @enum {string}

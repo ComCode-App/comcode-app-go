@@ -234,7 +234,7 @@ func TestNormalizeMapsV1Fields(t *testing.T) {
 			t.Fatalf("column default %q must be the default style: %+v %v", raw, empty, err)
 		}
 	}
-	if d := DefaultStyle(); d.BodyShape != "rounded-pointed" || d.EyeFrameShape != "rounded-large" || d.EyeBallShape != "rounded" ||
+	if d := DefaultStyle(); d.BodyShape != "smooth" || d.EyeFrameShape != "rounded-large" || d.EyeBallShape != "rounded" ||
 		d.Foreground != "#000000" || d.Background != "#ffffff" || d.QuietZone != 4 || d.LogoProfileUUID != nil || d.Validate() != nil {
 		t.Fatalf("default design (TEC-1273): %+v", d)
 	}
