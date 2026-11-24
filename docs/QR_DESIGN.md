@@ -3,7 +3,7 @@
 Route QR codes (TEC-1268) are drawn by one design engine written twice:
 
 - Go: `backend/internal/platform/qr/` (`style.go`, `path.go`, `shapes.go`, `render.go`). It serves
-  `/v1/routes/{uuid}/qr/render` (SVG, PNG, PDF), `/qr/preview` and every server-side use.
+  `/v1/routes/{uuid}/qr/render` (SVG, PNG, PDF) and every server-side use.
 - TypeScript: `frontend/src/features/route-qr/lib/qr-engine.ts`. The editor uses it for instant
   previews, shape swatches and browser-side SVG/PNG downloads.
 
@@ -140,8 +140,11 @@ Every eye shape therefore keeps:
 links, cards and the profile public page card:
 
 - **Preview:** the engine draws the draft with `GET /qr`'s `matrices` (H with a logo), so the
-  preview is the exact file; no server round trip while editing. A logo the browser cannot read
-  (for example a cross-origin bucket without CORS) is shown on top of the preview instead.
+  preview is the exact file; no server round trip while editing. The logo is read through
+  `GET /v1/routes/{uuid}/qr/logo?profile_uuid=…&field=avatar|cover` (same origin, same checks as
+  server renders, TEC-1271) and embedded as a `data:` URL, so browser SVG/PNG files include it.
+  If that read fails, the logo is shown on top of the preview and browser downloads point to the
+  server download instead.
 - **Tabs:** templates (`data/qr-templates.json`, 10 own designs; a template keeps the logo, its
   size and mode, and the quiet zone), shapes (swatches drawn by the engine, per-eye flips and
   "make symmetric", quiet zone), colors (single color / linear / radial, angle, gradient on eyes,
