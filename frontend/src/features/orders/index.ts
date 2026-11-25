@@ -2,7 +2,7 @@ export { OrdersPage } from "./components/orders-page";
 export { OrdersPipelinePage } from "./components/orders-pipeline-page";
 export { MyOrdersPage } from "./components/my-orders-page";
 export { SubscriberOrderDialog } from "./components/subscriber-order-dialog";
-export { SubscriberOrderDetailDialog } from "./components/subscriber-order-detail-dialog";
+export { SubscriberOrderDetailPage } from "./components/subscriber-order-detail-page";
 export { OrderKPICards } from "./components/order-kpi-cards";
 export { OrderKanbanBoard } from "./components/order-kanban-board";
 export { OrderDetailDialog } from "./components/order-detail-dialog";
