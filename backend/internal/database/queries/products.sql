@@ -202,3 +202,11 @@ RETURNING *;
 -- name: DeleteProductVariant :exec
 DELETE FROM product_variants
 WHERE uuid = $1;
+
+-- name: SetProductCategory :exec
+-- UpdateProduct keeps the category when none is given; an import rollback (TEC-596) uses this
+-- to put back exactly the category a product had before, none included.
+UPDATE products
+SET category_id = sqlc.narg(category_id)
+WHERE uuid = sqlc.arg(uuid)
+  AND deleted_at IS NULL;

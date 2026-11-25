@@ -51,6 +51,9 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/platform/activity/export", middleware.Chain(
 		http.HandlerFunc(h.RequestActivityExport), authn, require(rbac.PermPlatformActivityRead), requireStepUp,
 	))
+	mux.Handle("POST /v1/platform/products/export", middleware.Chain(
+		http.HandlerFunc(h.RequestProductsExport), authn, require(rbac.PermPlatformProductsExport), requireStepUp,
+	))
 	mux.Handle("POST /v1/platform/orders/export", middleware.Chain(
 		http.HandlerFunc(h.RequestOrdersExport), authn, require(rbac.PermPlatformOrdersExport), requireStepUp,
 	))

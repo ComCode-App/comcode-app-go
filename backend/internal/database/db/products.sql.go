@@ -660,6 +660,25 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]L
 	return items, nil
 }
 
+const setProductCategory = `-- name: SetProductCategory :exec
+UPDATE products
+SET category_id = $1
+WHERE uuid = $2
+  AND deleted_at IS NULL
+`
+
+type SetProductCategoryParams struct {
+	CategoryID pgtype.Int8 `json:"category_id"`
+	Uuid       uuid.UUID   `json:"uuid"`
+}
+
+// UpdateProduct keeps the category when none is given; an import rollback (TEC-596) uses this
+// to put back exactly the category a product had before, none included.
+func (q *Queries) SetProductCategory(ctx context.Context, arg SetProductCategoryParams) error {
+	_, err := q.db.Exec(ctx, setProductCategory, arg.CategoryID, arg.Uuid)
+	return err
+}
+
 const updateProduct = `-- name: UpdateProduct :one
 UPDATE products
 SET category_id = COALESCE($1, category_id),

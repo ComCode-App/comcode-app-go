@@ -3332,6 +3332,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/products/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue an export of the product catalog
+         * @description Product catalog export (TEC-596), resource `platform.products`. Honors the filters of
+         *     `GET /v1/platform/products`: `q` (name, slug, SKU), `status`, `product_type`; list order
+         *     (display order, then newest), at most 10,000 rows. Columns are the importable fields (slug,
+         *     name, SKU, status, product type, category slug, price, currency, VAT rate, stock, custom
+         *     print, display order, short and long description, SEO title/description/keywords) plus
+         *     created/updated time and UUID, so a file can be edited and imported back. Download it from
+         *     `/v1/platform/exports/{uuid}/download`. Requires `platform.products.export` and step-up.
+         */
+        post: operations["postPlatformProductsExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/products/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a product catalog import file
+         * @description Requires `platform.products.import` (TEC-596). Rows are matched by slug (normalized like the
+         *     product form does); a live product with that slug is updated, otherwise one is created.
+         *     Columns: slug and name (required), sku, status (active|draft|archived), product_type,
+         *     category (slug or UUID of a platform category), base_price (required for new products),
+         *     currency, tax_rate, stock_quantity, allow_custom_print, display_order, short_description,
+         *     description, meta_title, meta_description, meta_keywords. Empty cells keep the current value
+         *     on update. Rules: price >= 0 and tax rate 0-100, both with at most two decimals; stock a
+         *     whole number >= 0. Variants, images, 3D models and SEO image/canonical URL are not imported.
+         *     Continue with mapping, preview (dry run with row errors), confirm and rollback under
+         *     `/v1/platform/imports/{uuid}`.
+         */
+        post: operations["postPlatformProductsImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/products/import/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the product import sample
+         * @description Requires `platform.products.import`.
+         */
+        get: operations["getPlatformProductsImportSample"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/products": {
         parameters: {
             query?: never;
@@ -18707,6 +18782,109 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeResourceMeta"];
                 };
             };
+        };
+    };
+    postPlatformProductsExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    format: "pdf" | "xlsx" | "csv" | "json";
+                    /**
+                     * @default tr
+                     * @enum {string}
+                     */
+                    locale?: "tr" | "en";
+                    /** @description List filters, as on `GET /v1/platform/products`. */
+                    query?: {
+                        q?: string;
+                        status?: string;
+                        product_type?: string;
+                    } & {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGeneric"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postPlatformProductsImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /** @enum {string} */
+                    format?: "csv" | "tsv" | "xlsx" | "json";
+                    /** @enum {string} */
+                    locale?: "tr" | "en";
+                };
+            };
+        };
+        responses: {
+            /** @description Import job created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeImportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    getPlatformProductsImportSample: {
+        parameters: {
+            query?: {
+                format?: "csv" | "tsv" | "xlsx" | "json";
+                locale?: "tr" | "en";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sample file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listPlatformProducts: {

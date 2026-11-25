@@ -13,6 +13,7 @@ import {
   useServerListState,
 } from "@/components/entity";
 import { Button } from "@/components/ui/button";
+import { ResourceIOToolbar } from "@/features/io";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { useLocale } from "@/providers/locale-provider";
@@ -51,6 +52,12 @@ export function ProductsPage() {
   const listQuery = useQuery({
     queryKey: productsQueryKeys.list(listParams),
     queryFn: () => productsService.list(listParams),
+  });
+  // Capabilities (export, import) for the I/O toolbar (TEC-596).
+  const metaQuery = useQuery({
+    queryKey: productsQueryKeys.meta(),
+    queryFn: () => productsService.meta(),
+    staleTime: 5 * 60_000,
   });
 
   const handleCreate = useCallback(() => {
@@ -166,7 +173,14 @@ export function ProductsPage() {
           <EntityToolbar
             onRefresh={() => void listQuery.refetch()}
             refreshDisabled={listQuery.isFetching}
-          />
+          >
+            <ResourceIOToolbar
+              resource="platform.products"
+              query={{ q: listParams.q }}
+              capabilities={metaQuery.data?.capabilities}
+              onImportComplete={() => void listQuery.refetch()}
+            />
+          </EntityToolbar>
         }
       />
 

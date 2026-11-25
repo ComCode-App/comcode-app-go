@@ -81,6 +81,8 @@
   "labels.platform.categories.write": "Ürün kategorilerini yönet",
   "labels.platform.products.read": "Ürün kataloğunu görüntüle",
   "labels.platform.products.write": "Ürün kataloğunu yönet",
+  "labels.platform.products.export": "Ürünleri dışa aktar",
+  "labels.platform.products.import": "Ürünleri içe aktar",
   "labels.platform.orders.read": "Siparişleri görüntüle",
   "labels.platform.orders.export": "Siparişleri dışa aktar",
   "labels.platform.orders.write": "Siparişleri yönet",
