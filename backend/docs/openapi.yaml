@@ -17632,7 +17632,14 @@ components:
         product_type: { type: string, maxLength: 32 }
         base_price: { type: number, minimum: 0, multipleOf: 0.01 }
         currency: { type: string, maxLength: 8 }
-        tax_rate: { type: number, minimum: 0, maximum: 100, multipleOf: 0.01 }
+        tax_rate:
+          type: number
+          minimum: 0
+          maximum: 100
+          multipleOf: 0.01
+          description: |
+            VAT in percent. Omitted: 20 on create, unchanged on update. An explicit 0 is stored
+            as 0 % VAT (TEC-1301).
         stock_quantity: { type: integer, minimum: 0 }
         sku: { type: string, maxLength: 64 }
         allow_custom_print: { type: boolean }

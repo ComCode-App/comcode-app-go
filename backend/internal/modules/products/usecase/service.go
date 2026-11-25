@@ -272,6 +272,7 @@ func (s *Service) UploadImage(ctx context.Context, id uuid.UUID, file io.Reader,
 	}
 
 	newImages := append(prod.Images, imageURL)
+	taxRate := prod.TaxRate
 	updateInput := model.UpsertProductInput{
 		Name:             prod.Name,
 		Slug:             prod.Slug,
@@ -281,7 +282,7 @@ func (s *Service) UploadImage(ctx context.Context, id uuid.UUID, file io.Reader,
 		ProductType:      prod.ProductType,
 		BasePrice:        prod.BasePrice,
 		Currency:         prod.Currency,
-		TaxRate:          prod.TaxRate,
+		TaxRate:          &taxRate,
 		StockQuantity:    prod.StockQuantity,
 		SKU:              prod.SKU,
 		AllowCustomPrint: prod.AllowCustomPrint,
