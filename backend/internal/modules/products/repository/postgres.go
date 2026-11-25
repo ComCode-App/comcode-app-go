@@ -44,6 +44,7 @@ func (r *PostgresRepository) List(ctx context.Context, q *string, categoryID *in
 		}
 		result = append(result, model.ProductSummary{
 			UUID:             row.Uuid.String(),
+			CategoryUUID:     pgUUIDToString(row.CategoryUuid),
 			CategoryName:     pgtypeToString(row.CategoryName),
 			CategorySlug:     pgtypeToString(row.CategorySlug),
 			Name:             row.Name,
@@ -166,7 +167,8 @@ func (r *PostgresRepository) Create(ctx context.Context, input model.UpsertProdu
 		return nil, err
 	}
 
-	return toProductDetailFromProduct(row), nil
+	// Read it back with the joined category, so the response carries category_uuid.
+	return r.GetByUUID(ctx, row.Uuid)
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, input model.UpsertProductInput, categoryID *int64, slug string) (*model.ProductDetail, error) {
@@ -212,7 +214,7 @@ func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, input mod
 		}
 		return nil, err
 	}
-	return toProductDetailFromProduct(row), nil
+	return r.GetByUUID(ctx, row.Uuid)
 }
 
 func (r *PostgresRepository) Update3DViewbox(ctx context.Context, id uuid.UUID, viewbox model.Model3DViewbox, fileURL, usdzURL string) (*model.ProductDetail, error) {
@@ -421,6 +423,7 @@ func toProductDetailFromGetRow(row db.GetProductByUUIDRow) *model.ProductDetail 
 		UUID:             row.Uuid.String(),
 		CategoryID:       catID,
 		CategoryName:     pgtypeToString(row.CategoryName),
+		CategoryUUID:     pgUUIDToString(row.CategoryUuid),
 		CategorySlug:     pgtypeToString(row.CategorySlug),
 		Name:             row.Name,
 		Slug:             row.Slug,
@@ -469,6 +472,7 @@ func toProductDetailFromSlugRow(row db.GetProductBySlugRow) *model.ProductDetail
 		UUID:             row.Uuid.String(),
 		CategoryID:       catID,
 		CategoryName:     pgtypeToString(row.CategoryName),
+		CategoryUUID:     pgUUIDToString(row.CategoryUuid),
 		CategorySlug:     pgtypeToString(row.CategorySlug),
 		Name:             row.Name,
 		Slug:             row.Slug,
@@ -555,6 +559,14 @@ func int64ToPgtype(i *int64) pgtype.Int8 {
 		return pgtype.Int8{Valid: false}
 	}
 	return pgtype.Int8{Int64: *i, Valid: true}
+}
+
+// pgUUIDToString is the uuid of a joined row, or "" when there is none.
+func pgUUIDToString(u pgtype.UUID) string {
+	if !u.Valid {
+		return ""
+	}
+	return uuid.UUID(u.Bytes).String()
 }
 
 func pgtypeToString(t pgtype.Text) string {

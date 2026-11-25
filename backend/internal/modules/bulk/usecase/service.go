@@ -19,6 +19,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/queue"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -56,23 +57,46 @@ type ExecuteResult struct {
 	Persisted bool
 }
 
-// JobAccess limits which jobs a caller reaches. AccountID 0 means platform jobs only; a positive
-// AccountID means that account's jobs only. AnyActor lets the caller reach other actors' jobs
-// (company owners/admins); otherwise only the caller's own.
+// JobAccess limits which jobs a caller reaches. AccountID 0 means platform jobs only (no
+// account); a positive AccountID means that account's jobs of Resource only, so each app route
+// family (/v1/company/bulk, /v1/cards/bulk, ...) reaches its own resource's jobs and nothing else
+// (TEC-1300). AnyActor lets the caller reach other actors' jobs (company owners/admins);
+// otherwise only the caller's own.
 type JobAccess struct {
 	AccountID int64
+	Resource  string
 	AnyActor  bool
 }
 
-func (a JobAccess) allows(row db.BulkJob, actorID int64) bool {
-	if a.AccountID == 0 {
-		if row.AccountID.Valid {
-			return false
-		}
-	} else if !row.AccountID.Valid || row.AccountID.Int64 != a.AccountID {
-		return false
+// loadJob reads the job the caller reaches through access, filtered in the query: a platform
+// job (no account) for AccountID 0, otherwise a job of that account and Resource. An account
+// access without a resource reaches nothing. Every miss, including another actor's job without
+// AnyActor, is ErrNotFound so a job's existence does not leak.
+func (s *Service) loadJob(ctx context.Context, jobUUID uuid.UUID, actorID int64, access JobAccess) (db.BulkJob, error) {
+	var row db.BulkJob
+	var err error
+	switch {
+	case access.AccountID == 0:
+		row, err = s.q.GetPlatformBulkJob(ctx, jobUUID)
+	case access.AccountID > 0 && access.Resource != "":
+		row, err = s.q.GetAccountBulkJob(ctx, db.GetAccountBulkJobParams{
+			Uuid:      jobUUID,
+			AccountID: pgtype.Int8{Int64: access.AccountID, Valid: true},
+			Resource:  access.Resource,
+		})
+	default:
+		return db.BulkJob{}, ErrNotFound
 	}
-	return a.AnyActor || row.ActorID == actorID
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return db.BulkJob{}, ErrNotFound
+		}
+		return db.BulkJob{}, err
+	}
+	if !access.AnyActor && row.ActorID != actorID {
+		return db.BulkJob{}, ErrNotFound
+	}
+	return row, nil
 }
 
 type BulkJobView struct {
@@ -295,9 +319,9 @@ func (s *Service) runJob(ctx context.Context, jobID int64, notify bool) error {
 // Rollback reverts a completed job within its window. access decides which jobs the caller
 // reaches; account-scoped adapters re-check the caller's rights for every reverted item.
 func (s *Service) Rollback(ctx context.Context, jobUUID uuid.UUID, actorID int64, access JobAccess) (BulkJobView, error) {
-	job, err := s.q.GetBulkJobByUUID(ctx, jobUUID)
-	if err != nil || !access.allows(job, actorID) {
-		return BulkJobView{}, ErrNotFound
+	job, err := s.loadJob(ctx, jobUUID, actorID, access)
+	if err != nil {
+		return BulkJobView{}, err
 	}
 	ctx = bulkengine.WithActor(ctx, actorID)
 	if job.AccountID.Valid {
@@ -370,21 +394,18 @@ func (s *Service) ListJobs(ctx context.Context, actorID int64, admin bool, limit
 	return out, total, nil
 }
 
-// ListAccountJobs lists one account's app jobs. Without access.AnyActor only the caller's own.
-func (s *Service) ListAccountJobs(ctx context.Context, actorID int64, access JobAccess, resource string, limit, offset int32) ([]BulkJobView, int64, error) {
-	if access.AccountID <= 0 {
+// ListAccountJobs lists one account's app jobs of access.Resource. Without access.AnyActor only
+// the caller's own.
+func (s *Service) ListAccountJobs(ctx context.Context, actorID int64, access JobAccess, limit, offset int32) ([]BulkJobView, int64, error) {
+	if access.AccountID <= 0 || access.Resource == "" {
 		return nil, 0, ErrForbidden
 	}
 	account := pgtype.Int8{Int64: access.AccountID, Valid: true}
-	params := db.ListBulkJobsForAccountParams{AccountID: account, LimitCount: limit, OffsetCount: offset}
-	count := db.CountBulkJobsForAccountParams{AccountID: account}
+	params := db.ListBulkJobsForAccountParams{AccountID: account, Resource: access.Resource, LimitCount: limit, OffsetCount: offset}
+	count := db.CountBulkJobsForAccountParams{AccountID: account, Resource: access.Resource}
 	if !access.AnyActor {
 		params.ActorID = pgtype.Int8{Int64: actorID, Valid: true}
 		count.ActorID = params.ActorID
-	}
-	if resource != "" {
-		params.Resource = pgtype.Text{String: resource, Valid: true}
-		count.Resource = params.Resource
 	}
 	rows, err := s.q.ListBulkJobsForAccount(ctx, params)
 	if err != nil {
@@ -403,15 +424,16 @@ func (s *Service) ListAccountJobs(ctx context.Context, actorID int64, access Job
 
 // GetAccountJob returns one job the caller reaches through access (404 otherwise).
 func (s *Service) GetAccountJob(ctx context.Context, jobUUID uuid.UUID, actorID int64, access JobAccess) (BulkJobView, error) {
-	row, err := s.q.GetBulkJobByUUID(ctx, jobUUID)
-	if err != nil || !access.allows(row, actorID) {
-		return BulkJobView{}, ErrNotFound
+	row, err := s.loadJob(ctx, jobUUID, actorID, access)
+	if err != nil {
+		return BulkJobView{}, err
 	}
 	return mapBulkJob(row), nil
 }
 
 func (s *Service) GetJob(ctx context.Context, jobUUID uuid.UUID, actorID int64, admin bool) (BulkJobView, error) {
-	row, err := s.q.GetBulkJobByUUID(ctx, jobUUID)
+	// Platform jobs only: an account's app job is not found here.
+	row, err := s.q.GetPlatformBulkJob(ctx, jobUUID)
 	if err != nil {
 		return BulkJobView{}, ErrNotFound
 	}

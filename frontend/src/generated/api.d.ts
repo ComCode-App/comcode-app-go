@@ -756,7 +756,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List bulk jobs */
+        /**
+         * List bulk jobs
+         * @description Platform jobs only (no account). App jobs of accounts (company profiles, cards) are not listed here and are 404 (TEC-1300).
+         */
         get: operations["listPlatformBulkJobs"];
         put?: never;
         post?: never;
@@ -773,7 +776,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get bulk job status */
+        /**
+         * Get bulk job status
+         * @description Platform jobs only (no account). App jobs of accounts (company profiles, cards) are not listed here and are 404 (TEC-1300).
+         */
         get: operations["getPlatformBulkJob"];
         put?: never;
         post?: never;
@@ -792,7 +798,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Roll back a completed bulk job */
+        /**
+         * Roll back a completed bulk job
+         * @description Platform jobs only (no account). App jobs of accounts (company profiles, cards) are not listed here and are 404 (TEC-1300).
+         */
         post: operations["postPlatformBulkJobRollback"];
         delete?: never;
         options?: never;
@@ -7450,7 +7459,7 @@ export interface paths {
         };
         /**
          * Bulk jobs of the active company
-         * @description Requires `app.company_profiles.bulk`. Owners/admins see every job of the account, office managers their own.
+         * @description Requires `app.company_profiles.bulk`. Only `app.company_profiles` jobs of the active account (TEC-1300). Owners/admins see every such job, office managers their own.
          */
         get: operations["listCompanyBulkJobs"];
         put?: never;
@@ -7470,7 +7479,7 @@ export interface paths {
         };
         /**
          * Get a bulk job of the active company
-         * @description Requires `app.company_profiles.bulk`. Jobs of other accounts (and other actors, for office managers) are 404.
+         * @description Requires `app.company_profiles.bulk`. Jobs of other accounts, of other resources (e.g. card jobs) and, for office managers, of other actors are 404.
          */
         get: operations["getCompanyBulkJob"];
         put?: never;
@@ -7492,7 +7501,7 @@ export interface paths {
         put?: never;
         /**
          * Roll back a bulk job of the active company
-         * @description Requires the action permission. Restores the recorded previous values; items the caller may no longer change are skipped (`rolled_back_partial`).
+         * @description Requires the action permission. Only `app.company_profiles` jobs of the active account; others are 404. Restores the recorded previous values; items the caller may no longer change are skipped (`rolled_back_partial`).
          */
         post: operations["postCompanyBulkJobRollback"];
         delete?: never;
@@ -11827,6 +11836,8 @@ export interface components {
         ProductSummary: {
             /** Format: uuid */
             uuid: string;
+            /** Format: uuid */
+            category_uuid?: string;
             category_name?: string;
             category_slug?: string;
             name: string;
@@ -11881,6 +11892,13 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Checked with the platform product form's rules (TEC-1299); a violation is
+         *     400 VALIDATION_ERROR with one `details` entry per field (`field`, `code`: required,
+         *     too_long, invalid_status, negative, too_many_decimals, out_of_range, invalid_number).
+         *     An omitted `status`, `product_type` or `currency` means the default on create
+         *     (draft, physical_card, TRY) and "keep the current value" on update.
+         */
         UpsertProductInput: {
             /** Format: uuid */
             category_uuid?: string;
@@ -11888,7 +11906,8 @@ export interface components {
             slug?: string;
             short_description?: string;
             description?: string;
-            status?: string;
+            /** @enum {string} */
+            status?: "active" | "draft" | "archived";
             product_type?: string;
             base_price: number;
             currency?: string;
@@ -19012,6 +19031,8 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeProductDetail"];
                 };
             };
+            400: components["responses"]["BadRequest"];
+            409: components["responses"]["Conflict"];
         };
     };
     getPlatformProduct: {
@@ -19062,6 +19083,9 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeProductDetail"];
                 };
             };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     deletePlatformProduct: {

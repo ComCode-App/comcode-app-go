@@ -50,6 +50,8 @@ import type {
   UpsertProductPayload,
 } from "../services/products.service";
 import { useProductMutations } from "../hooks/use-products";
+import { productServerFieldErrors } from "../lib/server-field-errors";
+import { suppressApiErrorToast } from "@/lib/api/errors";
 import { categoriesService } from "@/features/categories/services/categories.service";
 import { categoriesQueryKeys } from "@/features/categories/hooks/query-keys";
 import { ViewboxStudioModal } from "./ViewboxStudioModal";
@@ -120,6 +122,7 @@ export function ProductDialog({
     control,
     reset,
     watch,
+    setError,
     formState: { errors },
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -229,13 +232,25 @@ export function ProductDialog({
       model_3d_viewbox: currentViewbox,
     };
 
-    if (isEditing && product) {
-      await updateMutation.mutateAsync({
-        uuid: product.uuid,
-        payload: payload as UpsertProductPayload,
-      });
-    } else {
-      await createMutation.mutateAsync(payload as UpsertProductPayload);
+    try {
+      if (isEditing && product) {
+        await updateMutation.mutateAsync({
+          uuid: product.uuid,
+          payload: payload as UpsertProductPayload,
+        });
+      } else {
+        await createMutation.mutateAsync(payload as UpsertProductPayload);
+      }
+    } catch (error) {
+      // Field rules the API rejected (TEC-1299) are shown on their fields, on their tab.
+      const fieldErrors = productServerFieldErrors(error, values);
+      if (fieldErrors.length === 0) return;
+      suppressApiErrorToast(error);
+      for (const fe of fieldErrors) {
+        setError(fe.field, { type: fe.type, message: t(fe.message) });
+      }
+      setTab(fieldErrors[0]!.tab);
+      return;
     }
     onOpenChange(false);
   };
@@ -392,6 +407,11 @@ export function ProductDialog({
                         </Select>
                       )}
                     />
+                    {errors.status && (
+                      <p role="alert" className="text-destructive text-xs">
+                        {errors.status.message}
+                      </p>
+                    )}
                   </div>
                 </div>
 

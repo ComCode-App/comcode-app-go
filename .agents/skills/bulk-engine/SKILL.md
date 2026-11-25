@@ -36,7 +36,12 @@ Adapters of app data implement `bulkengine.AccountScoped` (`ValidateParams`) and
 `jobscope.From(ctx)` (account, actor, params) in every call, failing closed without it. Their jobs
 store `account_id`/`params_json`, are always persisted (inline runs too) and are reached through
 app routes with `bulkusecase.JobAccess`. Example: `modules/companyprofiles` (`app.company_profiles`,
-docs/COMPANIES.md "Bulk operations").
+docs/COMPANIES.md "Bulk operations"); `app.cards` (lock/unlock, `/v1/cards/bulk`).
+
+Each job route family reaches only its own jobs, filtered in the query (TEC-1300): set
+`JobAccess.Resource` to the family's resource (an account access without one reaches nothing),
+and `/v1/platform/bulk` reaches only platform jobs (`account_id IS NULL`). Another family's job
+is 404 and missing from the list.
 
 ## Env
 

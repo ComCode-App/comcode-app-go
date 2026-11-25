@@ -27,8 +27,8 @@ type FieldError struct {
 // whole number >= 0, SKU at most 64, currency 1-8, product type 1-32, meta title and keywords
 // at most 255. The product import (TEC-596) runs every row through it before Create/Update.
 //
-// Create and Update of the REST API do not call it yet: they accept any value today and
-// tightening them is tracked separately, so the API contract stays as it is.
+// Create and Update of the REST API run it too (TEC-1299, see validateUpsert), so the form,
+// the import and the API share one set of rules.
 func ValidateProductInput(in model.UpsertProductInput) []FieldError {
 	var errs []FieldError
 	bad := func(field, code string) { errs = append(errs, FieldError{Field: field, Code: code}) }
@@ -89,6 +89,40 @@ func ValidateProductInput(in model.UpsertProductInput) []FieldError {
 		bad("meta_keywords", "too_long")
 	}
 	return errs
+}
+
+// ValidationError is a product input that breaks the rules of ValidateProductInput. The handler
+// writes it as 400 VALIDATION_ERROR with one detail per field.
+type ValidationError struct {
+	Fields []FieldError
+}
+
+func (e *ValidationError) Error() string {
+	parts := make([]string, len(e.Fields))
+	for i, f := range e.Fields {
+		parts[i] = f.Field + ": " + f.Code
+	}
+	return "invalid product: " + strings.Join(parts, ", ")
+}
+
+// validateUpsert checks what a Create or Update request sends. Status, product type and
+// currency are optional in the API (an empty value means the default on create and "keep" on
+// update), so an empty one is not checked; every other field is written as sent and checked
+// as is.
+func validateUpsert(in model.UpsertProductInput) error {
+	if in.Status == "" {
+		in.Status = ProductStatuses[0]
+	}
+	if in.ProductType == "" {
+		in.ProductType = "physical_card"
+	}
+	if in.Currency == "" {
+		in.Currency = "TRY"
+	}
+	if errs := ValidateProductInput(in); len(errs) > 0 {
+		return &ValidationError{Fields: errs}
+	}
+	return nil
 }
 
 // twoDecimals is the form's check: at most two decimal places, as NUMERIC(…, 2) stores.

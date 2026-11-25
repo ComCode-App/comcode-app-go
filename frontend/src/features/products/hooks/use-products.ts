@@ -9,6 +9,15 @@ import {
   type UpsertVariantPayload,
 } from "../services/products.service";
 import { productsQueryKeys } from "./query-keys";
+import { ApiError } from "@/lib/api/errors";
+
+function isFieldValidationError(err: unknown) {
+  return (
+    err instanceof ApiError &&
+    err.code === "VALIDATION_ERROR" &&
+    err.details.some((d) => Boolean(d.field))
+  );
+}
 
 export function useProductMutations() {
   const queryClient = useQueryClient();
@@ -26,6 +35,8 @@ export function useProductMutations() {
       invalidate();
     },
     onError: (err: Error) => {
+      // The dialog shows field validation errors on the fields themselves.
+      if (isFieldValidationError(err)) return;
       toast.error(err?.message || t("products.error_creating"));
     },
   });
@@ -43,6 +54,8 @@ export function useProductMutations() {
       invalidate();
     },
     onError: (err: Error) => {
+      // The dialog shows field validation errors on the fields themselves.
+      if (isFieldValidationError(err)) return;
       toast.error(err?.message || t("products.error_updating"));
     },
   });

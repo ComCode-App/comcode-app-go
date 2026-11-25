@@ -20,7 +20,7 @@ func cardsAccess(p authctx.Principal) (bulkusecase.JobAccess, bool) {
 	if p.Account.ID <= 0 || !p.Account.CanWrite() {
 		return bulkusecase.JobAccess{}, false
 	}
-	return bulkusecase.JobAccess{AccountID: p.Account.ID, AnyActor: true}, true
+	return bulkusecase.JobAccess{AccountID: p.Account.ID, Resource: adapters.ResourceAppCards, AnyActor: true}, true
 }
 
 const cardsRoleRequired = "Account owner or admin role required"
@@ -81,7 +81,7 @@ func (h *Handler) CardsList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := apiquery.Parse(r.URL.Query())
-	items, total, err := h.svc.ListAccountJobs(r.Context(), p.UserInternal, access, adapters.ResourceAppCards, q.Limit, q.Offset)
+	items, total, err := h.svc.ListAccountJobs(r.Context(), p.UserInternal, access, q.Limit, q.Offset)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -89,7 +89,8 @@ func (h *Handler) CardsList(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
 }
 
-// cardsJob loads a card bulk job of the active account; jobs of other resources are not found.
+// cardsJob loads a card bulk job of the active account; jobs of other resources are not found
+// (the usecase filters by resource).
 func (h *Handler) cardsJob(w http.ResponseWriter, r *http.Request) (bulkusecase.BulkJobView, bulkusecase.JobAccess, bool) {
 	p := authctx.MustPrincipal(r.Context())
 	access, ok := cardsAccess(p)
@@ -105,10 +106,6 @@ func (h *Handler) cardsJob(w http.ResponseWriter, r *http.Request) (bulkusecase.
 	job, err := h.svc.GetAccountJob(r.Context(), id, p.UserInternal, access)
 	if err != nil {
 		writeErr(w, r, err)
-		return bulkusecase.BulkJobView{}, access, false
-	}
-	if job.Resource != adapters.ResourceAppCards {
-		response.NotFound(w, r, "Bulk job not found")
 		return bulkusecase.BulkJobView{}, access, false
 	}
 	return job, access, true

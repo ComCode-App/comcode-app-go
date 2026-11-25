@@ -104,7 +104,6 @@ type Querier interface {
 	CountAccountSmartLinksUsage(ctx context.Context, accountID int64) (int64, error)
 	CountAccountsFiltered(ctx context.Context, arg CountAccountsFilteredParams) (int64, error)
 	CountActivityEvents(ctx context.Context, arg CountActivityEventsParams) (int64, error)
-	// account-lint: cross-account platform /v1/platform/bulk admin list
 	CountAllBulkJobs(ctx context.Context) (int64, error)
 	CountAllExportJobs(ctx context.Context) (int64, error)
 	// account-lint: cross-account platform /v1/platform/imports admin list
@@ -113,7 +112,6 @@ type Querier interface {
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
 	CountBanks(ctx context.Context, arg CountBanksParams) (int64, error)
 	CountBulkJobsForAccount(ctx context.Context, arg CountBulkJobsForAccountParams) (int64, error)
-	// account-lint: cross-account platform /v1/platform/bulk: the caller's own jobs (actor_id)
 	CountBulkJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountCompanyAssetCards(ctx context.Context, arg CountCompanyAssetCardsParams) (int64, error)
 	CountCompanyAssetOrders(ctx context.Context, arg CountCompanyAssetOrdersParams) (int64, error)
@@ -296,6 +294,9 @@ type Querier interface {
 	FinishSubscriptionPaymentAttempt(ctx context.Context, arg FinishSubscriptionPaymentAttemptParams) error
 	GetAccountActivePaymentSubscription(ctx context.Context, accountID int64) (GetAccountActivePaymentSubscriptionRow, error)
 	GetAccountBranding(ctx context.Context, accountID int64) (GetAccountBrandingRow, error)
+	// An app job of one account and one resource: each app route family reaches only its own
+	// resource's jobs (TEC-1300); the actor check stays in the usecase.
+	GetAccountBulkJob(ctx context.Context, arg GetAccountBulkJobParams) (BulkJob, error)
 	GetAccountByID(ctx context.Context, id int64) (GetAccountByIDRow, error)
 	// account-lint: cross-account platform /v1/platform/accounts: any account by uuid (platform.accounts.*)
 	GetAccountByUUID(ctx context.Context, argUuid uuid.UUID) (GetAccountByUUIDRow, error)
@@ -332,8 +333,6 @@ type Querier interface {
 	GetBankByUUID(ctx context.Context, argUuid uuid.UUID) (Bank, error)
 	// account-lint: cross-account bulk worker: job id from the queue
 	GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error)
-	// account-lint: cross-account usecase checks JobAccess.allows (account + actor) or platform admin/actor
-	GetBulkJobByUUID(ctx context.Context, argUuid uuid.UUID) (BulkJob, error)
 	// Public profile pages (/{username}): canonical_profile routes + profile bank account picks.
 	// account-lint: cross-account public profile page resolver
 	// Any canonical route (active, locked or retired) whose profile and account are still live.
@@ -449,6 +448,8 @@ type Querier interface {
 	GetPlanBySlug(ctx context.Context, slug string) (Plan, error)
 	GetPlanByUUID(ctx context.Context, argUuid uuid.UUID) (Plan, error)
 	GetPlanIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	// A platform job (no account) of /v1/platform/bulk; app jobs of accounts are not found here.
+	GetPlatformBulkJob(ctx context.Context, argUuid uuid.UUID) (BulkJob, error)
 	GetPrimaryProfileByAccountID(ctx context.Context, accountID int64) (Profile, error)
 	GetProductBySlug(ctx context.Context, slug string) (GetProductBySlugRow, error)
 	GetProductByUUID(ctx context.Context, argUuid uuid.UUID) (GetProductByUUIDRow, error)
@@ -580,7 +581,7 @@ type Querier interface {
 	ListActiveSocialPlatforms(ctx context.Context) ([]SocialPlatform, error)
 	ListActiveWebhookEndpointsForEvent(ctx context.Context, arg ListActiveWebhookEndpointsForEventParams) ([]WebhookEndpoint, error)
 	ListActivityEvents(ctx context.Context, arg ListActivityEventsParams) ([]ActivityEvent, error)
-	// account-lint: cross-account platform /v1/platform/bulk admin list
+	// Platform /v1/platform/bulk admin list: every platform job (no account).
 	ListAllBulkJobs(ctx context.Context, arg ListAllBulkJobsParams) ([]BulkJob, error)
 	ListAllExportJobs(ctx context.Context, arg ListAllExportJobsParams) ([]ExportJob, error)
 	// account-lint: cross-account platform /v1/platform/imports admin list
@@ -599,9 +600,10 @@ type Querier interface {
 	ListBanks(ctx context.Context, arg ListBanksParams) ([]Bank, error)
 	ListBillingRecipients(ctx context.Context, accountID int64) ([]int64, error)
 	ListBulkChangesForJob(ctx context.Context, jobID int64) ([]BulkChange, error)
-	// App job history of one account; a non-nil actor_id limits it to that actor's jobs.
+	// App job history of one account and one resource; a non-nil actor_id limits it to that
+	// actor's jobs.
 	ListBulkJobsForAccount(ctx context.Context, arg ListBulkJobsForAccountParams) ([]BulkJob, error)
-	// account-lint: cross-account platform /v1/platform/bulk: the caller's own jobs (actor_id)
+	// Platform /v1/platform/bulk: the caller's own platform jobs (no account).
 	ListBulkJobsForActor(ctx context.Context, arg ListBulkJobsForActorParams) ([]BulkJob, error)
 	// account-lint: cross-account search index builder: documents carry account_id and searches filter on it
 	ListCardsForSearch(ctx context.Context, argUuid pgtype.UUID) ([]ListCardsForSearchRow, error)

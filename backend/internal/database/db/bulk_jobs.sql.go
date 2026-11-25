@@ -13,10 +13,9 @@ import (
 )
 
 const countAllBulkJobs = `-- name: CountAllBulkJobs :one
-SELECT COUNT(*)::bigint FROM bulk_jobs
+SELECT COUNT(*)::bigint FROM bulk_jobs WHERE account_id IS NULL
 `
 
-// account-lint: cross-account platform /v1/platform/bulk admin list
 func (q *Queries) CountAllBulkJobs(ctx context.Context) (int64, error) {
 	row := q.db.QueryRow(ctx, countAllBulkJobs)
 	var column_1 int64
@@ -27,28 +26,27 @@ func (q *Queries) CountAllBulkJobs(ctx context.Context) (int64, error) {
 const countBulkJobsForAccount = `-- name: CountBulkJobsForAccount :one
 SELECT COUNT(*)::bigint FROM bulk_jobs
 WHERE account_id = $1
-  AND ($2::bigint IS NULL OR actor_id = $2::bigint)
-  AND ($3::text IS NULL OR resource = $3::text)
+  AND resource = $2
+  AND ($3::bigint IS NULL OR actor_id = $3::bigint)
 `
 
 type CountBulkJobsForAccountParams struct {
 	AccountID pgtype.Int8 `json:"account_id"`
+	Resource  string      `json:"resource"`
 	ActorID   pgtype.Int8 `json:"actor_id"`
-	Resource  pgtype.Text `json:"resource"`
 }
 
 func (q *Queries) CountBulkJobsForAccount(ctx context.Context, arg CountBulkJobsForAccountParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countBulkJobsForAccount, arg.AccountID, arg.ActorID, arg.Resource)
+	row := q.db.QueryRow(ctx, countBulkJobsForAccount, arg.AccountID, arg.Resource, arg.ActorID)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
 }
 
 const countBulkJobsForActor = `-- name: CountBulkJobsForActor :one
-SELECT COUNT(*)::bigint FROM bulk_jobs WHERE actor_id = $1
+SELECT COUNT(*)::bigint FROM bulk_jobs WHERE actor_id = $1 AND account_id IS NULL
 `
 
-// account-lint: cross-account platform /v1/platform/bulk: the caller's own jobs (actor_id)
 func (q *Queries) CountBulkJobsForActor(ctx context.Context, actorID int64) (int64, error) {
 	row := q.db.QueryRow(ctx, countBulkJobsForActor, actorID)
 	var column_1 int64
@@ -107,6 +105,45 @@ func (q *Queries) CreateBulkJob(ctx context.Context, arg CreateBulkJobParams) (B
 	return i, err
 }
 
+const getAccountBulkJob = `-- name: GetAccountBulkJob :one
+SELECT id, uuid, resource, action, actor_id, locale, status, target_json, result_json, error, rollback_until, applied_at, created_at, updated_at, account_id, params_json FROM bulk_jobs
+WHERE uuid = $1
+  AND account_id = $2
+  AND resource = $3
+`
+
+type GetAccountBulkJobParams struct {
+	Uuid      uuid.UUID   `json:"uuid"`
+	AccountID pgtype.Int8 `json:"account_id"`
+	Resource  string      `json:"resource"`
+}
+
+// An app job of one account and one resource: each app route family reaches only its own
+// resource's jobs (TEC-1300); the actor check stays in the usecase.
+func (q *Queries) GetAccountBulkJob(ctx context.Context, arg GetAccountBulkJobParams) (BulkJob, error) {
+	row := q.db.QueryRow(ctx, getAccountBulkJob, arg.Uuid, arg.AccountID, arg.Resource)
+	var i BulkJob
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Resource,
+		&i.Action,
+		&i.ActorID,
+		&i.Locale,
+		&i.Status,
+		&i.TargetJson,
+		&i.ResultJson,
+		&i.Error,
+		&i.RollbackUntil,
+		&i.AppliedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.AccountID,
+		&i.ParamsJson,
+	)
+	return i, err
+}
+
 const getBulkJobByID = `-- name: GetBulkJobByID :one
 SELECT id, uuid, resource, action, actor_id, locale, status, target_json, result_json, error, rollback_until, applied_at, created_at, updated_at, account_id, params_json FROM bulk_jobs WHERE id = $1
 `
@@ -136,13 +173,13 @@ func (q *Queries) GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error)
 	return i, err
 }
 
-const getBulkJobByUUID = `-- name: GetBulkJobByUUID :one
-SELECT id, uuid, resource, action, actor_id, locale, status, target_json, result_json, error, rollback_until, applied_at, created_at, updated_at, account_id, params_json FROM bulk_jobs WHERE uuid = $1
+const getPlatformBulkJob = `-- name: GetPlatformBulkJob :one
+SELECT id, uuid, resource, action, actor_id, locale, status, target_json, result_json, error, rollback_until, applied_at, created_at, updated_at, account_id, params_json FROM bulk_jobs WHERE uuid = $1 AND account_id IS NULL
 `
 
-// account-lint: cross-account usecase checks JobAccess.allows (account + actor) or platform admin/actor
-func (q *Queries) GetBulkJobByUUID(ctx context.Context, argUuid uuid.UUID) (BulkJob, error) {
-	row := q.db.QueryRow(ctx, getBulkJobByUUID, argUuid)
+// A platform job (no account) of /v1/platform/bulk; app jobs of accounts are not found here.
+func (q *Queries) GetPlatformBulkJob(ctx context.Context, argUuid uuid.UUID) (BulkJob, error) {
+	row := q.db.QueryRow(ctx, getPlatformBulkJob, argUuid)
 	var i BulkJob
 	err := row.Scan(
 		&i.ID,
@@ -203,6 +240,7 @@ func (q *Queries) InsertBulkChange(ctx context.Context, arg InsertBulkChangePara
 
 const listAllBulkJobs = `-- name: ListAllBulkJobs :many
 SELECT id, uuid, resource, action, actor_id, locale, status, target_json, result_json, error, rollback_until, applied_at, created_at, updated_at, account_id, params_json FROM bulk_jobs
+WHERE account_id IS NULL
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $1
 `
@@ -212,7 +250,7 @@ type ListAllBulkJobsParams struct {
 	LimitCount  int32 `json:"limit_count"`
 }
 
-// account-lint: cross-account platform /v1/platform/bulk admin list
+// Platform /v1/platform/bulk admin list: every platform job (no account).
 func (q *Queries) ListAllBulkJobs(ctx context.Context, arg ListAllBulkJobsParams) ([]BulkJob, error) {
 	rows, err := q.db.Query(ctx, listAllBulkJobs, arg.OffsetCount, arg.LimitCount)
 	if err != nil {
@@ -288,26 +326,27 @@ func (q *Queries) ListBulkChangesForJob(ctx context.Context, jobID int64) ([]Bul
 const listBulkJobsForAccount = `-- name: ListBulkJobsForAccount :many
 SELECT id, uuid, resource, action, actor_id, locale, status, target_json, result_json, error, rollback_until, applied_at, created_at, updated_at, account_id, params_json FROM bulk_jobs
 WHERE account_id = $1
-  AND ($2::bigint IS NULL OR actor_id = $2::bigint)
-  AND ($3::text IS NULL OR resource = $3::text)
+  AND resource = $2
+  AND ($3::bigint IS NULL OR actor_id = $3::bigint)
 ORDER BY created_at DESC
 LIMIT $5 OFFSET $4
 `
 
 type ListBulkJobsForAccountParams struct {
 	AccountID   pgtype.Int8 `json:"account_id"`
+	Resource    string      `json:"resource"`
 	ActorID     pgtype.Int8 `json:"actor_id"`
-	Resource    pgtype.Text `json:"resource"`
 	OffsetCount int32       `json:"offset_count"`
 	LimitCount  int32       `json:"limit_count"`
 }
 
-// App job history of one account; a non-nil actor_id limits it to that actor's jobs.
+// App job history of one account and one resource; a non-nil actor_id limits it to that
+// actor's jobs.
 func (q *Queries) ListBulkJobsForAccount(ctx context.Context, arg ListBulkJobsForAccountParams) ([]BulkJob, error) {
 	rows, err := q.db.Query(ctx, listBulkJobsForAccount,
 		arg.AccountID,
-		arg.ActorID,
 		arg.Resource,
+		arg.ActorID,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)
@@ -348,7 +387,7 @@ func (q *Queries) ListBulkJobsForAccount(ctx context.Context, arg ListBulkJobsFo
 
 const listBulkJobsForActor = `-- name: ListBulkJobsForActor :many
 SELECT id, uuid, resource, action, actor_id, locale, status, target_json, result_json, error, rollback_until, applied_at, created_at, updated_at, account_id, params_json FROM bulk_jobs
-WHERE actor_id = $1
+WHERE actor_id = $1 AND account_id IS NULL
 ORDER BY created_at DESC
 LIMIT $3 OFFSET $2
 `
@@ -359,7 +398,7 @@ type ListBulkJobsForActorParams struct {
 	LimitCount  int32 `json:"limit_count"`
 }
 
-// account-lint: cross-account platform /v1/platform/bulk: the caller's own jobs (actor_id)
+// Platform /v1/platform/bulk: the caller's own platform jobs (no account).
 func (q *Queries) ListBulkJobsForActor(ctx context.Context, arg ListBulkJobsForActorParams) ([]BulkJob, error) {
 	rows, err := q.db.Query(ctx, listBulkJobsForActor, arg.ActorID, arg.OffsetCount, arg.LimitCount)
 	if err != nil {
