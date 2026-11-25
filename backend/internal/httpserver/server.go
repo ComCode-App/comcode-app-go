@@ -444,6 +444,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
 		bulkadapters.NewRoles(deps.Queries),
+		bulkadapters.NewCards(deps.Queries, routeCache),
 		companyBulk,
 	)
 	bulkSvc := bulkusecase.New(deps.Queries, bulkReg, deps.Queue, notifSvc, activityRec, cfg.Bulk, log)

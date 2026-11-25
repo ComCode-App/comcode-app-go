@@ -69,6 +69,7 @@ export function BulkActionMenu({
       resource,
       action: action.id,
       target,
+      reversible: action.reversible,
       onComplete,
     });
   };

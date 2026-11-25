@@ -205,6 +205,7 @@ func main() {
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(queries),
 		bulkadapters.NewRoles(queries),
+		bulkadapters.NewCards(queries, routecache.New(rdb, cfg.App.Env, routecache.DefaultTTL)),
 		companyprofilesusecase.NewBulkAdapter(queries, profilesSvc, store, companyBrandingSvc),
 	)
 	bulkSvc := bulkusecase.New(queries, bulkReg, nil, notifSvc, activityRec, cfg.Bulk, log)

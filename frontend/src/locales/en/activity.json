@@ -58,5 +58,6 @@
   "actions.profile.username_changed": "Username changed",
   "actions.route.path_changed": "Smart link path changed",
   "resources.app.company_profiles": "Employee profiles",
+  "resources.app.cards": "NFC cards",
   "resources.app.company_employees": "Employees"
 }

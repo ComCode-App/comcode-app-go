@@ -89,6 +89,8 @@ export const Permission = {
   AppOrdersWrite: "app.orders.write",
   AppCardsRead: "app.cards.read",
   AppCardsWrite: "app.cards.write",
+  AppCardsBulkLock: "app.cards.bulk.lock",
+  AppCardsBulkUnlock: "app.cards.bulk.unlock",
   AppRoutesRead: "app.routes.read",
   AppRoutesWrite: "app.routes.write",
   AppProfilesRead: "app.profiles.read",
@@ -279,6 +281,8 @@ export const permissions = {
     write: Permission.PlatformCardsWrite,
     appRead: Permission.AppCardsRead,
     appWrite: Permission.AppCardsWrite,
+    appBulkLock: Permission.AppCardsBulkLock,
+    appBulkUnlock: Permission.AppCardsBulkUnlock,
   },
   routes: {
     read: Permission.PlatformRoutesRead,

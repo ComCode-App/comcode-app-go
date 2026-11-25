@@ -242,3 +242,41 @@ SELECT EXISTS(
       AND deleted_at IS NULL
       AND (sqlc.narg(exclude_uuid)::uuid IS NULL OR uuid != sqlc.narg(exclude_uuid)::uuid)
 );
+
+-- SetCardLock sets the lock of one card of the account and returns the lock it had before, so a
+-- bulk lock/unlock (TEC-596) can be rolled back exactly.
+-- name: SetCardLock :one
+WITH prev AS (
+    SELECT p.id, p.is_locked
+    FROM nfc_cards p
+    WHERE p.uuid = sqlc.arg(uuid)
+      AND p.account_id = sqlc.arg(account_id)
+      AND p.deleted_at IS NULL
+    FOR UPDATE
+)
+UPDATE nfc_cards c
+SET is_locked = sqlc.arg(is_locked)
+FROM prev
+WHERE c.id = prev.id
+  AND c.account_id = sqlc.arg(account_id)
+RETURNING prev.is_locked AS was_locked;
+
+-- ListAccountCardUUIDsForBulk resolves the "query" scope of a card bulk action with the filters
+-- of GET /v1/cards (q, is_active).
+-- name: ListAccountCardUUIDsForBulk :many
+SELECT c.uuid
+FROM nfc_cards c
+WHERE c.account_id = sqlc.arg(account_id)
+  AND c.deleted_at IS NULL
+  AND (
+    sqlc.narg(q)::text IS NULL
+    OR c.name ILIKE '%' || sqlc.narg(q) || '%'
+    OR c.smart_code ILIKE '%' || sqlc.narg(q) || '%'
+    OR c.card_uid ILIKE '%' || sqlc.narg(q) || '%'
+  )
+  AND (
+    sqlc.narg(is_active)::boolean IS NULL
+    OR c.is_active = sqlc.narg(is_active)::boolean
+  )
+ORDER BY c.created_at DESC
+LIMIT sqlc.arg(limit_count);
