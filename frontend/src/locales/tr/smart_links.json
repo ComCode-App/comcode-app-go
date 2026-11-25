@@ -57,5 +57,9 @@
   "primary_action.whatsapp": "WhatsApp",
   "primary_action.website": "Web sitesine git",
   "error.passcode_short": "En az {{min}} karakterlik bir şifre girin.",
-  "error.slug_required": "Bir adres girin."
+  "error.slug_required": "Bir adres girin.",
+  "card.created": "Oluşturulma: {{date}}",
+  "card.open": "Aç",
+  "card.no_profile": "Profil seçilmedi",
+  "card.vcard_preview": "Rehbere kaydet"
 }
