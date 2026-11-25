@@ -162,6 +162,11 @@ func (h *Handler) RequestActivityExport(w http.ResponseWriter, r *http.Request) 
 	h.requestExport(w, r, "platform.activity", rbac.PermPlatformActivityRead)
 }
 
+// RequestOrdersExport exports the platform order list with its filters (TEC-596).
+func (h *Handler) RequestOrdersExport(w http.ResponseWriter, r *http.Request) {
+	h.requestExport(w, r, "platform.orders", rbac.PermPlatformOrdersExport)
+}
+
 // RequestOrderManifestExport exports the production manifest of one order (TEC-581). The order
 // comes from the path; the file holds activation codes, so the route also requires step-up.
 func (h *Handler) RequestOrderManifestExport(w http.ResponseWriter, r *http.Request) {

@@ -14,6 +14,7 @@ import {
   useServerListState,
 } from "@/components/entity";
 import { Button } from "@/components/ui/button";
+import { ResourceIOToolbar } from "@/features/io";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { useLocale } from "@/providers/locale-provider";
@@ -44,6 +45,13 @@ export function OrdersPage() {
     queryKey: ordersQueryKeys.list(listParams),
     queryFn: () => ordersService.list(listParams),
   });
+  // Capabilities (export) for the I/O toolbar (TEC-596).
+  const metaQuery = useQuery({
+    queryKey: ordersQueryKeys.meta(),
+    queryFn: () => ordersService.meta(),
+    staleTime: 5 * 60_000,
+  });
+  const meta = metaQuery.data;
 
   // Cmd+K hits link to /platform/orders?open={uuid} (TEC-595); closing drops the param.
   const router = useRouter();
@@ -131,7 +139,13 @@ export function OrdersPage() {
           <EntityToolbar
             onRefresh={() => void listQuery.refetch()}
             refreshDisabled={listQuery.isFetching}
-          />
+          >
+            <ResourceIOToolbar
+              resource="platform.orders"
+              query={{ q: listParams.q }}
+              capabilities={meta?.capabilities}
+            />
+          </EntityToolbar>
         }
       />
 

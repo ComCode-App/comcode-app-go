@@ -49,6 +49,7 @@
   "resources.platform.plans": "Planlar",
   "resources.platform.subscriptions": "Abonelikler",
   "resources.platform.companies": "İşletmeler",
+  "resources.platform.orders": "Siparişler",
   "status.pending": "Bekliyor",
   "status.processing": "Hazırlanıyor",
   "status.completed": "Hazır",

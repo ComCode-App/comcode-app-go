@@ -121,6 +121,22 @@ From the order detail dialog, "Production files":
   (`001-{code}.png`, …) encoding the manifest QR URL. Its `?src=qr` marker records `card.qr.scan` through
   the existing public resolver, preserving activation, lock, passcode and retirement behavior. Existing printed URLs keep working. No activation codes in it.
 
+## Order list export (TEC-596)
+
+The platform order list has an Export menu (`ResourceIOToolbar`, resource `platform.orders`):
+`POST /v1/platform/orders/export` queues an io-engine job (PDF, XLSX, CSV or JSON) that lands in
+Exports. It needs `platform.orders.export` (seeded for `super_admin`, migration 000083) and step-up.
+
+- **Filters**: the same as `GET /v1/platform/orders`: `q` (order number, customer email, name or
+  surname, tracking number), `status`, `payment_status`, `fulfillment_status`, `order_type`. The
+  list has no sort or date-range parameters, so the export is newest first over all dates. Deleted
+  orders are left out. At most 10,000 rows per file.
+- **Columns**: order number, order type, status, payment status, fulfillment status, account and
+  account type (personal/company), customer name and email, item count, grand total (two decimals)
+  and currency, tracking number, created and updated time, UUID.
+- Export only; orders are never imported. Adapter: `ioengine/adapters/orders.go`. The per-order
+  production manifest above is a separate resource (`platform.order_manifest`).
+
 ## Activation
 
 The customer enters the activation code (`POST /v1/cards/activate`). The card moves to the

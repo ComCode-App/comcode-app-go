@@ -82,6 +82,7 @@
   "labels.platform.products.read": "View product catalog",
   "labels.platform.products.write": "Manage product catalog",
   "labels.platform.orders.read": "View platform orders",
+  "labels.platform.orders.export": "Export platform orders",
   "labels.platform.orders.write": "Manage platform orders",
   "labels.platform.cards.read": "View platform cards",
   "labels.platform.cards.write": "Manage platform cards",

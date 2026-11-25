@@ -550,7 +550,7 @@ func PlatformOrders() ResourceMeta {
 		DefaultFields: []string{"uuid", "order_number", "order_type", "items_count", "customer_name", "status", "payment_status", "fulfillment_status", "grand_total", "currency", "created_at"},
 		Capabilities: Capabilities{
 			Create: true, Read: true, Update: true, Delete: true,
-			Search: true, Filter: true, Sort: true,
+			Search: true, Filter: true, Sort: true, Export: true,
 		},
 		SearchableFields: []string{"order_number", "customer_email", "customer_name", "tracking_number"},
 		SortableFields:   []string{"order_number", "grand_total", "created_at", "updated_at"},

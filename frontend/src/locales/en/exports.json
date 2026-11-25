@@ -49,6 +49,7 @@
   "resources.platform.plans": "Plans",
   "resources.platform.subscriptions": "Subscriptions",
   "resources.platform.companies": "Companies",
+  "resources.platform.orders": "Orders",
   "status.pending": "Pending",
   "status.processing": "Processing",
   "status.completed": "Ready",

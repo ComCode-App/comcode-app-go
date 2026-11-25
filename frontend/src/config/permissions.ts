@@ -77,6 +77,7 @@ export const Permission = {
   PlatformProductsRead: "platform.products.read",
   PlatformProductsWrite: "platform.products.write",
   PlatformOrdersRead: "platform.orders.read",
+  PlatformOrdersExport: "platform.orders.export",
   PlatformOrdersWrite: "platform.orders.write",
   PlatformCardsRead: "platform.cards.read",
   PlatformCardsWrite: "platform.cards.write",
@@ -265,6 +266,7 @@ export const permissions = {
   orders: {
     read: Permission.PlatformOrdersRead,
     write: Permission.PlatformOrdersWrite,
+    export: Permission.PlatformOrdersExport,
     appRead: Permission.AppOrdersRead,
     appWrite: Permission.AppOrdersWrite,
   },
