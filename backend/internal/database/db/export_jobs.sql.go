@@ -13,7 +13,7 @@ import (
 )
 
 const countAllExportJobs = `-- name: CountAllExportJobs :one
-SELECT COUNT(*)::bigint FROM export_jobs
+SELECT COUNT(*)::bigint FROM export_jobs WHERE resource NOT LIKE 'app.%'
 `
 
 func (q *Queries) CountAllExportJobs(ctx context.Context) (int64, error) {
@@ -24,7 +24,7 @@ func (q *Queries) CountAllExportJobs(ctx context.Context) (int64, error) {
 }
 
 const countExportJobsForActor = `-- name: CountExportJobsForActor :one
-SELECT COUNT(*)::bigint FROM export_jobs WHERE actor_id = $1
+SELECT COUNT(*)::bigint FROM export_jobs WHERE actor_id = $1 AND resource NOT LIKE 'app.%'
 `
 
 func (q *Queries) CountExportJobsForActor(ctx context.Context, actorID int64) (int64, error) {
@@ -78,6 +78,43 @@ func (q *Queries) CreateExportJob(ctx context.Context, arg CreateExportJobParams
 	return i, err
 }
 
+const getAppExportJob = `-- name: GetAppExportJob :one
+SELECT id, uuid, resource, actor_id, format, query_json, locale, status, file_key, row_count, error, expires_at, created_at, updated_at FROM export_jobs
+WHERE uuid = $1
+  AND resource LIKE 'app.%'
+  AND query_json->>'account_id' = $2::text
+`
+
+type GetAppExportJobParams struct {
+	Uuid      uuid.UUID `json:"uuid"`
+	AccountID string    `json:"account_id"`
+}
+
+// An app export job (app.*) of one account, for /v1/exports. export_jobs has no account
+// column: app exports carry the requesting account in query_json.account_id, set by the
+// server (a fixed query key the request cannot override).
+func (q *Queries) GetAppExportJob(ctx context.Context, arg GetAppExportJobParams) (ExportJob, error) {
+	row := q.db.QueryRow(ctx, getAppExportJob, arg.Uuid, arg.AccountID)
+	var i ExportJob
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Resource,
+		&i.ActorID,
+		&i.Format,
+		&i.QueryJson,
+		&i.Locale,
+		&i.Status,
+		&i.FileKey,
+		&i.RowCount,
+		&i.Error,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getExportJobByID = `-- name: GetExportJobByID :one
 SELECT id, uuid, resource, actor_id, format, query_json, locale, status, file_key, row_count, error, expires_at, created_at, updated_at FROM export_jobs WHERE id = $1
 `
@@ -104,12 +141,14 @@ func (q *Queries) GetExportJobByID(ctx context.Context, id int64) (ExportJob, er
 	return i, err
 }
 
-const getExportJobByUUID = `-- name: GetExportJobByUUID :one
-SELECT id, uuid, resource, actor_id, format, query_json, locale, status, file_key, row_count, error, expires_at, created_at, updated_at FROM export_jobs WHERE uuid = $1
+const getPlatformExportJob = `-- name: GetPlatformExportJob :one
+SELECT id, uuid, resource, actor_id, format, query_json, locale, status, file_key, row_count, error, expires_at, created_at, updated_at FROM export_jobs WHERE uuid = $1 AND resource NOT LIKE 'app.%'
 `
 
-func (q *Queries) GetExportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ExportJob, error) {
-	row := q.db.QueryRow(ctx, getExportJobByUUID, argUuid)
+// A platform export job of /v1/platform/exports: every resource except the app shell's
+// (app.*), which download through /v1/exports (TEC-1302).
+func (q *Queries) GetPlatformExportJob(ctx context.Context, argUuid uuid.UUID) (ExportJob, error) {
+	row := q.db.QueryRow(ctx, getPlatformExportJob, argUuid)
 	var i ExportJob
 	err := row.Scan(
 		&i.ID,
@@ -132,6 +171,7 @@ func (q *Queries) GetExportJobByUUID(ctx context.Context, argUuid uuid.UUID) (Ex
 
 const listAllExportJobs = `-- name: ListAllExportJobs :many
 SELECT id, uuid, resource, actor_id, format, query_json, locale, status, file_key, row_count, error, expires_at, created_at, updated_at FROM export_jobs
+WHERE resource NOT LIKE 'app.%'
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $1
 `
@@ -141,6 +181,7 @@ type ListAllExportJobsParams struct {
 	LimitCount  int32 `json:"limit_count"`
 }
 
+// Platform /v1/platform/exports admin list: every platform export (no app.* jobs).
 func (q *Queries) ListAllExportJobs(ctx context.Context, arg ListAllExportJobsParams) ([]ExportJob, error) {
 	rows, err := q.db.Query(ctx, listAllExportJobs, arg.OffsetCount, arg.LimitCount)
 	if err != nil {
@@ -178,7 +219,7 @@ func (q *Queries) ListAllExportJobs(ctx context.Context, arg ListAllExportJobsPa
 
 const listExportJobsForActor = `-- name: ListExportJobsForActor :many
 SELECT id, uuid, resource, actor_id, format, query_json, locale, status, file_key, row_count, error, expires_at, created_at, updated_at FROM export_jobs
-WHERE actor_id = $1
+WHERE actor_id = $1 AND resource NOT LIKE 'app.%'
 ORDER BY created_at DESC
 LIMIT $3 OFFSET $2
 `
@@ -189,6 +230,7 @@ type ListExportJobsForActorParams struct {
 	LimitCount  int32 `json:"limit_count"`
 }
 
+// Platform /v1/platform/exports: the caller's own platform exports (no app.* jobs).
 func (q *Queries) ListExportJobsForActor(ctx context.Context, arg ListExportJobsForActorParams) ([]ExportJob, error) {
 	rows, err := q.db.Query(ctx, listExportJobsForActor, arg.ActorID, arg.OffsetCount, arg.LimitCount)
 	if err != nil {

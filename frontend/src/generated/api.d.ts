@@ -5077,7 +5077,7 @@ export interface paths {
         };
         /**
          * GET /v1/platform/exports
-         * @description Registered in `internal/modules/exports/routes.go`. Requires `platform.exports.read`.
+         * @description Registered in `internal/modules/exports/routes.go`. Requires `platform.exports.read`. Platform exports only. App exports (`app.*`, e.g. leads) are not listed here and are 404; they are reached through `/v1/exports` (TEC-1302).
          */
         get: operations["getPlatformExports"];
         put?: never;
@@ -5097,7 +5097,7 @@ export interface paths {
         };
         /**
          * GET /v1/platform/exports/{uuid}
-         * @description Registered in `internal/modules/exports/routes.go`. Requires `platform.exports.read`.
+         * @description Registered in `internal/modules/exports/routes.go`. Requires `platform.exports.read`. Platform exports only. App exports (`app.*`, e.g. leads) are not listed here and are 404; they are reached through `/v1/exports` (TEC-1302).
          */
         get: operations["getPlatformExportsUuid"];
         put?: never;
@@ -5117,7 +5117,7 @@ export interface paths {
         };
         /**
          * GET /v1/platform/exports/{uuid}/download
-         * @description Registered in `internal/modules/exports/routes.go`. Requires `platform.exports.read`.
+         * @description Registered in `internal/modules/exports/routes.go`. Requires `platform.exports.read`. Platform exports only. App exports (`app.*`, e.g. leads) are not listed here and are 404; they are reached through `/v1/exports` (TEC-1302).
          */
         get: operations["getPlatformExportsUuidDownload"];
         put?: never;
@@ -5137,7 +5137,7 @@ export interface paths {
         };
         /**
          * GET /v1/platform/imports
-         * @description Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`.
+         * @description Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`. Platform import jobs only (no account). Company import jobs are not listed here and are 404 (TEC-1302).
          */
         get: operations["getPlatformImports"];
         put?: never;
@@ -5157,7 +5157,7 @@ export interface paths {
         };
         /**
          * GET /v1/platform/imports/{uuid}
-         * @description Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`.
+         * @description Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`. Platform import jobs only (no account). Company import jobs are not listed here and are 404 (TEC-1302).
          */
         get: operations["getPlatformImportsUuid"];
         put?: never;
@@ -5179,7 +5179,7 @@ export interface paths {
         put?: never;
         /**
          * POST /v1/platform/imports/{uuid}/confirm
-         * @description Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`.
+         * @description Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`. Platform import jobs only (no account). Company import jobs are not listed here and are 404 (TEC-1302).
          */
         post: operations["postPlatformImportsUuidConfirm"];
         delete?: never;
@@ -5203,7 +5203,7 @@ export interface paths {
         head?: never;
         /**
          * PATCH /v1/platform/imports/{uuid}/mapping
-         * @description Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`.
+         * @description Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`. Platform import jobs only (no account). Company import jobs are not listed here and are 404 (TEC-1302).
          */
         patch: operations["patchPlatformImportsUuidMapping"];
         trace?: never;
@@ -5219,7 +5219,7 @@ export interface paths {
         put?: never;
         /**
          * POST /v1/platform/imports/{uuid}/preview
-         * @description Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`.
+         * @description Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`. Platform import jobs only (no account). Company import jobs are not listed here and are 404 (TEC-1302).
          */
         post: operations["postPlatformImportsUuidPreview"];
         delete?: never;
@@ -5239,7 +5239,7 @@ export interface paths {
         put?: never;
         /**
          * POST /v1/platform/imports/{uuid}/rollback
-         * @description Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`.
+         * @description Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`. Platform import jobs only (no account). Company import jobs are not listed here and are 404 (TEC-1302).
          */
         post: operations["postPlatformImportsUuidRollback"];
         delete?: never;
@@ -11911,6 +11911,10 @@ export interface components {
             product_type?: string;
             base_price: number;
             currency?: string;
+            /**
+             * @description VAT in percent. Omitted: 20 on create, unchanged on update. An explicit 0 is stored
+             *     as 0 % VAT (TEC-1301).
+             */
             tax_rate?: number;
             stock_quantity?: number;
             sku?: string;
@@ -21852,6 +21856,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getPlatformExportsUuidDownload: {
@@ -21876,6 +21881,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getPlatformImports: {
@@ -21922,6 +21928,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     postPlatformImportsUuidConfirm: {
@@ -21952,6 +21959,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     patchPlatformImportsUuidMapping: {
@@ -21982,6 +21990,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     postPlatformImportsUuidPreview: {
@@ -22012,6 +22021,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     postPlatformImportsUuidRollback: {
@@ -22042,6 +22052,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getPlatformLogRules: {

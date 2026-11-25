@@ -13,10 +13,9 @@ import (
 )
 
 const countAllImportJobs = `-- name: CountAllImportJobs :one
-SELECT COUNT(*)::bigint FROM import_jobs
+SELECT COUNT(*)::bigint FROM import_jobs WHERE account_id IS NULL
 `
 
-// account-lint: cross-account platform /v1/platform/imports admin list
 func (q *Queries) CountAllImportJobs(ctx context.Context) (int64, error) {
 	row := q.db.QueryRow(ctx, countAllImportJobs)
 	var column_1 int64
@@ -27,13 +26,13 @@ func (q *Queries) CountAllImportJobs(ctx context.Context) (int64, error) {
 const countImportJobsForAccount = `-- name: CountImportJobsForAccount :one
 SELECT COUNT(*)::bigint FROM import_jobs
 WHERE account_id = $1 AND actor_id = $2
-  AND ($3::text IS NULL OR resource = $3::text)
+  AND resource = $3
 `
 
 type CountImportJobsForAccountParams struct {
 	AccountID pgtype.Int8 `json:"account_id"`
 	ActorID   int64       `json:"actor_id"`
-	Resource  pgtype.Text `json:"resource"`
+	Resource  string      `json:"resource"`
 }
 
 func (q *Queries) CountImportJobsForAccount(ctx context.Context, arg CountImportJobsForAccountParams) (int64, error) {
@@ -44,10 +43,9 @@ func (q *Queries) CountImportJobsForAccount(ctx context.Context, arg CountImport
 }
 
 const countImportJobsForActor = `-- name: CountImportJobsForActor :one
-SELECT COUNT(*)::bigint FROM import_jobs WHERE actor_id = $1
+SELECT COUNT(*)::bigint FROM import_jobs WHERE actor_id = $1 AND account_id IS NULL
 `
 
-// account-lint: cross-account platform /v1/platform/imports: the caller's own jobs (actor_id)
 func (q *Queries) CountImportJobsForActor(ctx context.Context, actorID int64) (int64, error) {
 	row := q.db.QueryRow(ctx, countImportJobsForActor, actorID)
 	var column_1 int64
@@ -103,6 +101,46 @@ func (q *Queries) CreateImportJob(ctx context.Context, arg CreateImportJobParams
 	return i, err
 }
 
+const getAccountImportJob = `-- name: GetAccountImportJob :one
+SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, account_id FROM import_jobs
+WHERE uuid = $1
+  AND account_id = $2
+  AND resource = $3
+`
+
+type GetAccountImportJobParams struct {
+	Uuid      uuid.UUID   `json:"uuid"`
+	AccountID pgtype.Int8 `json:"account_id"`
+	Resource  string      `json:"resource"`
+}
+
+// An app import job of one account and one resource: each app route family reaches only its
+// own resource's jobs (TEC-1302); the actor check stays in the usecase.
+func (q *Queries) GetAccountImportJob(ctx context.Context, arg GetAccountImportJobParams) (ImportJob, error) {
+	row := q.db.QueryRow(ctx, getAccountImportJob, arg.Uuid, arg.AccountID, arg.Resource)
+	var i ImportJob
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Resource,
+		&i.ActorID,
+		&i.Format,
+		&i.Locale,
+		&i.Status,
+		&i.FileKey,
+		&i.MappingJson,
+		&i.DefaultsJson,
+		&i.PreviewJson,
+		&i.Error,
+		&i.RollbackUntil,
+		&i.AppliedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.AccountID,
+	)
+	return i, err
+}
+
 const getImportJobByID = `-- name: GetImportJobByID :one
 SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, account_id FROM import_jobs WHERE id = $1
 `
@@ -133,13 +171,14 @@ func (q *Queries) GetImportJobByID(ctx context.Context, id int64) (ImportJob, er
 	return i, err
 }
 
-const getImportJobByUUID = `-- name: GetImportJobByUUID :one
-SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, account_id FROM import_jobs WHERE uuid = $1
+const getPlatformImportJob = `-- name: GetPlatformImportJob :one
+SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, account_id FROM import_jobs WHERE uuid = $1 AND account_id IS NULL
 `
 
-// account-lint: cross-account usecase getOwned checks account + actor; platform GetJob checks admin/actor
-func (q *Queries) GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error) {
-	row := q.db.QueryRow(ctx, getImportJobByUUID, argUuid)
+// A platform import job (no account) of /v1/platform/imports; app jobs of accounts are not
+// found here (TEC-1302).
+func (q *Queries) GetPlatformImportJob(ctx context.Context, argUuid uuid.UUID) (ImportJob, error) {
+	row := q.db.QueryRow(ctx, getPlatformImportJob, argUuid)
 	var i ImportJob
 	err := row.Scan(
 		&i.ID,
@@ -201,6 +240,7 @@ func (q *Queries) InsertImportChange(ctx context.Context, arg InsertImportChange
 
 const listAllImportJobs = `-- name: ListAllImportJobs :many
 SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, account_id FROM import_jobs
+WHERE account_id IS NULL
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $1
 `
@@ -210,7 +250,7 @@ type ListAllImportJobsParams struct {
 	LimitCount  int32 `json:"limit_count"`
 }
 
-// account-lint: cross-account platform /v1/platform/imports admin list
+// Platform /v1/platform/imports admin list: every platform job (no account).
 func (q *Queries) ListAllImportJobs(ctx context.Context, arg ListAllImportJobsParams) ([]ImportJob, error) {
 	rows, err := q.db.Query(ctx, listAllImportJobs, arg.OffsetCount, arg.LimitCount)
 	if err != nil {
@@ -287,7 +327,7 @@ func (q *Queries) ListImportChangesForJob(ctx context.Context, jobID int64) ([]I
 const listImportJobsForAccount = `-- name: ListImportJobsForAccount :many
 SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, account_id FROM import_jobs
 WHERE account_id = $1 AND actor_id = $2
-  AND ($3::text IS NULL OR resource = $3::text)
+  AND resource = $3
 ORDER BY created_at DESC
 LIMIT $5 OFFSET $4
 `
@@ -295,12 +335,12 @@ LIMIT $5 OFFSET $4
 type ListImportJobsForAccountParams struct {
 	AccountID   pgtype.Int8 `json:"account_id"`
 	ActorID     int64       `json:"actor_id"`
-	Resource    pgtype.Text `json:"resource"`
+	Resource    string      `json:"resource"`
 	OffsetCount int32       `json:"offset_count"`
 	LimitCount  int32       `json:"limit_count"`
 }
 
-// App import history of one account for one actor.
+// App import history of one account, one resource and one actor.
 func (q *Queries) ListImportJobsForAccount(ctx context.Context, arg ListImportJobsForAccountParams) ([]ImportJob, error) {
 	rows, err := q.db.Query(ctx, listImportJobsForAccount,
 		arg.AccountID,
@@ -347,7 +387,7 @@ func (q *Queries) ListImportJobsForAccount(ctx context.Context, arg ListImportJo
 
 const listImportJobsForActor = `-- name: ListImportJobsForActor :many
 SELECT id, uuid, resource, actor_id, format, locale, status, file_key, mapping_json, defaults_json, preview_json, error, rollback_until, applied_at, created_at, updated_at, account_id FROM import_jobs
-WHERE actor_id = $1
+WHERE actor_id = $1 AND account_id IS NULL
 ORDER BY created_at DESC
 LIMIT $3 OFFSET $2
 `
@@ -358,7 +398,7 @@ type ListImportJobsForActorParams struct {
 	LimitCount  int32 `json:"limit_count"`
 }
 
-// account-lint: cross-account platform /v1/platform/imports: the caller's own jobs (actor_id)
+// Platform /v1/platform/imports: the caller's own platform jobs (no account).
 func (q *Queries) ListImportJobsForActor(ctx context.Context, arg ListImportJobsForActorParams) ([]ImportJob, error) {
 	rows, err := q.db.Query(ctx, listImportJobsForActor, arg.ActorID, arg.OffsetCount, arg.LimitCount)
 	if err != nil {

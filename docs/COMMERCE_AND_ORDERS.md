@@ -175,6 +175,8 @@ The platform product list has Export and Import (`ResourceIOToolbar`, resource
     field (`field`, `code`), and the product dialog shows them on the field. An omitted `status`,
     `product_type` or `currency` is not checked: it means the default on create and "keep" on
     update. Product list, detail and write responses carry the category's `category_uuid`.
+  - VAT (TEC-1301): `tax_rate` omitted means 20 % on create and "keep" on update; an explicit
+    `0` is stored as 0 % VAT on every path (REST create/update, the import, the product dialog).
 
 ## Activation
 
