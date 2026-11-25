@@ -36,6 +36,7 @@ export const routes = {
     },
     orders: {
       root: "/orders",
+      detail: (orderUuid: string) => `/orders/${orderUuid}`,
       checkout: (sessionUuid: string) => `/orders/checkout/${sessionUuid}`,
     },
     bankAccounts: {
