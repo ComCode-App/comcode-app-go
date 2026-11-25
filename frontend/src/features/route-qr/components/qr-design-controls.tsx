@@ -1,5 +1,6 @@
 "use client";
 
+import { PROFILE_COVER_ENABLED } from "@/config/profile-media";
 import { FlipHorizontal2, FlipVertical2, Sparkles } from "lucide-react";
 import { useId, useMemo } from "react";
 
@@ -524,7 +525,10 @@ function LogoPanel({
         </Select>
         {logoProfileUuid ? (
           <div className="grid grid-cols-2 gap-2">
-            {(["avatar", "cover"] as const).map((field) => {
+            {(PROFILE_COVER_ENABLED || style.logo_field === "cover"
+              ? (["avatar", "cover"] as const)
+              : (["avatar"] as const)
+            ).map((field) => {
               const url = logoMedia[field];
               const active = style.logo_field === field;
               return (

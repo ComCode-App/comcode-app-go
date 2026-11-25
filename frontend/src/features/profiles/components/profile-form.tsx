@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { PROFILE_COVER_ENABLED } from "@/config/profile-media";
 import { routes } from "@/config/routes";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
@@ -80,22 +81,15 @@ interface ProfileFormProps {
   initialData?: ProfileDetail;
   onSubmit: (values: ProfileFormValues) => Promise<void>;
   isLoading?: boolean;
-  /** Editor tab to open, e.g. from a completion suggestion (`?tab=media`). */
+  /** Editor tab to open, e.g. from a completion suggestion (`?tab=contacts`). */
   initialTab?: string | null;
 }
 
 type TabKey =
-  | "identity"
-  | "media"
-  | "contacts"
-  | "social"
-  | "addresses"
-  | "keywords"
-  | "settings";
+  "identity" | "contacts" | "social" | "addresses" | "keywords" | "settings";
 
 const TAB_KEYS: readonly TabKey[] = [
   "identity",
-  "media",
   "contacts",
   "social",
   "addresses",
@@ -103,8 +97,10 @@ const TAB_KEYS: readonly TabKey[] = [
   "settings",
 ];
 
-function isTabKey(value: string | null | undefined): value is TabKey {
-  return Boolean(value) && TAB_KEYS.includes(value as TabKey);
+/** The photo moved into the identity tab (TEC-1305); old `?tab=media` links land there. */
+function resolveTab(value: string | null | undefined): TabKey | null {
+  if (value === "media") return "identity";
+  return value && TAB_KEYS.includes(value as TabKey) ? (value as TabKey) : null;
 }
 
 interface ValidationErrorItem {
@@ -125,13 +121,14 @@ export function ProfileForm({
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<TabKey>(
-    isTabKey(initialTab) ? initialTab : "identity",
+    resolveTab(initialTab) ?? "identity",
   );
   // A new ?tab= (a suggestion clicked while the editor is open) switches the tab.
   const [requestedTab, setRequestedTab] = useState(initialTab);
   if (initialTab !== requestedTab) {
     setRequestedTab(initialTab);
-    if (isTabKey(initialTab)) setActiveTab(initialTab);
+    const tab = resolveTab(initialTab);
+    if (tab) setActiveTab(tab);
   }
   const [activeLocale, setActiveLocale] = useState<"tr" | "en">(
     initialData?.primary_locale || "tr",
@@ -946,20 +943,6 @@ export function ProfileForm({
 
             <button
               type="button"
-              onClick={() => setActiveTab("media")}
-              className={cn(
-                "flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all",
-                activeTab === "media"
-                  ? "bg-background text-foreground border-border/60 border shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-              )}
-            >
-              <ImageIcon className="h-4 w-4 text-indigo-500" />
-              <span>{t("profiles.tabs.media")}</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => setActiveTab("contacts")}
               className={cn(
                 "flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all",
@@ -1150,6 +1133,138 @@ export function ProfileForm({
               </CardHeader>
 
               <CardContent className="space-y-4 pt-0">
+                {/* Profile photo (moved from the old photos tab, TEC-1305) */}
+                <div className="border-border bg-muted/20 flex flex-col items-center gap-5 rounded-xl border border-dashed p-4 sm:flex-row">
+                  <Avatar className="border-border bg-muted h-24 w-24 shrink-0 rounded-2xl border-2 shadow-sm">
+                    {watchedValues.avatar_url ? (
+                      <AvatarImage
+                        src={watchedValues.avatar_url}
+                        alt="Avatar"
+                        className="object-cover"
+                      />
+                    ) : null}
+                    <AvatarFallback className="rounded-2xl text-xl font-bold">
+                      <User className="text-muted-foreground h-8 w-8" />
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div className="flex-1 space-y-2 text-center sm:text-left">
+                    <div className="text-sm font-semibold">
+                      {t("profiles.fields.avatar")}
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      {t("profiles.fields.avatar_hint")}
+                    </p>
+                    <div className="flex items-center justify-center gap-2 pt-1 sm:justify-start">
+                      <label className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex cursor-pointer items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-sm transition-colors">
+                        {avatarUploading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <UploadCloud className="h-4 w-4" />
+                        )}
+                        <span>
+                          {avatarUploading
+                            ? t("profiles.actions.uploading")
+                            : t("profiles.actions.upload_avatar")}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          onChange={handleAvatarFileChange}
+                          disabled={avatarUploading}
+                          className="hidden"
+                        />
+                      </label>
+                      {watchedValues.avatar_url && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            form.setValue("avatar_url", "", {
+                              shouldDirty: true,
+                            })
+                          }
+                          className="text-destructive hover:bg-destructive/10 text-xs"
+                        >
+                          {t("profiles.actions.remove")}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cover image: hidden while PROFILE_COVER_ENABLED is off (TEC-1305) */}
+                {PROFILE_COVER_ENABLED && (
+                  <div className="border-border bg-muted/20 space-y-3 rounded-xl border border-dashed p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-semibold">
+                          {t("profiles.fields.cover")}
+                        </div>
+                        <p className="text-muted-foreground text-xs">
+                          {t("profiles.fields.cover_hint")}
+                        </p>
+                      </div>
+                      {watchedValues.cover_url && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            form.setValue("cover_url", "", {
+                              shouldDirty: true,
+                            })
+                          }
+                          className="text-destructive hover:bg-destructive/10 text-xs"
+                        >
+                          {t("profiles.actions.remove_cover")}
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="border-border bg-muted/40 relative flex h-32 items-center justify-center overflow-hidden rounded-xl border">
+                      {watchedValues.cover_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={watchedValues.cover_url}
+                          alt="Cover preview"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="space-y-1 text-center">
+                          <ImageIcon className="text-muted-foreground mx-auto h-8 w-8" />
+                          <span className="text-muted-foreground text-xs">
+                            {t("profiles.fields.cover_hint")}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      <label className="border-input bg-background hover:bg-muted inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3.5 py-2 text-xs font-semibold shadow-sm transition-colors">
+                        {coverUploading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <UploadCloud className="h-4 w-4" />
+                        )}
+                        <span>
+                          {coverUploading
+                            ? t("profiles.actions.uploading")
+                            : t("profiles.actions.upload_cover")}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          onChange={handleCoverFileChange}
+                          disabled={coverUploading}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                )}
+
                 {/* Name Fields */}
                 <div className="bg-muted/20 border-border/50 space-y-4 rounded-xl border p-4">
                   <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold tracking-wider uppercase">
@@ -1266,150 +1381,6 @@ export function ProfileForm({
                         `translations.${currentTranslationIndex}.bio`,
                       )}
                     />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Tab 2: Media & Photo Uploaders */}
-          {activeTab === "media" && (
-            <Card className="border-border shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <ImageIcon className="h-4 w-4 text-indigo-500" />
-                  {t("profiles.sections.media_title")}
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  {t("profiles.sections.media_desc")}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Avatar Uploader Dropzone */}
-                <div className="border-border bg-muted/20 flex flex-col items-center gap-5 rounded-xl border border-dashed p-4 sm:flex-row">
-                  <Avatar className="border-border bg-muted h-24 w-24 shrink-0 rounded-2xl border-2 shadow-sm">
-                    {watchedValues.avatar_url ? (
-                      <AvatarImage
-                        src={watchedValues.avatar_url}
-                        alt="Avatar"
-                        className="object-cover"
-                      />
-                    ) : null}
-                    <AvatarFallback className="rounded-2xl text-xl font-bold">
-                      <User className="text-muted-foreground h-8 w-8" />
-                    </AvatarFallback>
-                  </Avatar>
-
-                  <div className="flex-1 space-y-2 text-center sm:text-left">
-                    <div className="text-sm font-semibold">
-                      {t("profiles.fields.avatar")}
-                    </div>
-                    <p className="text-muted-foreground text-xs">
-                      {t("profiles.fields.avatar_hint")}
-                    </p>
-                    <div className="flex items-center justify-center gap-2 pt-1 sm:justify-start">
-                      <label className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex cursor-pointer items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-sm transition-colors">
-                        {avatarUploading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <UploadCloud className="h-4 w-4" />
-                        )}
-                        <span>
-                          {avatarUploading
-                            ? t("profiles.actions.uploading")
-                            : t("profiles.actions.upload_avatar")}
-                        </span>
-                        <input
-                          type="file"
-                          accept="image/png,image/jpeg,image/webp"
-                          onChange={handleAvatarFileChange}
-                          disabled={avatarUploading}
-                          className="hidden"
-                        />
-                      </label>
-                      {watchedValues.avatar_url && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            form.setValue("avatar_url", "", {
-                              shouldDirty: true,
-                            })
-                          }
-                          className="text-destructive hover:bg-destructive/10 text-xs"
-                        >
-                          {t("profiles.actions.remove")}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Cover Uploader Dropzone */}
-                <div className="border-border bg-muted/20 space-y-3 rounded-xl border border-dashed p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-semibold">
-                        {t("profiles.fields.cover")}
-                      </div>
-                      <p className="text-muted-foreground text-xs">
-                        {t("profiles.fields.cover_hint")}
-                      </p>
-                    </div>
-                    {watchedValues.cover_url && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          form.setValue("cover_url", "", { shouldDirty: true })
-                        }
-                        className="text-destructive hover:bg-destructive/10 text-xs"
-                      >
-                        {t("profiles.actions.remove_cover")}
-                      </Button>
-                    )}
-                  </div>
-
-                  <div className="border-border bg-muted/40 relative flex h-32 items-center justify-center overflow-hidden rounded-xl border">
-                    {watchedValues.cover_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={watchedValues.cover_url}
-                        alt="Cover preview"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="space-y-1 text-center">
-                        <ImageIcon className="text-muted-foreground mx-auto h-8 w-8" />
-                        <span className="text-muted-foreground text-xs">
-                          {t("profiles.fields.cover_hint")}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-end pt-1">
-                    <label className="border-input bg-background hover:bg-muted inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3.5 py-2 text-xs font-semibold shadow-sm transition-colors">
-                      {coverUploading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <UploadCloud className="h-4 w-4" />
-                      )}
-                      <span>
-                        {coverUploading
-                          ? t("profiles.actions.uploading")
-                          : t("profiles.actions.upload_cover")}
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp"
-                        onChange={handleCoverFileChange}
-                        disabled={coverUploading}
-                        className="hidden"
-                      />
-                    </label>
                   </div>
                 </div>
               </CardContent>

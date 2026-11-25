@@ -34,6 +34,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PROFILE_COVER_ENABLED } from "@/config/profile-media";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { ProfileCompletionBadge } from "@/features/profiles/components/profile-completion-badge";
@@ -218,7 +219,7 @@ export function ProfileDetailPage() {
         <Card className="border-border/80 bg-card overflow-hidden border shadow-sm">
           {/* Cover Banner */}
           <div className="relative h-40 overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 sm:h-56">
-            {profile.cover_url ? (
+            {PROFILE_COVER_ENABLED && profile.cover_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={profile.cover_url}

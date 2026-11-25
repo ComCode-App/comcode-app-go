@@ -1,5 +1,6 @@
 "use client";
 
+import { PROFILE_COVER_ENABLED } from "@/config/profile-media";
 import {
   Building2,
   Copy,
@@ -199,7 +200,7 @@ export function PublicProfileView({
 
   const cover = (
     <div className="relative h-36 sm:h-44">
-      {profile.cover_url ? (
+      {PROFILE_COVER_ENABLED && profile.cover_url ? (
         // eslint-disable-next-line @next/next/no-img-element -- API-owned media URL, any host
         <img
           src={profile.cover_url}
