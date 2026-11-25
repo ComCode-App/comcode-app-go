@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -201,16 +202,50 @@ func (s *Service) fail(ctx context.Context, jobID int64, msg string) error {
 	return errors.New(msg)
 }
 
-// GetJob returns a job if actor may access it.
+// GetJob returns a platform export job (not an app.* one) if actor may access it.
 func (s *Service) GetJob(ctx context.Context, jobUUID uuid.UUID, actorID int64, admin bool) (ExportJobView, error) {
-	row, err := s.q.GetExportJobByUUID(ctx, jobUUID)
+	row, err := s.platformJob(ctx, jobUUID, actorID, admin)
 	if err != nil {
-		return ExportJobView{}, ErrNotFound
-	}
-	if !admin && row.ActorID != actorID {
-		return ExportJobView{}, ErrForbidden
+		return ExportJobView{}, err
 	}
 	return mapExportJob(row), nil
+}
+
+// GetAppJob returns the caller's own app export job (app.*) of one account (TEC-1302): a job of
+// another account, another actor or a platform resource is not found.
+func (s *Service) GetAppJob(ctx context.Context, jobUUID uuid.UUID, actorID, accountID int64) (ExportJobView, error) {
+	row, err := s.appJob(ctx, jobUUID, actorID, accountID)
+	if err != nil {
+		return ExportJobView{}, err
+	}
+	return mapExportJob(row), nil
+}
+
+// platformJob loads a platform export job, filtered in the query; app jobs are not found.
+func (s *Service) platformJob(ctx context.Context, jobUUID uuid.UUID, actorID int64, admin bool) (db.ExportJob, error) {
+	row, err := s.q.GetPlatformExportJob(ctx, jobUUID)
+	if err != nil {
+		return db.ExportJob{}, ErrNotFound
+	}
+	if !admin && row.ActorID != actorID {
+		return db.ExportJob{}, ErrForbidden
+	}
+	return row, nil
+}
+
+// appJob loads the caller's app export job of one account, filtered in the query. Without an
+// account it reaches nothing; another actor's job is not found either.
+func (s *Service) appJob(ctx context.Context, jobUUID uuid.UUID, actorID, accountID int64) (db.ExportJob, error) {
+	if accountID <= 0 {
+		return db.ExportJob{}, ErrNotFound
+	}
+	row, err := s.q.GetAppExportJob(ctx, db.GetAppExportJobParams{
+		Uuid: jobUUID, AccountID: strconv.FormatInt(accountID, 10),
+	})
+	if err != nil || row.ActorID != actorID {
+		return db.ExportJob{}, ErrNotFound
+	}
+	return row, nil
 }
 
 // ListJobs lists export jobs for actor or all if admin.
@@ -237,15 +272,25 @@ func (s *Service) ListJobs(ctx context.Context, actorID int64, admin bool, limit
 	return out, total, nil
 }
 
-// Download opens export file stream.
+// Download opens the file of a platform export job.
 func (s *Service) Download(ctx context.Context, jobUUID uuid.UUID, actorID int64, admin bool) (io.ReadCloser, string, string, error) {
-	row, err := s.q.GetExportJobByUUID(ctx, jobUUID)
+	row, err := s.platformJob(ctx, jobUUID, actorID, admin)
 	if err != nil {
-		return nil, "", "", ErrNotFound
+		return nil, "", "", err
 	}
-	if !admin && row.ActorID != actorID {
-		return nil, "", "", ErrForbidden
+	return s.open(ctx, row)
+}
+
+// DownloadApp opens the file of the caller's app export job of one account.
+func (s *Service) DownloadApp(ctx context.Context, jobUUID uuid.UUID, actorID, accountID int64) (io.ReadCloser, string, string, error) {
+	row, err := s.appJob(ctx, jobUUID, actorID, accountID)
+	if err != nil {
+		return nil, "", "", err
 	}
+	return s.open(ctx, row)
+}
+
+func (s *Service) open(ctx context.Context, row db.ExportJob) (io.ReadCloser, string, string, error) {
 	if !row.FileKey.Valid || row.Status != "completed" {
 		return nil, "", "", ErrNotFound
 	}

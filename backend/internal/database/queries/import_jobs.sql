@@ -11,9 +11,18 @@ SET file_key = $2
 WHERE uuid = $1
 RETURNING *;
 
--- account-lint: cross-account usecase getOwned checks account + actor; platform GetJob checks admin/actor
--- name: GetImportJobByUUID :one
-SELECT * FROM import_jobs WHERE uuid = $1;
+-- name: GetPlatformImportJob :one
+-- A platform import job (no account) of /v1/platform/imports; app jobs of accounts are not
+-- found here (TEC-1302).
+SELECT * FROM import_jobs WHERE uuid = $1 AND account_id IS NULL;
+
+-- name: GetAccountImportJob :one
+-- An app import job of one account and one resource: each app route family reaches only its
+-- own resource's jobs (TEC-1302); the actor check stays in the usecase.
+SELECT * FROM import_jobs
+WHERE uuid = sqlc.arg(uuid)
+  AND account_id = sqlc.arg(account_id)
+  AND resource = sqlc.arg(resource);
 
 -- account-lint: cross-account import worker / Confirm: job id from an owned job (getOwned) or the queue
 -- name: GetImportJobByID :one
@@ -75,26 +84,25 @@ SET status = 'rolled_back'
 WHERE id = $1 AND status = 'applied'
 RETURNING *;
 
--- account-lint: cross-account platform /v1/platform/imports: the caller's own jobs (actor_id)
 -- name: ListImportJobsForActor :many
+-- Platform /v1/platform/imports: the caller's own platform jobs (no account).
 SELECT * FROM import_jobs
-WHERE actor_id = $1
+WHERE actor_id = $1 AND account_id IS NULL
 ORDER BY created_at DESC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
--- account-lint: cross-account platform /v1/platform/imports: the caller's own jobs (actor_id)
 -- name: CountImportJobsForActor :one
-SELECT COUNT(*)::bigint FROM import_jobs WHERE actor_id = $1;
+SELECT COUNT(*)::bigint FROM import_jobs WHERE actor_id = $1 AND account_id IS NULL;
 
--- account-lint: cross-account platform /v1/platform/imports admin list
 -- name: ListAllImportJobs :many
+-- Platform /v1/platform/imports admin list: every platform job (no account).
 SELECT * FROM import_jobs
+WHERE account_id IS NULL
 ORDER BY created_at DESC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
--- account-lint: cross-account platform /v1/platform/imports admin list
 -- name: CountAllImportJobs :one
-SELECT COUNT(*)::bigint FROM import_jobs;
+SELECT COUNT(*)::bigint FROM import_jobs WHERE account_id IS NULL;
 
 -- name: InsertImportChange :one
 INSERT INTO import_changes (job_id, entity_type, entity_uuid, op, previous_json)
@@ -107,14 +115,14 @@ WHERE job_id = $1
 ORDER BY id ASC;
 
 -- name: ListImportJobsForAccount :many
--- App import history of one account for one actor.
+-- App import history of one account, one resource and one actor.
 SELECT * FROM import_jobs
 WHERE account_id = sqlc.arg(account_id) AND actor_id = sqlc.arg(actor_id)
-  AND (sqlc.narg(resource)::text IS NULL OR resource = sqlc.narg(resource)::text)
+  AND resource = sqlc.arg(resource)
 ORDER BY created_at DESC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountImportJobsForAccount :one
 SELECT COUNT(*)::bigint FROM import_jobs
 WHERE account_id = sqlc.arg(account_id) AND actor_id = sqlc.arg(actor_id)
-  AND (sqlc.narg(resource)::text IS NULL OR resource = sqlc.narg(resource)::text);
+  AND resource = sqlc.arg(resource);

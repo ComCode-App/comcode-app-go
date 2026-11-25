@@ -8036,7 +8036,7 @@ paths:
       tags: [Exports]
       operationId: getPlatformExports
       summary: "GET /v1/platform/exports"
-      description: "Registered in `internal/modules/exports/routes.go`. Requires `platform.exports.read`."
+      description: "Registered in `internal/modules/exports/routes.go`. Requires `platform.exports.read`. Platform exports only. App exports (`app.*`, e.g. leads) are not listed here and are 404; they are reached through `/v1/exports` (TEC-1302)."
       security: [{ bearerAuth: [] }]
       responses:
         "200":
@@ -8052,11 +8052,13 @@ paths:
       tags: [Exports]
       operationId: getPlatformExportsUuid
       summary: "GET /v1/platform/exports/{uuid}"
-      description: "Registered in `internal/modules/exports/routes.go`. Requires `platform.exports.read`."
+      description: "Registered in `internal/modules/exports/routes.go`. Requires `platform.exports.read`. Platform exports only. App exports (`app.*`, e.g. leads) are not listed here and are 404; they are reached through `/v1/exports` (TEC-1302)."
       security: [{ bearerAuth: [] }]
       parameters:
         - { name: uuid, in: path, required: true, schema: { type: string } }
       responses:
+        "404":
+          $ref: "#/components/responses/NotFound"
         "200":
           description: Success envelope (see API_CONVENTIONS.md); some endpoints stream files or redirect
           content:
@@ -8070,11 +8072,13 @@ paths:
       tags: [Exports]
       operationId: getPlatformExportsUuidDownload
       summary: "GET /v1/platform/exports/{uuid}/download"
-      description: "Registered in `internal/modules/exports/routes.go`. Requires `platform.exports.read`."
+      description: "Registered in `internal/modules/exports/routes.go`. Requires `platform.exports.read`. Platform exports only. App exports (`app.*`, e.g. leads) are not listed here and are 404; they are reached through `/v1/exports` (TEC-1302)."
       security: [{ bearerAuth: [] }]
       parameters:
         - { name: uuid, in: path, required: true, schema: { type: string } }
       responses:
+        "404":
+          $ref: "#/components/responses/NotFound"
         "200":
           description: Success envelope (see API_CONVENTIONS.md); some endpoints stream files or redirect
           content:
@@ -8088,7 +8092,7 @@ paths:
       tags: [Imports]
       operationId: getPlatformImports
       summary: "GET /v1/platform/imports"
-      description: "Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`."
+      description: "Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`. Platform import jobs only (no account). Company import jobs are not listed here and are 404 (TEC-1302)."
       security: [{ bearerAuth: [] }]
       responses:
         "200":
@@ -8104,11 +8108,13 @@ paths:
       tags: [Imports]
       operationId: getPlatformImportsUuid
       summary: "GET /v1/platform/imports/{uuid}"
-      description: "Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`."
+      description: "Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`. Platform import jobs only (no account). Company import jobs are not listed here and are 404 (TEC-1302)."
       security: [{ bearerAuth: [] }]
       parameters:
         - { name: uuid, in: path, required: true, schema: { type: string } }
       responses:
+        "404":
+          $ref: "#/components/responses/NotFound"
         "200":
           description: Success envelope (see API_CONVENTIONS.md); some endpoints stream files or redirect
           content:
@@ -8122,7 +8128,7 @@ paths:
       tags: [Imports]
       operationId: postPlatformImportsUuidConfirm
       summary: "POST /v1/platform/imports/{uuid}/confirm"
-      description: "Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`."
+      description: "Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`. Platform import jobs only (no account). Company import jobs are not listed here and are 404 (TEC-1302)."
       security: [{ bearerAuth: [] }]
       parameters:
         - { name: uuid, in: path, required: true, schema: { type: string } }
@@ -8132,6 +8138,8 @@ paths:
           application/json:
             schema: { type: object, additionalProperties: true }
       responses:
+        "404":
+          $ref: "#/components/responses/NotFound"
         "200":
           description: Success envelope (see API_CONVENTIONS.md); some endpoints stream files or redirect
           content:
@@ -8145,7 +8153,7 @@ paths:
       tags: [Imports]
       operationId: patchPlatformImportsUuidMapping
       summary: "PATCH /v1/platform/imports/{uuid}/mapping"
-      description: "Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`."
+      description: "Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`. Platform import jobs only (no account). Company import jobs are not listed here and are 404 (TEC-1302)."
       security: [{ bearerAuth: [] }]
       parameters:
         - { name: uuid, in: path, required: true, schema: { type: string } }
@@ -8155,6 +8163,8 @@ paths:
           application/json:
             schema: { type: object, additionalProperties: true }
       responses:
+        "404":
+          $ref: "#/components/responses/NotFound"
         "200":
           description: Success envelope (see API_CONVENTIONS.md); some endpoints stream files or redirect
           content:
@@ -8168,7 +8178,7 @@ paths:
       tags: [Imports]
       operationId: postPlatformImportsUuidPreview
       summary: "POST /v1/platform/imports/{uuid}/preview"
-      description: "Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`."
+      description: "Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`. Platform import jobs only (no account). Company import jobs are not listed here and are 404 (TEC-1302)."
       security: [{ bearerAuth: [] }]
       parameters:
         - { name: uuid, in: path, required: true, schema: { type: string } }
@@ -8178,6 +8188,8 @@ paths:
           application/json:
             schema: { type: object, additionalProperties: true }
       responses:
+        "404":
+          $ref: "#/components/responses/NotFound"
         "200":
           description: Success envelope (see API_CONVENTIONS.md); some endpoints stream files or redirect
           content:
@@ -8191,7 +8203,7 @@ paths:
       tags: [Imports]
       operationId: postPlatformImportsUuidRollback
       summary: "POST /v1/platform/imports/{uuid}/rollback"
-      description: "Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`."
+      description: "Registered in `internal/modules/imports/routes.go`. Requires `platform.imports.read`. Platform import jobs only (no account). Company import jobs are not listed here and are 404 (TEC-1302)."
       security: [{ bearerAuth: [] }]
       parameters:
         - { name: uuid, in: path, required: true, schema: { type: string } }
@@ -8201,6 +8213,8 @@ paths:
           application/json:
             schema: { type: object, additionalProperties: true }
       responses:
+        "404":
+          $ref: "#/components/responses/NotFound"
         "200":
           description: Success envelope (see API_CONVENTIONS.md); some endpoints stream files or redirect
           content:
