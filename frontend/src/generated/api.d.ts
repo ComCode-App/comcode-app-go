@@ -11591,6 +11591,15 @@ export interface components {
             layout_mode?: components["schemas"]["PublicLayoutMode"] | "";
             /** @description Main button chosen by the smart link that opened the page (?via=s/{slug}); omitted = save contact */
             primary_action?: components["schemas"]["SmartLinkPrimaryAction"];
+            /** @description Contact the primary action opens (the profile's first of that category), also when the link hides the contacts section (TEC-1307); omitted = no action or no matching contact */
+            primary_contact?: {
+                /** @enum {string} */
+                category: "phone" | "email" | "url" | "whatsapp" | "other";
+                type?: string;
+                label?: string;
+                value: string;
+                is_primary?: boolean;
+            };
             /** @description Company brand color (#rrggbb, TEC-946); empty = the theme's */
             primary_color?: string;
             /** @description Company branding logo; empty = none */

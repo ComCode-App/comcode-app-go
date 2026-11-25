@@ -17283,6 +17283,16 @@ components:
         primary_action:
           description: "Main button chosen by the smart link that opened the page (?via=s/{slug}); omitted = save contact"
           allOf: [{ $ref: "#/components/schemas/SmartLinkPrimaryAction" }]
+        primary_contact:
+          type: object
+          description: "Contact the primary action opens (the profile's first of that category), also when the link hides the contacts section (TEC-1307); omitted = no action or no matching contact"
+          required: [category, value]
+          properties:
+            category: { type: string, enum: [phone, email, url, whatsapp, other] }
+            type: { type: string }
+            label: { type: string }
+            value: { type: string }
+            is_primary: { type: boolean }
         primary_color: { type: string, description: "Company brand color (#rrggbb, TEC-946); empty = the theme's" }
         company_logo_url: { type: string, description: "Company branding logo; empty = none" }
 

@@ -54,6 +54,14 @@ type LinkPresentationSource interface {
 // link's theme, modules and primary action.
 func (s *Service) SetLinkPresentations(src LinkPresentationSource) { s.linkPresentations = src }
 
+// primaryActionCategory maps a smart link's primary action to the contact category it opens.
+var primaryActionCategory = map[string]string{
+	"call":     "phone",
+	"email":    "email",
+	"whatsapp": "whatsapp",
+	"website":  "url",
+}
+
 // linkPresentation is the presentation of the smart link `via` when it targets profileUUID.
 // Lookup failures fall back to the profile's own page.
 func (s *Service) linkPresentation(ctx context.Context, via string, profileUUID uuid.UUID) *routesmodel.LinkPresentation {
@@ -605,6 +613,16 @@ func (s *Service) PublicProfileVia(ctx context.Context, username, via string) (*
 			pt.Bio = t.Bio
 		}
 		out.Translations = append(out.Translations, pt)
+	}
+	// The smart link's main button needs its contact even when the link hides the contacts
+	// section (a social hub, or modules without contacts): send just that one (TEC-1307).
+	if category := primaryActionCategory[primaryAction]; category != "" {
+		for _, c := range detail.ContactDetails {
+			if c.Category == category {
+				out.PrimaryContact = &model.PublicContact{Category: c.Category, Type: c.Type, Label: c.Label, Value: c.Value, IsPrimary: c.IsPrimary}
+				break
+			}
+		}
 	}
 	if show(model.ModuleContacts) {
 		for _, c := range detail.ContactDetails {

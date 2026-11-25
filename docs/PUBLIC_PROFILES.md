@@ -130,7 +130,7 @@ Writes need an owner or admin role in the active account (docs/TENANCY_AND_ACCES
   - Profiles: `lead_capture_enabled` in `PUT /v1/profiles/{uuid}/public-page`.
   - Smart links: `presentation_config` via `PUT /v1/routes/{uuid}`.
   - Cards: the card's own `lead_capture_enabled` (card settings) also turns it on.
-- `/c/{code}` and `/s/{slug}` always open a profile target with `?via=c/{code}` (or `s/{slug}`), also when their own form is off (TEC-940). The page shows the card's form when it is on, else the profile's own form; either way the lead is stored against the card or link (`via` in `POST /v1/public/leads`), as long as it is live and opens the same profile. Visitor events carry `via` as a property. Direct URL / vCard targets have no form.
+- `/c/{code}` always opens a profile target with `?via=c/{code}`, and `/s/{slug}` renders its profile target in place with `via=s/{slug}` (TEC-1307), also when their own form is off (TEC-940). The page shows the card's form when it is on, else the profile's own form; either way the lead is stored against the card or link (`via` in `POST /v1/public/leads`), as long as it is live and opens the same profile. Visitor events carry `via` as a property. Direct URL / vCard targets have no form.
 - Visitor API (no auth):
   - `GET /v1/public/leads/form?path=` says whether a path's form is on.
   - `POST /v1/public/leads` stores the lead. It is limited per client IP, and needs a name, an email or a phone, and `consent: true` with a known `consent_version` (`kvkk-lead-v1`; bump it with the text in `leads.form.consent_text`).
