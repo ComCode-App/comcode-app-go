@@ -50,6 +50,7 @@
   "tabs.social": "Sosyal & Web",
   "tabs.addresses": "Adresler",
   "tabs.settings": "Ayarlar",
+  "tabs.keywords": "Anahtar Kelimeler",
   "tabs.general": "Genel Bilgiler",
   "tabs.organization": "İş & Kurum",
   "tabs.appearance": "Görünüm & Tema",
@@ -73,6 +74,7 @@
   "sections.settings_title": "Profil Yapılandırması",
   "sections.settings_desc": "Varsayılan dil, yayın durumu ve birincil profil önceliğini belirleyin.",
   "sections.bio_note": "Biyografi & Özel Not",
+  "sections.bio": "Biyografi",
   "sections.quick_channels": "Hızlı Kanallar",
   "sections.preview": "Dijital Kartvizit Önizlemesi",
   "fields.uuid": "UUID",
@@ -353,5 +355,13 @@
   "review.range": "{{from}}–{{to}} / {{total}}",
   "public_page.theme_premium_fallback": "Bu tema planınıza dahil değil. Ziyaretçiler şu an {{theme}} temasını görüyor; planınızı yükseltince seçiminiz geri gelir.",
   "public_page.background_premium_fallback": "Bu arka plan animasyonlu ve planınıza dahil değil. Ziyaretçiler şu an temanın arka planını görüyor; planınızı yükseltince seçiminiz geri gelir.",
-  "public_page.branding_locked": "Firma marka ayarlarını kilitledi: bu sayfada buradaki seçimler yerine firmanın teması, layout'u ve kapağı gösterilir."
+  "public_page.branding_locked": "Firma marka ayarlarını kilitledi: bu sayfada buradaki seçimler yerine firmanın teması, layout'u ve kapağı gösterilir.",
+  "keywords.title": "Anahtar Kelimeler",
+  "keywords.description": "Sizi tanımlayan kelimeleri ekleyin; indirilen kartvizitin not alanına yazılır.",
+  "keywords.locale_label": "Anahtar kelimeler ({{locale}})",
+  "keywords.placeholder": "Kelime yazıp Enter'a veya virgüle basın",
+  "keywords.empty": "Henüz anahtar kelime eklenmedi.",
+  "keywords.remove": "{{keyword}} kelimesini kaldır",
+  "keywords.limit_reached": "En fazla {{count}} anahtar kelime ekleyebilirsiniz",
+  "keywords.hint": "Örnek: yazılım, bulut, siber güvenlik. Her dil için ayrı liste tutulur."
 }
