@@ -1491,8 +1491,24 @@ export function ProfileForm({
                                 <Select
                                   onValueChange={(val) => {
                                     field.onChange(val);
+                                    // The phone input only takes E.164 numbers: drop an email or
+                                    // URL typed before switching to phone/WhatsApp (TEC-1306).
+                                    const value = form.getValues(
+                                      `contact_details.${idx}.value`,
+                                    );
+                                    if (
+                                      (val === "phone" || val === "whatsapp") &&
+                                      value &&
+                                      !value.startsWith("+")
+                                    ) {
+                                      form.setValue(
+                                        `contact_details.${idx}.value`,
+                                        "",
+                                        { shouldDirty: true },
+                                      );
+                                    }
                                   }}
-                                  defaultValue={field.value}
+                                  value={field.value}
                                 >
                                   <SelectTrigger>
                                     <SelectValue />
@@ -1529,7 +1545,7 @@ export function ProfileForm({
                               render={({ field }) => (
                                 <Select
                                   onValueChange={field.onChange}
-                                  defaultValue={field.value}
+                                  value={field.value}
                                 >
                                   <SelectTrigger>
                                     <SelectValue />
@@ -1611,7 +1627,24 @@ export function ProfileForm({
                               placeholder={t(
                                 "profiles.contact.label_placeholder",
                               )}
-                              {...form.register(`contact_details.${idx}.label`)}
+                              {...form.register(
+                                `contact_details.${idx}.label`,
+                                {
+                                  // Typing a custom label picks the "custom" template (TEC-1306).
+                                  onChange: (e) => {
+                                    const typeField =
+                                      `contact_details.${idx}.type` as const;
+                                    if (
+                                      e.target.value.trim() &&
+                                      form.getValues(typeField) !== "custom"
+                                    ) {
+                                      form.setValue(typeField, "custom", {
+                                        shouldDirty: true,
+                                      });
+                                    }
+                                  },
+                                },
+                              )}
                             />
                           </div>
 
