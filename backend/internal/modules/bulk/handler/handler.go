@@ -149,9 +149,9 @@ func companyAccess(p authctx.Principal) (bulkusecase.JobAccess, bool) {
 	}
 	switch p.Account.Role {
 	case authctx.AccountRoleOwner, authctx.AccountRoleAdmin:
-		return bulkusecase.JobAccess{AccountID: p.Account.ID, AnyActor: true}, true
+		return bulkusecase.JobAccess{AccountID: p.Account.ID, Resource: cpmodel.ResourceCompanyProfiles, AnyActor: true}, true
 	case authctx.AccountRoleOfficeManager:
-		return bulkusecase.JobAccess{AccountID: p.Account.ID}, true
+		return bulkusecase.JobAccess{AccountID: p.Account.ID, Resource: cpmodel.ResourceCompanyProfiles}, true
 	default:
 		return bulkusecase.JobAccess{}, false
 	}
@@ -213,7 +213,7 @@ func (h *Handler) CompanyList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := apiquery.Parse(r.URL.Query())
-	items, total, err := h.svc.ListAccountJobs(r.Context(), p.UserInternal, access, cpmodel.ResourceCompanyProfiles, q.Limit, q.Offset)
+	items, total, err := h.svc.ListAccountJobs(r.Context(), p.UserInternal, access, q.Limit, q.Offset)
 	if err != nil {
 		writeErr(w, r, err)
 		return

@@ -381,17 +381,17 @@ func TestIntegrationBulkApplyAndRollback(t *testing.T) {
 	}
 
 	for _, j := range []bulkusecase.BulkJobView{logo, links, theme, contact} {
-		rolled, err := e.bulk.Rollback(e.ctx, j.UUID, c.owner.ID, bulkusecase.JobAccess{AccountID: c.account.ID, AnyActor: true})
+		rolled, err := e.bulk.Rollback(e.ctx, j.UUID, c.owner.ID, bulkusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyProfiles, AnyActor: true})
 		if err != nil || rolled.Status != "rolled_back" {
 			t.Fatalf("rollback %s: %+v %v", j.Action, rolled, err)
 		}
 	}
 	// The first contact job changed profile A only; undo it last.
-	first, _, err := e.bulk.ListAccountJobs(e.ctx, c.owner.ID, bulkusecase.JobAccess{AccountID: c.account.ID, AnyActor: true}, model.ResourceCompanyProfiles, 10, 0)
+	first, _, err := e.bulk.ListAccountJobs(e.ctx, c.owner.ID, bulkusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyProfiles, AnyActor: true}, 10, 0)
 	if err != nil || len(first) != 5 {
 		t.Fatalf("jobs: %d %v", len(first), err)
 	}
-	if _, err := e.bulk.Rollback(e.ctx, first[4].UUID, c.owner.ID, bulkusecase.JobAccess{AccountID: c.account.ID, AnyActor: true}); err != nil {
+	if _, err := e.bulk.Rollback(e.ctx, first[4].UUID, c.owner.ID, bulkusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyProfiles, AnyActor: true}); err != nil {
 		t.Fatal(err)
 	}
 	if got := content(e.detail(c, pa)); got != beforeA {
@@ -406,7 +406,7 @@ func TestIntegrationBulkApplyAndRollback(t *testing.T) {
 	if e.media.count() != 1 {
 		t.Fatalf("rollback touched the library file: %d", e.media.count())
 	}
-	if _, err := e.bulk.Rollback(e.ctx, logo.UUID, c.owner.ID, bulkusecase.JobAccess{AccountID: c.account.ID, AnyActor: true}); !errors.Is(err, bulkusecase.ErrInvalidRequest) {
+	if _, err := e.bulk.Rollback(e.ctx, logo.UUID, c.owner.ID, bulkusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyProfiles, AnyActor: true}); !errors.Is(err, bulkusecase.ErrInvalidRequest) {
 		t.Fatalf("second rollback: %v", err)
 	}
 
@@ -446,7 +446,7 @@ func TestIntegrationBulkIsolationAndOfficeScope(t *testing.T) {
 	if page, _ := e.profiles.GetPublicPage(e.ctx, principal(c.account, c.owner, "owner"), px); page.Theme != "" {
 		t.Fatalf("foreign job changed profile: %q", page.Theme)
 	}
-	if _, err := e.bulk.GetAccountJob(e.ctx, job.UUID, c.owner.ID, bulkusecase.JobAccess{AccountID: c.account.ID, AnyActor: true}); !errors.Is(err, bulkusecase.ErrNotFound) {
+	if _, err := e.bulk.GetAccountJob(e.ctx, job.UUID, c.owner.ID, bulkusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyProfiles, AnyActor: true}); !errors.Is(err, bulkusecase.ErrNotFound) {
 		t.Fatalf("job of another account: %v", err)
 	}
 	if _, err := e.bulk.Rollback(e.ctx, job.UUID, other.owner.ID, bulkusecase.JobAccess{}); !errors.Is(err, bulkusecase.ErrNotFound) {
@@ -462,7 +462,7 @@ func TestIntegrationBulkIsolationAndOfficeScope(t *testing.T) {
 	if job.Summary.Total != 1 || job.Summary.Succeeded != 1 {
 		t.Fatalf("office manager query: %+v", job.Summary)
 	}
-	if _, err := e.bulk.Rollback(e.ctx, job.UUID, mgrUser.ID, bulkusecase.JobAccess{AccountID: c.account.ID}); err != nil {
+	if _, err := e.bulk.Rollback(e.ctx, job.UUID, mgrUser.ID, bulkusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyProfiles}); err != nil {
 		t.Fatalf("manager rollback: %v", err)
 	}
 	ownerJob := e.run(principal(c.account, c.owner, "owner"), model.ActionSetTheme, bulkengine.BulkTarget{Scope: "query", Query: map[string]string{"office_uuid": y.Uuid.String()}}, theme)
@@ -470,7 +470,7 @@ func TestIntegrationBulkIsolationAndOfficeScope(t *testing.T) {
 		t.Fatalf("owner query by office: %+v", ownerJob.Summary)
 	}
 	// Office managers see and roll back only their own jobs.
-	if _, err := e.bulk.Rollback(e.ctx, ownerJob.UUID, mgrUser.ID, bulkusecase.JobAccess{AccountID: c.account.ID}); !errors.Is(err, bulkusecase.ErrNotFound) {
+	if _, err := e.bulk.Rollback(e.ctx, ownerJob.UUID, mgrUser.ID, bulkusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyProfiles}); !errors.Is(err, bulkusecase.ErrNotFound) {
 		t.Fatalf("manager rolled back owner's job: %v", err)
 	}
 
@@ -479,7 +479,7 @@ func TestIntegrationBulkIsolationAndOfficeScope(t *testing.T) {
 	if err := e.d.Queries.ClearStructureScopes(e.ctx, db.ClearStructureScopesParams{AccountID: c.account.ID, Uuid: mgrUser.UUID}); err != nil {
 		t.Fatal(err)
 	}
-	rolled, err := e.bulk.Rollback(e.ctx, job.UUID, mgrUser.ID, bulkusecase.JobAccess{AccountID: c.account.ID})
+	rolled, err := e.bulk.Rollback(e.ctx, job.UUID, mgrUser.ID, bulkusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyProfiles})
 	if err != nil || rolled.Status != "rolled_back_partial" {
 		t.Fatalf("revoked manager rollback: %+v %v", rolled, err)
 	}
