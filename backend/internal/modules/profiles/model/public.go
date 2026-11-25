@@ -194,4 +194,7 @@ type PublicProfile struct {
 	// PrimaryAction is the main button chosen by the smart link that opened the page
 	// (save_contact, call, email, whatsapp, website); "" = save contact (TEC-556).
 	PrimaryAction string `json:"primary_action,omitempty"`
+	// PrimaryContact is the contact the primary action opens, also when the link hides the
+	// contacts section (TEC-1307). Nil when there is no action or no matching contact.
+	PrimaryContact *PublicContact `json:"primary_contact,omitempty"`
 }

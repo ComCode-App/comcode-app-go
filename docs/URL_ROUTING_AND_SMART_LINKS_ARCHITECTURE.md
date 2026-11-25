@@ -202,12 +202,22 @@ are rejected), edited in the smart link dialog (`frontend/src/features/smart-lin
 
 - **Targets:** `profile`, `social_hub` (profile page with social links only), `vcard_download` (need a
   profile) and `direct_url` (https only). `custom_modules` is not offered for smart links.
-- **Presentation:** the redirect always appends `?via=s/{slug}` (TEC-940); `GET /v1/public/p/{username}?via=s/{slug}`
-  applies the link's presentation when the link is active and targets that profile.
+- **Presentation:** `profile` and `social_hub` links render the profile in place at `/s/{slug}`; the
+  address stays the link's and has no `?via` (TEC-1307). The page loads
+  `GET /v1/public/p/{username}?via=s/{slug}` on the server, which applies the link's presentation when
+  the link is active and targets that profile, and attributes leads and visits to the link (TEC-940).
+  `vcard_download` and `direct_url` links still redirect. Cards (`/c/{code}`) still redirect with
+  `?via=c/{code}`; the profile page reads it on the server and drops it from the address bar.
+- **Primary action:** the page response carries `primary_contact`, the contact the link's main button
+  opens, also when the link hides the contacts section (a social hub, or modules without contacts).
+  Without a matching contact the main button stays "save contact" (TEC-1307).
 - **Passcode:** `GET /v1/s/{slug}` returns `requires_passcode: true` with no target fields; the visitor page
-  shows a passcode screen and posts the passcode to `POST /v1/s/{slug}/unlock` (body only, never the URL).
-  Wrong passcodes are limited in Redis per visitor+link (5), per visitor (20) and per link (50) per
-  15 minutes; correct passcodes do not count.
+  shows a passcode screen. Its server action posts the passcode to `POST /v1/s/{slug}/unlock` (body only,
+  never the URL) and, when it is right, keeps it for an hour in an httpOnly cookie scoped to the link's
+  path. `/s/{slug}` checks that cookie with the same endpoint on each render and then shows the target
+  in place (TEC-1307). Wrong passcodes are limited in Redis per visitor+link (5), per visitor (20) and
+  per link (50) per 15 minutes; correct passcodes do not count. The passcode protects the link, not the
+  profile: its own `/{username}` page stays public.
 
 ---
 

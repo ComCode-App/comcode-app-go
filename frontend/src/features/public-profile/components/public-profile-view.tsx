@@ -130,6 +130,19 @@ export function PublicProfileView({
       via ? { ...props, via } : props,
     );
 
+  // Cards redirect here with ?via=c/{code}. It is read on the server (lead and visit
+  // attribution arrive as the `via` prop), so drop it from the address bar (TEC-1307).
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("via")) return;
+    url.searchParams.delete("via");
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+  }, []);
+
   const viewed = useRef(false);
   useEffect(() => {
     if (viewed.current) return;
@@ -148,8 +161,10 @@ export function PublicProfileView({
   const vcardHref = `/api/v1/public/p/${encodeURIComponent(profile.username)}/vcard?locale=${activeLocale}`;
   // The smart link that opened the page may lead with another action (TEC-556); without a
   // matching contact the main button stays "save contact".
+  // The API sends that contact separately, also when the link hides contacts (TEC-1307).
   const primaryContact = profile.primary_action
-    ? first(PRIMARY_ACTION_CATEGORY[profile.primary_action] ?? "")
+    ? (profile.primary_contact ??
+      first(PRIMARY_ACTION_CATEGORY[profile.primary_action] ?? ""))
     : undefined;
   const primaryHref = primaryContact ? contactHref(primaryContact) : null;
   const initials = name

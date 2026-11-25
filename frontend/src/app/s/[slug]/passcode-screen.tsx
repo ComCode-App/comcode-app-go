@@ -1,21 +1,22 @@
 "use client";
 
 import { KeyRound } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
+import { unlockSmartLink } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { SmartLinkResolution } from "@/features/cards/services/cards.service";
-import { withVia } from "@/features/leads/lib/via";
 import { useLocale } from "@/providers/locale-provider";
 
 /**
  * Passcode entry for a protected smart link (TEC-556). The passcode goes in the POST body only,
- * never in the URL; the API rate limits wrong attempts.
+ * never in the URL; the API rate limits wrong attempts per visitor IP.
  */
 export function SmartLinkPasscodeScreen({ slug }: { slug: string }) {
   const { t } = useLocale();
+  const router = useRouter();
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -26,23 +27,11 @@ export function SmartLinkPasscodeScreen({ slug }: { slug: string }) {
     setPending(true);
     setError(null);
     try {
-      const res = await fetch(`/api/v1/s/${encodeURIComponent(slug)}/unlock`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ passcode }),
-        cache: "no-store",
-      });
+      // A server action checks the passcode and keeps it in a cookie for this link only; the
+      // refreshed page then shows the target here, at /s/{slug} (TEC-1307).
+      const res = await unlockSmartLink(slug, passcode);
       if (res.ok) {
-        const { data } = (await res.json()) as { data?: SmartLinkResolution };
-        if (data?.target_url) {
-          // replace: the passcode screen should not come back on "back".
-          window.location.replace(withVia(data.target_url, `s/${slug}`));
-          return;
-        }
-        setError(t("public_profile.link_passcode.gone"));
+        router.refresh();
       } else if (res.status === 403) {
         setError(t("public_profile.link_passcode.wrong"));
         setPasscode("");
