@@ -63,13 +63,16 @@ func ValidateProductInput(in model.UpsertProductInput) []FieldError {
 	case !twoDecimals(in.BasePrice):
 		bad("base_price", "too_many_decimals")
 	}
-	switch {
-	case math.IsNaN(in.TaxRate) || math.IsInf(in.TaxRate, 0):
-		bad("tax_rate", "invalid_number")
-	case in.TaxRate < 0 || in.TaxRate > 100:
-		bad("tax_rate", "out_of_range")
-	case !twoDecimals(in.TaxRate):
-		bad("tax_rate", "too_many_decimals")
+	if in.TaxRate != nil { // omitted: the default on create, unchanged on update
+		tax := *in.TaxRate
+		switch {
+		case math.IsNaN(tax) || math.IsInf(tax, 0):
+			bad("tax_rate", "invalid_number")
+		case tax < 0 || tax > 100:
+			bad("tax_rate", "out_of_range")
+		case !twoDecimals(tax):
+			bad("tax_rate", "too_many_decimals")
+		}
 	}
 	if in.StockQuantity < 0 {
 		bad("stock_quantity", "negative")

@@ -133,9 +133,9 @@ func (r *PostgresRepository) Create(ctx context.Context, input model.UpsertProdu
 	if curr == "" {
 		curr = "TRY"
 	}
-	taxRate := input.TaxRate
-	if taxRate <= 0 {
-		taxRate = 20.00
+	taxRate := model.DefaultTaxRate
+	if input.TaxRate != nil {
+		taxRate = *input.TaxRate // an explicit 0 stays 0
 	}
 
 	row, err := r.q.CreateProduct(ctx, db.CreateProductParams{
@@ -193,7 +193,7 @@ func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, input mod
 		ProductType:      textToPgtype(&input.ProductType),
 		BasePrice:        floatToNumeric(input.BasePrice),
 		Currency:         textToPgtype(&input.Currency),
-		TaxRate:          floatToNumeric(input.TaxRate),
+		TaxRate:          optionalNumeric(input.TaxRate), // nil keeps the current VAT
 		StockQuantity:    pgtype.Int4{Int32: int32(input.StockQuantity), Valid: true},
 		Sku:              pgtype.Text{String: input.SKU, Valid: true},
 		AllowCustomPrint: pgtype.Bool{Bool: input.AllowCustomPrint, Valid: true},
@@ -585,6 +585,14 @@ func numericToFloat(n pgtype.Numeric) float64 {
 		return 0.0
 	}
 	return f.Float64
+}
+
+// optionalNumeric is NULL for nil (COALESCE keeps the stored value) and the number otherwise.
+func optionalNumeric(f *float64) pgtype.Numeric {
+	if f == nil {
+		return pgtype.Numeric{Valid: false}
+	}
+	return floatToNumeric(*f)
 }
 
 func floatToNumeric(f float64) pgtype.Numeric {

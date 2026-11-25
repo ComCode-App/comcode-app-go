@@ -144,6 +144,32 @@ func TestIntegrationProductsImportExport(t *testing.T) {
 		t.Fatalf("invalid row applied: %+v %v", bad, err)
 	}
 
+	// --- TEC-1301: an explicit 0 % VAT is kept on create and on update; an empty cell is 20 on create.
+	vatTag := pgtest.Unique() // outside the q filter of the export checks below
+	zeroSlug := "sifir-kdv-" + vatTag
+	if r, err := a.ApplyRow(ctx, map[string]any{"slug": zeroSlug, "name": "Sıfır KDV", "base_price": "5", "tax_rate": "0"}, nil); err != nil || !r.OK {
+		t.Fatalf("zero VAT create: %+v %v", r, err)
+	}
+	if zp, _, _ := loadProduct(t, d, zeroSlug); zp.TaxRate != "0.00" {
+		t.Fatalf("zero VAT create stored %s", zp.TaxRate)
+	}
+	if r, err := a.ApplyRow(ctx, map[string]any{"slug": zeroSlug, "tax_rate": "18"}, nil); err != nil || !r.OK {
+		t.Fatalf("VAT update: %+v %v", r, err)
+	}
+	if r, err := a.ApplyRow(ctx, map[string]any{"slug": zeroSlug, "tax_rate": "0"}, nil); err != nil || !r.OK {
+		t.Fatalf("zero VAT update: %+v %v", r, err)
+	}
+	if zp, _, _ := loadProduct(t, d, zeroSlug); zp.TaxRate != "0.00" {
+		t.Fatalf("zero VAT update stored %s", zp.TaxRate)
+	}
+	defSlug := "varsayilan-kdv-" + vatTag
+	if r, err := a.ApplyRow(ctx, map[string]any{"slug": defSlug, "name": "Varsayılan KDV", "base_price": "5"}, nil); err != nil || !r.OK {
+		t.Fatalf("default VAT create: %+v %v", r, err)
+	}
+	if dp, _, _ := loadProduct(t, d, defSlug); dp.TaxRate != "20.00" {
+		t.Fatalf("default VAT stored %s", dp.TaxRate)
+	}
+
 	// --- Rollback: the update comes back exactly (no category again), the create is deleted.
 	if err := a.RevertRow(ctx, updated.EntityType, updated.EntityUUID, updated.Previous); err != nil {
 		t.Fatal(err)

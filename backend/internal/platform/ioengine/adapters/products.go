@@ -184,7 +184,7 @@ func (a *ProductsAdapter) plan(ctx context.Context, row map[string]any) (product
 		p.input = inputFromDetail(existing)
 	case errors.Is(err, productsusecase.ErrNotFound):
 		p.input = model.UpsertProductInput{
-			Status: "draft", ProductType: "physical_card", Currency: "TRY", TaxRate: 20,
+			Status: "draft", ProductType: "physical_card", Currency: "TRY", TaxRate: ptrFloat(model.DefaultTaxRate),
 		}
 		if strVal(row, "base_price") == "" {
 			bad("base_price", "required")
@@ -228,7 +228,12 @@ func (a *ProductsAdapter) plan(ctx context.Context, row map[string]any) (product
 		*dst = f
 	}
 	number("base_price", &in.BasePrice)
-	number("tax_rate", &in.TaxRate)
+	// An explicit 0 % VAT is kept (TEC-1301); an empty cell keeps the default or current VAT.
+	if in.TaxRate != nil {
+		tax := *in.TaxRate
+		number("tax_rate", &tax)
+		in.TaxRate = &tax
+	}
 	integer := func(key string, dst *int) {
 		v := strVal(row, key)
 		if v == "" {
@@ -293,7 +298,7 @@ func inputFromDetail(d *model.ProductDetail) model.UpsertProductInput {
 	in := model.UpsertProductInput{
 		Name: d.Name, Slug: d.Slug, ShortDescription: d.ShortDescription, Description: d.Description,
 		Status: d.Status, ProductType: d.ProductType, BasePrice: d.BasePrice, Currency: d.Currency,
-		TaxRate: d.TaxRate, StockQuantity: d.StockQuantity, SKU: d.SKU, AllowCustomPrint: d.AllowCustomPrint,
+		TaxRate: ptrFloat(d.TaxRate), StockQuantity: d.StockQuantity, SKU: d.SKU, AllowCustomPrint: d.AllowCustomPrint,
 		Model3DFileURL: d.Model3DFileURL, Model3DUSDZURL: d.Model3DUSDZURL, Images: d.Images,
 		MetaTitle: d.MetaTitle, MetaDescription: d.MetaDescription, MetaKeywords: d.MetaKeywords,
 		CanonicalURL: d.CanonicalURL, OGImageURL: d.OGImageURL, DisplayOrder: d.DisplayOrder,
@@ -403,3 +408,5 @@ func joinRowErrors(errs []ioengine.RowError) string {
 	}
 	return strings.Join(parts, "; ")
 }
+
+func ptrFloat(f float64) *float64 { return &f }

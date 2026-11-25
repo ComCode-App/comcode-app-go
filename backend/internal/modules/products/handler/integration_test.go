@@ -164,3 +164,55 @@ func TestIntegrationProductValidationAndCategory(t *testing.T) {
 	require.Len(t, page.Items, 1)
 	require.Equal(t, cat, page.Items[0].CategoryUUID)
 }
+
+// TEC-1301: an explicit 0 % VAT is stored on create; an omitted one is 20 on create and kept on
+// update; an explicit value on update is written.
+func TestIntegrationProductTaxRate(t *testing.T) {
+	d := pgtest.Open(t)
+	ctx := context.Background()
+	h := handler.New(usecase.NewService(repository.NewPostgres(d.Queries), categoriesrepo.NewPostgres(d.Queries), nil))
+	tag := pgtest.Unique()
+	stored := func(id string) string {
+		t.Helper()
+		var v string
+		require.NoError(t, d.Pool.QueryRow(ctx, `SELECT tax_rate::text FROM products WHERE uuid = $1`, id).Scan(&v))
+		return v
+	}
+	create := func(name string, extra map[string]any) product {
+		t.Helper()
+		body := map[string]any{"name": name + " " + tag, "base_price": 10, "stock_quantity": 1}
+		for k, v := range extra {
+			body[k] = v
+		}
+		code, raw := do(t, h.Create, "POST", "/v1/platform/products", "", body)
+		require.Equal(t, http.StatusCreated, code, string(raw))
+		return data[product](t, raw)
+	}
+
+	zero := create("KDV sifir", map[string]any{"tax_rate": 0})
+	require.Equal(t, 0.0, zero.TaxRate)
+	require.Equal(t, "0.00", stored(zero.UUID), "explicit 0 % VAT is stored as 0")
+
+	omitted := create("KDV yok", nil)
+	require.Equal(t, 20.0, omitted.TaxRate)
+	require.Equal(t, "20.00", stored(omitted.UUID), "omitted VAT defaults to 20")
+
+	eighteen := create("KDV onsekiz", map[string]any{"tax_rate": 18})
+	require.Equal(t, "18.00", stored(eighteen.UUID))
+
+	update := func(id string, extra map[string]any) {
+		t.Helper()
+		body := map[string]any{"name": "KDV onsekiz " + tag, "base_price": 10, "stock_quantity": 1}
+		for k, v := range extra {
+			body[k] = v
+		}
+		code, raw := do(t, h.Update, "PUT", "/v1/platform/products/"+id, id, body)
+		require.Equal(t, http.StatusOK, code, string(raw))
+	}
+	update(eighteen.UUID, map[string]any{"tax_rate": 0})
+	require.Equal(t, "0.00", stored(eighteen.UUID), "update to 0 % VAT")
+	update(eighteen.UUID, map[string]any{"tax_rate": 8})
+	require.Equal(t, "8.00", stored(eighteen.UUID))
+	update(eighteen.UUID, nil)
+	require.Equal(t, "8.00", stored(eighteen.UUID), "an omitted VAT on update keeps the stored one")
+}

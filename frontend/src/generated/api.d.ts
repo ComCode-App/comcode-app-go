@@ -11911,6 +11911,10 @@ export interface components {
             product_type?: string;
             base_price: number;
             currency?: string;
+            /**
+             * @description VAT in percent. Omitted: 20 on create, unchanged on update. An explicit 0 is stored
+             *     as 0 % VAT (TEC-1301).
+             */
             tax_rate?: number;
             stock_quantity?: number;
             sku?: string;

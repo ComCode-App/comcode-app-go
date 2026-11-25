@@ -106,17 +106,22 @@ type ProductDetail struct {
 	UpdatedAt        time.Time               `json:"updated_at"`
 }
 
+// DefaultTaxRate is the VAT of a product created without tax_rate.
+const DefaultTaxRate = 20.0
+
 type UpsertProductInput struct {
-	CategoryUUID     *string         `json:"category_uuid,omitempty"`
-	Name             string          `json:"name"`
-	Slug             string          `json:"slug,omitempty"`
-	ShortDescription string          `json:"short_description,omitempty"`
-	Description      string          `json:"description,omitempty"`
-	Status           string          `json:"status,omitempty"`
-	ProductType      string          `json:"product_type,omitempty"`
-	BasePrice        float64         `json:"base_price"`
-	Currency         string          `json:"currency,omitempty"`
-	TaxRate          float64         `json:"tax_rate,omitempty"`
+	CategoryUUID     *string `json:"category_uuid,omitempty"`
+	Name             string  `json:"name"`
+	Slug             string  `json:"slug,omitempty"`
+	ShortDescription string  `json:"short_description,omitempty"`
+	Description      string  `json:"description,omitempty"`
+	Status           string  `json:"status,omitempty"`
+	ProductType      string  `json:"product_type,omitempty"`
+	BasePrice        float64 `json:"base_price"`
+	Currency         string  `json:"currency,omitempty"`
+	// TaxRate is the VAT in percent. Omitted (nil): 20 on create, unchanged on update; an
+	// explicit 0 is stored as 0 (TEC-1301).
+	TaxRate          *float64        `json:"tax_rate,omitempty"`
 	StockQuantity    int             `json:"stock_quantity"`
 	SKU              string          `json:"sku,omitempty"`
 	AllowCustomPrint bool            `json:"allow_custom_print"`
