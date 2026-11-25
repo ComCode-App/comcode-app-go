@@ -32,6 +32,7 @@
   "resources.platform.subscriptions": "Abonelikler",
   "resources.platform.companies": "İşletmeler",
   "resources.platform.orders": "Siparişler",
+  "resources.platform.products": "Ürünler",
   "resources.platform.settings": "Ayarlar",
   "resources.platform.access": "Erişim ayarları",
   "resources.platform.auth.settings": "Auth ayarları",

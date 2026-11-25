@@ -81,6 +81,8 @@
   "labels.platform.categories.write": "Manage product categories",
   "labels.platform.products.read": "View product catalog",
   "labels.platform.products.write": "Manage product catalog",
+  "labels.platform.products.export": "Export platform products",
+  "labels.platform.products.import": "Import platform products",
   "labels.platform.orders.read": "View platform orders",
   "labels.platform.orders.export": "Export platform orders",
   "labels.platform.orders.write": "Manage platform orders",

@@ -518,7 +518,7 @@ func PlatformProducts() ResourceMeta {
 		DefaultFields: []string{"uuid", "name", "slug", "category_name", "status", "product_type", "base_price", "currency", "stock_quantity"},
 		Capabilities: Capabilities{
 			Create: true, Read: true, Update: true, Delete: true,
-			Search: true, Filter: true, Sort: true,
+			Search: true, Filter: true, Sort: true, Export: true, Import: true,
 		},
 		SearchableFields: []string{"name", "slug", "sku", "short_description"},
 		SortableFields:   []string{"name", "slug", "base_price", "stock_quantity", "display_order", "created_at"},

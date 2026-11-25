@@ -87,6 +87,8 @@ const (
 	PermPlatformCategoriesWrite      = "platform.categories.write"
 	PermPlatformProductsRead         = "platform.products.read"
 	PermPlatformProductsWrite        = "platform.products.write"
+	PermPlatformProductsExport       = "platform.products.export"
+	PermPlatformProductsImport       = "platform.products.import"
 	PermPlatformOrdersRead           = "platform.orders.read"
 	PermPlatformOrdersExport         = "platform.orders.export"
 	PermPlatformOrdersWrite          = "platform.orders.write"

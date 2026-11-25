@@ -74,6 +74,7 @@
   "columns.actions": "Actions",
   "resources.platform.users": "Users",
   "resources.platform.roles": "Roles",
+  "resources.platform.products": "Products",
   "formats.xlsx": "Excel (.xlsx)",
   "formats.csv": "CSV",
   "formats.tsv": "TSV",

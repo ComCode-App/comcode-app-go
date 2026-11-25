@@ -93,7 +93,8 @@ export type IoResource =
   | "platform.plans"
   | "platform.subscriptions"
   | "platform.companies"
-  | "platform.orders";
+  | "platform.orders"
+  | "platform.products";
 
 export const EXPORT_PATHS: Record<IoResource, string> = {
   "platform.users": "/v1/platform/users/export",
@@ -104,6 +105,7 @@ export const EXPORT_PATHS: Record<IoResource, string> = {
   "platform.subscriptions": "/v1/platform/subscriptions/export",
   "platform.companies": "/v1/platform/companies/export",
   "platform.orders": "/v1/platform/orders/export",
+  "platform.products": "/v1/platform/products/export",
 };
 
 /** Import-capable resources: platform lists plus app resources without an export. */
@@ -124,6 +126,10 @@ export const IMPORT_PATHS: Partial<Record<ImportResource, ImportPaths>> = {
   "platform.roles": {
     upload: "/v1/platform/roles/import",
     sample: "/v1/platform/roles/import/sample",
+  },
+  "platform.products": {
+    upload: "/v1/platform/products/import",
+    sample: "/v1/platform/products/import/sample",
   },
   "app.company_employees": {
     upload: "/v1/company/employees/import",
@@ -151,6 +157,31 @@ export const IMPORT_SCHEMA: Partial<
     { key: "slug", labelKey: "roles.fields.slug", required: true },
     { key: "description", labelKey: "roles.fields.description" },
     { key: "permission_slugs", labelKey: "roles.fields.permissions" },
+  ],
+  "platform.products": [
+    { key: "slug", labelKey: "products.fields.slug", required: true },
+    { key: "name", labelKey: "products.fields.name", required: true },
+    { key: "sku", labelKey: "products.fields.sku" },
+    { key: "status", labelKey: "products.fields.status" },
+    { key: "product_type", labelKey: "products.fields.type" },
+    { key: "category", labelKey: "products.fields.category" },
+    { key: "base_price", labelKey: "products.fields.base_price" },
+    { key: "currency", labelKey: "products.fields.currency" },
+    { key: "tax_rate", labelKey: "products.fields.tax_rate" },
+    { key: "stock_quantity", labelKey: "products.fields.stock" },
+    {
+      key: "allow_custom_print",
+      labelKey: "products.fields.allow_custom_print",
+    },
+    { key: "display_order", labelKey: "products.fields.display_order" },
+    {
+      key: "short_description",
+      labelKey: "products.fields.short_description",
+    },
+    { key: "description", labelKey: "products.fields.description" },
+    { key: "meta_title", labelKey: "products.seo.meta_title" },
+    { key: "meta_description", labelKey: "products.seo.meta_description" },
+    { key: "meta_keywords", labelKey: "products.seo.meta_keywords" },
   ],
   "app.company_employees": [
     {

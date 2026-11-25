@@ -969,6 +969,9 @@ type Querier interface {
 	// identity and the client id it belongs to (TEC-1181).
 	SetOAuthAccountRefreshToken(ctx context.Context, arg SetOAuthAccountRefreshTokenParams) (int64, error)
 	SetPrimaryProfileByUUID(ctx context.Context, arg SetPrimaryProfileByUUIDParams) error
+	// UpdateProduct keeps the category when none is given; an import rollback (TEC-596) uses this
+	// to put back exactly the category a product had before, none included.
+	SetProductCategory(ctx context.Context, arg SetProductCategoryParams) error
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetStructureAssignment(ctx context.Context, arg SetStructureAssignmentParams) (int64, error)
 	SetUserEmailVerified(ctx context.Context, id int64) (User, error)

@@ -426,6 +426,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	companyImport := companyprofilesusecase.NewImportAdapter(deps.Queries, profilesSvc)
 	companyImport.SetInviter(invitesSvc)
 
+	productsIO := ioadapters.NewProducts(deps.Queries)
+	productsIO.SetSearchIndexer(searchIndexer)
 	ioReg := ioengine.NewRegistry(
 		ioadapters.NewUsers(deps.Queries),
 		ioadapters.NewRoles(deps.Queries),
@@ -433,6 +435,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		ioadapters.NewActivity(deps.Queries),
 		ioadapters.NewOrderManifest(deps.Queries, cfg.Auth.FrontendURL),
 		ioadapters.NewOrders(deps.Queries),
+		productsIO,
 		ioadapters.NewLeads(deps.Queries),
 		companyImport,
 	)

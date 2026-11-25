@@ -51,6 +51,12 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/platform/roles/import/sample", middleware.Chain(
 		http.HandlerFunc(h.SampleRoles), authn, require(rbac.PermPlatformRolesImport),
 	))
+	mux.Handle("POST /v1/platform/products/import", middleware.Chain(
+		http.HandlerFunc(h.UploadProducts), authn, require(rbac.PermPlatformProductsImport),
+	))
+	mux.Handle("GET /v1/platform/products/import/sample", middleware.Chain(
+		http.HandlerFunc(h.SampleProducts), authn, require(rbac.PermPlatformProductsImport),
+	))
 
 	// Employee import of the active company account (TEC-573): owners/admins only, and the job
 	// routes reach only the caller's jobs of that account.

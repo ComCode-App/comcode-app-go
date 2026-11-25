@@ -43,6 +43,7 @@
   "fields.allow_custom_print": "Özel Baskı & Lazer Kazımaya Uygun",
   "fields.allow_custom_print_sub": "Siparişte müşteri adı, unvanı veya şirket logosu baskısı talep edilebilir.",
   "fields.created_at": "Oluşturulma Tarihi",
+  "fields.display_order": "Sıra",
   "tabs.general": "Genel Bilgiler",
   "tabs.seo": "SEO & Arama Motoru",
   "tabs.viewbox": "3D Studio & Sahne",

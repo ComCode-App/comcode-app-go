@@ -50,6 +50,7 @@
   "resources.platform.subscriptions": "Subscriptions",
   "resources.platform.companies": "Companies",
   "resources.platform.orders": "Orders",
+  "resources.platform.products": "Products",
   "status.pending": "Pending",
   "status.processing": "Processing",
   "status.completed": "Ready",

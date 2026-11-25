@@ -5577,6 +5577,106 @@ paths:
               schema:
                 $ref: "#/components/schemas/EnvelopeResourceMeta"
 
+  /v1/platform/products/export:
+    post:
+      tags: [Products]
+      operationId: postPlatformProductsExport
+      summary: Queue an export of the product catalog
+      description: |
+        Product catalog export (TEC-596), resource `platform.products`. Honors the filters of
+        `GET /v1/platform/products`: `q` (name, slug, SKU), `status`, `product_type`; list order
+        (display order, then newest), at most 10,000 rows. Columns are the importable fields (slug,
+        name, SKU, status, product type, category slug, price, currency, VAT rate, stock, custom
+        print, display order, short and long description, SEO title/description/keywords) plus
+        created/updated time and UUID, so a file can be edited and imported back. Download it from
+        `/v1/platform/exports/{uuid}/download`. Requires `platform.products.export` and step-up.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [format]
+              properties:
+                format: { type: string, enum: [pdf, xlsx, csv, json] }
+                locale: { type: string, enum: [tr, en], default: tr }
+                query:
+                  type: object
+                  description: List filters, as on `GET /v1/platform/products`.
+                  properties:
+                    q: { type: string }
+                    status: { type: string }
+                    product_type: { type: string }
+                  additionalProperties: { type: string }
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeGeneric" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/platform/products/import:
+    post:
+      tags: [Products]
+      operationId: postPlatformProductsImport
+      summary: Upload a product catalog import file
+      description: |
+        Requires `platform.products.import` (TEC-596). Rows are matched by slug (normalized like the
+        product form does); a live product with that slug is updated, otherwise one is created.
+        Columns: slug and name (required), sku, status (active|draft|archived), product_type,
+        category (slug or UUID of a platform category), base_price (required for new products),
+        currency, tax_rate, stock_quantity, allow_custom_print, display_order, short_description,
+        description, meta_title, meta_description, meta_keywords. Empty cells keep the current value
+        on update. Rules: price >= 0 and tax rate 0-100, both with at most two decimals; stock a
+        whole number >= 0. Variants, images, 3D models and SEO image/canonical URL are not imported.
+        Continue with mapping, preview (dry run with row errors), confirm and rollback under
+        `/v1/platform/imports/{uuid}`.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                format: { type: string, enum: [csv, tsv, xlsx, json] }
+                locale: { type: string, enum: [tr, en] }
+      responses:
+        "201":
+          description: Import job created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeImportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+
+  /v1/platform/products/import/sample:
+    get:
+      tags: [Products]
+      operationId: getPlatformProductsImportSample
+      summary: Download the product import sample
+      description: "Requires `platform.products.import`."
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: format, in: query, schema: { type: string, enum: [csv, tsv, xlsx, json] } }
+        - { name: locale, in: query, schema: { type: string, enum: [tr, en] } }
+      responses:
+        "200":
+          description: Sample file
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/platform/products:
     get:
       tags: [Commerce Products]
