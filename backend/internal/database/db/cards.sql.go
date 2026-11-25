@@ -666,6 +666,59 @@ func (q *Queries) GetCardBySmartCode(ctx context.Context, smartCode string) (Get
 	return i, err
 }
 
+const listAccountCardUUIDsForBulk = `-- name: ListAccountCardUUIDsForBulk :many
+SELECT c.uuid
+FROM nfc_cards c
+WHERE c.account_id = $1
+  AND c.deleted_at IS NULL
+  AND (
+    $2::text IS NULL
+    OR c.name ILIKE '%' || $2 || '%'
+    OR c.smart_code ILIKE '%' || $2 || '%'
+    OR c.card_uid ILIKE '%' || $2 || '%'
+  )
+  AND (
+    $3::boolean IS NULL
+    OR c.is_active = $3::boolean
+  )
+ORDER BY c.created_at DESC
+LIMIT $4
+`
+
+type ListAccountCardUUIDsForBulkParams struct {
+	AccountID  int64       `json:"account_id"`
+	Q          pgtype.Text `json:"q"`
+	IsActive   pgtype.Bool `json:"is_active"`
+	LimitCount int32       `json:"limit_count"`
+}
+
+// ListAccountCardUUIDsForBulk resolves the "query" scope of a card bulk action with the filters
+// of GET /v1/cards (q, is_active).
+func (q *Queries) ListAccountCardUUIDsForBulk(ctx context.Context, arg ListAccountCardUUIDsForBulkParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listAccountCardUUIDsForBulk,
+		arg.AccountID,
+		arg.Q,
+		arg.IsActive,
+		arg.LimitCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var uuid uuid.UUID
+		if err := rows.Scan(&uuid); err != nil {
+			return nil, err
+		}
+		items = append(items, uuid)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAccountCards = `-- name: ListAccountCards :many
 SELECT 
     c.id, c.uuid, c.user_id, c.name, c.card_uid, c.activation_code, c.smart_code, c.target_type, c.profile_id, c.direct_url, c.custom_data, c.card_type, c.material, c.color_hex, c.is_active, c.is_locked, c.lead_capture_enabled, c.passcode, c.created_at, c.updated_at, c.deleted_at, c.order_id, c.order_item_id, c.status, c.account_id,
@@ -789,6 +842,38 @@ func (q *Queries) ListAccountCards(ctx context.Context, arg ListAccountCardsPara
 		return nil, err
 	}
 	return items, nil
+}
+
+const setCardLock = `-- name: SetCardLock :one
+WITH prev AS (
+    SELECT p.id, p.is_locked
+    FROM nfc_cards p
+    WHERE p.uuid = $3
+      AND p.account_id = $2
+      AND p.deleted_at IS NULL
+    FOR UPDATE
+)
+UPDATE nfc_cards c
+SET is_locked = $1
+FROM prev
+WHERE c.id = prev.id
+  AND c.account_id = $2
+RETURNING prev.is_locked AS was_locked
+`
+
+type SetCardLockParams struct {
+	IsLocked  bool      `json:"is_locked"`
+	AccountID int64     `json:"account_id"`
+	Uuid      uuid.UUID `json:"uuid"`
+}
+
+// SetCardLock sets the lock of one card of the account and returns the lock it had before, so a
+// bulk lock/unlock (TEC-596) can be rolled back exactly.
+func (q *Queries) SetCardLock(ctx context.Context, arg SetCardLockParams) (bool, error) {
+	row := q.db.QueryRow(ctx, setCardLock, arg.IsLocked, arg.AccountID, arg.Uuid)
+	var was_locked bool
+	err := row.Scan(&was_locked)
+	return was_locked, err
 }
 
 const toggleCardLock = `-- name: ToggleCardLock :one

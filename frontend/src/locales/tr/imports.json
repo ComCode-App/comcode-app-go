@@ -74,6 +74,7 @@
   "columns.actions": "İşlemler",
   "resources.platform.users": "Kullanıcılar",
   "resources.platform.roles": "Roller",
+  "resources.platform.products": "Ürünler",
   "formats.xlsx": "Excel tablosu (.xlsx)",
   "formats.csv": "CSV",
   "formats.tsv": "TSV",

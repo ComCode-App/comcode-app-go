@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Updater, PaginationState } from "@tanstack/react-table";
 import {
@@ -35,6 +35,13 @@ import { createCardsColumns } from "./cards-columns";
 import { SubscriberOrderDialog } from "@/features/orders";
 import { RouteQrDialog } from "@/features/route-qr";
 import { EntityTable } from "@/components/entity";
+import { createSelectColumnDef } from "@/components/tables";
+import {
+  BulkActionMenu,
+  SelectionBanner,
+  resolveBulkActionsWithIcons,
+  useBulkSelection,
+} from "@/features/bulk-engine";
 
 export function CardsPage() {
   const { t } = useLocale();
@@ -62,6 +69,27 @@ export function CardsPage() {
 
   const cards = data?.items || [];
   const total = data?.total || 0;
+
+  // Bulk lock/unlock in the table view (TEC-596): the page's rows or every card matching the
+  // search, in the active account.
+  const metaQuery = useQuery({
+    queryKey: cardsKeys.meta(),
+    queryFn: () => cardsService.meta(),
+  });
+  const bulkActions = useMemo(
+    () =>
+      resolveBulkActionsWithIcons(
+        "app.cards",
+        metaQuery.data?.bulk_actions ?? [],
+      ),
+    [metaQuery.data?.bulk_actions],
+  );
+  const bulkQuery = useMemo(() => ({ q: searchTerm }), [searchTerm]);
+  const bulkSelection = useBulkSelection({
+    listQueryKey: `${viewMode}:${page}:${pageSize}:${searchTerm}`,
+    bulkQuery,
+    total,
+  });
 
   const activeCount = cards.filter((c) => c.is_active && !c.is_locked).length;
   const lockedCount = cards.filter((c) => c.is_locked || !c.is_active).length;
@@ -96,12 +124,15 @@ export function CardsPage() {
     toggleLockMutation.mutate(card.uuid);
   };
 
-  const tableColumns = createCardsColumns({
-    t,
-    onSettingsClick: handleOpenSettings,
-    onQRClick: handleOpenQR,
-    onToggleLock: handleToggleLock,
-  });
+  const tableColumns = [
+    createSelectColumnDef<CardSummary>(),
+    ...createCardsColumns({
+      t,
+      onSettingsClick: handleOpenSettings,
+      onQRClick: handleOpenQR,
+      onToggleLock: handleToggleLock,
+    }),
+  ];
 
   return (
     <div className="space-y-6 pb-12">
@@ -301,24 +332,50 @@ export function CardsPage() {
         </div>
       ) : (
         /* Table View */
-        <EntityTable
-          data={cards}
-          columns={tableColumns}
-          isLoading={isLoading}
-          manual={{ pagination: true }}
-          pageCount={Math.ceil(total / pageSize)}
-          state={{
-            pagination: { pageIndex: page - 1, pageSize },
-            onPaginationChange: (updater: Updater<PaginationState>) => {
-              const next =
-                typeof updater === "function"
-                  ? updater({ pageIndex: page - 1, pageSize })
-                  : updater;
-              setPage(next.pageIndex + 1);
-              setPageSize(next.pageSize);
-            },
-          }}
-        />
+        <div className="space-y-3">
+          <SelectionBanner
+            selectedCount={bulkSelection.selectedCount}
+            total={total}
+            showSelectAll={bulkSelection.showSelectAllBanner}
+            allMatchingSelected={bulkSelection.scope.mode === "all"}
+            onSelectAllMatching={bulkSelection.selectAllMatching}
+            onClearSelection={bulkSelection.clearSelection}
+          />
+          <EntityTable
+            data={cards}
+            columns={tableColumns}
+            getRowId={(row) => row.uuid}
+            isLoading={isLoading}
+            manual={{ pagination: true }}
+            pageCount={Math.ceil(total / pageSize)}
+            features={{ rowSelection: true }}
+            toolbarExtra={
+              <BulkActionMenu
+                resource="app.cards"
+                actions={bulkActions}
+                scope={bulkSelection.scope}
+                selectedCount={bulkSelection.selectedCount}
+                onComplete={() => {
+                  bulkSelection.clearSelection();
+                  void refetch();
+                }}
+              />
+            }
+            state={{
+              rowSelection: bulkSelection.rowSelection,
+              onRowSelectionChange: bulkSelection.onRowSelectionChange,
+              pagination: { pageIndex: page - 1, pageSize },
+              onPaginationChange: (updater: Updater<PaginationState>) => {
+                const next =
+                  typeof updater === "function"
+                    ? updater({ pageIndex: page - 1, pageSize })
+                    : updater;
+                setPage(next.pageIndex + 1);
+                setPageSize(next.pageSize);
+              },
+            }}
+          />
+        </div>
       )}
 
       {/* Dialogs */}

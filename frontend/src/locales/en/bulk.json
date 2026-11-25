@@ -6,6 +6,7 @@
   "rollback": "Undo bulk action",
   "rollback_until": "Undo available until {{date}}",
   "rollback_success": "Bulk action rolled back",
+  "undo": "Undo",
   "result.sync": "{{succeeded}} succeeded, {{failed}} failed",
   "job.queued": "Bulk job queued",
   "job.processing": "Processing bulk job…",
@@ -23,5 +24,9 @@
   "confirm.company_profiles.set_contact": "Update the contact details of {{count}} profiles?",
   "confirm.company_profiles.set_logo": "Set the logo on {{count}} profiles?",
   "confirm.company_profiles.set_theme": "Change the theme of {{count}} profiles?",
-  "confirm.company_profiles.add_links": "Add the links to {{count}} profiles?"
+  "confirm.company_profiles.add_links": "Add the links to {{count}} profiles?",
+  "actions.cards.lock": "Lock cards",
+  "actions.cards.unlock": "Unlock cards",
+  "confirm.cards.lock": "Lock {{count}} selected cards? Locked cards stop redirecting visitors until they are unlocked.",
+  "confirm.cards.unlock": "Unlock {{count}} selected cards?"
 }

@@ -597,3 +597,32 @@ The production manifest preserves `payload_url` for NFC and adds `qr_payload_url
 manifest QR column and branded renderer share `platform/qr` URL builders. Existing unmarked printed
 QR codes still resolve normally; they cannot reliably be distinguished from NFC/browser visits
 and are not retroactively counted as QR scans. Print packs retain their unbranded default rendering.
+
+## Bulk lock and unlock of cards (TEC-596)
+
+Card owners can lock or unlock many cards at once from the table view of **Kartlarım / My cards**
+(select rows, or "select all matching" the search). It runs on the bulk engine as resource
+`app.cards`, with actions `lock` and `unlock`.
+
+- **Scope.** Cards are account data, so the job always carries the active account
+  (`bulk_jobs.account_id`). `target.ids` are card UUIDs; `target.query` takes the card list
+  filters `q` (name, smart code, card UID) and `is_active`. Every query is filtered by that
+  account; a card of another account fails per item as `not_found` and is never touched. A query
+  target is capped at 5000 cards.
+- **Who.** `POST /v1/cards/bulk` needs `app.cards.write` plus the action permission
+  (`app.cards.bulk.lock` / `app.cards.bulk.unlock`), and an owner or admin role in the active
+  account, the same role the single `PATCH /v1/cards/{uuid}/toggle-lock` needs. The adapter
+  checks the role again for every item from the job scope, so a queued job stops changing cards
+  if the actor loses the role. Migration `000085` adds both permissions to `super_admin` and to
+  every role that already has `app.cards.write`.
+- **Cache.** Each changed card drops its resolver cache entries (`routecache.InvalidateCard`),
+  like the single toggle, so a locked card stops redirecting at once.
+- **Jobs and rollback.** Runs up to `BULK_SYNC_MAX` cards finish inline (200 with the summary and
+  the job; the page offers an undo toast); larger ones are queued (202). Each item remembers the
+  card's previous `is_locked`, and `POST /v1/cards/bulk/{uuid}/rollback` restores it within
+  `BULK_ROLLBACK_HOURS`. `GET /v1/cards/bulk` and `GET /v1/cards/bulk/{uuid}` list and read the
+  account's card jobs; jobs of other accounts or other resources are 404. Requests and
+  completions are written to the activity log by the bulk engine (`bulk.requested`,
+  `bulk.completed`, resource `app.cards`).
+- **Not included.** Platform-side (all accounts) card locking: platform card support only
+  retires and reassigns cards, and has no single lock action to mirror.

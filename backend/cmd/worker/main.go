@@ -188,12 +188,15 @@ func main() {
 	// Employees without a user get the profile and an email invite (TEC-945).
 	companyImport := companyprofilesusecase.NewImportAdapter(queries, profilesSvc)
 	companyImport.SetInviter(accountsusecase.NewInvites(pool, queries, notifSvc, cfg.Auth.FrontendURL, log))
+	productsIO := ioadapters.NewProducts(queries)
 	ioReg := ioengine.NewRegistry(
 		ioadapters.NewUsers(queries),
 		ioadapters.NewRoles(queries),
 		ioadapters.NewNotifications(queries),
 		ioadapters.NewActivity(queries),
 		ioadapters.NewOrderManifest(queries, cfg.Auth.FrontendURL),
+		ioadapters.NewOrders(queries),
+		productsIO,
 		ioadapters.NewLeads(queries),
 		companyImport,
 	)
@@ -202,6 +205,7 @@ func main() {
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(queries),
 		bulkadapters.NewRoles(queries),
+		bulkadapters.NewCards(queries, routecache.New(rdb, cfg.App.Env, routecache.DefaultTTL)),
 		companyprofilesusecase.NewBulkAdapter(queries, profilesSvc, store, companyBrandingSvc),
 	)
 	bulkSvc := bulkusecase.New(queries, bulkReg, nil, notifSvc, activityRec, cfg.Bulk, log)
@@ -210,6 +214,7 @@ func main() {
 	searchClient := searchengine.NewClient(cfg.Search, log)
 	searchIndexer := searchengine.NewIndexer(searchClient, searchReg, nil, log)
 	profilesSvc.SetSearchIndexer(searchIndexer) // company bulk/import jobs
+	productsIO.SetSearchIndexer(searchIndexer)  // product import jobs
 	persist := logging.Attach(log, logsSvc)
 	log = persist.Logger()
 	defer persist.Close()

@@ -43,6 +43,7 @@
   "fields.allow_custom_print": "Custom Laser Printing & Engraving Allowed",
   "fields.allow_custom_print_sub": "Customers can request their name, title, or custom company logo engraving.",
   "fields.created_at": "Created At",
+  "fields.display_order": "Display order",
   "tabs.general": "General Info",
   "tabs.seo": "SEO & Search Engines",
   "tabs.viewbox": "3D Studio & Stage",

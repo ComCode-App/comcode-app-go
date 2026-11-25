@@ -102,6 +102,16 @@ func (h *Handler) SampleRoles(w http.ResponseWriter, r *http.Request) {
 	h.sample(w, r, "platform.roles")
 }
 
+// UploadProducts starts a product catalog import (TEC-596).
+func (h *Handler) UploadProducts(w http.ResponseWriter, r *http.Request) {
+	h.upload(w, r, "platform.products")
+}
+
+// SampleProducts downloads the product import sample file.
+func (h *Handler) SampleProducts(w http.ResponseWriter, r *http.Request) {
+	h.sample(w, r, "platform.products")
+}
+
 func (h *Handler) sample(w http.ResponseWriter, r *http.Request, resource string) {
 	format := ioengine.ImportFormat(strings.ToLower(strings.TrimSpace(r.URL.Query().Get("format"))))
 	if format == "" {

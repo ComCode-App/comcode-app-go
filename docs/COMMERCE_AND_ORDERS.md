@@ -121,6 +121,58 @@ From the order detail dialog, "Production files":
   (`001-{code}.png`, …) encoding the manifest QR URL. Its `?src=qr` marker records `card.qr.scan` through
   the existing public resolver, preserving activation, lock, passcode and retirement behavior. Existing printed URLs keep working. No activation codes in it.
 
+## Order list export (TEC-596)
+
+The platform order list has an Export menu (`ResourceIOToolbar`, resource `platform.orders`):
+`POST /v1/platform/orders/export` queues an io-engine job (PDF, XLSX, CSV or JSON) that lands in
+Exports. It needs `platform.orders.export` (seeded for `super_admin`, migration 000083) and step-up.
+
+- **Filters**: the same as `GET /v1/platform/orders`: `q` (order number, customer email, name or
+  surname, tracking number), `status`, `payment_status`, `fulfillment_status`, `order_type`. The
+  list has no sort or date-range parameters, so the export is newest first over all dates. Deleted
+  orders are left out. At most 10,000 rows per file.
+- **Columns**: order number, order type, status, payment status, fulfillment status, account and
+  account type (personal/company), customer name and email, item count, grand total (two decimals)
+  and currency, tracking number, created and updated time, UUID.
+- Export only; orders are never imported. Adapter: `ioengine/adapters/orders.go`. The per-order
+  production manifest above is a separate resource (`platform.order_manifest`).
+
+## Product catalog import and export (TEC-596)
+
+The platform product list has Export and Import (`ResourceIOToolbar`, resource
+`platform.products`, adapter `ioengine/adapters/products.go`). Permissions
+`platform.products.export` and `platform.products.import` are seeded for `super_admin`
+(migration 000084); export also needs step-up.
+
+- **Export**: `POST /v1/platform/products/export` (PDF, XLSX, CSV, JSON). Filters as on the list:
+  `q` (name, slug, SKU), `status`, `product_type`; list order; at most 10,000 rows. The columns are
+  the importable fields plus created/updated time and UUID, so an exported file can be edited and
+  imported back.
+- **Import**: `POST /v1/platform/products/import` (CSV, TSV, XLSX, JSON), sample at
+  `GET .../import/sample`, then mapping, preview, confirm and rollback under
+  `/v1/platform/imports/{uuid}`.
+  - **Natural key: slug.** Live slugs are unique (`uq_products_slug_active`); SKU is optional and
+    not unique, so it cannot identify a product. The slug is normalized as the product form does
+    (`comcode Kart` → `comcode-kart`). A live product with that slug is updated; otherwise one is
+    created.
+  - **Columns**: `slug`, `name` (required), `sku`, `status`, `product_type`, `category` (slug or
+    UUID of a live platform category), `base_price` (required for new products), `currency`,
+    `tax_rate`, `stock_quantity`, `allow_custom_print`, `display_order`, `short_description`,
+    `description`, `meta_title`, `meta_description`, `meta_keywords`. On update an empty cell keeps
+    the current value. New products default to draft, `physical_card`, TRY, 20 % VAT, stock 0.
+  - **Rules** (`productsusecase.ValidateProductInput`, the product form's rules): name 1–200
+    characters; status `active`, `draft` or `archived`; price ≥ 0 and VAT 0–100, both with at most
+    two decimals; stock a whole number ≥ 0; SKU ≤ 64; slug ≤ 150. The preview is a real dry run
+    (`RowPreviewer`): every row shows create/update or its field errors, and nothing is written.
+    Rows are written through the products use case (`Create`/`Update`), so slug handling and
+    the search index behave as in the editor.
+  - **Not imported**: variants, images, 3D models, SEO image and canonical URL. An update leaves
+    them unchanged.
+  - **Rollback** (within the import window): created products are deleted; updated products are
+    rewritten field by field to their previous state, category included (also "no category").
+  - The REST create/update endpoints do not run `ValidateProductInput` yet (they accept any value
+    today); see the follow-up issue linked from TEC-596.
+
 ## Activation
 
 The customer enters the activation code (`POST /v1/cards/activate`). The card moves to the

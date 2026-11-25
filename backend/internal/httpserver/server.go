@@ -426,12 +426,16 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	companyImport := companyprofilesusecase.NewImportAdapter(deps.Queries, profilesSvc)
 	companyImport.SetInviter(invitesSvc)
 
+	productsIO := ioadapters.NewProducts(deps.Queries)
+	productsIO.SetSearchIndexer(searchIndexer)
 	ioReg := ioengine.NewRegistry(
 		ioadapters.NewUsers(deps.Queries),
 		ioadapters.NewRoles(deps.Queries),
 		ioadapters.NewNotifications(deps.Queries),
 		ioadapters.NewActivity(deps.Queries),
 		ioadapters.NewOrderManifest(deps.Queries, cfg.Auth.FrontendURL),
+		ioadapters.NewOrders(deps.Queries),
+		productsIO,
 		ioadapters.NewLeads(deps.Queries),
 		companyImport,
 	)
@@ -440,6 +444,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
 		bulkadapters.NewRoles(deps.Queries),
+		bulkadapters.NewCards(deps.Queries, routeCache),
 		companyBulk,
 	)
 	bulkSvc := bulkusecase.New(deps.Queries, bulkReg, deps.Queue, notifSvc, activityRec, cfg.Bulk, log)

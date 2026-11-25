@@ -6,6 +6,7 @@
   "rollback": "Toplu işlemi geri al",
   "rollback_until": "Geri alma {{date}} tarihine kadar geçerli",
   "rollback_success": "Toplu işlem geri alındı",
+  "undo": "Geri al",
   "result.sync": "{{succeeded}} başarılı, {{failed}} hatalı",
   "job.queued": "Toplu iş kuyruğa alındı",
   "job.processing": "Toplu işlem yapılıyor…",
@@ -23,5 +24,9 @@
   "confirm.company_profiles.set_contact": "{{count}} profilin iletişim bilgileri güncellensin mi?",
   "confirm.company_profiles.set_logo": "{{count}} profile logo uygulansın mı?",
   "confirm.company_profiles.set_theme": "{{count}} profilin teması değiştirilsin mi?",
-  "confirm.company_profiles.add_links": "{{count}} profile bağlantılar eklensin mi?"
+  "confirm.company_profiles.add_links": "{{count}} profile bağlantılar eklensin mi?",
+  "actions.cards.lock": "Kartları kilitle",
+  "actions.cards.unlock": "Kartların kilidini aç",
+  "confirm.cards.lock": "Seçili {{count}} kart kilitlensin mi? Kilitli kartlar, kilit açılana kadar ziyaretçileri yönlendirmez.",
+  "confirm.cards.unlock": "Seçili {{count}} kartın kilidi açılsın mı?"
 }

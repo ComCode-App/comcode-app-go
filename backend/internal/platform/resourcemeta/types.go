@@ -518,7 +518,7 @@ func PlatformProducts() ResourceMeta {
 		DefaultFields: []string{"uuid", "name", "slug", "category_name", "status", "product_type", "base_price", "currency", "stock_quantity"},
 		Capabilities: Capabilities{
 			Create: true, Read: true, Update: true, Delete: true,
-			Search: true, Filter: true, Sort: true,
+			Search: true, Filter: true, Sort: true, Export: true, Import: true,
 		},
 		SearchableFields: []string{"name", "slug", "sku", "short_description"},
 		SortableFields:   []string{"name", "slug", "base_price", "stock_quantity", "display_order", "created_at"},
@@ -550,7 +550,7 @@ func PlatformOrders() ResourceMeta {
 		DefaultFields: []string{"uuid", "order_number", "order_type", "items_count", "customer_name", "status", "payment_status", "fulfillment_status", "grand_total", "currency", "created_at"},
 		Capabilities: Capabilities{
 			Create: true, Read: true, Update: true, Delete: true,
-			Search: true, Filter: true, Sort: true,
+			Search: true, Filter: true, Sort: true, Export: true,
 		},
 		SearchableFields: []string{"order_number", "customer_email", "customer_name", "tracking_number"},
 		SortableFields:   []string{"order_number", "grand_total", "created_at", "updated_at"},
@@ -586,7 +586,7 @@ func AppCards() ResourceMeta {
 		DefaultFields: []string{"uuid", "name", "smart_code", "target_type", "card_type", "material", "is_active", "is_locked", "created_at"},
 		Capabilities: Capabilities{
 			Create: true, Read: true, Update: true, Delete: true,
-			Search: true, Filter: true, Sort: true,
+			Search: true, Filter: true, Sort: true, Bulk: true,
 		},
 		SearchableFields: []string{"name", "smart_code", "card_uid"},
 		SortableFields:   []string{"name", "created_at"},
@@ -606,6 +606,7 @@ func AppCards() ResourceMeta {
 			{Key: "is_active", LabelKey: "cards.fields.is_active", Variant: FilterVariantFaceted},
 			{Key: "target_type", LabelKey: "cards.fields.target_type", Variant: FilterVariantFaceted},
 		},
+		BulkActions: adapters.NewCards(nil, nil).BulkActions(),
 	}
 }
 

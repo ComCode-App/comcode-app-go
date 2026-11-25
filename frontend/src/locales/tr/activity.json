@@ -31,6 +31,8 @@
   "resources.platform.plans": "Planlar",
   "resources.platform.subscriptions": "Abonelikler",
   "resources.platform.companies": "İşletmeler",
+  "resources.platform.orders": "Siparişler",
+  "resources.platform.products": "Ürünler",
   "resources.platform.settings": "Ayarlar",
   "resources.platform.access": "Erişim ayarları",
   "resources.platform.auth.settings": "Auth ayarları",
@@ -56,5 +58,6 @@
   "actions.profile.username_changed": "Kullanıcı adı değiştirildi",
   "actions.route.path_changed": "Akıllı link adresi değiştirildi",
   "resources.app.company_profiles": "Çalışan profilleri",
+  "resources.app.cards": "NFC kartlar",
   "resources.app.company_employees": "Çalışanlar"
 }

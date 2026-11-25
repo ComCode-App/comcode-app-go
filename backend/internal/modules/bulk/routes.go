@@ -51,4 +51,19 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/company/bulk/{uuid}/rollback", middleware.Chain(
 		http.HandlerFunc(h.CompanyRollback), authn, require(rbac.PermAppCompanyProfilesBulk),
 	))
+
+	// Lock and unlock cards of the active account (TEC-596). Action permissions and the
+	// owner/admin account role are checked by the handler and again by the adapter.
+	mux.Handle("POST /v1/cards/bulk", middleware.Chain(
+		http.HandlerFunc(h.ExecuteCards), authn, require(rbac.PermAppCardsWrite),
+	))
+	mux.Handle("GET /v1/cards/bulk", middleware.Chain(
+		http.HandlerFunc(h.CardsList), authn, require(rbac.PermAppCardsWrite),
+	))
+	mux.Handle("GET /v1/cards/bulk/{uuid}", middleware.Chain(
+		http.HandlerFunc(h.CardsGet), authn, require(rbac.PermAppCardsWrite),
+	))
+	mux.Handle("POST /v1/cards/bulk/{uuid}/rollback", middleware.Chain(
+		http.HandlerFunc(h.CardsRollback), authn, require(rbac.PermAppCardsWrite),
+	))
 }

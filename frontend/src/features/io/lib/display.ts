@@ -15,6 +15,8 @@ const RESOURCE_LABEL_KEYS: Record<
   "platform.plans": "plans.title",
   "platform.subscriptions": "subscriptions.title",
   "platform.companies": "companies.title",
+  "platform.orders": "orders.title",
+  "platform.products": "products.title",
   "platform.order_manifest": "orders.title",
   "app.leads": "leads.title",
   "app.company_profiles": "company_bulk.title",

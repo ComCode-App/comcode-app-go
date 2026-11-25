@@ -3332,6 +3332,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/products/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue an export of the product catalog
+         * @description Product catalog export (TEC-596), resource `platform.products`. Honors the filters of
+         *     `GET /v1/platform/products`: `q` (name, slug, SKU), `status`, `product_type`; list order
+         *     (display order, then newest), at most 10,000 rows. Columns are the importable fields (slug,
+         *     name, SKU, status, product type, category slug, price, currency, VAT rate, stock, custom
+         *     print, display order, short and long description, SEO title/description/keywords) plus
+         *     created/updated time and UUID, so a file can be edited and imported back. Download it from
+         *     `/v1/platform/exports/{uuid}/download`. Requires `platform.products.export` and step-up.
+         */
+        post: operations["postPlatformProductsExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/products/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a product catalog import file
+         * @description Requires `platform.products.import` (TEC-596). Rows are matched by slug (normalized like the
+         *     product form does); a live product with that slug is updated, otherwise one is created.
+         *     Columns: slug and name (required), sku, status (active|draft|archived), product_type,
+         *     category (slug or UUID of a platform category), base_price (required for new products),
+         *     currency, tax_rate, stock_quantity, allow_custom_print, display_order, short_description,
+         *     description, meta_title, meta_description, meta_keywords. Empty cells keep the current value
+         *     on update. Rules: price >= 0 and tax rate 0-100, both with at most two decimals; stock a
+         *     whole number >= 0. Variants, images, 3D models and SEO image/canonical URL are not imported.
+         *     Continue with mapping, preview (dry run with row errors), confirm and rollback under
+         *     `/v1/platform/imports/{uuid}`.
+         */
+        post: operations["postPlatformProductsImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/products/import/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the product import sample
+         * @description Requires `platform.products.import`.
+         */
+        get: operations["getPlatformProductsImportSample"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/products": {
         parameters: {
             query?: never;
@@ -4018,6 +4093,76 @@ export interface paths {
         post?: never;
         /** Delete an NFC card */
         delete: operations["deleteCard"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cards/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Card bulk jobs of the active account
+         * @description Requires `app.cards.write` and an owner or admin role in the active account.
+         */
+        get: operations["listCardsBulkJobs"];
+        put?: never;
+        /**
+         * Lock or unlock cards of the active account in bulk
+         * @description Requires `app.cards.write`, the action permission (`app.cards.bulk.lock` or
+         *     `app.cards.bulk.unlock`) and an owner or admin role in the active account (TEC-596), like the
+         *     single toggle-lock. `target.ids` are card UUIDs of the active account (others fail per item as
+         *     `not_found`); `target.query` takes the card list filters `q` and `is_active`. The actions take
+         *     no `params`. Each changed card's resolver cache is dropped. Every run is a job that can be
+         *     rolled back within `BULK_ROLLBACK_HOURS`, restoring each card's previous lock state. Runs up
+         *     to `BULK_SYNC_MAX` targets finish inline (200); larger ones are queued (202).
+         */
+        post: operations["postCardsBulk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cards/bulk/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a card bulk job of the active account
+         * @description Requires `app.cards.write` and an owner or admin role. Jobs of other accounts or other resources are 404.
+         */
+        get: operations["getCardsBulkJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cards/bulk/{uuid}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Roll back a card bulk job of the active account
+         * @description Requires the action permission. Restores each card's previous lock state; cards that no longer exist are skipped (`rolled_back_partial`).
+         */
+        post: operations["postCardsBulkJobRollback"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -6309,6 +6454,32 @@ export interface paths {
         get: operations["getStorageStreamKey"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/orders/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue an export of the platform order list
+         * @description Order list export (TEC-596), resource `platform.orders`. Honors the filters of
+         *     `GET /v1/platform/orders`: `q` (order number, customer email/name/surname, tracking number),
+         *     `status`, `payment_status`, `fulfillment_status` and `order_type`; newest first, at most
+         *     10,000 rows. Columns: order number, type, status, payment and fulfillment status, account
+         *     and account type, customer name and email, item count, grand total, currency, tracking
+         *     number, created and updated time, UUID. Download it from
+         *     `/v1/platform/exports/{uuid}/download`. Requires `platform.orders.export` and step-up.
+         */
+        post: operations["postPlatformOrdersExport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9850,6 +10021,13 @@ export interface components {
             /** Format: uuid */
             entity_uuid: string;
             error: string;
+        };
+        CardsBulkRequest: {
+            /** @enum {string} */
+            action: "lock" | "unlock";
+            target: components["schemas"]["BulkTarget"];
+            /** @enum {string} */
+            locale?: "tr" | "en";
         };
         CompanyBulkRequest: {
             /** @enum {string} */
@@ -18683,6 +18861,109 @@ export interface operations {
             };
         };
     };
+    postPlatformProductsExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    format: "pdf" | "xlsx" | "csv" | "json";
+                    /**
+                     * @default tr
+                     * @enum {string}
+                     */
+                    locale?: "tr" | "en";
+                    /** @description List filters, as on `GET /v1/platform/products`. */
+                    query?: {
+                        q?: string;
+                        status?: string;
+                        product_type?: string;
+                    } & {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGeneric"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postPlatformProductsImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /** @enum {string} */
+                    format?: "csv" | "tsv" | "xlsx" | "json";
+                    /** @enum {string} */
+                    locale?: "tr" | "en";
+                };
+            };
+        };
+        responses: {
+            /** @description Import job created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeImportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            413: components["responses"]["PayloadTooLarge"];
+        };
+    };
+    getPlatformProductsImportSample: {
+        parameters: {
+            query?: {
+                format?: "csv" | "tsv" | "xlsx" | "json";
+                locale?: "tr" | "en";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sample file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     listPlatformProducts: {
         parameters: {
             query?: {
@@ -20006,6 +20287,120 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeSimpleSuccess"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listCardsBulkJobs: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bulk job page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJobPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postCardsBulk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CardsBulkRequest"];
+            };
+        };
+        responses: {
+            /** @description Applied inline */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCompanyBulkSyncResult"];
+                };
+            };
+            /** @description Job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getCardsBulkJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bulk job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postCardsBulkJobRollback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rolled back job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -23461,6 +23856,51 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeGeneric"];
                 };
             };
+        };
+    };
+    postPlatformOrdersExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    format: "pdf" | "xlsx" | "csv" | "json";
+                    /**
+                     * @default tr
+                     * @enum {string}
+                     */
+                    locale?: "tr" | "en";
+                    /** @description List filters, as on `GET /v1/platform/orders`. */
+                    query?: {
+                        q?: string;
+                        status?: string;
+                        payment_status?: string;
+                        fulfillment_status?: string;
+                        order_type?: string;
+                    } & {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGeneric"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     postPlatformOrdersUuidManifestExport: {

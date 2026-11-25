@@ -31,6 +31,8 @@
   "resources.platform.plans": "Plans",
   "resources.platform.subscriptions": "Subscriptions",
   "resources.platform.companies": "Companies",
+  "resources.platform.orders": "Orders",
+  "resources.platform.products": "Products",
   "resources.platform.settings": "Settings",
   "resources.platform.access": "Access settings",
   "resources.platform.auth.settings": "Auth settings",
@@ -56,5 +58,6 @@
   "actions.profile.username_changed": "Username changed",
   "actions.route.path_changed": "Smart link path changed",
   "resources.app.company_profiles": "Employee profiles",
+  "resources.app.cards": "NFC cards",
   "resources.app.company_employees": "Employees"
 }

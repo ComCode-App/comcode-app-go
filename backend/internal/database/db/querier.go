@@ -547,6 +547,9 @@ type Querier interface {
 	// Links the invite's profile to the member unless either side is already linked.
 	LinkInvitedMemberProfile(ctx context.Context, arg LinkInvitedMemberProfileParams) (int64, error)
 	ListAccountBankAccountIDsByUUID(ctx context.Context, arg ListAccountBankAccountIDsByUUIDParams) ([]ListAccountBankAccountIDsByUUIDRow, error)
+	// ListAccountCardUUIDsForBulk resolves the "query" scope of a card bulk action with the filters
+	// of GET /v1/cards (q, is_active).
+	ListAccountCardUUIDsForBulk(ctx context.Context, arg ListAccountCardUUIDsForBulkParams) ([]uuid.UUID, error)
 	// account-lint: cross-account card-route subquery is keyed by this account's card id (display only)
 	ListAccountCards(ctx context.Context, arg ListAccountCardsParams) ([]ListAccountCardsRow, error)
 	// status: pending (open, not expired), expired (open, past expires_at), accepted, revoked;
@@ -961,6 +964,9 @@ type Querier interface {
 	SetBackgroundThumbnail(ctx context.Context, arg SetBackgroundThumbnailParams) (int64, error)
 	// account-lint: cross-account route id from LiveRoute of the account's own profile
 	SetCanonicalRouteState(ctx context.Context, arg SetCanonicalRouteStateParams) error
+	// SetCardLock sets the lock of one card of the account and returns the lock it had before, so a
+	// bulk lock/unlock (TEC-596) can be rolled back exactly.
+	SetCardLock(ctx context.Context, arg SetCardLockParams) (bool, error)
 	SetCompanyAssetCardActive(ctx context.Context, arg SetCompanyAssetCardActiveParams) error
 	SetCompanyMemberProfile(ctx context.Context, arg SetCompanyMemberProfileParams) (int64, error)
 	SetCompanySector(ctx context.Context, arg SetCompanySectorParams) (int64, error)
@@ -969,6 +975,9 @@ type Querier interface {
 	// identity and the client id it belongs to (TEC-1181).
 	SetOAuthAccountRefreshToken(ctx context.Context, arg SetOAuthAccountRefreshTokenParams) (int64, error)
 	SetPrimaryProfileByUUID(ctx context.Context, arg SetPrimaryProfileByUUIDParams) error
+	// UpdateProduct keeps the category when none is given; an import rollback (TEC-596) uses this
+	// to put back exactly the category a product had before, none included.
+	SetProductCategory(ctx context.Context, arg SetProductCategoryParams) error
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetStructureAssignment(ctx context.Context, arg SetStructureAssignmentParams) (int64, error)
 	SetUserEmailVerified(ctx context.Context, id int64) (User, error)
