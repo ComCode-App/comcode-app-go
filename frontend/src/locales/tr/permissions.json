@@ -82,6 +82,7 @@
   "labels.platform.products.read": "Ürün kataloğunu görüntüle",
   "labels.platform.products.write": "Ürün kataloğunu yönet",
   "labels.platform.orders.read": "Siparişleri görüntüle",
+  "labels.platform.orders.export": "Siparişleri dışa aktar",
   "labels.platform.orders.write": "Siparişleri yönet",
   "labels.platform.cards.read": "Platform kartlarını görüntüle",
   "labels.platform.cards.write": "Platform kartlarını yönet",

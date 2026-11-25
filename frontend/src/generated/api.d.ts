@@ -6315,6 +6315,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/orders/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue an export of the platform order list
+         * @description Order list export (TEC-596), resource `platform.orders`. Honors the filters of
+         *     `GET /v1/platform/orders`: `q` (order number, customer email/name/surname, tracking number),
+         *     `status`, `payment_status`, `fulfillment_status` and `order_type`; newest first, at most
+         *     10,000 rows. Columns: order number, type, status, payment and fulfillment status, account
+         *     and account type, customer name and email, item count, grand total, currency, tracking
+         *     number, created and updated time, UUID. Download it from
+         *     `/v1/platform/exports/{uuid}/download`. Requires `platform.orders.export` and step-up.
+         */
+        post: operations["postPlatformOrdersExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/orders/{uuid}/manifest/export": {
         parameters: {
             query?: never;
@@ -23461,6 +23487,51 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeGeneric"];
                 };
             };
+        };
+    };
+    postPlatformOrdersExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    format: "pdf" | "xlsx" | "csv" | "json";
+                    /**
+                     * @default tr
+                     * @enum {string}
+                     */
+                    locale?: "tr" | "en";
+                    /** @description List filters, as on `GET /v1/platform/orders`. */
+                    query?: {
+                        q?: string;
+                        status?: string;
+                        payment_status?: string;
+                        fulfillment_status?: string;
+                        order_type?: string;
+                    } & {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGeneric"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     postPlatformOrdersUuidManifestExport: {

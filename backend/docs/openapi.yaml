@@ -9322,6 +9322,50 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeGeneric" }
 
+  /v1/platform/orders/export:
+    post:
+      tags: [Orders]
+      operationId: postPlatformOrdersExport
+      summary: Queue an export of the platform order list
+      description: |
+        Order list export (TEC-596), resource `platform.orders`. Honors the filters of
+        `GET /v1/platform/orders`: `q` (order number, customer email/name/surname, tracking number),
+        `status`, `payment_status`, `fulfillment_status` and `order_type`; newest first, at most
+        10,000 rows. Columns: order number, type, status, payment and fulfillment status, account
+        and account type, customer name and email, item count, grand total, currency, tracking
+        number, created and updated time, UUID. Download it from
+        `/v1/platform/exports/{uuid}/download`. Requires `platform.orders.export` and step-up.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [format]
+              properties:
+                format: { type: string, enum: [pdf, xlsx, csv, json] }
+                locale: { type: string, enum: [tr, en], default: tr }
+                query:
+                  type: object
+                  description: List filters, as on `GET /v1/platform/orders`.
+                  properties:
+                    q: { type: string }
+                    status: { type: string }
+                    payment_status: { type: string }
+                    fulfillment_status: { type: string }
+                    order_type: { type: string }
+                  additionalProperties: { type: string }
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeGeneric" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/platform/orders/{uuid}/manifest/export:
     post:
       tags: [Orders]

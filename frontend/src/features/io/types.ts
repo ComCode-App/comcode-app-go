@@ -92,7 +92,8 @@ export type IoResource =
   | "platform.activity"
   | "platform.plans"
   | "platform.subscriptions"
-  | "platform.companies";
+  | "platform.companies"
+  | "platform.orders";
 
 export const EXPORT_PATHS: Record<IoResource, string> = {
   "platform.users": "/v1/platform/users/export",
@@ -102,6 +103,7 @@ export const EXPORT_PATHS: Record<IoResource, string> = {
   "platform.plans": "/v1/platform/plans/export",
   "platform.subscriptions": "/v1/platform/subscriptions/export",
   "platform.companies": "/v1/platform/companies/export",
+  "platform.orders": "/v1/platform/orders/export",
 };
 
 /** Import-capable resources: platform lists plus app resources without an export. */

@@ -432,6 +432,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		ioadapters.NewNotifications(deps.Queries),
 		ioadapters.NewActivity(deps.Queries),
 		ioadapters.NewOrderManifest(deps.Queries, cfg.Auth.FrontendURL),
+		ioadapters.NewOrders(deps.Queries),
 		ioadapters.NewLeads(deps.Queries),
 		companyImport,
 	)

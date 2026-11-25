@@ -194,6 +194,7 @@ func main() {
 		ioadapters.NewNotifications(queries),
 		ioadapters.NewActivity(queries),
 		ioadapters.NewOrderManifest(queries, cfg.Auth.FrontendURL),
+		ioadapters.NewOrders(queries),
 		ioadapters.NewLeads(queries),
 		companyImport,
 	)
