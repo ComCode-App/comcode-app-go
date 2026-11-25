@@ -5718,6 +5718,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeProductDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /v1/platform/products/{uuid}:
     get:
@@ -5754,6 +5758,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeProductDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
     delete:
       tags: [Commerce Products]
       operationId: deletePlatformProduct
@@ -17547,6 +17557,7 @@ components:
       required: [uuid, name, slug, status, product_type, base_price, currency, stock_quantity, created_at]
       properties:
         uuid: { type: string, format: uuid }
+        category_uuid: { type: string, format: uuid }
         category_name: { type: string }
         category_slug: { type: string }
         name: { type: string }
@@ -17601,28 +17612,34 @@ components:
 
     UpsertProductInput:
       type: object
+      description: |
+        Checked with the platform product form's rules (TEC-1299); a violation is
+        400 VALIDATION_ERROR with one `details` entry per field (`field`, `code`: required,
+        too_long, invalid_status, negative, too_many_decimals, out_of_range, invalid_number).
+        An omitted `status`, `product_type` or `currency` means the default on create
+        (draft, physical_card, TRY) and "keep the current value" on update.
       required: [name, base_price]
       properties:
         category_uuid: { type: string, format: uuid }
-        name: { type: string }
-        slug: { type: string }
-        short_description: { type: string }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        slug: { type: string, maxLength: 150 }
+        short_description: { type: string, maxLength: 300 }
         description: { type: string }
-        status: { type: string }
-        product_type: { type: string }
-        base_price: { type: number }
-        currency: { type: string }
-        tax_rate: { type: number }
-        stock_quantity: { type: integer }
-        sku: { type: string }
+        status: { type: string, enum: [active, draft, archived] }
+        product_type: { type: string, maxLength: 32 }
+        base_price: { type: number, minimum: 0, multipleOf: 0.01 }
+        currency: { type: string, maxLength: 8 }
+        tax_rate: { type: number, minimum: 0, maximum: 100, multipleOf: 0.01 }
+        stock_quantity: { type: integer, minimum: 0 }
+        sku: { type: string, maxLength: 64 }
         allow_custom_print: { type: boolean }
         model_3d_file_url: { type: string }
         model_3d_usdz_url: { type: string }
         model_3d_viewbox: { $ref: "#/components/schemas/Model3DViewbox" }
         images: { type: array, items: { type: string } }
-        meta_title: { type: string }
+        meta_title: { type: string, maxLength: 255 }
         meta_description: { type: string }
-        meta_keywords: { type: string }
+        meta_keywords: { type: string, maxLength: 255 }
         canonical_url: { type: string }
         og_image_url: { type: string }
         display_order: { type: integer }

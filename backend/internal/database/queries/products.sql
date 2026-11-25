@@ -2,7 +2,8 @@
 SELECT 
     p.*,
     c.name as category_name,
-    c.slug as category_slug
+    c.slug as category_slug,
+    c.uuid as category_uuid
 FROM products p
 LEFT JOIN product_categories c ON c.id = p.category_id AND c.deleted_at IS NULL
 WHERE p.deleted_at IS NULL
@@ -54,7 +55,8 @@ WHERE p.deleted_at IS NULL
 SELECT 
     p.*,
     c.name as category_name,
-    c.slug as category_slug
+    c.slug as category_slug,
+    c.uuid as category_uuid
 FROM products p
 LEFT JOIN product_categories c ON c.id = p.category_id AND c.deleted_at IS NULL
 WHERE p.uuid = $1
@@ -64,7 +66,8 @@ WHERE p.uuid = $1
 SELECT 
     p.*,
     c.name as category_name,
-    c.slug as category_slug
+    c.slug as category_slug,
+    c.uuid as category_uuid
 FROM products p
 LEFT JOIN product_categories c ON c.id = p.category_id AND c.deleted_at IS NULL
 WHERE p.slug = $1

@@ -87,6 +87,9 @@ func (s *Service) Create(ctx context.Context, input model.UpsertProductInput) (*
 	if strings.TrimSpace(input.Name) == "" {
 		return nil, ErrNameRequired
 	}
+	if err := validateUpsert(input); err != nil {
+		return nil, err
+	}
 
 	slug := input.Slug
 	if slug == "" {
@@ -120,6 +123,9 @@ func (s *Service) Create(ctx context.Context, input model.UpsertProductInput) (*
 func (s *Service) Update(ctx context.Context, id uuid.UUID, input model.UpsertProductInput) (*model.ProductDetail, error) {
 	if strings.TrimSpace(input.Name) == "" {
 		return nil, ErrNameRequired
+	}
+	if err := validateUpsert(input); err != nil {
+		return nil, err
 	}
 
 	slug := input.Slug
