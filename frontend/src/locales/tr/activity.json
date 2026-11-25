@@ -58,5 +58,6 @@
   "actions.profile.username_changed": "Kullanıcı adı değiştirildi",
   "actions.route.path_changed": "Akıllı link adresi değiştirildi",
   "resources.app.company_profiles": "Çalışan profilleri",
+  "resources.app.cards": "NFC kartlar",
   "resources.app.company_employees": "Çalışanlar"
 }

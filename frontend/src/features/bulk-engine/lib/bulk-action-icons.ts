@@ -2,6 +2,8 @@ import {
   Contact,
   Image,
   Link2,
+  Lock,
+  LockOpen,
   Palette,
   Trash2,
   UserCheck,
@@ -34,6 +36,10 @@ const bulkActionIconCatalog: Record<
     set_logo: Image,
     set_theme: Palette,
     add_links: Link2,
+  },
+  "app.cards": {
+    lock: Lock,
+    unlock: LockOpen,
   },
 };
 

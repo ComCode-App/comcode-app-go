@@ -94,6 +94,8 @@
   "labels.app.orders.write": "Sipariş oluştur ve yönet",
   "labels.app.cards.read": "NFC kartlarımı görüntüle",
   "labels.app.cards.write": "NFC kartlarımı yönet",
+  "labels.app.cards.bulk.lock": "NFC kartlarımı toplu kilitle",
+  "labels.app.cards.bulk.unlock": "NFC kartlarımın kilidini toplu aç",
   "labels.app.routes.read": "Rotalarımı ve smart linkleri görüntüle",
   "labels.app.routes.write": "Rotalarımı ve smart linkleri yönet",
   "labels.app.bank_accounts.read": "Banka hesaplarını görüntüle",

@@ -46,6 +46,7 @@ export type BulkJob = {
 export type BulkExecuteSyncResult = {
   sync: true;
   summary: BulkSummary;
+  job?: BulkJob;
 };
 
 export type BulkResource =
@@ -54,7 +55,8 @@ export type BulkResource =
   | "platform.plans"
   | "platform.subscriptions"
   | "platform.companies"
-  | "app.company_profiles";
+  | "app.company_profiles"
+  | "app.cards";
 
 export const BULK_PATHS: Record<BulkResource, string> = {
   "platform.users": "/v1/platform/users/bulk",
@@ -63,6 +65,15 @@ export const BULK_PATHS: Record<BulkResource, string> = {
   "platform.subscriptions": "/v1/platform/subscriptions/bulk",
   "platform.companies": "/v1/platform/companies/bulk",
   "app.company_profiles": "/v1/company/profiles/bulk",
+  "app.cards": "/v1/cards/bulk",
+};
+
+/**
+ * Job endpoints of account-scoped resources whose jobs live outside /v1/platform/bulk. A sync
+ * run of a reversible action on one of these offers an undo toast that rolls the job back here.
+ */
+export const BULK_JOB_PATHS: Partial<Record<BulkResource, string>> = {
+  "app.cards": "/v1/cards/bulk",
 };
 
 export type SelectionScope =

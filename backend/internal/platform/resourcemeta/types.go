@@ -586,7 +586,7 @@ func AppCards() ResourceMeta {
 		DefaultFields: []string{"uuid", "name", "smart_code", "target_type", "card_type", "material", "is_active", "is_locked", "created_at"},
 		Capabilities: Capabilities{
 			Create: true, Read: true, Update: true, Delete: true,
-			Search: true, Filter: true, Sort: true,
+			Search: true, Filter: true, Sort: true, Bulk: true,
 		},
 		SearchableFields: []string{"name", "smart_code", "card_uid"},
 		SortableFields:   []string{"name", "created_at"},
@@ -606,6 +606,7 @@ func AppCards() ResourceMeta {
 			{Key: "is_active", LabelKey: "cards.fields.is_active", Variant: FilterVariantFaceted},
 			{Key: "target_type", LabelKey: "cards.fields.target_type", Variant: FilterVariantFaceted},
 		},
+		BulkActions: adapters.NewCards(nil, nil).BulkActions(),
 	}
 }
 

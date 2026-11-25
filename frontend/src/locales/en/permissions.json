@@ -94,6 +94,8 @@
   "labels.app.orders.write": "Create and manage my orders",
   "labels.app.cards.read": "View my NFC cards",
   "labels.app.cards.write": "Manage my NFC cards",
+  "labels.app.cards.bulk.lock": "Lock my NFC cards in bulk",
+  "labels.app.cards.bulk.unlock": "Unlock my NFC cards in bulk",
   "labels.app.routes.read": "View my routes & smart links",
   "labels.app.routes.write": "Manage my routes & smart links",
   "labels.app.bank_accounts.read": "Read bank accounts",

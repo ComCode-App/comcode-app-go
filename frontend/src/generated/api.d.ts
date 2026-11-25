@@ -4098,6 +4098,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cards/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Card bulk jobs of the active account
+         * @description Requires `app.cards.write` and an owner or admin role in the active account.
+         */
+        get: operations["listCardsBulkJobs"];
+        put?: never;
+        /**
+         * Lock or unlock cards of the active account in bulk
+         * @description Requires `app.cards.write`, the action permission (`app.cards.bulk.lock` or
+         *     `app.cards.bulk.unlock`) and an owner or admin role in the active account (TEC-596), like the
+         *     single toggle-lock. `target.ids` are card UUIDs of the active account (others fail per item as
+         *     `not_found`); `target.query` takes the card list filters `q` and `is_active`. The actions take
+         *     no `params`. Each changed card's resolver cache is dropped. Every run is a job that can be
+         *     rolled back within `BULK_ROLLBACK_HOURS`, restoring each card's previous lock state. Runs up
+         *     to `BULK_SYNC_MAX` targets finish inline (200); larger ones are queued (202).
+         */
+        post: operations["postCardsBulk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cards/bulk/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a card bulk job of the active account
+         * @description Requires `app.cards.write` and an owner or admin role. Jobs of other accounts or other resources are 404.
+         */
+        get: operations["getCardsBulkJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cards/bulk/{uuid}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Roll back a card bulk job of the active account
+         * @description Requires the action permission. Restores each card's previous lock state; cards that no longer exist are skipped (`rolled_back_partial`).
+         */
+        post: operations["postCardsBulkJobRollback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cards/{uuid}/toggle-lock": {
         parameters: {
             query?: never;
@@ -9951,6 +10021,13 @@ export interface components {
             /** Format: uuid */
             entity_uuid: string;
             error: string;
+        };
+        CardsBulkRequest: {
+            /** @enum {string} */
+            action: "lock" | "unlock";
+            target: components["schemas"]["BulkTarget"];
+            /** @enum {string} */
+            locale?: "tr" | "en";
         };
         CompanyBulkRequest: {
             /** @enum {string} */
@@ -20210,6 +20287,120 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeSimpleSuccess"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listCardsBulkJobs: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bulk job page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJobPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postCardsBulk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CardsBulkRequest"];
+            };
+        };
+        responses: {
+            /** @description Applied inline */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCompanyBulkSyncResult"];
+                };
+            };
+            /** @description Job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getCardsBulkJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bulk job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postCardsBulkJobRollback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rolled back job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
                 };
             };
             400: components["responses"]["BadRequest"];

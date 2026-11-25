@@ -6786,6 +6786,118 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/cards/bulk:
+    post:
+      tags: [NFC Cards]
+      operationId: postCardsBulk
+      summary: Lock or unlock cards of the active account in bulk
+      description: |
+        Requires `app.cards.write`, the action permission (`app.cards.bulk.lock` or
+        `app.cards.bulk.unlock`) and an owner or admin role in the active account (TEC-596), like the
+        single toggle-lock. `target.ids` are card UUIDs of the active account (others fail per item as
+        `not_found`); `target.query` takes the card list filters `q` and `is_active`. The actions take
+        no `params`. Each changed card's resolver cache is dropped. Every run is a job that can be
+        rolled back within `BULK_ROLLBACK_HOURS`, restoring each card's previous lock state. Runs up
+        to `BULK_SYNC_MAX` targets finish inline (200); larger ones are queued (202).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CardsBulkRequest"
+      responses:
+        "200":
+          description: Applied inline
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCompanyBulkSyncResult"
+        "202":
+          description: Job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    get:
+      tags: [NFC Cards]
+      operationId: listCardsBulkJobs
+      summary: Card bulk jobs of the active account
+      description: "Requires `app.cards.write` and an owner or admin role in the active account."
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Bulk job page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJobPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/cards/bulk/{uuid}:
+    get:
+      tags: [NFC Cards]
+      operationId: getCardsBulkJob
+      summary: Get a card bulk job of the active account
+      description: "Requires `app.cards.write` and an owner or admin role. Jobs of other accounts or other resources are 404."
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Bulk job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJob"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/cards/bulk/{uuid}/rollback:
+    post:
+      tags: [NFC Cards]
+      operationId: postCardsBulkJobRollback
+      summary: Roll back a card bulk job of the active account
+      description: "Requires the action permission. Restores each card's previous lock state; cards that no longer exist are skipped (`rolled_back_partial`)."
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Rolled back job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBulkJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/cards/{uuid}/toggle-lock:
     patch:
       tags: [NFC Cards]
@@ -15288,6 +15400,14 @@ components:
       properties:
         entity_uuid: { type: string, format: uuid }
         error: { type: string }
+
+    CardsBulkRequest:
+      type: object
+      required: [action, target]
+      properties:
+        action: { type: string, enum: [lock, unlock] }
+        target: { $ref: "#/components/schemas/BulkTarget" }
+        locale: { type: string, enum: [tr, en] }
 
     CompanyBulkRequest:
       type: object

@@ -100,6 +100,8 @@ const (
 	PermAppOrdersWrite               = "app.orders.write"
 	PermAppCardsRead                 = "app.cards.read"
 	PermAppCardsWrite                = "app.cards.write"
+	PermAppCardsBulkLock             = "app.cards.bulk.lock"
+	PermAppCardsBulkUnlock           = "app.cards.bulk.unlock"
 	PermAppRoutesRead                = "app.routes.read"
 	PermAppRoutesWrite               = "app.routes.write"
 	PermAppProfilesRead              = "app.profiles.read"
