@@ -25,6 +25,7 @@ import {
   type SocialLinkFormValues,
   type AddressFormValues,
 } from "@/features/profiles/schemas/profile-form";
+import { PROFILE_COVER_ENABLED } from "@/config/profile-media";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -111,7 +112,7 @@ export function ProfileCardPreview({
     >
       {/* Cover Header */}
       <div className="relative h-28 overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 sm:h-36">
-        {values?.cover_url ? (
+        {PROFILE_COVER_ENABLED && values?.cover_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={values.cover_url}
