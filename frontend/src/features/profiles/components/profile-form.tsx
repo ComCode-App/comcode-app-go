@@ -17,6 +17,7 @@ import {
   Share2,
   Sparkles,
   Star,
+  Tags,
   Trash2,
   UploadCloud,
   User,
@@ -66,6 +67,8 @@ import {
 } from "../services/profiles.service";
 import { useActiveSocialPlatformsQuery } from "@/features/social-platforms/hooks/use-social-platforms";
 import { ProfileCardPreview } from "./profile-card-preview";
+import { ProfileKeywordsInput } from "./profile-keywords-input";
+import { parseKeywords } from "../lib/keywords";
 import {
   VCardImportDialog,
   type VCardApplyOptions,
@@ -82,7 +85,13 @@ interface ProfileFormProps {
 }
 
 type TabKey =
-  "identity" | "media" | "contacts" | "social" | "addresses" | "settings";
+  | "identity"
+  | "media"
+  | "contacts"
+  | "social"
+  | "addresses"
+  | "keywords"
+  | "settings";
 
 const TAB_KEYS: readonly TabKey[] = [
   "identity",
@@ -90,6 +99,7 @@ const TAB_KEYS: readonly TabKey[] = [
   "contacts",
   "social",
   "addresses",
+  "keywords",
   "settings",
 ];
 
@@ -258,6 +268,10 @@ export function ProfileForm({
   );
 
   const watchedValues = useWatch({ control: form.control });
+  const keywordCount = (watchedValues.translations || []).reduce(
+    (sum, tr) => sum + parseKeywords(tr?.note).length,
+    0,
+  );
 
   // Field Arrays
   const { fields: translationFields, append: appendTranslation } =
@@ -1012,6 +1026,28 @@ export function ProfileForm({
 
             <button
               type="button"
+              onClick={() => setActiveTab("keywords")}
+              className={cn(
+                "flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all",
+                activeTab === "keywords"
+                  ? "bg-background text-foreground border-border/60 border shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+              )}
+            >
+              <Tags className="h-4 w-4 text-violet-500" />
+              <span>{t("profiles.tabs.keywords")}</span>
+              {keywordCount > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="px-1.5 py-0 font-mono text-[10px]"
+                >
+                  {keywordCount}
+                </Badge>
+              )}
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveTab("settings")}
               className={cn(
                 "flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all",
@@ -1167,36 +1203,12 @@ export function ProfileForm({
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div>
                       <Label className="text-xs">
-                        {t("profiles.fields.middle_name")}
-                      </Label>
-                      <Input
-                        placeholder={t(
-                          "profiles.fields.middle_name_placeholder",
-                        )}
-                        {...form.register(
-                          `translations.${currentTranslationIndex}.middle_name`,
-                        )}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">
                         {t("profiles.fields.suffix")}
                       </Label>
                       <Input
                         placeholder={t("profiles.fields.suffix_placeholder")}
                         {...form.register(
                           `translations.${currentTranslationIndex}.suffix`,
-                        )}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">
-                        {t("profiles.fields.nickname")}
-                      </Label>
-                      <Input
-                        placeholder={t("profiles.fields.nickname_placeholder")}
-                        {...form.register(
-                          `translations.${currentTranslationIndex}.nickname`,
                         )}
                       />
                     </div>
@@ -1236,39 +1248,12 @@ export function ProfileForm({
                       />
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div>
-                      <Label className="text-xs">
-                        {t("profiles.fields.department")}
-                      </Label>
-                      <Input
-                        placeholder={t(
-                          "profiles.fields.department_placeholder",
-                        )}
-                        {...form.register(
-                          `translations.${currentTranslationIndex}.department`,
-                        )}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">
-                        {t("profiles.fields.role")}
-                      </Label>
-                      <Input
-                        placeholder={t("profiles.fields.role_placeholder")}
-                        {...form.register(
-                          `translations.${currentTranslationIndex}.role`,
-                        )}
-                      />
-                    </div>
-                  </div>
                 </div>
 
                 {/* Bio & Note */}
                 <div className="bg-muted/20 border-border/50 space-y-3 rounded-xl border p-4">
                   <div className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                    {t("profiles.sections.bio_note")}
+                    {t("profiles.sections.bio")}
                   </div>
                   <div>
                     <Label className="text-xs">
@@ -1279,18 +1264,6 @@ export function ProfileForm({
                       rows={3}
                       {...form.register(
                         `translations.${currentTranslationIndex}.bio`,
-                      )}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">
-                      {t("profiles.fields.note")}
-                    </Label>
-                    <Textarea
-                      placeholder={t("profiles.fields.note_placeholder")}
-                      rows={2}
-                      {...form.register(
-                        `translations.${currentTranslationIndex}.note`,
                       )}
                     />
                   </div>
@@ -2141,7 +2114,53 @@ export function ProfileForm({
             </Card>
           )}
 
-          {/* Tab 6: Settings */}
+          {/* Tab 6: Keywords (stored in each translation's note, TEC-1304) */}
+          {activeTab === "keywords" && (
+            <Card className="border-border shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Tags className="h-4 w-4 text-violet-500" />
+                  {t("profiles.keywords.title")}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {t("profiles.keywords.description")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {translationFields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="bg-muted/20 border-border/50 space-y-3 rounded-xl border p-4"
+                  >
+                    <Label
+                      htmlFor={`field-keywords-${index}`}
+                      className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
+                    >
+                      {t("profiles.keywords.locale_label", {
+                        locale: field.locale.toUpperCase(),
+                      })}
+                    </Label>
+                    <Controller
+                      control={form.control}
+                      name={`translations.${index}.note`}
+                      render={({ field: noteField }) => (
+                        <ProfileKeywordsInput
+                          id={`field-keywords-${index}`}
+                          value={noteField.value || ""}
+                          onChange={noteField.onChange}
+                        />
+                      )}
+                    />
+                  </div>
+                ))}
+                <p className="text-muted-foreground text-xs">
+                  {t("profiles.keywords.hint")}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Tab 7: Settings */}
           {activeTab === "settings" && (
             <Card className="border-border shadow-sm">
               <CardHeader>

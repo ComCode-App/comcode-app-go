@@ -50,6 +50,7 @@
   "tabs.social": "Social & Web",
   "tabs.addresses": "Addresses",
   "tabs.settings": "Settings",
+  "tabs.keywords": "Keywords",
   "tabs.general": "General",
   "tabs.organization": "Work & Org",
   "tabs.appearance": "Appearance",
@@ -73,6 +74,7 @@
   "sections.settings_title": "Profile Configuration",
   "sections.settings_desc": "Configure default language, publishing status, and primary card priority.",
   "sections.bio_note": "Biography & Personal Note",
+  "sections.bio": "Biography",
   "sections.quick_channels": "Quick Channels",
   "sections.preview": "Digital Business Card Preview",
   "fields.uuid": "UUID",
@@ -353,5 +355,13 @@
   "review.range": "{{from}}–{{to}} of {{total}}",
   "public_page.theme_premium_fallback": "This theme is not included in your plan. Visitors see {{theme}} for now; your choice comes back when you upgrade.",
   "public_page.background_premium_fallback": "This background is animated and not included in your plan. Visitors see the theme's background for now; your choice comes back when you upgrade.",
-  "public_page.branding_locked": "The company locked its branding: its theme, layout and cover are shown on this page instead of the choices here."
+  "public_page.branding_locked": "The company locked its branding: its theme, layout and cover are shown on this page instead of the choices here.",
+  "keywords.title": "Keywords",
+  "keywords.description": "Add words that describe you; they are written to the note field of the downloaded contact card.",
+  "keywords.locale_label": "Keywords ({{locale}})",
+  "keywords.placeholder": "Type a word and press Enter or comma",
+  "keywords.empty": "No keywords yet.",
+  "keywords.remove": "Remove {{keyword}}",
+  "keywords.limit_reached": "You can add up to {{count}} keywords",
+  "keywords.hint": "Example: software, cloud, cybersecurity. Each language keeps its own list."
 }

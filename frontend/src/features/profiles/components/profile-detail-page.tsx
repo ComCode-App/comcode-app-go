@@ -46,6 +46,7 @@ import {
   useDeleteProfile,
   useSetPrimaryProfile,
 } from "@/features/profiles/hooks/use-profile-mutations";
+import { parseKeywords } from "@/features/profiles/lib/keywords";
 import { profilesService } from "@/features/profiles/services/profiles.service";
 import { canManageAccount } from "@/lib/auth/types";
 import { useAuth } from "@/providers/auth-provider";
@@ -110,6 +111,8 @@ export function ProfileDetailPage() {
     }
     return "ID";
   }, [activeTranslation]);
+
+  const keywords = parseKeywords(activeTranslation?.note);
 
   if (profileQuery.isLoading) {
     return <PageLoader label={t("common.loading")} />;
@@ -565,18 +568,24 @@ export function ProfileDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Note & Additional Info */}
-            {activeTranslation?.note && (
+            {/* Keywords (stored in the translation note, TEC-1304) */}
+            {keywords.length > 0 && (
               <Card className="border-border shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm">
-                    {t("profiles.fields.note")}
+                    {t("profiles.keywords.title")}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-xs leading-relaxed whitespace-pre-wrap">
-                    {activeTranslation.note}
-                  </p>
+                <CardContent className="flex flex-wrap gap-1.5">
+                  {keywords.map((keyword) => (
+                    <Badge
+                      key={keyword}
+                      variant="secondary"
+                      className="text-xs"
+                    >
+                      {keyword}
+                    </Badge>
+                  ))}
                 </CardContent>
               </Card>
             )}
