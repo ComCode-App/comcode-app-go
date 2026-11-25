@@ -106,7 +106,6 @@ type Querier interface {
 	CountActivityEvents(ctx context.Context, arg CountActivityEventsParams) (int64, error)
 	CountAllBulkJobs(ctx context.Context) (int64, error)
 	CountAllExportJobs(ctx context.Context) (int64, error)
-	// account-lint: cross-account platform /v1/platform/imports admin list
 	CountAllImportJobs(ctx context.Context) (int64, error)
 	CountAppLogs(ctx context.Context, arg CountAppLogsParams) (int64, error)
 	CountAppLogsByLevel(ctx context.Context) ([]CountAppLogsByLevelRow, error)
@@ -125,7 +124,6 @@ type Querier interface {
 	CountEventsFilteredCapped(ctx context.Context, arg CountEventsFilteredCappedParams) (int64, error)
 	CountExportJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountImportJobsForAccount(ctx context.Context, arg CountImportJobsForAccountParams) (int64, error)
-	// account-lint: cross-account platform /v1/platform/imports: the caller's own jobs (actor_id)
 	CountImportJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountNotificationsForUser(ctx context.Context, arg CountNotificationsForUserParams) (int64, error)
 	CountOrders(ctx context.Context, arg CountOrdersParams) (int64, error)
@@ -302,6 +300,9 @@ type Querier interface {
 	GetAccountByUUID(ctx context.Context, argUuid uuid.UUID) (GetAccountByUUIDRow, error)
 	GetAccountCardByUUID(ctx context.Context, arg GetAccountCardByUUIDParams) (GetAccountCardByUUIDRow, error)
 	GetAccountIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	// An app import job of one account and one resource: each app route family reaches only its
+	// own resource's jobs (TEC-1302); the actor check stays in the usecase.
+	GetAccountImportJob(ctx context.Context, arg GetAccountImportJobParams) (ImportJob, error)
 	GetAccountInvite(ctx context.Context, arg GetAccountInviteParams) (GetAccountInviteRow, error)
 	// account-lint: cross-account public invite preview/accept: the token hash is the credential
 	// The link holder's view: not account-scoped, the token is the credential.
@@ -318,6 +319,10 @@ type Querier interface {
 	GetActiveSubscriptionByAccountID(ctx context.Context, accountID int64) (GetActiveSubscriptionByAccountIDRow, error)
 	GetActiveUserIDByEmail(ctx context.Context, email string) (int64, error)
 	GetAnalyticsSettings(ctx context.Context) (AnalyticsSetting, error)
+	// An app export job (app.*) of one account, for /v1/exports. export_jobs has no account
+	// column: app exports carry the requesting account in query_json.account_id, set by the
+	// server (a fixed query key the request cannot override).
+	GetAppExportJob(ctx context.Context, arg GetAppExportJobParams) (ExportJob, error)
 	GetAppLogByUUID(ctx context.Context, argUuid uuid.UUID) (AppLog, error)
 	GetAppSettings(ctx context.Context) (AppSetting, error)
 	// account-lint: cross-account public asset upload link: the token is the credential
@@ -366,15 +371,12 @@ type Querier interface {
 	// exchange copies. Translation: the primary locale first; contacts: primary first, then order.
 	GetExchangeSenderProfile(ctx context.Context, arg GetExchangeSenderProfileParams) (GetExchangeSenderProfileRow, error)
 	GetExportJobByID(ctx context.Context, id int64) (ExportJob, error)
-	GetExportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ExportJob, error)
 	GetFeatureDefinition(ctx context.Context, key string) (FeatureDefinition, error)
 	GetGeoIPSettings(ctx context.Context) (GeoipSetting, error)
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
 	GetHourlyAggregates(ctx context.Context, arg GetHourlyAggregatesParams) ([]EventAggregatesHourly, error)
 	// account-lint: cross-account import worker / Confirm: job id from an owned job (getOwned) or the queue
 	GetImportJobByID(ctx context.Context, id int64) (ImportJob, error)
-	// account-lint: cross-account usecase getOwned checks account + actor; platform GetJob checks admin/actor
-	GetImportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
 	// TEC-549: verified profile badge requests. Owner-side queries take account_id; platform
 	// review queries are unscoped by design (gated by platform.profile_verifications.manage).
 	// account-lint: cross-account profile id resolved through GetProfileIDForAccount (account-scoped)
@@ -450,6 +452,12 @@ type Querier interface {
 	GetPlanIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	// A platform job (no account) of /v1/platform/bulk; app jobs of accounts are not found here.
 	GetPlatformBulkJob(ctx context.Context, argUuid uuid.UUID) (BulkJob, error)
+	// A platform export job of /v1/platform/exports: every resource except the app shell's
+	// (app.*), which download through /v1/exports (TEC-1302).
+	GetPlatformExportJob(ctx context.Context, argUuid uuid.UUID) (ExportJob, error)
+	// A platform import job (no account) of /v1/platform/imports; app jobs of accounts are not
+	// found here (TEC-1302).
+	GetPlatformImportJob(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
 	GetPrimaryProfileByAccountID(ctx context.Context, accountID int64) (Profile, error)
 	GetProductBySlug(ctx context.Context, slug string) (GetProductBySlugRow, error)
 	GetProductByUUID(ctx context.Context, argUuid uuid.UUID) (GetProductByUUIDRow, error)
@@ -583,8 +591,9 @@ type Querier interface {
 	ListActivityEvents(ctx context.Context, arg ListActivityEventsParams) ([]ActivityEvent, error)
 	// Platform /v1/platform/bulk admin list: every platform job (no account).
 	ListAllBulkJobs(ctx context.Context, arg ListAllBulkJobsParams) ([]BulkJob, error)
+	// Platform /v1/platform/exports admin list: every platform export (no app.* jobs).
 	ListAllExportJobs(ctx context.Context, arg ListAllExportJobsParams) ([]ExportJob, error)
-	// account-lint: cross-account platform /v1/platform/imports admin list
+	// Platform /v1/platform/imports admin list: every platform job (no account).
 	ListAllImportJobs(ctx context.Context, arg ListAllImportJobsParams) ([]ImportJob, error)
 	ListAllPermissionSlugs(ctx context.Context) ([]string, error)
 	ListAppLogSources(ctx context.Context) ([]string, error)
@@ -627,12 +636,13 @@ type Querier interface {
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListEventDefinitions(ctx context.Context, arg ListEventDefinitionsParams) ([]EventDefinition, error)
 	ListEventsPaginated(ctx context.Context, arg ListEventsPaginatedParams) ([]Event, error)
+	// Platform /v1/platform/exports: the caller's own platform exports (no app.* jobs).
 	ListExportJobsForActor(ctx context.Context, arg ListExportJobsForActorParams) ([]ExportJob, error)
 	ListFeatureDefinitions(ctx context.Context) ([]FeatureDefinition, error)
 	ListImportChangesForJob(ctx context.Context, jobID int64) ([]ImportChange, error)
-	// App import history of one account for one actor.
+	// App import history of one account, one resource and one actor.
 	ListImportJobsForAccount(ctx context.Context, arg ListImportJobsForAccountParams) ([]ImportJob, error)
-	// account-lint: cross-account platform /v1/platform/imports: the caller's own jobs (actor_id)
+	// Platform /v1/platform/imports: the caller's own platform jobs (no account).
 	ListImportJobsForActor(ctx context.Context, arg ListImportJobsForActorParams) ([]ImportJob, error)
 	// Owners and admins of an account hear about new leads.
 	ListLeadNotifyUserIDs(ctx context.Context, accountID int64) ([]int64, error)

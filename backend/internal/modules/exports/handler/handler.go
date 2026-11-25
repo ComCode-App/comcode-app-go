@@ -103,7 +103,7 @@ func (h *Handler) DownloadOwn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p := authctx.MustPrincipal(r.Context())
-	file, ct, filename, err := h.svc.Download(r.Context(), job.UUID, p.UserInternal, false)
+	file, ct, filename, err := h.svc.DownloadApp(r.Context(), job.UUID, p.UserInternal, p.Account.ID)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -114,7 +114,8 @@ func (h *Handler) DownloadOwn(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.Copy(w, file)
 }
 
-// ownAppJob loads a job the caller requested for an app.* resource; anything else is not found.
+// ownAppJob loads a job the caller requested for an app.* resource in the active account
+// (TEC-1302); a platform job, another account's or another actor's job is not found.
 func (h *Handler) ownAppJob(w http.ResponseWriter, r *http.Request) (exportusecase.ExportJobView, bool) {
 	p := authctx.MustPrincipal(r.Context())
 	id, err := uuid.Parse(r.PathValue("uuid"))
@@ -122,13 +123,7 @@ func (h *Handler) ownAppJob(w http.ResponseWriter, r *http.Request) (exportuseca
 		response.BadRequest(w, r, response.CodeValidationError, "uuid is invalid")
 		return exportusecase.ExportJobView{}, false
 	}
-	job, err := h.svc.GetJob(r.Context(), id, p.UserInternal, false)
-	if err == nil && !exportusecase.IsAppResource(job.Resource) {
-		err = exportusecase.ErrNotFound
-	}
-	if errors.Is(err, exportusecase.ErrForbidden) {
-		err = exportusecase.ErrNotFound
-	}
+	job, err := h.svc.GetAppJob(r.Context(), id, p.UserInternal, p.Account.ID)
 	if err != nil {
 		writeErr(w, r, err)
 		return exportusecase.ExportJobView{}, false

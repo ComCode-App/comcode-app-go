@@ -45,10 +45,10 @@ func TestIntegrationEmployeeImportUnverifiedUserIsInvited(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pv, err := imports.Preview(e.ctx, job.UUID, c.owner.ID, c.account.ID); err != nil || pv.PreviewSummary.Valid != 2 {
+	if pv, err := imports.Preview(e.ctx, job.UUID, c.owner.ID, importusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyEmployees}); err != nil || pv.PreviewSummary.Valid != 2 {
 		t.Fatalf("preview: %+v %v", pv.PreviewSummary, err)
 	}
-	if applied, err := imports.Confirm(e.ctx, job.UUID, c.owner.ID, c.account.ID); err != nil || applied.PreviewSummary.Valid != 2 {
+	if applied, err := imports.Confirm(e.ctx, job.UUID, c.owner.ID, importusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyEmployees}); err != nil || applied.PreviewSummary.Valid != 2 {
 		t.Fatalf("apply: %+v %v", applied, err)
 	}
 

@@ -71,7 +71,7 @@ func TestIntegrationEmployeeImportInvites(t *testing.T) {
 
 	// Preview: the row is valid and would create a profile; nothing is written or sent.
 	job := upload(csv)
-	pv, err := imports.Preview(e.ctx, job, c.owner.ID, c.account.ID)
+	pv, err := imports.Preview(e.ctx, job, c.owner.ID, importusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyEmployees})
 	if err != nil || pv.PreviewSummary.Valid != 1 || pv.PreviewSummary.Rows[0].Op != "create" {
 		t.Fatalf("preview: %+v %v", pv.PreviewSummary, err)
 	}
@@ -80,14 +80,14 @@ func TestIntegrationEmployeeImportInvites(t *testing.T) {
 	}
 
 	// Apply then roll back: profile and invite are both removed.
-	if applied, err := imports.Confirm(e.ctx, job, c.owner.ID, c.account.ID); err != nil || applied.PreviewSummary.Valid != 1 {
+	if applied, err := imports.Confirm(e.ctx, job, c.owner.ID, importusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyEmployees}); err != nil || applied.PreviewSummary.Valid != 1 {
 		t.Fatalf("apply: %+v %v", applied, err)
 	}
 	first, err := e.d.Queries.GetPendingAccountInviteByEmail(e.ctx, db.GetPendingAccountInviteByEmailParams{AccountID: c.account.ID, Email: address})
 	if err != nil || !first.ProfileUuid.Valid {
 		t.Fatalf("invite after apply: %+v %v", first, err)
 	}
-	if rolled, err := imports.Rollback(e.ctx, job, c.owner.ID, c.account.ID); err != nil || rolled.Status != "rolled_back" {
+	if rolled, err := imports.Rollback(e.ctx, job, c.owner.ID, importusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyEmployees}); err != nil || rolled.Status != "rolled_back" {
 		t.Fatalf("rollback: %+v %v", rolled, err)
 	}
 	if _, err := e.d.Queries.GetPendingAccountInviteByEmail(e.ctx, db.GetPendingAccountInviteByEmailParams{AccountID: c.account.ID, Email: address}); err == nil {
@@ -102,10 +102,10 @@ func TestIntegrationEmployeeImportInvites(t *testing.T) {
 
 	// Apply again: the card profile exists at once, the invite carries it.
 	job = upload(csv)
-	if _, err := imports.Preview(e.ctx, job, c.owner.ID, c.account.ID); err != nil {
+	if _, err := imports.Preview(e.ctx, job, c.owner.ID, importusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyEmployees}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := imports.Confirm(e.ctx, job, c.owner.ID, c.account.ID); err != nil {
+	if _, err := imports.Confirm(e.ctx, job, c.owner.ID, importusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyEmployees}); err != nil {
 		t.Fatal(err)
 	}
 	inv, err := e.d.Queries.GetPendingAccountInviteByEmail(e.ctx, db.GetPendingAccountInviteByEmailParams{AccountID: c.account.ID, Email: address})
@@ -123,11 +123,11 @@ func TestIntegrationEmployeeImportInvites(t *testing.T) {
 
 	// Re-importing the same person updates the invite's profile; no second email.
 	job = upload("Ad,Soyad,E-posta,Unvan\nDavetli,Yeni," + address + ",Müdür\n")
-	pv, err = imports.Preview(e.ctx, job, c.owner.ID, c.account.ID)
+	pv, err = imports.Preview(e.ctx, job, c.owner.ID, importusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyEmployees})
 	if err != nil || pv.PreviewSummary.Rows[0].Op != "update" {
 		t.Fatalf("re-import preview: %+v %v", pv.PreviewSummary, err)
 	}
-	if _, err := imports.Confirm(e.ctx, job, c.owner.ID, c.account.ID); err != nil {
+	if _, err := imports.Confirm(e.ctx, job, c.owner.ID, importusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyEmployees}); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.detail(c, profileID).Translations[0]; got.LastName != "Yeni" || got.Title != "Müdür" {
@@ -162,10 +162,10 @@ func TestIntegrationEmployeeImportInvites(t *testing.T) {
 
 	// Now registered: a later import updates the linked profile as a member row, no email.
 	job = upload("Ad,Soyad,E-posta\nDavetli,Son," + address + "\n")
-	if _, err := imports.Preview(e.ctx, job, c.owner.ID, c.account.ID); err != nil {
+	if _, err := imports.Preview(e.ctx, job, c.owner.ID, importusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyEmployees}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := imports.Confirm(e.ctx, job, c.owner.ID, c.account.ID); err != nil {
+	if _, err := imports.Confirm(e.ctx, job, c.owner.ID, importusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyEmployees}); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.detail(c, profileID).Translations[0].LastName; got != "Son" || len(mails.tokens()) != 2 {

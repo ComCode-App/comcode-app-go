@@ -579,17 +579,17 @@ func TestIntegrationEmployeeImport(t *testing.T) {
 		}
 	}
 	// Jobs are invisible from another account and from platform routes.
-	if _, err := e.imports.Preview(e.ctx, job.UUID, other.owner.ID, other.account.ID); !errors.Is(err, importusecase.ErrNotFound) {
+	if _, err := e.imports.Preview(e.ctx, job.UUID, other.owner.ID, importusecase.JobAccess{AccountID: other.account.ID, Resource: model.ResourceCompanyEmployees}); !errors.Is(err, importusecase.ErrNotFound) {
 		t.Fatalf("other account preview: %v", err)
 	}
-	if _, err := e.imports.Preview(e.ctx, job.UUID, c.owner.ID, 0); !errors.Is(err, importusecase.ErrNotFound) {
+	if _, err := e.imports.Preview(e.ctx, job.UUID, c.owner.ID, importusecase.JobAccess{}); !errors.Is(err, importusecase.ErrNotFound) {
 		t.Fatalf("platform preview: %v", err)
 	}
 	if _, err := e.imports.Upload(e.ctx, c.owner.ID, 0, model.ResourceCompanyEmployees, ioengine.ImportCSV, "tr", "x.csv", bytes.NewBufferString(csv)); !errors.Is(err, importusecase.ErrInvalidRequest) {
 		t.Fatalf("platform upload: %v", err)
 	}
 
-	previewed, err := e.imports.Preview(e.ctx, job.UUID, c.owner.ID, c.account.ID)
+	previewed, err := e.imports.Preview(e.ctx, job.UUID, c.owner.ID, importusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyEmployees})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -605,7 +605,7 @@ func TestIntegrationEmployeeImport(t *testing.T) {
 		t.Fatal("preview added a member")
 	}
 
-	applied, err := e.imports.Confirm(e.ctx, job.UUID, c.owner.ID, c.account.ID)
+	applied, err := e.imports.Confirm(e.ctx, job.UUID, c.owner.ID, importusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyEmployees})
 	if err != nil || applied.Status != "applied" || applied.PreviewSummary.Valid != 2 || applied.PreviewSummary.Invalid != 2 {
 		t.Fatalf("apply: %+v %v", applied, err)
 	}
@@ -637,7 +637,7 @@ func TestIntegrationEmployeeImport(t *testing.T) {
 		t.Fatalf("existing member keeps office, gets company-wide group: %+v", asg)
 	}
 
-	rolled, err := e.imports.Rollback(e.ctx, job.UUID, c.owner.ID, c.account.ID)
+	rolled, err := e.imports.Rollback(e.ctx, job.UUID, c.owner.ID, importusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyEmployees})
 	if err != nil || rolled.Status != "rolled_back" {
 		t.Fatalf("rollback: %+v %v", rolled, err)
 	}
@@ -662,7 +662,7 @@ func TestIntegrationEmployeeImport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mp, err := e.imports.Preview(e.ctx, mjob.UUID, mgrUser.ID, c.account.ID)
+	mp, err := e.imports.Preview(e.ctx, mjob.UUID, mgrUser.ID, importusecase.JobAccess{AccountID: c.account.ID, Resource: model.ResourceCompanyEmployees})
 	if err != nil || mp.PreviewSummary.Valid != 0 {
 		t.Fatalf("office manager preview: %+v %v", mp.PreviewSummary, err)
 	}

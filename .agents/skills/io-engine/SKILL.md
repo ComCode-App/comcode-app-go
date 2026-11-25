@@ -38,6 +38,23 @@ the sample rows. Jobs carry `account_id`; upload with the active account and ser
 under the app prefix (example: `/v1/company/imports/*`, `modules/companyprofiles`). Frontend:
 `IMPORT_PATHS[resource].jobs` points the `ImportWizard` at those routes.
 
+### Job route families (TEC-1302)
+
+Each job route family reaches only its own jobs, filtered in the query (the bulk engine does the
+same, TEC-1300); another family's, resource's or account's job is 404 and missing from the list:
+
+- `/v1/platform/imports/*` — platform import jobs only (`account_id IS NULL`, `GetPlatformImportJob`).
+- App import routes (e.g. `/v1/company/imports/*`) — the active account's jobs of the route's
+  resource (`GetAccountImportJob(uuid, account_id, resource)`). Pass `importusecase.JobAccess`
+  with `AccountID` and `Resource`; an access without either reaches nothing.
+- `/v1/platform/exports/*` — platform exports only (resources outside `app.*`, `GetPlatformExportJob`).
+- `/v1/exports/*` — the caller's `app.*` exports of the active account (`GetAppExportJob`). An app
+  export route must put the active account into the job query as a fixed key `account_id`
+  (see `RequestLeadsExport`); `export_jobs` has no account column.
+
+Workers keep the unscoped by-id reads (`GetImportJobByID`, `GetExportJobByID`); never expose them
+to HTTP.
+
 ## Formats
 
 | Direction | Formats |

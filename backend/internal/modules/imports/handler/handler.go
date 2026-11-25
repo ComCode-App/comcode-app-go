@@ -145,7 +145,7 @@ func (h *Handler) UpdateMapping(w http.ResponseWriter, r *http.Request) {
 	if err := decodeJSON(w, r, &in); err != nil {
 		return
 	}
-	job, err := h.svc.UpdateMapping(r.Context(), id, p.UserInternal, accountOf(r), in.Mapping, in.Defaults)
+	job, err := h.svc.UpdateMapping(r.Context(), id, p.UserInternal, accessOf(r), in.Mapping, in.Defaults)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -160,7 +160,7 @@ func (h *Handler) Preview(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, r, response.CodeValidationError, "uuid is invalid")
 		return
 	}
-	job, err := h.svc.Preview(r.Context(), id, p.UserInternal, accountOf(r))
+	job, err := h.svc.Preview(r.Context(), id, p.UserInternal, accessOf(r))
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -175,7 +175,7 @@ func (h *Handler) Confirm(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, r, response.CodeValidationError, "uuid is invalid")
 		return
 	}
-	job, err := h.svc.Confirm(r.Context(), id, p.UserInternal, accountOf(r))
+	job, err := h.svc.Confirm(r.Context(), id, p.UserInternal, accessOf(r))
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -190,7 +190,7 @@ func (h *Handler) Rollback(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, r, response.CodeValidationError, "uuid is invalid")
 		return
 	}
-	job, err := h.svc.Rollback(r.Context(), id, p.UserInternal, accountOf(r))
+	job, err := h.svc.Rollback(r.Context(), id, p.UserInternal, accessOf(r))
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -200,12 +200,16 @@ func (h *Handler) Rollback(w http.ResponseWriter, r *http.Request) {
 
 type accountKey struct{}
 
-// accountOf is the account the job routes act in: 0 on platform routes, the active company
-// account on company routes (set by RequireCompanyImporter).
-func accountOf(r *http.Request) int64 {
-	id, _ := r.Context().Value(accountKey{}).(int64)
-	return id
+// accessOf is the job family the job routes act in: platform jobs (the zero value) on platform
+// routes; on company routes the active company's employee import jobs (set by
+// RequireCompanyImporter).
+func accessOf(r *http.Request) importusecase.JobAccess {
+	a, _ := r.Context().Value(accountKey{}).(importusecase.JobAccess)
+	return a
 }
+
+// accountOf is the account the upload routes act in: 0 on platform routes.
+func accountOf(r *http.Request) int64 { return accessOf(r).AccountID }
 
 // RequireCompanyImporter admits owners/admins of a company account to the company import routes
 // and makes the job routes act on that account's jobs only.
@@ -216,7 +220,8 @@ func RequireCompanyImporter(next http.Handler) http.Handler {
 			response.Forbidden(w, r, "Company owner or admin role required")
 			return
 		}
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), accountKey{}, p.Account.ID)))
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), accountKey{},
+			importusecase.JobAccess{AccountID: p.Account.ID, Resource: cpmodel.ResourceCompanyEmployees})))
 	})
 }
 
@@ -234,7 +239,7 @@ func (h *Handler) SampleCompanyEmployees(w http.ResponseWriter, r *http.Request)
 func (h *Handler) CompanyList(w http.ResponseWriter, r *http.Request) {
 	p := authctx.MustPrincipal(r.Context())
 	q := apiquery.Parse(r.URL.Query())
-	items, total, err := h.svc.ListAccountJobs(r.Context(), p.UserInternal, accountOf(r), cpmodel.ResourceCompanyEmployees, q.Limit, q.Offset)
+	items, total, err := h.svc.ListAccountJobs(r.Context(), p.UserInternal, accessOf(r), q.Limit, q.Offset)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -250,7 +255,7 @@ func (h *Handler) CompanyGet(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, r, response.CodeValidationError, "uuid is invalid")
 		return
 	}
-	job, err := h.svc.GetAccountJob(r.Context(), id, p.UserInternal, accountOf(r))
+	job, err := h.svc.GetAccountJob(r.Context(), id, p.UserInternal, accessOf(r))
 	if err != nil {
 		writeErr(w, r, err)
 		return

@@ -165,8 +165,8 @@ func (s *Service) Sample(ctx context.Context, resource string, format ioengine.I
 }
 
 // UpdateMapping saves column mapping and defaults.
-func (s *Service) UpdateMapping(ctx context.Context, jobUUID uuid.UUID, actorID, accountID int64, mapping, defaults map[string]string) (ImportJobView, error) {
-	job, err := s.getOwned(ctx, jobUUID, actorID, accountID)
+func (s *Service) UpdateMapping(ctx context.Context, jobUUID uuid.UUID, actorID int64, access JobAccess, mapping, defaults map[string]string) (ImportJobView, error) {
+	job, err := s.getOwned(ctx, jobUUID, actorID, access)
 	if err != nil {
 		return ImportJobView{}, err
 	}
@@ -183,8 +183,8 @@ func (s *Service) UpdateMapping(ctx context.Context, jobUUID uuid.UUID, actorID,
 }
 
 // Preview dry-runs mapped rows.
-func (s *Service) Preview(ctx context.Context, jobUUID uuid.UUID, actorID, accountID int64) (ImportJobView, error) {
-	job, err := s.getOwned(ctx, jobUUID, actorID, accountID)
+func (s *Service) Preview(ctx context.Context, jobUUID uuid.UUID, actorID int64, access JobAccess) (ImportJobView, error) {
+	job, err := s.getOwned(ctx, jobUUID, actorID, access)
 	if err != nil {
 		return ImportJobView{}, err
 	}
@@ -201,8 +201,8 @@ func (s *Service) Preview(ctx context.Context, jobUUID uuid.UUID, actorID, accou
 }
 
 // Confirm queues apply task.
-func (s *Service) Confirm(ctx context.Context, jobUUID uuid.UUID, actorID, accountID int64) (ImportJobView, error) {
-	if _, err := s.getOwned(ctx, jobUUID, actorID, accountID); err != nil {
+func (s *Service) Confirm(ctx context.Context, jobUUID uuid.UUID, actorID int64, access JobAccess) (ImportJobView, error) {
+	if _, err := s.getOwned(ctx, jobUUID, actorID, access); err != nil {
 		return ImportJobView{}, err
 	}
 	row, err := s.q.QueueImportJob(ctx, jobUUID)
@@ -298,8 +298,8 @@ func (s *Service) ProcessImport(ctx context.Context, jobID int64) error {
 }
 
 // Rollback reverts an applied import within window.
-func (s *Service) Rollback(ctx context.Context, jobUUID uuid.UUID, actorID, accountID int64) (ImportJobView, error) {
-	job, err := s.getOwned(ctx, jobUUID, actorID, accountID)
+func (s *Service) Rollback(ctx context.Context, jobUUID uuid.UUID, actorID int64, access JobAccess) (ImportJobView, error) {
+	job, err := s.getOwned(ctx, jobUUID, actorID, access)
 	if err != nil {
 		return ImportJobView{}, err
 	}
@@ -360,16 +360,14 @@ func (s *Service) ListJobs(ctx context.Context, actorID int64, admin bool, limit
 	return out, total, nil
 }
 
-// ListAccountJobs lists the caller's import jobs in one account (app routes).
-func (s *Service) ListAccountJobs(ctx context.Context, actorID, accountID int64, resource string, limit, offset int32) ([]ImportJobView, int64, error) {
-	if accountID <= 0 {
+// ListAccountJobs lists the caller's import jobs of access.Resource in one account (app
+// routes). An access without an account or a resource lists nothing.
+func (s *Service) ListAccountJobs(ctx context.Context, actorID int64, access JobAccess, limit, offset int32) ([]ImportJobView, int64, error) {
+	if access.AccountID <= 0 || access.Resource == "" {
 		return nil, 0, ErrForbidden
 	}
-	account := pgtype.Int8{Int64: accountID, Valid: true}
-	var res pgtype.Text
-	if resource != "" {
-		res = pgtype.Text{String: resource, Valid: true}
-	}
+	account := pgtype.Int8{Int64: access.AccountID, Valid: true}
+	res := access.Resource
 	rows, err := s.q.ListImportJobsForAccount(ctx, db.ListImportJobsForAccountParams{
 		AccountID: account, ActorID: actorID, Resource: res, LimitCount: limit, OffsetCount: offset,
 	})
@@ -387,9 +385,12 @@ func (s *Service) ListAccountJobs(ctx context.Context, actorID, accountID int64,
 	return out, total, nil
 }
 
-// GetAccountJob returns the caller's own job of the account (404 otherwise).
-func (s *Service) GetAccountJob(ctx context.Context, jobUUID uuid.UUID, actorID, accountID int64) (ImportJobView, error) {
-	row, err := s.getOwned(ctx, jobUUID, actorID, accountID)
+// GetAccountJob returns the caller's own job of access's account and resource (404 otherwise).
+func (s *Service) GetAccountJob(ctx context.Context, jobUUID uuid.UUID, actorID int64, access JobAccess) (ImportJobView, error) {
+	if access.AccountID <= 0 {
+		return ImportJobView{}, ErrNotFound
+	}
+	row, err := s.getOwned(ctx, jobUUID, actorID, access)
 	if err != nil {
 		return ImportJobView{}, err
 	}
@@ -397,7 +398,8 @@ func (s *Service) GetAccountJob(ctx context.Context, jobUUID uuid.UUID, actorID,
 }
 
 func (s *Service) GetJob(ctx context.Context, jobUUID uuid.UUID, actorID int64, admin bool) (ImportJobView, error) {
-	row, err := s.q.GetImportJobByUUID(ctx, jobUUID)
+	// Platform jobs only: an account's app job is not found here.
+	row, err := s.q.GetPlatformImportJob(ctx, jobUUID)
 	if err != nil {
 		return ImportJobView{}, ErrNotFound
 	}
@@ -494,14 +496,32 @@ func (s *Service) loadMappedRows(ctx context.Context, job db.ImportJob) ([]map[s
 	return rows, mapping, defAny, nil
 }
 
-// getOwned loads the caller's job of the given account (0: a platform job). A job of another
-// account is not found.
-func (s *Service) getOwned(ctx context.Context, jobUUID uuid.UUID, actorID, accountID int64) (db.ImportJob, error) {
-	row, err := s.q.GetImportJobByUUID(ctx, jobUUID)
-	if err != nil {
+// JobAccess is the job family a route reaches (TEC-1302). AccountID 0 means platform jobs only
+// (no account); a positive AccountID means that account's jobs of Resource only. An account
+// access without a resource reaches nothing.
+type JobAccess struct {
+	AccountID int64
+	Resource  string
+}
+
+// getOwned loads the caller's job of access's family, filtered in the query: a platform job for
+// AccountID 0, otherwise a job of that account and resource. Anything else is not found.
+func (s *Service) getOwned(ctx context.Context, jobUUID uuid.UUID, actorID int64, access JobAccess) (db.ImportJob, error) {
+	var row db.ImportJob
+	var err error
+	switch {
+	case access.AccountID == 0:
+		row, err = s.q.GetPlatformImportJob(ctx, jobUUID)
+	case access.AccountID > 0 && access.Resource != "":
+		row, err = s.q.GetAccountImportJob(ctx, db.GetAccountImportJobParams{
+			Uuid:      jobUUID,
+			AccountID: pgtype.Int8{Int64: access.AccountID, Valid: true},
+			Resource:  access.Resource,
+		})
+	default:
 		return db.ImportJob{}, ErrNotFound
 	}
-	if row.AccountID.Valid != (accountID > 0) || (accountID > 0 && row.AccountID.Int64 != accountID) {
+	if err != nil {
 		return db.ImportJob{}, ErrNotFound
 	}
 	if row.ActorID != actorID {
