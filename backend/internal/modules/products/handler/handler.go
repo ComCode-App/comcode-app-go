@@ -103,6 +103,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	prod, err := h.svc.Create(r.Context(), input)
 	if err != nil {
+		if writeProductValidation(w, r, err) {
+			return
+		}
 		if errors.Is(err, usecase.ErrNameRequired) {
 			response.BadRequest(w, r, response.CodeValidationError, err.Error())
 			return
@@ -133,6 +136,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	prod, err := h.svc.Update(r.Context(), id, input)
 	if err != nil {
+		if writeProductValidation(w, r, err) {
+			return
+		}
 		if errors.Is(err, usecase.ErrNotFound) {
 			response.NotFound(w, r, "product not found")
 			return
@@ -355,4 +361,19 @@ func (h *Handler) DeleteVariant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.JSON(w, r, http.StatusOK, map[string]bool{"success": true})
+}
+
+// writeProductValidation writes a product rule violation (TEC-1299) as 400 VALIDATION_ERROR
+// with one detail per field; it reports whether err was one.
+func writeProductValidation(w http.ResponseWriter, r *http.Request, err error) bool {
+	var verr *usecase.ValidationError
+	if !errors.As(err, &verr) {
+		return false
+	}
+	details := make([]response.Detail, len(verr.Fields))
+	for i, f := range verr.Fields {
+		details[i] = response.Detail{Field: f.Field, Code: f.Code, Message: f.Field + " is invalid: " + f.Code}
+	}
+	response.ValidationError(w, r, details)
+	return true
 }

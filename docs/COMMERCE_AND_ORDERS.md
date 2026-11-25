@@ -170,8 +170,11 @@ The platform product list has Export and Import (`ResourceIOToolbar`, resource
     them unchanged.
   - **Rollback** (within the import window): created products are deleted; updated products are
     rewritten field by field to their previous state, category included (also "no category").
-  - The REST create/update endpoints do not run `ValidateProductInput` yet (they accept any value
-    today); see the follow-up issue linked from TEC-596.
+  - The REST endpoints run the same rules (TEC-1299): `POST /v1/platform/products` and
+    `PUT /v1/platform/products/{uuid}` answer 400 `VALIDATION_ERROR` with one `details` entry per
+    field (`field`, `code`), and the product dialog shows them on the field. An omitted `status`,
+    `product_type` or `currency` is not checked: it means the default on create and "keep" on
+    update. Product list, detail and write responses carry the category's `category_uuid`.
 
 ## Activation
 

@@ -294,7 +294,8 @@ const getProductBySlug = `-- name: GetProductBySlug :one
 SELECT 
     p.id, p.uuid, p.category_id, p.name, p.slug, p.short_description, p.description, p.status, p.product_type, p.base_price, p.currency, p.tax_rate, p.stock_quantity, p.sku, p.allow_custom_print, p.model_3d_file_url, p.model_3d_usdz_url, p.model_3d_viewbox, p.images, p.meta_title, p.meta_description, p.meta_keywords, p.canonical_url, p.og_image_url, p.display_order, p.created_at, p.updated_at, p.deleted_at,
     c.name as category_name,
-    c.slug as category_slug
+    c.slug as category_slug,
+    c.uuid as category_uuid
 FROM products p
 LEFT JOIN product_categories c ON c.id = p.category_id AND c.deleted_at IS NULL
 WHERE p.slug = $1
@@ -332,6 +333,7 @@ type GetProductBySlugRow struct {
 	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
 	CategoryName     pgtype.Text        `json:"category_name"`
 	CategorySlug     pgtype.Text        `json:"category_slug"`
+	CategoryUuid     pgtype.UUID        `json:"category_uuid"`
 }
 
 func (q *Queries) GetProductBySlug(ctx context.Context, slug string) (GetProductBySlugRow, error) {
@@ -368,6 +370,7 @@ func (q *Queries) GetProductBySlug(ctx context.Context, slug string) (GetProduct
 		&i.DeletedAt,
 		&i.CategoryName,
 		&i.CategorySlug,
+		&i.CategoryUuid,
 	)
 	return i, err
 }
@@ -376,7 +379,8 @@ const getProductByUUID = `-- name: GetProductByUUID :one
 SELECT 
     p.id, p.uuid, p.category_id, p.name, p.slug, p.short_description, p.description, p.status, p.product_type, p.base_price, p.currency, p.tax_rate, p.stock_quantity, p.sku, p.allow_custom_print, p.model_3d_file_url, p.model_3d_usdz_url, p.model_3d_viewbox, p.images, p.meta_title, p.meta_description, p.meta_keywords, p.canonical_url, p.og_image_url, p.display_order, p.created_at, p.updated_at, p.deleted_at,
     c.name as category_name,
-    c.slug as category_slug
+    c.slug as category_slug,
+    c.uuid as category_uuid
 FROM products p
 LEFT JOIN product_categories c ON c.id = p.category_id AND c.deleted_at IS NULL
 WHERE p.uuid = $1
@@ -414,6 +418,7 @@ type GetProductByUUIDRow struct {
 	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
 	CategoryName     pgtype.Text        `json:"category_name"`
 	CategorySlug     pgtype.Text        `json:"category_slug"`
+	CategoryUuid     pgtype.UUID        `json:"category_uuid"`
 }
 
 func (q *Queries) GetProductByUUID(ctx context.Context, argUuid uuid.UUID) (GetProductByUUIDRow, error) {
@@ -450,6 +455,7 @@ func (q *Queries) GetProductByUUID(ctx context.Context, argUuid uuid.UUID) (GetP
 		&i.DeletedAt,
 		&i.CategoryName,
 		&i.CategorySlug,
+		&i.CategoryUuid,
 	)
 	return i, err
 }
@@ -534,7 +540,8 @@ const listProducts = `-- name: ListProducts :many
 SELECT 
     p.id, p.uuid, p.category_id, p.name, p.slug, p.short_description, p.description, p.status, p.product_type, p.base_price, p.currency, p.tax_rate, p.stock_quantity, p.sku, p.allow_custom_print, p.model_3d_file_url, p.model_3d_usdz_url, p.model_3d_viewbox, p.images, p.meta_title, p.meta_description, p.meta_keywords, p.canonical_url, p.og_image_url, p.display_order, p.created_at, p.updated_at, p.deleted_at,
     c.name as category_name,
-    c.slug as category_slug
+    c.slug as category_slug,
+    c.uuid as category_uuid
 FROM products p
 LEFT JOIN product_categories c ON c.id = p.category_id AND c.deleted_at IS NULL
 WHERE p.deleted_at IS NULL
@@ -600,6 +607,7 @@ type ListProductsRow struct {
 	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
 	CategoryName     pgtype.Text        `json:"category_name"`
 	CategorySlug     pgtype.Text        `json:"category_slug"`
+	CategoryUuid     pgtype.UUID        `json:"category_uuid"`
 }
 
 func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]ListProductsRow, error) {
@@ -649,6 +657,7 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]L
 			&i.DeletedAt,
 			&i.CategoryName,
 			&i.CategorySlug,
+			&i.CategoryUuid,
 		); err != nil {
 			return nil, err
 		}

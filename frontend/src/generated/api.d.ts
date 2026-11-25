@@ -11827,6 +11827,8 @@ export interface components {
         ProductSummary: {
             /** Format: uuid */
             uuid: string;
+            /** Format: uuid */
+            category_uuid?: string;
             category_name?: string;
             category_slug?: string;
             name: string;
@@ -11881,6 +11883,13 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Checked with the platform product form's rules (TEC-1299); a violation is
+         *     400 VALIDATION_ERROR with one `details` entry per field (`field`, `code`: required,
+         *     too_long, invalid_status, negative, too_many_decimals, out_of_range, invalid_number).
+         *     An omitted `status`, `product_type` or `currency` means the default on create
+         *     (draft, physical_card, TRY) and "keep the current value" on update.
+         */
         UpsertProductInput: {
             /** Format: uuid */
             category_uuid?: string;
@@ -11888,7 +11897,8 @@ export interface components {
             slug?: string;
             short_description?: string;
             description?: string;
-            status?: string;
+            /** @enum {string} */
+            status?: "active" | "draft" | "archived";
             product_type?: string;
             base_price: number;
             currency?: string;
@@ -19012,6 +19022,8 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeProductDetail"];
                 };
             };
+            400: components["responses"]["BadRequest"];
+            409: components["responses"]["Conflict"];
         };
     };
     getPlatformProduct: {
@@ -19062,6 +19074,9 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeProductDetail"];
                 };
             };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     deletePlatformProduct: {

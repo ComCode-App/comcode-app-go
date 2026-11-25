@@ -52,6 +52,7 @@ type ProductVariantSummary struct {
 
 type ProductSummary struct {
 	UUID             string    `json:"uuid"`
+	CategoryUUID     string    `json:"category_uuid,omitempty"`
 	CategoryName     string    `json:"category_name,omitempty"`
 	CategorySlug     string    `json:"category_slug,omitempty"`
 	Name             string    `json:"name"`
