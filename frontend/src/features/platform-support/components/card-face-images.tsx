@@ -7,8 +7,10 @@ import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { FileInput } from "@/components/ui/file-input";
 import {
-  DEFAULT_CARD_ART,
   cardFaceImage,
+  cardShapeOf,
+  defaultArt,
+  shapeAspectClass,
   type CardSide,
 } from "@/features/cards/lib/card-art";
 import {
@@ -18,6 +20,7 @@ import {
 } from "@/features/platform-support/services/platform-support.service";
 import { useStepUp } from "@/features/step-up-engine";
 import { isApiError } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
@@ -45,12 +48,22 @@ export function CardFaceImages({
   canWrite: boolean;
 }) {
   const { t } = useLocale();
+  const isBadge = cardShapeOf(card.card_type) === "badge";
   return (
     <div className="space-y-2">
       <p className="text-muted-foreground text-xs">
-        {t("routes.support.card_images.hint")}
+        {t(
+          isBadge
+            ? "routes.support.card_images.hint_badge"
+            : "routes.support.card_images.hint",
+        )}
       </p>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div
+        className={cn(
+          "grid gap-3",
+          isBadge ? "grid-cols-2 sm:max-w-md" : "sm:grid-cols-2",
+        )}
+      >
         {(["front", "back"] as const).map((side) => (
           <Face key={side} card={card} side={side} canWrite={canWrite} />
         ))}
@@ -109,14 +122,20 @@ function Face({
     onError,
   });
   const busy = upload.isPending || remove.isPending;
+  const shape = cardShapeOf(card.card_type);
 
   return (
     <div className="space-y-2">
       <p className="text-xs font-medium">{t(SIDE_LABEL[side])}</p>
-      <div className="relative aspect-[1.586/1] w-full overflow-hidden rounded-lg border bg-gradient-to-br from-zinc-900 via-neutral-900 to-black">
+      <div
+        className={cn(
+          "relative w-full overflow-hidden rounded-lg border bg-gradient-to-br from-zinc-900 via-neutral-900 to-black",
+          shapeAspectClass(shape),
+        )}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={image ?? DEFAULT_CARD_ART[side]}
+          src={image ?? defaultArt(shape, side)}
           alt={
             image ? t(SIDE_ALT[side]) : t("routes.support.card_images.default")
           }

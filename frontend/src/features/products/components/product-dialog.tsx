@@ -57,6 +57,9 @@ import { categoriesQueryKeys } from "@/features/categories/hooks/query-keys";
 import { ViewboxStudioModal } from "./ViewboxStudioModal";
 import { Bounded3DStage } from "./Bounded3DStage";
 
+/** Product types offered in the editor; physical_card is the default. */
+const PRODUCT_TYPES = ["physical_card", "badge"] as const;
+
 interface ProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -413,6 +416,44 @@ export function ProductDialog({
                       </p>
                     )}
                   </div>
+                </div>
+
+                {/* Product type: a badge (yaka kartı) is provisioned as a badge card with a
+                    portrait preview (TEC-1320). */}
+                <div className="space-y-2">
+                  <Label>{t("products.fields.type")}</Label>
+                  <Controller
+                    name="product_type"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PRODUCT_TYPES.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {t(`products.types.${type}`)}
+                            </SelectItem>
+                          ))}
+                          {field.value &&
+                          !(PRODUCT_TYPES as readonly string[]).includes(
+                            field.value,
+                          ) ? (
+                            <SelectItem value={field.value}>
+                              {field.value}
+                            </SelectItem>
+                          ) : null}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    {t("products.type_hint")}
+                  </p>
                 </div>
 
                 <div className="space-y-2">

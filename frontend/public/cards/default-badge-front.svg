@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 856" width="540" height="856">
+  <!-- ComCode default badge (yaka kartı) front (TEC-1320), 54×85.6 mm portrait. Transparent: the
+       material colour shows through. The middle stays empty for the holder's name. -->
+  <defs>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.10"/>
+      <stop offset="0.55" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0.06"/>
+    </linearGradient>
+  </defs>
+  <rect width="540" height="856" fill="url(#sheen)"/>
+  <!-- lanyard slot -->
+  <rect x="210" y="38" width="120" height="22" rx="11" fill="#000" fill-opacity="0.55"/>
+  <rect x="210" y="38" width="120" height="22" rx="11" fill="none" stroke="#fff" stroke-opacity="0.25" stroke-width="2"/>
+  <g transform="translate(222 120) scale(0.07)" fill="#fff" fill-rule="evenodd">
+    <path transform="translate(-473 -3864)" d="M1054.91,3906.1s-386.5,389.36-418.638,421.74-57.216,115.61,7.047,180.35,150.247,36.08,179.112,7,394.869-397.81,426.289-429.46,73.73-19.45,92.33-.71c15.7,15.82,39.86,54.98.68,94.45s-398.484,401.45-426.269,429.44c-42.434,42.75-208.849,146.16-360.2-6.33-152.3-153.43-54.268-327.31-12.621-369.27S843.6,3930.12,869.551,3903.97,980.925,3831.56,1054.91,3906.1Zm-76.821,734.86S1364.6,4251.58,1396.74,4219.2s57.22-115.61-7.05-180.35-150.24-36.08-179.11-7-394.881,397.82-426.3,429.47-73.728,19.45-92.327.72c-15.7-15.83-39.864-54.99-.683-94.46s398.494-401.46,426.284-429.45c42.43-42.75,208.85-146.16,360.21,6.32,152.3,153.43,54.26,327.32,12.61,369.28s-300.97,303.2-326.92,329.35S1052.07,4715.49,978.089,4640.96Z"/>
+  </g>
+  <text x="270" y="250" text-anchor="middle" font-family="Plus Jakarta Sans, Arial, sans-serif" font-size="40" font-weight="700" letter-spacing="2" fill="#fff">COMCODE</text>
+  <g transform="translate(150 470) scale(0.22)" fill="#fff" fill-opacity="0.06" fill-rule="evenodd">
+    <path transform="translate(-473 -3864)" d="M1054.91,3906.1s-386.5,389.36-418.638,421.74-57.216,115.61,7.047,180.35,150.247,36.08,179.112,7,394.869-397.81,426.289-429.46,73.73-19.45,92.33-.71c15.7,15.82,39.86,54.98.68,94.45s-398.484,401.45-426.269,429.44c-42.434,42.75-208.849,146.16-360.2-6.33-152.3-153.43-54.268-327.31-12.621-369.27S843.6,3930.12,869.551,3903.97,980.925,3831.56,1054.91,3906.1Zm-76.821,734.86S1364.6,4251.58,1396.74,4219.2s57.22-115.61-7.05-180.35-150.24-36.08-179.11-7-394.881,397.82-426.3,429.47-73.728,19.45-92.327.72c-15.7-15.83-39.864-54.99-.683-94.46s398.494-401.46,426.284-429.45c42.43-42.75,208.85-146.16,360.21,6.32,152.3,153.43,54.26,327.32,12.61,369.28s-300.97,303.2-326.92,329.35S1052.07,4715.49,978.089,4640.96Z"/>
+  </g>
+  <rect x="0" y="776" width="540" height="80" fill="#000" fill-opacity="0.35"/>
+  <g fill="none" stroke="#fff" stroke-opacity="0.55" stroke-width="6" stroke-linecap="round" transform="translate(462 816)">
+    <path d="M0 -14 a20 20 0 0 1 0 28"/>
+    <path d="M10 -24 a34 34 0 0 1 0 48"/>
+  </g>
+</svg>

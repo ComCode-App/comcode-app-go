@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ProductTypeBadge } from "./product-type-badge";
 import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
@@ -487,8 +488,11 @@ export function OrderDetailDialog({
 
                               {/* Product & Variant */}
                               <td className="p-3">
-                                <div className="text-foreground font-medium">
+                                <div className="text-foreground flex items-center gap-1.5 font-medium">
                                   {item.product_name}
+                                  <ProductTypeBadge
+                                    productType={item.product_type}
+                                  />
                                 </div>
                                 {item.variant_name && (
                                   <span className="text-muted-foreground text-[11px]">

@@ -66,6 +66,8 @@ type Card struct {
 	IsLocked         bool      `json:"is_locked"`
 	ActivationStatus string    `json:"activation_status"`
 	// FrontImageURL / BackImageURL are the card's design images (TEC-1320); empty = default artwork.
+	// CardType is physical_nfc, badge (yaka kartı, vertical preview) etc. (TEC-1320).
+	CardType      string      `json:"card_type,omitempty"`
 	FrontImageURL string      `json:"front_image_url,omitempty"`
 	BackImageURL  string      `json:"back_image_url,omitempty"`
 	Account       AccountRef  `json:"account"`

@@ -54,6 +54,8 @@ export type OrderItemSummary = {
   total_price: number;
   custom_print_data?: Record<string, unknown>;
   product_images?: string[];
+  /** physical_card, badge (yaka kartı) ... (TEC-1320). */
+  product_type?: string;
   recipient_name?: string;
   recipient_email?: string;
   recipient_phone?: string;

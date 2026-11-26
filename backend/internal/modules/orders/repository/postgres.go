@@ -508,6 +508,7 @@ func (r *PostgresRepository) ListItems(ctx context.Context, orderID int64) ([]mo
 			TotalPrice:            numericToFloat(row.TotalPrice),
 			CustomPrintData:       customPrint,
 			ProductImages:         images,
+			ProductType:           row.ProductType,
 			RecipientName:         row.RecipientName,
 			RecipientEmail:        row.RecipientEmail,
 			RecipientPhone:        row.RecipientPhone,
@@ -573,6 +574,7 @@ func (r *PostgresRepository) GetItemByUUID(ctx context.Context, itemUUID uuid.UU
 		TotalPrice:          numericToFloat(row.TotalPrice),
 		CustomPrintData:     customPrint,
 		ProductImages:       images,
+		ProductType:         row.ProductType,
 		RecipientName:       row.RecipientName,
 		RecipientEmail:      row.RecipientEmail,
 		RecipientPhone:      row.RecipientPhone,
@@ -680,7 +682,7 @@ func (r *PostgresRepository) UpdateItemFulfillment(ctx context.Context, itemUUID
 }
 
 // Card & Route Provisioning (TEC-77 Integration)
-func (r *PostgresRepository) CreateProvisionedCardAndRoute(ctx context.Context, orderID, orderItemID, accountID, userID int64, profileID *int64, cardName, smartCode, activationCode, cardUID, material, colorHex string) (int64, uuid.UUID, uuid.UUID, error) {
+func (r *PostgresRepository) CreateProvisionedCardAndRoute(ctx context.Context, orderID, orderItemID, accountID, userID int64, profileID *int64, cardName, smartCode, activationCode, cardUID, cardType, material, colorHex string) (int64, uuid.UUID, uuid.UUID, error) {
 	var createdCardID int64
 	var createdCardUUID uuid.UUID
 	var createdRouteUUID uuid.UUID
@@ -698,7 +700,7 @@ func (r *PostgresRepository) CreateProvisionedCardAndRoute(ctx context.Context, 
 			ProfileID:          int64ToPgtype(profileID),
 			DirectUrl:          "",
 			CustomData:         []byte("{}"),
-			CardType:           "physical_nfc",
+			CardType:           cardType,
 			Material:           material,
 			ColorHex:           colorHex,
 			IsActive:           false, // Unactivated until scanned/entered

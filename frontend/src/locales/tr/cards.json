@@ -114,5 +114,7 @@
   "resolver_retired_desc": "Bu kart veya bağlantı artık kullanılmıyor.",
   "delete_title": "Kartı sil",
   "art.front_alt": "Kartın ön yüz tasarımı",
-  "art.back_alt": "Kartın arka yüz tasarımı"
+  "art.back_alt": "Kartın arka yüz tasarımı",
+  "types.badge": "Yaka Kartı",
+  "types.card": "NFC Kart"
 }

@@ -18,7 +18,12 @@ import { cn } from "@/lib/utils";
 import type { CardSummary } from "../services/cards.service";
 import { useLocale } from "@/providers/locale-provider";
 import { TooltipHint } from "@/components/ui/tooltip";
-import { DEFAULT_CARD_ART, cardFaceImage } from "../lib/card-art";
+import {
+  cardFaceImage,
+  cardShapeOf,
+  defaultArt,
+  shapeAspectClass,
+} from "../lib/card-art";
 
 interface InteractiveNFCCardProps {
   card: CardSummary;
@@ -108,6 +113,9 @@ export function InteractiveNFCCard({
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
   const style = MATERIAL_STYLES[card.material] || MATERIAL_STYLES.matte_black;
+  // A badge (yaka kartı) is a portrait 54×85.6 mm card (TEC-1320).
+  const shape = cardShapeOf(card.card_type);
+  const isBadge = shape === "badge";
   const frontImage = cardFaceImage(card.front_image_url);
   const backImage = cardFaceImage(card.back_image_url);
   const matKey = `cards.materials.${card.material}`;
@@ -138,7 +146,11 @@ export function InteractiveNFCCard({
     <div className={cn("group/card relative flex flex-col gap-3", className)}>
       {/* 3D Card Container */}
       <div
-        className="relative aspect-[1.586/1] w-full cursor-pointer rounded-2xl transition-transform duration-300 select-none hover:scale-[1.01]"
+        className={cn(
+          "relative cursor-pointer rounded-2xl transition-transform duration-300 select-none hover:scale-[1.01]",
+          shapeAspectClass(shape),
+          isBadge ? "mx-auto w-[64%]" : "w-full",
+        )}
         // Tailwind v4 has no perspective-1000 / transform-style-3d: the faces
         // were drawn flat on top of each other, mirrored (TEC-1320).
         style={{ perspective: "1200px" }}
@@ -165,7 +177,7 @@ export function InteractiveNFCCard({
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={DEFAULT_CARD_ART.front}
+                src={defaultArt(shape, "front")}
                 alt=""
                 aria-hidden
                 className="pointer-events-none absolute inset-0 h-full w-full object-cover"
@@ -213,7 +225,8 @@ export function InteractiveNFCCard({
               <div className={cn("space-y-0.5", frontImage && "invisible")}>
                 <h3
                   className={cn(
-                    "max-w-[200px] truncate text-base font-bold tracking-wide",
+                    "truncate text-base font-bold tracking-wide",
+                    isBadge ? "max-w-[130px]" : "max-w-[200px]",
                     style.text,
                   )}
                 >
@@ -234,7 +247,12 @@ export function InteractiveNFCCard({
                   {card.target_type === "vcard_download" && (
                     <Share2 className="h-3 w-3" />
                   )}
-                  <span className="max-w-[180px] truncate">
+                  <span
+                    className={cn(
+                      "truncate",
+                      isBadge ? "max-w-[110px]" : "max-w-[180px]",
+                    )}
+                  >
                     {card.target_type === "profile" &&
                       t("cards.settings.target_profile")}
                     {card.target_type === "direct_url" &&
@@ -271,7 +289,7 @@ export function InteractiveNFCCard({
           <div className="absolute inset-0 flex h-full w-full rotate-y-180 flex-col justify-between overflow-hidden rounded-2xl p-5 backface-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={backImage ?? DEFAULT_CARD_ART.back}
+              src={backImage ?? defaultArt(shape, "back")}
               alt={backImage ? t("cards.art.back_alt") : ""}
               aria-hidden={backImage ? undefined : true}
               className="pointer-events-none absolute inset-0 h-full w-full object-cover"
@@ -279,7 +297,10 @@ export function InteractiveNFCCard({
 
             <div
               className={cn(
-                "relative z-10 mt-12 flex items-center justify-between",
+                "relative z-10 flex",
+                isBadge
+                  ? "my-auto flex-col items-center gap-3"
+                  : "mt-12 items-center justify-between",
                 backImage && "invisible",
               )}
             >
@@ -300,7 +321,12 @@ export function InteractiveNFCCard({
               </div>
 
               {/* Back Information */}
-              <div className="flex flex-col items-end gap-1.5 text-right font-mono text-xs text-white/80">
+              <div
+                className={cn(
+                  "flex flex-col gap-1.5 font-mono text-xs text-white/80",
+                  isBadge ? "items-center text-center" : "items-end text-right",
+                )}
+              >
                 <div className="flex items-center gap-1 text-white">
                   <Wifi className="h-3.5 w-3.5" />
                   <span className="text-xs font-semibold">NFC ENABLED</span>
@@ -344,6 +370,11 @@ export function InteractiveNFCCard({
           >
             {card.is_active ? t("common.active") : t("common.inactive")}
           </Badge>
+          {isBadge && (
+            <Badge variant="outline" className="text-xs">
+              {t("cards.types.badge")}
+            </Badge>
+          )}
           <span className="text-muted-foreground text-xs">{materialLabel}</span>
         </div>
 
