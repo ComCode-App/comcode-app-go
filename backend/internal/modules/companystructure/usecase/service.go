@@ -132,7 +132,7 @@ func validName(s string, max int) bool {
 }
 func officeModel(v db.CompanyOffice) model.Office {
 	return model.Office{
-		UUID: v.Uuid, OfficeInput: model.OfficeInput{Name: v.Name, City: v.City, Address: v.Address, Phone: v.Phone, SortOrder: v.SortOrder},
+		UUID: v.Uuid, OfficeInput: model.OfficeInput{Name: v.Name, City: v.City, District: v.District, Address: v.Address, Phone: v.Phone, SortOrder: v.SortOrder},
 		CreatedAt: v.CreatedAt.Time, UpdatedAt: v.UpdatedAt.Time,
 	}
 }
@@ -201,7 +201,12 @@ func (s *Service) Office(ctx context.Context, p authctx.Principal, id uuid.UUID)
 // SaveOffice uses replacement semantics for updates. Only company owners/admins manage offices.
 func (s *Service) SaveOffice(ctx context.Context, p authctx.Principal, id uuid.UUID, in model.OfficeInput) (model.Office, error) {
 	in.Name = strings.TrimSpace(in.Name)
-	if !validName(in.Name, 150) || utf8.RuneCountInString(in.City) > 150 || utf8.RuneCountInString(in.Phone) > 50 || utf8.RuneCountInString(in.Address) > 10000 {
+	in.City = strings.TrimSpace(in.City)
+	in.District = strings.TrimSpace(in.District)
+	if in.City == "" {
+		in.District = ""
+	}
+	if !validName(in.Name, 150) || utf8.RuneCountInString(in.City) > 150 || utf8.RuneCountInString(in.District) > 150 || utf8.RuneCountInString(in.Phone) > 50 || utf8.RuneCountInString(in.Address) > 10000 {
 		return model.Office{}, model.ErrInvalid
 	}
 	var out model.Office
@@ -216,6 +221,7 @@ func (s *Service) SaveOffice(ctx context.Context, p authctx.Principal, id uuid.U
 				AccountID: p.Account.ID,
 				Name:      in.Name,
 				City:      in.City,
+				District:  in.District,
 				Address:   in.Address,
 				Phone:     in.Phone,
 				SortOrder: in.SortOrder,
@@ -226,6 +232,7 @@ func (s *Service) SaveOffice(ctx context.Context, p authctx.Principal, id uuid.U
 				Uuid:      id,
 				Name:      in.Name,
 				City:      in.City,
+				District:  in.District,
 				Address:   in.Address,
 				Phone:     in.Phone,
 				SortOrder: in.SortOrder,

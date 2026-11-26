@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { NumberFieldError } from "@/components/forms";
 import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/providers/locale-provider";
 
 import { useOfficeMutations } from "../hooks/use-company-structure";
+import { TrLocationFields } from "./tr-location-fields";
 import {
   officeFormSchema,
   type OfficeFormValues,
@@ -36,6 +37,7 @@ type OfficeDialogProps = {
 const EMPTY: OfficeFormValues = {
   name: "",
   city: "",
+  district: "",
   address: "",
   phone: "",
   sort_order: 0,
@@ -56,6 +58,7 @@ export function OfficeDialog({
         ? {
             name: office.name,
             city: office.city ?? "",
+            district: office.district ?? "",
             address: office.address ?? "",
             phone: office.phone ?? "",
             sort_order: office.sort_order ?? 0,
@@ -67,6 +70,8 @@ export function OfficeDialog({
   const {
     register,
     handleSubmit,
+    setValue,
+    control,
     formState: { errors },
   } = useForm<OfficeFormValues>({
     resolver: zodResolver(officeFormSchema),
@@ -84,6 +89,8 @@ export function OfficeDialog({
   };
 
   const saving = create.isPending || update.isPending;
+  const city = useWatch({ control, name: "city" });
+  const district = useWatch({ control, name: "district" });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -115,27 +122,27 @@ export function OfficeDialog({
             ) : null}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="office-city">
-                {t("company_structure.offices.fields.city")}
-              </Label>
-              <Input
-                id="office-city"
-                autoComplete="off"
-                {...register("city")}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="office-phone">
-                {t("company_structure.offices.fields.phone")}
-              </Label>
-              <Input
-                id="office-phone"
-                type="tel"
-                autoComplete="off"
-                {...register("phone")}
-              />
-            </div>
+            <TrLocationFields
+              city={city}
+              district={district}
+              disabled={saving}
+              onChange={(next) => {
+                setValue("city", next.city, { shouldDirty: true });
+                setValue("district", next.district, { shouldDirty: true });
+              }}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="office-phone">
+              {t("company_structure.offices.fields.phone")}
+            </Label>
+            <Input
+              id="office-phone"
+              type="tel"
+              autoComplete="off"
+              className="sm:w-1/2"
+              {...register("phone")}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="office-address">

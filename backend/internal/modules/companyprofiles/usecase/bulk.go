@@ -482,6 +482,10 @@ func (a *BulkAdapter) applyContact(ctx context.Context, ac actor, id uuid.UUID, 
 			return snapshot{}, err
 		}
 		address = &model.AddressParams{Label: office.Name, Street: office.Address, City: office.City}
+		if office.District != "" {
+			// TEC-1316: the district is the locality, the city (il) the region.
+			address.City, address.Region = office.District, office.City
+		}
 		if phone == nil && strings.TrimSpace(office.Phone) != "" {
 			v := strings.TrimSpace(office.Phone)
 			phone = &v

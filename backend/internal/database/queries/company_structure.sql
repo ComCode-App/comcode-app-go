@@ -64,10 +64,10 @@ AND (NOT sqlc.arg(restricted)::bool OR t.uuid=ANY(sqlc.arg(visible_offices)::uui
 SELECT t.* FROM company_offices t WHERE t.account_id=$1 AND t.uuid=$2;
 
 -- name: CreateStructureOffice :one
-INSERT INTO company_offices (account_id,name,city,address,phone,sort_order) VALUES (sqlc.arg(account_id),sqlc.arg(name),sqlc.arg(city),sqlc.arg(address),sqlc.arg(phone),sqlc.arg(sort_order)) RETURNING *;
+INSERT INTO company_offices (account_id,name,city,district,address,phone,sort_order) VALUES (sqlc.arg(account_id),sqlc.arg(name),sqlc.arg(city),sqlc.arg(district),sqlc.arg(address),sqlc.arg(phone),sqlc.arg(sort_order)) RETURNING *;
 
 -- name: UpdateStructureOffice :one
-UPDATE company_offices SET name=sqlc.arg(name),city=sqlc.arg(city),address=sqlc.arg(address),phone=sqlc.arg(phone),sort_order=sqlc.arg(sort_order) WHERE company_offices.account_id=sqlc.arg(account_id) AND company_offices.uuid=sqlc.arg(uuid) RETURNING *;
+UPDATE company_offices SET name=sqlc.arg(name),city=sqlc.arg(city),district=sqlc.arg(district),address=sqlc.arg(address),phone=sqlc.arg(phone),sort_order=sqlc.arg(sort_order) WHERE company_offices.account_id=sqlc.arg(account_id) AND company_offices.uuid=sqlc.arg(uuid) RETURNING *;
 
 -- name: DeleteStructureOffice :execrows
 DELETE FROM company_offices WHERE account_id=$1 AND uuid=$2;
