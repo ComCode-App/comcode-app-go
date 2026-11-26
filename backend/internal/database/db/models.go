@@ -2296,6 +2296,16 @@ type ProfileBankAccount struct {
 	DisplayOrder  int32 `json:"display_order"`
 }
 
+type ProfileCompanyShare struct {
+	ID               int64              `json:"id"`
+	AccountID        int64              `json:"account_id"`
+	ProfileID        int64              `json:"profile_id"`
+	CompanyAccountID int64              `json:"company_account_id"`
+	MemberID         int64              `json:"member_id"`
+	SharedByUserID   int64              `json:"shared_by_user_id"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+}
+
 type ProfileContactDetail struct {
 	ID           int64              `json:"id"`
 	Uuid         uuid.UUID          `json:"uuid"`

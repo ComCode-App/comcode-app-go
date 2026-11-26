@@ -39,6 +39,7 @@ import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { ProfileCompletionBadge } from "@/features/profiles/components/profile-completion-badge";
 import { ProfileCompletionChecklist } from "@/features/profiles/components/profile-completion-checklist";
+import { ProfileCompanyShareCard } from "@/features/profiles/components/profile-company-share-card";
 import { ProfilePublicPageCard } from "@/features/profiles/components/profile-public-page-card";
 import { ProfileVerificationCard } from "@/features/profiles/components/profile-verification-card";
 import { VerifiedBadge } from "@/features/profiles/components/verified-badge";
@@ -348,6 +349,8 @@ export function ProfileDetailPage() {
         </div>
 
         <ProfilePublicPageCard profileUuid={profile.uuid} />
+
+        <ProfileCompanyShareCard profileUuid={profile.uuid} />
 
         {/* 2-Column Grid: Left (Contacts & Addresses) & Right (Social & Notes) */}
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
