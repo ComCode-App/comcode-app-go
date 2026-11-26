@@ -18773,6 +18773,12 @@ components:
           type: "string"
           maxLength: 150
           default: ""
+          description: "Province (il)"
+        district:
+          type: "string"
+          maxLength: 150
+          default: ""
+          description: "District (ilçe) within city (TEC-1316); cleared when city is empty"
         address:
           type: "string"
           maxLength: 10000

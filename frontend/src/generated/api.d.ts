@@ -12912,8 +12912,16 @@ export interface components {
         };
         CompanyOfficeInput: {
             name: string;
-            /** @default  */
+            /**
+             * @description Province (il)
+             * @default
+             */
             city: string;
+            /**
+             * @description District (ilçe) within city (TEC-1316); cleared when city is empty
+             * @default
+             */
+            district: string;
             /** @default  */
             address: string;
             /** @default  */

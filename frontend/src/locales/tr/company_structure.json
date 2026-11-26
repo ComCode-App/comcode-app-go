@@ -22,7 +22,7 @@
   "offices.dialog.edit_title": "Ofisi düzenle",
   "offices.dialog.description": "Ofisler üyeleri ve ofise bağlı grupları lokasyona göre toplar.",
   "offices.fields.name": "Ad",
-  "offices.fields.city": "Şehir",
+  "offices.fields.city": "İl",
   "offices.fields.address": "Adres",
   "offices.fields.phone": "Telefon",
   "offices.fields.groups": "Gruplar",
@@ -88,5 +88,12 @@
   "sector.none": "Belirtilmedi",
   "sector.hint": "Firmayı en iyi tanımlayan sektörü seçin.",
   "sector.read_only": "Sektörü yalnızca sahipler ve yöneticiler değiştirebilir.",
-  "sector.toast.saved": "Sektör kaydedildi"
+  "sector.toast.saved": "Sektör kaydedildi",
+  "offices.fields.district": "İlçe",
+  "offices.fields.city_placeholder": "İl seçin",
+  "offices.fields.city_search": "İl ara",
+  "offices.fields.district_placeholder": "İlçe seçin",
+  "offices.fields.district_needs_city": "Önce il seçin",
+  "offices.fields.district_search": "İlçe ara",
+  "offices.fields.no_match": "Sonuç yok"
 }

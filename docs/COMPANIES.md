@@ -118,7 +118,8 @@ Company accounts optionally select a bilingual sector from the platform-managed 
 (`GET /v1/sectors`; 12 initial sectors). `GET/PUT /v1/company/sector` reads/replaces
 `sector_uuid`; null clears it. Personal accounts cannot have company structure.
 
-Offices belong to the active company and carry name, city, address, phone and sort order.
+Offices belong to the active company and carry name, city (province, il), district (ilçe, migration 000086, TEC-1316), address, phone and sort order.
+The office form picks the province and district from Turkey's list (`company-structure/data/tr-locations.json`, 81 provinces and 973 districts from turkey-neighbourhoods, MIT); a city typed before the list existed stays selectable. A district is cleared when the city is empty. The bulk "office address" action writes the district as the address locality and the province as its region.
 Groups are `department` or `team`, optionally attached to an office; a null office makes a
 group company-wide. A member has at most one assignment (nullable office and group).
 An office-bound group's office must match the assignment's office. Company-wide groups
