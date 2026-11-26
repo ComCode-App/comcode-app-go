@@ -13,8 +13,6 @@
   "branding.hint": "Employee public pages use this look. Unlocked, it is their default and each employee may pick their own theme, layout and cover. Locked, every field set here overrides theirs.",
   "branding.theme": "Theme",
   "branding.theme_none": "No company theme",
-  "branding.layout": "Layout",
-  "branding.layout_theme": "Theme's layout",
   "branding.primary_color": "Primary color",
   "branding.color_hint": "Buttons and accents of employee pages; empty uses the theme's color.",
   "branding.color_invalid": "Use a #rrggbb color.",
@@ -49,5 +47,6 @@
   "usage.branding_logo": "Branding logo",
   "usage.branding_cover": "Branding cover",
   "usage.profile_avatar": "Profile photo",
-  "usage.profile_cover": "Profile cover"
+  "usage.profile_cover": "Profile cover",
+  "branding.theme_hint": "Default template for the company's profiles. Each template brings its own page layout."
 }

@@ -1,8 +1,7 @@
 "use client";
 
+import { PROFILE_COVER_ENABLED } from "@/config/profile-media";
 import {
-  Building2,
-  Copy,
   Download,
   Globe,
   Mail,
@@ -16,6 +15,11 @@ import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
 
 import { useConstrainedDevice } from "@/features/background-studio/lib/render-budget";
+import {
+  LegacyComcodeLayout,
+  isTagline,
+} from "@/features/public-profile/components/legacy-comcode-layout";
+import { PublicBankAccount } from "@/features/public-profile/components/public-bank-account";
 import { PublicProfileBackground } from "@/features/public-profile/components/public-profile-background";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -38,7 +42,6 @@ import {
   contactEvent,
   contactHref,
   displayName,
-  formatIban,
   headline,
   mapsHref,
   pickTranslation,
@@ -79,17 +82,19 @@ const SURFACE: Record<LayoutMode, string> = {
   standard: "rounded-3xl border shadow-sm",
   compact: "rounded-2xl border shadow-sm",
   minimal: "rounded-3xl",
+  legacy_comcode: "rounded-[2rem] border shadow-xl",
 };
 const SECTION: Record<LayoutMode, string> = {
   standard: "mt-4 p-5",
   compact: "mt-3 p-4",
   minimal: "mt-3 p-6",
+  legacy_comcode: "mt-4 p-5",
 };
 
 /**
  * Visitor page for comcode.../{username}. Hidden modules arrive empty from the API.
- * The theme (TEC-601) sets the tokens on the root; a Background Studio design replaces only the
- * theme's backdrop.
+ * The template (theme, TEC-601) sets the tokens on the root and brings its layout (TEC-1309);
+ * a Background Studio design replaces only the template's backdrop.
  */
 export function PublicProfileView({
   profile,
@@ -100,7 +105,7 @@ export function PublicProfileView({
 }: Props) {
   const { t } = useLocale();
   const theme = getTheme(profile.theme);
-  const layout = resolveLayout(theme, profile.layout_mode);
+  const layout = resolveLayout(theme);
   // Backdrop blur is costly on weak phones; glass cards are opaque enough without it.
   const constrained = useConstrainedDevice();
   const surface = cn(
@@ -116,6 +121,8 @@ export function PublicProfileView({
       }
     : undefined;
   const tr = pickTranslation(profile, lang);
+  // Comcode V1 shows a short bio as a tagline under the name (TEC-1309).
+  const tagline = layout === "legacy_comcode" && isTagline(tr?.bio);
   const name = displayName(tr);
   const subline = headline(tr);
   const activeLocale = tr?.locale ?? profile.primary_locale;
@@ -128,6 +135,19 @@ export function PublicProfileView({
       profile.profile_uuid,
       via ? { ...props, via } : props,
     );
+
+  // Cards redirect here with ?via=c/{code}. It is read on the server (lead and visit
+  // attribution arrive as the `via` prop), so drop it from the address bar (TEC-1307).
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("via")) return;
+    url.searchParams.delete("via");
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+  }, []);
 
   const viewed = useRef(false);
   useEffect(() => {
@@ -147,8 +167,10 @@ export function PublicProfileView({
   const vcardHref = `/api/v1/public/p/${encodeURIComponent(profile.username)}/vcard?locale=${activeLocale}`;
   // The smart link that opened the page may lead with another action (TEC-556); without a
   // matching contact the main button stays "save contact".
+  // The API sends that contact separately, also when the link hides contacts (TEC-1307).
   const primaryContact = profile.primary_action
-    ? first(PRIMARY_ACTION_CATEGORY[profile.primary_action] ?? "")
+    ? (profile.primary_contact ??
+      first(PRIMARY_ACTION_CATEGORY[profile.primary_action] ?? ""))
     : undefined;
   const primaryHref = primaryContact ? contactHref(primaryContact) : null;
   const initials = name
@@ -171,6 +193,190 @@ export function PublicProfileView({
       // the visitor closed the share sheet
     }
   };
+
+  const exchangeSection = exchange ? (
+    <Section className={section} title={t("leads.exchange.title")}>
+      <ContactExchange
+        exchange={exchange}
+        ownerName={name || profile.username}
+        locale={activeLocale}
+        vcardHref={vcardHref}
+        onSaveContact={() => track("vcard.download", { locale: activeLocale })}
+      />
+    </Section>
+  ) : null;
+  const leadSection = leadForm ? (
+    <Section className={section} title={t("leads.form.title")}>
+      <LeadCaptureForm
+        path={leadForm.path}
+        consentVersion={leadForm.consentVersion}
+        via={leadForm.via}
+        ownerName={name || profile.username}
+        locale={activeLocale}
+      />
+    </Section>
+  ) : null;
+  const bioSection = tr?.bio ? (
+    <Section className={section} title={t("public_profile.about")}>
+      <p className="text-sm leading-relaxed whitespace-pre-line">{tr.bio}</p>
+    </Section>
+  ) : null;
+  const contactsSection =
+    profile.contacts.length > 0 ? (
+      <Section className={section} title={t("public_profile.contact")}>
+        <ul className="-my-1 divide-y">
+          {profile.contacts.map((c, i) => {
+            const Icon = CONTACT_ICONS[c.category] ?? Globe;
+            const href = contactHref(c);
+            const event = contactEvent(c);
+            const body = (
+              <>
+                <span className="bg-muted text-foreground flex size-9 shrink-0 items-center justify-center rounded-full">
+                  <Icon className="size-4" />
+                </span>
+                <span className="min-w-0 text-left">
+                  <span className="text-muted-foreground block text-xs">
+                    {c.label || t(`public_profile.category.${c.category}`)}
+                  </span>
+                  <span className="block truncate text-sm font-medium">
+                    {c.value}
+                  </span>
+                </span>
+              </>
+            );
+            return (
+              <li key={`${c.category}-${i}`}>
+                {href ? (
+                  <a
+                    href={href}
+                    target={
+                      c.category === "url" || c.category === "whatsapp"
+                        ? "_blank"
+                        : undefined
+                    }
+                    rel="noopener noreferrer"
+                    onClick={() => event && track(event)}
+                    className="hover:bg-muted/60 -mx-2 flex items-center gap-3 rounded-lg px-2 py-2"
+                  >
+                    {body}
+                  </a>
+                ) : (
+                  <div className="flex items-center gap-3 py-2">{body}</div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </Section>
+    ) : null;
+  const socialSection =
+    profile.social_links.length > 0 ? (
+      <Section className={section} title={t("public_profile.social")}>
+        <ul className="grid grid-cols-4 gap-3">
+          {profile.social_links.map((link, i) => (
+            <li key={`${link.platform}-${i}`}>
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() =>
+                  track("social.link.click", { platform: link.platform })
+                }
+                className="hover:bg-muted/60 flex flex-col items-center gap-1.5 rounded-xl p-2 text-center"
+              >
+                <span className="bg-muted flex size-11 items-center justify-center overflow-hidden rounded-full">
+                  {link.icon_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- platform icons are API-owned
+                    <img
+                      src={link.icon_url}
+                      alt=""
+                      className="size-6 object-contain"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <Globe className="size-5" />
+                  )}
+                </span>
+                <span className="text-muted-foreground w-full truncate text-[11px] capitalize">
+                  {link.label || link.platform}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </Section>
+    ) : null;
+  const addressesSection =
+    profile.addresses.length > 0 ? (
+      <Section className={section} title={t("public_profile.addresses")}>
+        <ul className="space-y-3">
+          {profile.addresses.map((a, i) => (
+            <li key={i} className="flex gap-3">
+              <span className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-full">
+                <MapPin className="size-4" />
+              </span>
+              <div className="min-w-0 text-sm">
+                {a.label ? (
+                  <p className="text-muted-foreground text-xs">{a.label}</p>
+                ) : null}
+                {addressLines(a).map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+                <a
+                  href={mapsHref(a)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => track("contact.address.click")}
+                  className="text-primary mt-1 inline-block text-xs font-medium"
+                >
+                  {t("public_profile.open_in_maps")}
+                </a>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Section>
+    ) : null;
+  const banksSection =
+    profile.bank_accounts.length > 0 ? (
+      <Section className={section} title={t("public_profile.bank_accounts")}>
+        <ul className="space-y-3">
+          {profile.bank_accounts.map((b, i) => (
+            <li key={`${b.iban}-${i}`}>
+              <PublicBankAccount
+                account={b}
+                onIbanCopy={() => track("bank.iban.copy")}
+              />
+            </li>
+          ))}
+        </ul>
+      </Section>
+    ) : null;
+  const primaryButton =
+    primaryContact && primaryHref ? (
+      <Button asChild size="lg" className="w-full">
+        <a
+          href={primaryHref}
+          target={
+            primaryContact.category === "phone" ||
+            primaryContact.category === "email"
+              ? undefined
+              : "_blank"
+          }
+          rel="noopener noreferrer"
+          onClick={() => {
+            const event = contactEvent(primaryContact);
+            if (event) track(event);
+          }}
+        >
+          {(() => {
+            const Icon = CONTACT_ICONS[primaryContact.category] ?? Globe;
+            return <Icon className="size-4" />;
+          })()}
+          {t(`public_profile.primary_action.${profile.primary_action}`)}
+        </a>
+      </Button>
+    ) : null;
 
   const languageNav =
     locales.length > 1 ? (
@@ -199,7 +405,7 @@ export function PublicProfileView({
 
   const cover = (
     <div className="relative h-36 sm:h-44">
-      {profile.cover_url ? (
+      {PROFILE_COVER_ENABLED && profile.cover_url ? (
         // eslint-disable-next-line @next/next/no-img-element -- API-owned media URL, any host
         <img
           src={profile.cover_url}
@@ -295,353 +501,159 @@ export function PublicProfileView({
           className="from-primary/15 via-background to-background pointer-events-none fixed inset-0 bg-gradient-to-b"
         />
       )}
-      <main
-        className={cn(
-          "relative mx-auto w-full max-w-md px-4 pb-10",
-          layout === "minimal" ? "pt-8" : "pt-4",
-        )}
-      >
-        <article className={cn(surface, "relative overflow-hidden")}>
-          {layout === "standard" ? (
+      {layout === "legacy_comcode" ? (
+        <LegacyComcodeLayout
+          profile={profile}
+          name={name}
+          initials={initials}
+          tagline={tagline ? (tr?.bio?.trim() ?? "") : ""}
+          subline={subline}
+          department={tr?.department}
+          activeLocale={activeLocale}
+          locales={locales}
+          vcardHref={vcardHref}
+          primaryAction={primaryButton}
+          quick={quick}
+          contactIcons={CONTACT_ICONS}
+          surface={surface}
+          profileTab={
             <>
-              {cover}
-              <div className="-mt-12 flex flex-col items-center px-5">
-                {avatar("size-24", "text-2xl", true)}
+              {exchangeSection}
+              {leadSection}
+              {tagline ? null : bioSection}
+              {contactsSection}
+              {addressesSection}
+            </>
+          }
+          bankTab={banksSection}
+          track={track}
+          onShare={() => void share()}
+        />
+      ) : (
+        <main
+          className={cn(
+            "relative mx-auto w-full max-w-md px-4 pb-10",
+            layout === "minimal" ? "pt-8" : "pt-4",
+          )}
+        >
+          <article className={cn(surface, "relative overflow-hidden")}>
+            {layout === "standard" ? (
+              <>
+                {cover}
+                <div className="-mt-12 flex flex-col items-center px-5">
+                  {avatar("size-24", "text-2xl", true)}
+                  {nameBlock("center")}
+                </div>
+              </>
+            ) : layout === "compact" ? (
+              <div className="flex items-center gap-4 px-4 pt-4 pr-20">
+                {languageNav}
+                {avatar("size-16 shrink-0", "text-lg", false)}
+                {nameBlock("left")}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center px-6 pt-8">
+                {languageNav}
+                {avatar("size-20", "text-xl", false)}
                 {nameBlock("center")}
               </div>
-            </>
-          ) : layout === "compact" ? (
-            <div className="flex items-center gap-4 px-4 pt-4 pr-20">
-              {languageNav}
-              {avatar("size-16 shrink-0", "text-lg", false)}
-              {nameBlock("left")}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center px-6 pt-8">
-              {languageNav}
-              {avatar("size-20", "text-xl", false)}
-              {nameBlock("center")}
-            </div>
-          )}
-
-          <div
-            className={cn(
-              "flex flex-col items-center text-center",
-              layout === "compact" ? "px-4 pb-4" : "px-5 pb-6",
             )}
-          >
+
             <div
               className={cn(
-                "flex w-full flex-col gap-2",
-                layout === "compact" ? "mt-4" : "mt-5",
+                "flex flex-col items-center text-center",
+                layout === "compact" ? "px-4 pb-4" : "px-5 pb-6",
               )}
             >
-              {primaryContact && primaryHref ? (
-                <Button asChild size="lg" className="w-full">
+              <div
+                className={cn(
+                  "flex w-full flex-col gap-2",
+                  layout === "compact" ? "mt-4" : "mt-5",
+                )}
+              >
+                {primaryButton}
+                <Button
+                  asChild
+                  size="lg"
+                  variant={primaryHref ? "outline" : "default"}
+                  className="w-full"
+                >
                   <a
-                    href={primaryHref}
-                    target={
-                      primaryContact.category === "phone" ||
-                      primaryContact.category === "email"
-                        ? undefined
-                        : "_blank"
+                    href={vcardHref}
+                    onClick={() =>
+                      track("vcard.download", { locale: activeLocale })
                     }
-                    rel="noopener noreferrer"
-                    onClick={() => {
-                      const event = contactEvent(primaryContact);
-                      if (event) track(event);
-                    }}
                   >
-                    {(() => {
-                      const Icon =
-                        CONTACT_ICONS[primaryContact.category] ?? Globe;
-                      return <Icon className="size-4" />;
-                    })()}
-                    {t(
-                      `public_profile.primary_action.${profile.primary_action}`,
-                    )}
+                    <Download className="size-4" />
+                    {t("public_profile.save_contact")}
                   </a>
                 </Button>
-              ) : null}
-              <Button
-                asChild
-                size="lg"
-                variant={primaryHref ? "outline" : "default"}
-                className="w-full"
-              >
-                <a
-                  href={vcardHref}
-                  onClick={() =>
-                    track("vcard.download", { locale: activeLocale })
-                  }
-                >
-                  <Download className="size-4" />
-                  {t("public_profile.save_contact")}
-                </a>
-              </Button>
-              <div className="flex justify-center gap-2">
-                {quick.map((c) => {
-                  const Icon = CONTACT_ICONS[c.category] ?? Globe;
-                  const href = contactHref(c);
-                  const event = contactEvent(c);
-                  if (!href) return null;
-                  return (
-                    <Button
-                      key={`${c.category}-${c.value}`}
-                      asChild
-                      variant="outline"
-                      size="icon"
-                      className="size-11 rounded-full"
-                    >
-                      <a
-                        href={href}
-                        target={
-                          c.category === "whatsapp" ? "_blank" : undefined
-                        }
-                        rel="noopener noreferrer"
-                        aria-label={t(`public_profile.category.${c.category}`)}
-                        onClick={() => event && track(event)}
+                <div className="flex justify-center gap-2">
+                  {quick.map((c) => {
+                    const Icon = CONTACT_ICONS[c.category] ?? Globe;
+                    const href = contactHref(c);
+                    const event = contactEvent(c);
+                    if (!href) return null;
+                    return (
+                      <Button
+                        key={`${c.category}-${c.value}`}
+                        asChild
+                        variant="outline"
+                        size="icon"
+                        className="size-11 rounded-full"
                       >
-                        <Icon className="size-5" />
-                      </a>
-                    </Button>
-                  );
-                })}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="size-11 rounded-full"
-                  aria-label={t("public_profile.share")}
-                  onClick={() => void share()}
-                >
-                  <Share2 className="size-5" />
-                </Button>
+                        <a
+                          href={href}
+                          target={
+                            c.category === "whatsapp" ? "_blank" : undefined
+                          }
+                          rel="noopener noreferrer"
+                          aria-label={t(
+                            `public_profile.category.${c.category}`,
+                          )}
+                          onClick={() => event && track(event)}
+                        >
+                          <Icon className="size-5" />
+                        </a>
+                      </Button>
+                    );
+                  })}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-11 rounded-full"
+                    aria-label={t("public_profile.share")}
+                    onClick={() => void share()}
+                  >
+                    <Share2 className="size-5" />
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </article>
+          </article>
 
-        {exchange ? (
-          <Section className={section} title={t("leads.exchange.title")}>
-            <ContactExchange
-              exchange={exchange}
-              ownerName={name || profile.username}
-              locale={activeLocale}
-              vcardHref={vcardHref}
-              onSaveContact={() =>
-                track("vcard.download", { locale: activeLocale })
-              }
-            />
-          </Section>
-        ) : null}
+          {exchangeSection}
+          {leadSection}
+          {bioSection}
+          {contactsSection}
+          {socialSection}
+          {addressesSection}
+          {banksSection}
 
-        {leadForm ? (
-          <Section className={section} title={t("leads.form.title")}>
-            <LeadCaptureForm
-              path={leadForm.path}
-              consentVersion={leadForm.consentVersion}
-              via={leadForm.via}
-              ownerName={name || profile.username}
-              locale={activeLocale}
-            />
-          </Section>
-        ) : null}
-
-        {tr?.bio ? (
-          <Section className={section} title={t("public_profile.about")}>
-            <p className="text-sm leading-relaxed whitespace-pre-line">
-              {tr.bio}
-            </p>
-          </Section>
-        ) : null}
-
-        {profile.contacts.length > 0 ? (
-          <Section className={section} title={t("public_profile.contact")}>
-            <ul className="-my-1 divide-y">
-              {profile.contacts.map((c, i) => {
-                const Icon = CONTACT_ICONS[c.category] ?? Globe;
-                const href = contactHref(c);
-                const event = contactEvent(c);
-                const body = (
-                  <>
-                    <span className="bg-muted text-foreground flex size-9 shrink-0 items-center justify-center rounded-full">
-                      <Icon className="size-4" />
-                    </span>
-                    <span className="min-w-0 text-left">
-                      <span className="text-muted-foreground block text-xs">
-                        {c.label || t(`public_profile.category.${c.category}`)}
-                      </span>
-                      <span className="block truncate text-sm font-medium">
-                        {c.value}
-                      </span>
-                    </span>
-                  </>
-                );
-                return (
-                  <li key={`${c.category}-${i}`}>
-                    {href ? (
-                      <a
-                        href={href}
-                        target={
-                          c.category === "url" || c.category === "whatsapp"
-                            ? "_blank"
-                            : undefined
-                        }
-                        rel="noopener noreferrer"
-                        onClick={() => event && track(event)}
-                        className="hover:bg-muted/60 -mx-2 flex items-center gap-3 rounded-lg px-2 py-2"
-                      >
-                        {body}
-                      </a>
-                    ) : (
-                      <div className="flex items-center gap-3 py-2">{body}</div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </Section>
-        ) : null}
-
-        {profile.social_links.length > 0 ? (
-          <Section className={section} title={t("public_profile.social")}>
-            <ul className="grid grid-cols-4 gap-3">
-              {profile.social_links.map((link, i) => (
-                <li key={`${link.platform}-${i}`}>
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() =>
-                      track("social.link.click", { platform: link.platform })
-                    }
-                    className="hover:bg-muted/60 flex flex-col items-center gap-1.5 rounded-xl p-2 text-center"
-                  >
-                    <span className="bg-muted flex size-11 items-center justify-center overflow-hidden rounded-full">
-                      {link.icon_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- platform icons are API-owned
-                        <img
-                          src={link.icon_url}
-                          alt=""
-                          className="size-6 object-contain"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <Globe className="size-5" />
-                      )}
-                    </span>
-                    <span className="text-muted-foreground w-full truncate text-[11px] capitalize">
-                      {link.label || link.platform}
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </Section>
-        ) : null}
-
-        {profile.addresses.length > 0 ? (
-          <Section className={section} title={t("public_profile.addresses")}>
-            <ul className="space-y-3">
-              {profile.addresses.map((a, i) => (
-                <li key={i} className="flex gap-3">
-                  <span className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-full">
-                    <MapPin className="size-4" />
-                  </span>
-                  <div className="min-w-0 text-sm">
-                    {a.label ? (
-                      <p className="text-muted-foreground text-xs">{a.label}</p>
-                    ) : null}
-                    {addressLines(a).map((line) => (
-                      <p key={line}>{line}</p>
-                    ))}
-                    <a
-                      href={mapsHref(a)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => track("contact.address.click")}
-                      className="text-primary mt-1 inline-block text-xs font-medium"
-                    >
-                      {t("public_profile.open_in_maps")}
-                    </a>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </Section>
-        ) : null}
-
-        {profile.bank_accounts.length > 0 ? (
-          <Section
-            className={section}
-            title={t("public_profile.bank_accounts")}
-          >
-            <ul className="space-y-3">
-              {profile.bank_accounts.map((b, i) => (
-                <li key={`${b.iban}-${i}`} className="rounded-xl border p-3">
-                  <div className="flex items-center gap-2">
-                    <span className="bg-muted flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md">
-                      {b.bank_icon_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- bank icons are API-owned
-                        <img
-                          src={b.bank_icon_url}
-                          alt=""
-                          className="size-6 object-contain"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <Building2 className="size-4" />
-                      )}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {b.bank_name || b.title}
-                      </p>
-                      <p className="text-muted-foreground truncate text-xs">
-                        {b.account_holder}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <code className="bg-muted min-w-0 flex-1 truncate rounded-md px-2 py-1.5 text-xs">
-                      {formatIban(b.iban)}
-                    </code>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      aria-label={t("public_profile.copy_iban")}
-                      onClick={() => {
-                        void navigator.clipboard
-                          .writeText(b.iban.replace(/\s+/g, ""))
-                          .then(() =>
-                            appToast.success(t("public_profile.iban_copied")),
-                          );
-                        track("bank.iban.copy");
-                      }}
-                    >
-                      <Copy className="size-4" />
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </Section>
-        ) : null}
-
-        <footer className="mt-8 text-center">
-          {/* On a pill so it stays readable over any theme backdrop or Background Studio design. */}
-          {/* No prefetch: "/" is the panel; visitors should not download its JS (TEC-858). */}
-          <Link
-            href="/"
-            prefetch={false}
-            className="bg-card text-muted-foreground hover:text-foreground inline-block rounded-full px-3 py-1 text-xs"
-          >
-            {t("public_profile.made_with")}
-          </Link>
-        </footer>
-      </main>
+          <footer className="mt-8 text-center">
+            {/* On a pill so it stays readable over any theme backdrop or Background Studio design. */}
+            {/* No prefetch: "/" is the panel; visitors should not download its JS (TEC-858). */}
+            <Link
+              href="/"
+              prefetch={false}
+              className="bg-card text-muted-foreground hover:text-foreground inline-block rounded-full px-3 py-1 text-xs"
+            >
+              {t("public_profile.made_with")}
+            </Link>
+          </footer>
+        </main>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
+import type { CSSProperties } from "react";
 
 import { Label } from "@/components/ui/label";
 import {
@@ -10,7 +11,6 @@ import {
 } from "@/features/entitlements/components/premium-lock";
 import { fontProfileSerif } from "@/features/public-profile/lib/theme-fonts";
 import {
-  LAYOUT_MODES,
   THEME_IDS,
   basicThemeFor,
   getTheme,
@@ -25,45 +25,49 @@ import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 
 type Props = {
-  /** The profile's own theme; "" = inherit / default look. */
+  /** The profile's own template; "" = inherit / default look. */
   theme: ThemeId | "";
-  layoutMode: LayoutMode | "";
-  /** Company theme used when `theme` is "" (TEC-601); "" = none. */
+  /** Company template used when `theme` is "" (TEC-601); "" = none. */
   inheritedTheme: ThemeId | "";
   disabled?: boolean;
   /** Label and hint of the "" option when it means something else (smart links: the profile's own look). */
   noneLabel?: string;
   hint?: string;
   /**
-   * Whether premium themes may be picked (`design.premium`, TEC-947). Defaults to the active
+   * Static image of the chosen Background Studio design (its thumbnail). The preview tiles
+   * draw the template over it, since the background replaces the template's backdrop.
+   */
+  backdropImage?: string | null;
+  /**
+   * Whether premium templates may be picked (`design.premium`, TEC-947). Defaults to the active
    * account's plan; pass it to preview another account's plan.
    */
   premiumAllowed?: boolean;
   onThemeChange: (theme: ThemeId | "") => void;
-  onLayoutModeChange: (layout: LayoutMode | "") => void;
 };
 
 /**
- * Owner-side theme + layout picker for the public page (TEC-601), with live preview tiles.
- * Premium themes the plan lacks show a lock and cannot be picked; a premium theme already
- * stored stays selected and the hint says which basic theme visitors see instead (TEC-947).
+ * Owner-side template gallery for the public page (TEC-601, TEC-1309). A template is a theme
+ * with its own layout, so there is no separate density switch; the background is picked
+ * separately (Background Studio) and replaces only the template's backdrop.
+ * Premium templates the plan lacks show a lock and cannot be picked; a premium template
+ * already stored stays selected and the hint says which basic one visitors see instead
+ * (TEC-947).
  */
 export function ProfileThemePicker({
   theme,
-  layoutMode,
   inheritedTheme,
   disabled,
   noneLabel,
   hint,
+  backdropImage,
   premiumAllowed,
   onThemeChange,
-  onLayoutModeChange,
 }: Props) {
   const { t } = useLocale();
   const planPremium = useDesignPremium();
   const allowPremium = premiumAllowed ?? planPremium;
   const effectiveId = theme || inheritedTheme;
-  const effective = getTheme(effectiveId);
   const shownInstead =
     effectiveId && !allowPremium && isPremiumTheme(effectiveId)
       ? basicThemeFor(effectiveId)
@@ -90,137 +94,166 @@ export function ProfileThemePicker({
   ];
 
   return (
-    <div className={cn("space-y-4", fontProfileSerif.variable)}>
-      <div className="grid gap-1.5">
-        <Label id="public-page-theme-label">
-          {t("profiles.public_page.theme")}
-        </Label>
-        <div
-          role="radiogroup"
-          aria-labelledby="public-page-theme-label"
-          className="grid grid-cols-2 gap-3 sm:grid-cols-4"
-        >
-          {options.map((opt) => {
-            const selected = opt.value === theme;
-            const locked = !allowPremium && isPremiumTheme(opt.value);
-            return (
-              <button
-                key={opt.value || "none"}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                aria-disabled={locked && !selected ? true : undefined}
-                disabled={disabled}
-                onClick={() => {
-                  if (!locked || selected) onThemeChange(opt.value);
-                }}
-                className={cn(
-                  "group relative flex flex-col gap-1.5 rounded-xl border p-1.5 text-left transition-colors",
-                  "focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px] disabled:opacity-60",
-                  selected
-                    ? "border-primary ring-primary/30 ring-2"
-                    : locked
-                      ? "cursor-not-allowed opacity-70"
-                      : "hover:border-foreground/30",
-                )}
-              >
-                <ThemePreview
-                  theme={opt.preview}
-                  layout={resolveLayout(opt.preview, layoutMode)}
-                />
-                <span className="flex items-center justify-between gap-1 px-1 pb-0.5 text-xs font-medium">
-                  <span className="truncate">{opt.label}</span>
-                  {selected ? (
-                    <Check className="text-primary size-3.5 shrink-0" />
-                  ) : locked ? (
-                    <PremiumLockIcon />
-                  ) : null}
+    <div className={cn("grid gap-1.5", fontProfileSerif.variable)}>
+      <Label id="public-page-theme-label">
+        {t("profiles.public_page.theme")}
+      </Label>
+      <div
+        role="radiogroup"
+        aria-labelledby="public-page-theme-label"
+        className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+      >
+        {options.map((opt) => {
+          const selected = opt.value === theme;
+          const locked = !allowPremium && isPremiumTheme(opt.value);
+          const layout = resolveLayout(opt.preview);
+          return (
+            <button
+              key={opt.value || "none"}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              aria-disabled={locked && !selected ? true : undefined}
+              disabled={disabled}
+              onClick={() => {
+                if (!locked || selected) onThemeChange(opt.value);
+              }}
+              className={cn(
+                "group relative flex flex-col gap-1.5 rounded-xl border p-1.5 text-left transition-colors",
+                "focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px] disabled:opacity-60",
+                selected
+                  ? "border-primary ring-primary/30 ring-2"
+                  : locked
+                    ? "cursor-not-allowed opacity-70"
+                    : "hover:border-foreground/30",
+              )}
+            >
+              <ThemePreview
+                theme={opt.preview}
+                layout={layout}
+                backdropImage={backdropImage}
+              />
+              <span className="flex items-center justify-between gap-1 px-1 pb-0.5 text-xs font-medium">
+                <span className="min-w-0">
+                  <span className="block truncate">{opt.label}</span>
+                  <span className="text-muted-foreground block truncate text-[11px] font-normal">
+                    {t(`profiles.public_page.layout_name.${layout}`)}
+                  </span>
                 </span>
-              </button>
-            );
+                {selected ? (
+                  <Check className="text-primary size-3.5 shrink-0" />
+                ) : locked ? (
+                  <PremiumLockIcon />
+                ) : null}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-muted-foreground text-xs">
+        {hint ??
+          (!theme && inheritedTheme
+            ? t("profiles.public_page.theme_inherit_hint", {
+                theme: t(`profiles.public_page.theme_name.${inheritedTheme}`),
+              })
+            : t("profiles.public_page.theme_hint"))}
+      </p>
+      {shownInstead ? (
+        <p className="text-xs text-amber-700 dark:text-amber-400">
+          {t("profiles.public_page.theme_premium_fallback", {
+            theme: t(`profiles.public_page.theme_name.${shownInstead}`),
           })}
-        </div>
-        <p className="text-muted-foreground text-xs">
-          {hint ??
-            (!theme && inheritedTheme
-              ? t("profiles.public_page.theme_inherit_hint", {
-                  theme: t(`profiles.public_page.theme_name.${inheritedTheme}`),
-                })
-              : t("profiles.public_page.theme_hint"))}
         </p>
-        {shownInstead ? (
-          <p className="text-xs text-amber-700 dark:text-amber-400">
-            {t("profiles.public_page.theme_premium_fallback", {
-              theme: t(`profiles.public_page.theme_name.${shownInstead}`),
-            })}
-          </p>
-        ) : null}
-        {!allowPremium ? <PremiumNotice /> : null}
-      </div>
-
-      <div className="grid gap-1.5">
-        <Label id="public-page-layout-label">
-          {t("profiles.public_page.layout")}
-        </Label>
-        <div
-          role="radiogroup"
-          aria-labelledby="public-page-layout-label"
-          className="bg-muted/50 inline-flex w-fit flex-wrap gap-1 rounded-lg border p-1"
-        >
-          {(["", ...LAYOUT_MODES] as const).map((mode) => {
-            const selected = mode === layoutMode;
-            const label =
-              mode === ""
-                ? `${t("profiles.public_page.layout_theme")} · ${t(`profiles.public_page.layout_name.${resolveLayout(effective, "")}`)}`
-                : t(`profiles.public_page.layout_name.${mode}`);
-            return (
-              <button
-                key={mode || "theme"}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                disabled={disabled}
-                onClick={() => onLayoutModeChange(mode)}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-60",
-                  selected
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      ) : null}
+      {!allowPremium ? <PremiumNotice /> : null}
     </div>
   );
 }
 
-/** A miniature public page drawn with the theme's own tokens. */
+/** A miniature public page drawn with the template's own tokens and layout. */
 function ThemePreview({
   theme,
   layout,
+  backdropImage,
 }: {
   theme: ProfileTheme | null;
   layout: LayoutMode;
+  backdropImage?: string | null;
 }) {
-  const style = theme
+  const style: CSSProperties | undefined = theme
     ? { ...themeStyle(theme), background: theme.backdrop }
     : undefined;
+  const backdrop = backdropImage ? (
+    // eslint-disable-next-line @next/next/no-img-element -- API-owned thumbnail URL
+    <img
+      src={backdropImage}
+      alt=""
+      className="absolute inset-0 size-full object-cover"
+      loading="lazy"
+    />
+  ) : null;
+  const heading = theme
+    ? {
+        fontFamily: "var(--pp-font-heading)",
+        fontWeight: "var(--pp-heading-weight)",
+      }
+    : undefined;
+
+  if (layout === "legacy_comcode") {
+    return (
+      <div
+        aria-hidden
+        style={style}
+        className={cn(
+          "relative flex h-28 flex-col overflow-hidden rounded-lg",
+          !theme && "bg-muted",
+        )}
+      >
+        {backdrop}
+        <div className="bg-card relative mx-auto mt-2 flex w-[72%] flex-col items-center gap-1 rounded-lg border p-1.5 backdrop-blur-sm">
+          <span className="bg-muted size-6 rounded-full border" />
+          <span
+            className="text-foreground text-[9px] leading-none"
+            style={heading}
+          >
+            Aa Bb
+          </span>
+          <span className="bg-muted h-2.5 w-full rounded border" />
+          <span className="flex gap-0.5">
+            {[0, 1, 2, 3].map((i) => (
+              <span key={i} className="bg-foreground/70 size-1.5 rounded-sm" />
+            ))}
+          </span>
+          <span className="border-primary/60 h-2 w-full rounded border" />
+        </div>
+        <div className="bg-card relative mt-auto flex justify-around border-t px-2 py-1">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className={cn(
+                "size-1.5 rounded-full",
+                i === 0 ? "bg-foreground" : "bg-muted-foreground/50",
+              )}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       aria-hidden
       style={style}
       className={cn(
-        "flex h-28 flex-col justify-center overflow-hidden rounded-lg p-2",
+        "relative flex h-28 flex-col justify-center overflow-hidden rounded-lg p-2",
         !theme && "bg-muted",
       )}
     >
+      {backdrop}
       <div
         className={cn(
-          "bg-card overflow-hidden",
+          "bg-card relative overflow-hidden",
           layout === "compact" ? "rounded-md" : "rounded-lg",
           layout !== "minimal" && "border",
         )}
@@ -253,14 +286,7 @@ function ThemePreview({
           >
             <span
               className="text-foreground text-[9px] leading-none"
-              style={
-                theme
-                  ? {
-                      fontFamily: "var(--pp-font-heading)",
-                      fontWeight: "var(--pp-heading-weight)",
-                    }
-                  : undefined
-              }
+              style={heading}
             >
               Aa Bb
             </span>

@@ -15,8 +15,10 @@ var (
 )
 
 type OfficeInput struct {
-	Name      string `json:"name"`
-	City      string `json:"city"`
+	Name string `json:"name"`
+	City string `json:"city"`
+	// District is the office's district (ilçe) within City (TEC-1316); "" = not set.
+	District  string `json:"district"`
 	Address   string `json:"address"`
 	Phone     string `json:"phone"`
 	SortOrder int32  `json:"sort_order"`

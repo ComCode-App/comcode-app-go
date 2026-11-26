@@ -36,5 +36,12 @@
   "primary_action.call": "Ara",
   "primary_action.email": "E-posta gönder",
   "primary_action.whatsapp": "WhatsApp'tan yaz",
-  "primary_action.website": "Web sitesine git"
+  "primary_action.website": "Web sitesine git",
+  "copyright": "Copyright © {{year}} ComCode Dijital Kartvizit.",
+  "tabs": "Profil bölümleri",
+  "tab.profile": "Hesabım",
+  "tab.bank_accounts": "Banka Bilgileri",
+  "next_language": "Dili değiştir: {{locale}}",
+  "copy_account_holder": "Hesap adını kopyala",
+  "account_holder_copied": "Hesap adı kopyalandı"
 }

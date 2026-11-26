@@ -1,5 +1,12 @@
+import { Suspense } from "react";
+
 import { AccountPage } from "@/features/accounts";
 
 export default function AccountRoute() {
-  return <AccountPage />;
+  // AccountPage reads ?tab= with useSearchParams (TEC-1311).
+  return (
+    <Suspense>
+      <AccountPage />
+    </Suspense>
+  );
 }

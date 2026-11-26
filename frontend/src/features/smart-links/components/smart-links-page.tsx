@@ -1,14 +1,11 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Lock, LockOpen, Pencil, QrCode, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { EmptyState } from "@/components/common/empty-state";
 import { Loading } from "@/components/common/loading";
 import { EntityCreateButton, EntityPage } from "@/components/entity";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { QuotaNotice, useQuotaReached } from "@/features/entitlements";
@@ -16,6 +13,7 @@ import { entitlementKeys } from "@/features/entitlements/hooks/use-entitlements"
 import { profilesKeys } from "@/features/profiles/hooks/query-keys";
 import { profilesService } from "@/features/profiles/services/profiles.service";
 import { RouteQrDialog } from "@/features/route-qr";
+import { SmartLinkCard } from "@/features/smart-links/components/smart-link-card";
 import { SmartLinkDialog } from "@/features/smart-links/components/smart-link-dialog";
 import {
   type SmartLink,
@@ -46,10 +44,8 @@ export function SmartLinksPage() {
     queryKey: profilesKeys.list({ picker: true }),
     queryFn: () => profilesService.list({ limit: 100, offset: 0 }),
   });
-  const profileName = (uuid?: string) => {
-    const p = profilesQuery.data?.items.find((x) => x.uuid === uuid);
-    return p ? `${p.first_name} ${p.last_name}`.trim() : "";
-  };
+  const profileOf = (uuid?: string) =>
+    uuid ? profilesQuery.data?.items.find((x) => x.uuid === uuid) : undefined;
 
   const [editing, setEditing] = useState<SmartLink | undefined>();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -104,111 +100,38 @@ export function SmartLinksPage() {
         />
       ) : null}
 
-      <ul className="grid gap-3 md:grid-cols-2">
+      <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {links.map((link) => {
           const url = smartLinkUrl(link.path);
-          const locked = link.status === "locked";
-          const targetLabel =
-            link.target_type === "direct_url"
-              ? link.direct_url
-              : profileName(link.profile_uuid ?? undefined);
           return (
-            <li
+            <SmartLinkCard
               key={link.uuid}
-              className="bg-card rounded-xl border p-4 shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block truncate font-medium hover:underline"
-                  >
-                    /{link.path}
-                  </a>
-                  <p className="text-muted-foreground mt-1 truncate text-sm">
-                    {t(`smart_links.target.${link.target_type}`)}
-                    {targetLabel ? ` · ${targetLabel}` : ""}
-                  </p>
-                </div>
-                <Badge variant={locked ? "secondary" : "outline"}>
-                  {t(
-                    locked
-                      ? "smart_links.status.locked"
-                      : "smart_links.status.active",
-                  )}
-                </Badge>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() =>
-                    void navigator.clipboard
-                      .writeText(url)
-                      .then(() => appToast.success(t("smart_links.copied")))
-                  }
-                >
-                  <Copy className="size-4" />
-                  {t("smart_links.copy")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setQrLink(link)}
-                >
-                  <QrCode className="size-4" />
-                  {t("smart_links.qr")}
-                </Button>
-                {canEdit ? (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setEditing(link);
-                        setDialogOpen(true);
-                      }}
-                    >
-                      <Pencil className="size-4" />
-                      {t("smart_links.edit")}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={toggle.isPending}
-                      onClick={() => toggle.mutate(link.uuid)}
-                    >
-                      {locked ? (
-                        <LockOpen className="size-4" />
-                      ) : (
-                        <Lock className="size-4" />
-                      )}
-                      {t(locked ? "smart_links.unlock" : "smart_links.lock")}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive"
-                      disabled={remove.isPending}
-                      onClick={() =>
-                        void confirmDelete({
-                          title: t("smart_links.delete_title"),
-                          description: t("smart_links.delete_body", {
-                            path: `/${link.path}`,
-                          }),
-                          confirmLabel: t("smart_links.delete"),
-                        }).then((ok) => ok && remove.mutate(link.uuid))
-                      }
-                    >
-                      <Trash2 className="size-4" />
-                      {t("smart_links.delete")}
-                    </Button>
-                  </>
-                ) : null}
-              </div>
-            </li>
+              link={link}
+              url={url}
+              profile={profileOf(link.profile_uuid ?? undefined)}
+              canEdit={canEdit}
+              busy={toggle.isPending || remove.isPending}
+              onCopy={() =>
+                void navigator.clipboard
+                  .writeText(url)
+                  .then(() => appToast.success(t("smart_links.copied")))
+              }
+              onQr={() => setQrLink(link)}
+              onEdit={() => {
+                setEditing(link);
+                setDialogOpen(true);
+              }}
+              onToggleLock={() => toggle.mutate(link.uuid)}
+              onDelete={() =>
+                void confirmDelete({
+                  title: t("smart_links.delete_title"),
+                  description: t("smart_links.delete_body", {
+                    path: `/${link.path}`,
+                  }),
+                  confirmLabel: t("smart_links.delete"),
+                }).then((ok) => ok && remove.mutate(link.uuid))
+              }
+            />
           );
         })}
       </ul>

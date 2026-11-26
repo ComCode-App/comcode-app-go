@@ -34,6 +34,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PROFILE_COVER_ENABLED } from "@/config/profile-media";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { ProfileCompletionBadge } from "@/features/profiles/components/profile-completion-badge";
@@ -46,6 +47,7 @@ import {
   useDeleteProfile,
   useSetPrimaryProfile,
 } from "@/features/profiles/hooks/use-profile-mutations";
+import { parseKeywords } from "@/features/profiles/lib/keywords";
 import { profilesService } from "@/features/profiles/services/profiles.service";
 import { canManageAccount } from "@/lib/auth/types";
 import { useAuth } from "@/providers/auth-provider";
@@ -110,6 +112,8 @@ export function ProfileDetailPage() {
     }
     return "ID";
   }, [activeTranslation]);
+
+  const keywords = parseKeywords(activeTranslation?.note);
 
   if (profileQuery.isLoading) {
     return <PageLoader label={t("common.loading")} />;
@@ -215,7 +219,7 @@ export function ProfileDetailPage() {
         <Card className="border-border/80 bg-card overflow-hidden border shadow-sm">
           {/* Cover Banner */}
           <div className="relative h-40 overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 sm:h-56">
-            {profile.cover_url ? (
+            {PROFILE_COVER_ENABLED && profile.cover_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={profile.cover_url}
@@ -565,18 +569,24 @@ export function ProfileDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Note & Additional Info */}
-            {activeTranslation?.note && (
+            {/* Keywords (stored in the translation note, TEC-1304) */}
+            {keywords.length > 0 && (
               <Card className="border-border shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm">
-                    {t("profiles.fields.note")}
+                    {t("profiles.keywords.title")}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-xs leading-relaxed whitespace-pre-wrap">
-                    {activeTranslation.note}
-                  </p>
+                <CardContent className="flex flex-wrap gap-1.5">
+                  {keywords.map((keyword) => (
+                    <Badge
+                      key={keyword}
+                      variant="secondary"
+                      className="text-xs"
+                    >
+                      {keyword}
+                    </Badge>
+                  ))}
                 </CardContent>
               </Card>
             )}

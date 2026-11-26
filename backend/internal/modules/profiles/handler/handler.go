@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"strings"
 
@@ -279,7 +279,9 @@ func (h *Handler) DownloadVCard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/vcard; charset=utf-8")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	// RFC 6266/5987: a Turkish name must not go out as raw UTF-8 in the header, where browsers
+	// read it as Latin-1 and save "HÃ¼seyin_Ãlken.vcf" (TEC-1312).
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": filename}))
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(vcfContent))
 }

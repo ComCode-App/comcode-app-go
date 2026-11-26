@@ -22,7 +22,7 @@
   "offices.dialog.edit_title": "Edit office",
   "offices.dialog.description": "Offices group members and office-bound groups by location.",
   "offices.fields.name": "Name",
-  "offices.fields.city": "City",
+  "offices.fields.city": "Province",
   "offices.fields.address": "Address",
   "offices.fields.phone": "Phone",
   "offices.fields.groups": "Groups",
@@ -88,5 +88,12 @@
   "sector.none": "Not set",
   "sector.hint": "Choose the sector that best describes the company.",
   "sector.read_only": "Only owners and admins can change the sector.",
-  "sector.toast.saved": "Sector saved"
+  "sector.toast.saved": "Sector saved",
+  "offices.fields.district": "District",
+  "offices.fields.city_placeholder": "Pick a province",
+  "offices.fields.city_search": "Search provinces",
+  "offices.fields.district_placeholder": "Pick a district",
+  "offices.fields.district_needs_city": "Pick a province first",
+  "offices.fields.district_search": "Search districts",
+  "offices.fields.no_match": "No results"
 }

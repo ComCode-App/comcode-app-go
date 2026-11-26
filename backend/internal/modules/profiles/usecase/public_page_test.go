@@ -557,8 +557,9 @@ func TestPublicProfileViaSmartLink(t *testing.T) {
 	svc.SetLinkPresentations(stubLinks{
 		"s/promo": {ProfileUUID: prof.UUID, Theme: "glass", LayoutMode: "minimal", PrimaryAction: "call",
 			VisibleModules: []string{"contacts", "social_links"}},
-		"s/hub":   {ProfileUUID: prof.UUID, SocialHub: true},
-		"s/other": {ProfileUUID: uuid.New(), Theme: "glass"},
+		"s/hub":      {ProfileUUID: prof.UUID, SocialHub: true},
+		"s/hub-mail": {ProfileUUID: prof.UUID, SocialHub: true, PrimaryAction: "email"},
+		"s/other":    {ProfileUUID: uuid.New(), Theme: "glass"},
 	})
 
 	no := false
@@ -580,6 +581,13 @@ func TestPublicProfileViaSmartLink(t *testing.T) {
 	if public.Translations[0].Bio != "" || len(public.Contacts) != 0 || len(public.SocialLinks) != 1 {
 		t.Fatalf("link must only narrow the owner's modules: %+v", public)
 	}
+	// The main button still gets its contact while the contacts section stays hidden (TEC-1307).
+	if public.PrimaryContact == nil || public.PrimaryContact.Category != "phone" || public.PrimaryContact.Value != "+90" {
+		t.Fatalf("primary action contact missing: %+v", public.PrimaryContact)
+	}
+	if mail, _ := svc.PublicProfileVia(ctx, prof.Username, "s/hub-mail"); mail.PrimaryAction != "email" || mail.PrimaryContact != nil {
+		t.Fatalf("no email contact: the action falls back to save contact: %+v", mail.PrimaryContact)
+	}
 
 	hub, _ := svc.PublicProfileVia(ctx, prof.Username, "s/hub")
 	if hub.Translations[0].Bio != "" || len(hub.SocialLinks) != 1 || strings.Join(hub.VisibleModules, ",") != "social_links" {
@@ -589,7 +597,7 @@ func TestPublicProfileViaSmartLink(t *testing.T) {
 	// A link of another profile, or none, leaves the page as the owner set it.
 	for _, via := range []string{"s/other", "s/unknown", ""} {
 		plain, _ := svc.PublicProfileVia(ctx, prof.Username, via)
-		if plain.Theme != "" || plain.PrimaryAction != "" || plain.Translations[0].Bio != "Mathematician" {
+		if plain.Theme != "" || plain.PrimaryAction != "" || plain.PrimaryContact != nil || plain.Translations[0].Bio != "Mathematician" {
 			t.Fatalf("%q changed the page: %+v", via, plain)
 		}
 	}

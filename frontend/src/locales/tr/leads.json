@@ -107,5 +107,7 @@
   "locked.description": "Bu kayıt aylık kotanızın üzerinde geldi; ad ve iletişim bilgileri gizli. Planınızı yükseltince ya da yeni ay başlayınca açılır.",
   "export.remaining": "Bu ay {{count}} dışa aktarma hakkınız kaldı",
   "export.quota_reached": "Bu ayki dışa aktarma kotanız doldu ({{used}}/{{limit}}). {{date}} tarihinde yenilenir.",
-  "export.off": "Planınızda lead dışa aktarma yok."
+  "export.off": "Planınızda lead dışa aktarma yok.",
+  "columns.contact": "İletişim",
+  "empty_title": "Henüz talep yok"
 }

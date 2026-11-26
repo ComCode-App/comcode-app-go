@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, ExternalLink, Globe, QrCode } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -16,28 +15,20 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
   backgroundKeys,
   backgroundsService,
 } from "@/features/background-studio/services/backgrounds.service";
 import { useBankAccounts } from "@/features/bank-accounts";
+import { useDesignPremium } from "@/features/entitlements/components/premium-lock";
 import {
-  PremiumLockIcon,
-  PremiumNotice,
-  useDesignPremium,
-} from "@/features/entitlements/components/premium-lock";
+  BackgroundTilePicker,
+  backgroundImage,
+} from "@/features/public-profile/components/background-picker";
 import { ProfileThemePicker } from "@/features/public-profile/components/theme-picker";
-import type { LayoutMode, ThemeId } from "@/features/public-profile/lib/themes";
+import type { ThemeId } from "@/features/public-profile/lib/themes";
 import { permissions } from "@/config/permissions";
-import { routes } from "@/config/routes";
 import { profilesKeys } from "@/features/profiles/hooks/query-keys";
 import {
   type PublicModule,
@@ -118,16 +109,11 @@ function PublicPageForm({
     page.contact_exchange_enabled ?? false,
   );
   const [theme, setTheme] = useState<ThemeId | "">(page.theme ?? "");
-  const [layoutMode, setLayoutMode] = useState<LayoutMode | "">(
-    page.layout_mode ?? "",
-  );
   const [qrOpen, setQrOpen] = useState(false);
   // Animated backgrounds need design.premium (TEC-947); a stored one stays selectable.
   const allowPremium = useDesignPremium();
   const backgrounds = backgroundsQuery.data ?? [];
   const selectedBackground = backgrounds.find((b) => b.uuid === background);
-  const hasLockedBackground =
-    !allowPremium && backgrounds.some((b) => b.premium);
   const canReadRoutes = usePermission().can(permissions.routes.appRead);
   // The QR of a public page encodes its canonical /{username} route identity.
   const canonicalRoute = useQuery({
@@ -147,7 +133,8 @@ function PublicPageForm({
         lead_capture_enabled: leadCapture,
         contact_exchange_enabled: exchange,
         theme,
-        layout_mode: layoutMode,
+        // The template brings its own layout (TEC-1309): clear the old density override.
+        layout_mode: "",
       }),
     onSuccess: (page) => {
       setUsernameError(null);
@@ -187,8 +174,7 @@ function PublicPageForm({
     background !== (page.background_uuid ?? null) ||
     leadCapture !== (page.lead_capture_enabled ?? false) ||
     exchange !== (page.contact_exchange_enabled ?? false) ||
-    theme !== (page.theme ?? "") ||
-    layoutMode !== (page.layout_mode ?? "");
+    theme !== (page.theme ?? "");
 
   return (
     <Card className="border-border/80 shadow-sm">
@@ -349,69 +335,26 @@ function PublicPageForm({
 
           <ProfileThemePicker
             theme={theme}
-            layoutMode={layoutMode}
             inheritedTheme={page.inherited_theme ?? ""}
             disabled={!canEdit || save.isPending}
+            backdropImage={backgroundImage(selectedBackground)}
             onThemeChange={setTheme}
-            onLayoutModeChange={setLayoutMode}
           />
           {page.branding_locked ? (
-            // TEC-946: the company look overrides this profile's theme, layout and cover.
+            // TEC-946: the company look overrides this profile's template and cover.
             <p className="text-muted-foreground -mt-2 text-xs">
               {t("profiles.public_page.branding_locked")}
             </p>
           ) : null}
 
-          <div className="grid gap-1.5">
-            <Label>{t("profiles.public_page.background")}</Label>
-            <Select
-              value={background ?? "default"}
-              onValueChange={(value) =>
-                setBackground(value === "default" ? null : value)
-              }
-              disabled={!canEdit || save.isPending}
-            >
-              <SelectTrigger className="w-full sm:w-80">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="default">
-                  {t("profiles.public_page.background_default")}
-                </SelectItem>
-                {backgrounds.map((b) => {
-                  const locked = b.premium && !allowPremium;
-                  return (
-                    <SelectItem
-                      key={b.uuid}
-                      value={b.uuid}
-                      disabled={locked && b.uuid !== page.background_uuid}
-                    >
-                      {b.name}
-                      {b.is_preset
-                        ? ` · ${t("background_studio.saved.preset")}`
-                        : ""}
-                      {locked ? <PremiumLockIcon /> : null}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-            <p className="text-muted-foreground text-xs">
-              {t("profiles.public_page.background_hint")}{" "}
-              <Link
-                href={routes.app.backgroundStudio.root}
-                className="text-primary hover:underline"
-              >
-                {t("profiles.public_page.background_studio_link")}
-              </Link>
-            </p>
-            {selectedBackground?.premium && !allowPremium ? (
-              <p className="text-xs text-amber-700 dark:text-amber-400">
-                {t("profiles.public_page.background_premium_fallback")}
-              </p>
-            ) : null}
-            {hasLockedBackground ? <PremiumNotice /> : null}
-          </div>
+          <BackgroundTilePicker
+            backgrounds={backgrounds}
+            value={background}
+            storedValue={page.background_uuid ?? null}
+            allowPremium={allowPremium}
+            disabled={!canEdit || save.isPending}
+            onChange={setBackground}
+          />
 
           <div className="space-y-2">
             <p className="text-sm font-medium">

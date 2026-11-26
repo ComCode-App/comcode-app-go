@@ -18,6 +18,7 @@ import {
   useBankAccountMutations,
 } from "../hooks/use-bank-accounts";
 import { getBankAccountsColumns } from "./bank-accounts-columns";
+import { BankAccountCard } from "./bank-account-card";
 import { BankAccountDialog } from "./bank-account-dialog";
 import type { UserBankAccountSummary } from "../services/bank-accounts.service";
 
@@ -154,8 +155,25 @@ export function BankAccountsPage() {
         emptyDescription={t("bank_accounts.empty.description")}
         pageCount={pageCount}
         state={listState.tableState}
+        // Bank cards by default (TEC-1323); the table stays one toggle away.
+        initialState={{ viewMode: "grid" }}
+        renderGridItem={(account) => (
+          <BankAccountCard
+            account={account}
+            onEdit={handleEdit}
+            onDelete={(a) =>
+              void handleDelete(
+                a.uuid,
+                `${a.bank_name || "Bank"} (${a.iban.slice(-4)})`,
+              )
+            }
+            onToggleActive={handleToggleActive}
+            onSetPrimary={handleSetPrimary}
+          />
+        )}
         features={{
-          persistKey: "app-bank-accounts-v1",
+          // v2: earlier saved state pinned the table view.
+          persistKey: "app-bank-accounts-v2",
           rowSelection: false,
         }}
       />

@@ -195,13 +195,14 @@ func (q *Queries) CreateStructureGroup(ctx context.Context, arg CreateStructureG
 }
 
 const createStructureOffice = `-- name: CreateStructureOffice :one
-INSERT INTO company_offices (account_id,name,city,address,phone,sort_order) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, uuid, account_id, name, city, address, phone, sort_order, created_at, updated_at
+INSERT INTO company_offices (account_id,name,city,district,address,phone,sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, uuid, account_id, name, city, address, phone, sort_order, created_at, updated_at, district
 `
 
 type CreateStructureOfficeParams struct {
 	AccountID int64  `json:"account_id"`
 	Name      string `json:"name"`
 	City      string `json:"city"`
+	District  string `json:"district"`
 	Address   string `json:"address"`
 	Phone     string `json:"phone"`
 	SortOrder int32  `json:"sort_order"`
@@ -212,6 +213,7 @@ func (q *Queries) CreateStructureOffice(ctx context.Context, arg CreateStructure
 		arg.AccountID,
 		arg.Name,
 		arg.City,
+		arg.District,
 		arg.Address,
 		arg.Phone,
 		arg.SortOrder,
@@ -228,6 +230,7 @@ func (q *Queries) CreateStructureOffice(ctx context.Context, arg CreateStructure
 		&i.SortOrder,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.District,
 	)
 	return i, err
 }
@@ -385,7 +388,7 @@ func (q *Queries) GetStructureGroup(ctx context.Context, arg GetStructureGroupPa
 }
 
 const getStructureOffice = `-- name: GetStructureOffice :one
-SELECT t.id, t.uuid, t.account_id, t.name, t.city, t.address, t.phone, t.sort_order, t.created_at, t.updated_at FROM company_offices t WHERE t.account_id=$1 AND t.uuid=$2
+SELECT t.id, t.uuid, t.account_id, t.name, t.city, t.address, t.phone, t.sort_order, t.created_at, t.updated_at, t.district FROM company_offices t WHERE t.account_id=$1 AND t.uuid=$2
 `
 
 type GetStructureOfficeParams struct {
@@ -407,6 +410,7 @@ func (q *Queries) GetStructureOffice(ctx context.Context, arg GetStructureOffice
 		&i.SortOrder,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.District,
 	)
 	return i, err
 }
@@ -581,7 +585,7 @@ func (q *Queries) ListStructureGroups(ctx context.Context, arg ListStructureGrou
 }
 
 const listStructureOffices = `-- name: ListStructureOffices :many
-SELECT t.id, t.uuid, t.account_id, t.name, t.city, t.address, t.phone, t.sort_order, t.created_at, t.updated_at FROM company_offices t WHERE t.account_id=$1
+SELECT t.id, t.uuid, t.account_id, t.name, t.city, t.address, t.phone, t.sort_order, t.created_at, t.updated_at, t.district FROM company_offices t WHERE t.account_id=$1
 AND (NOT $2::bool OR t.uuid=ANY($3::uuid[]))
 ORDER BY t.sort_order,t.name,t.id LIMIT $5 OFFSET $4
 `
@@ -621,6 +625,7 @@ func (q *Queries) ListStructureOffices(ctx context.Context, arg ListStructureOff
 			&i.SortOrder,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.District,
 		); err != nil {
 			return nil, err
 		}
@@ -825,12 +830,13 @@ func (q *Queries) UpdateStructureGroup(ctx context.Context, arg UpdateStructureG
 }
 
 const updateStructureOffice = `-- name: UpdateStructureOffice :one
-UPDATE company_offices SET name=$1,city=$2,address=$3,phone=$4,sort_order=$5 WHERE company_offices.account_id=$6 AND company_offices.uuid=$7 RETURNING id, uuid, account_id, name, city, address, phone, sort_order, created_at, updated_at
+UPDATE company_offices SET name=$1,city=$2,district=$3,address=$4,phone=$5,sort_order=$6 WHERE company_offices.account_id=$7 AND company_offices.uuid=$8 RETURNING id, uuid, account_id, name, city, address, phone, sort_order, created_at, updated_at, district
 `
 
 type UpdateStructureOfficeParams struct {
 	Name      string    `json:"name"`
 	City      string    `json:"city"`
+	District  string    `json:"district"`
 	Address   string    `json:"address"`
 	Phone     string    `json:"phone"`
 	SortOrder int32     `json:"sort_order"`
@@ -842,6 +848,7 @@ func (q *Queries) UpdateStructureOffice(ctx context.Context, arg UpdateStructure
 	row := q.db.QueryRow(ctx, updateStructureOffice,
 		arg.Name,
 		arg.City,
+		arg.District,
 		arg.Address,
 		arg.Phone,
 		arg.SortOrder,
@@ -860,6 +867,7 @@ func (q *Queries) UpdateStructureOffice(ctx context.Context, arg UpdateStructure
 		&i.SortOrder,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.District,
 	)
 	return i, err
 }

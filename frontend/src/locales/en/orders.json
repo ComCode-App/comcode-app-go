@@ -270,6 +270,14 @@
   "subscriber.recipient_and_product": "Recipient & Product",
   "subscriber.card_route_col": "NFC Card / Route",
   "subscriber.preparing": "Preparing",
+  "subscriber.items_count_one": "{{count}} item",
+  "subscriber.items_count_other": "{{count}} items",
+  "subscriber.detail_not_found_title": "Order not found",
+  "subscriber.detail_not_found_desc": "This order does not exist or does not belong to this account.",
+  "subscriber.back_to_orders": "Back to my orders",
+  "subscriber.summary_heading": "Payment Summary",
+  "subscriber.subtotal_label": "Subtotal",
+  "subscriber.shipping_not_yet": "Your order has not shipped yet. Shipping details will appear here.",
   "manifest.menu": "Production files",
   "manifest.export_label": "Manifest (serial, QR URL, activation code)",
   "manifest.qr_zip": "QR images (ZIP)",
@@ -319,5 +327,8 @@
   "refund.attempts": "{{count}} attempts",
   "refund.retry": "Retry",
   "refund.unknown_outcome_hint": "The provider did not answer. Check the iyzico/PayTR panel for this refund before retrying.",
-  "refund.pending_hint": "The refund is being processed at the provider. If it stays here, check the provider panel."
+  "refund.pending_hint": "The refund is being processed at the provider. If it stays here, check the provider panel.",
+  "subscriber.col_date": "Order date",
+  "subscriber.col_items": "Items",
+  "subscriber.no_results": "No orders match your search"
 }

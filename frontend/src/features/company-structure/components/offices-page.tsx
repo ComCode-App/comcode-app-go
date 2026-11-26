@@ -123,7 +123,9 @@ function OfficesContent({
               <div className="font-medium">{row.original.name}</div>
               {row.original.city ? (
                 <div className="text-muted-foreground text-xs">
-                  {row.original.city}
+                  {[row.original.district, row.original.city]
+                    .filter(Boolean)
+                    .join(" / ")}
                 </div>
               ) : null}
             </div>

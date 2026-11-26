@@ -29,14 +29,10 @@ import { Switch } from "@/components/ui/switch";
 import type { components } from "@/generated/api";
 import { entitlementKeys } from "@/features/entitlements/hooks/use-entitlements";
 import { profilesKeys } from "@/features/profiles/hooks/query-keys";
+import { ProfilePicker } from "@/features/profiles/components/profile-picker";
 import { profilesService } from "@/features/profiles/services/profiles.service";
 import { ProfileThemePicker } from "@/features/public-profile/components/theme-picker";
-import {
-  isLayoutMode,
-  isThemeId,
-  type LayoutMode,
-  type ThemeId,
-} from "@/features/public-profile/lib/themes";
+import { isThemeId, type ThemeId } from "@/features/public-profile/lib/themes";
 import {
   PROFILE_PAGE_TARGETS,
   type SmartLink,
@@ -156,9 +152,6 @@ function SmartLinkForm({
   const [theme, setTheme] = useState<ThemeId | "">(
     isThemeId(stored.theme) ? stored.theme : "",
   );
-  const [layoutMode, setLayoutMode] = useState<LayoutMode | "">(
-    isLayoutMode(stored.layout_mode) ? stored.layout_mode : "",
-  );
   // null = the profile's own sections.
   const [modules, setModules] = useState<PublicModule[] | null>(
     stored.visible_modules ?? null,
@@ -185,7 +178,6 @@ function SmartLinkForm({
     };
     if (opensProfilePage) {
       if (theme) cfg.theme = theme;
-      if (layoutMode) cfg.layout_mode = layoutMode;
       if (modules && target === "profile") cfg.visible_modules = modules;
       cfg.primary_action = { type: primaryAction };
     }
@@ -305,22 +297,17 @@ function SmartLinkForm({
 
         {needsProfile ? (
           <div className="grid gap-1.5">
-            <Label>{t("smart_links.profile")}</Label>
-            <Select value={profileUuid} onValueChange={setProfileUuid}>
-              <SelectTrigger>
-                <SelectValue
-                  placeholder={t("smart_links.profile_placeholder")}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {(profilesQuery.data?.items ?? []).map((p) => (
-                  <SelectItem key={p.uuid} value={p.uuid}>
-                    {`${p.first_name} ${p.last_name}`.trim()}
-                    {p.username ? ` · /${p.username}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label id="smart-link-profile-label">
+              {t("smart_links.profile")}
+            </Label>
+            <ProfilePicker
+              profiles={profilesQuery.data?.items ?? []}
+              value={profileUuid}
+              onChange={setProfileUuid}
+              labelId="smart-link-profile-label"
+              placeholder={t("smart_links.profile_placeholder")}
+              disabled={save.isPending}
+            />
           </div>
         ) : (
           <div className="grid gap-1.5">
@@ -349,13 +336,11 @@ function SmartLinkForm({
           <>
             <ProfileThemePicker
               theme={theme}
-              layoutMode={layoutMode}
               inheritedTheme=""
               disabled={save.isPending}
               noneLabel={t("smart_links.presentation.theme_profile")}
               hint={t("smart_links.presentation.theme_hint")}
               onThemeChange={setTheme}
-              onLayoutModeChange={setLayoutMode}
             />
 
             {target === "profile" ? (

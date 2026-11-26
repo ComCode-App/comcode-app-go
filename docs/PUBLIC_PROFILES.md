@@ -54,6 +54,7 @@ Writes need an owner or admin role in the active account (docs/TENANCY_AND_ACCES
   - `contact.{phone,email,website,whatsapp,address}.click`
   - `social.link.click` (`platform` property)
   - `bank.iban.copy`
+- Bank accounts (TEC-1314, `public-bank-account.tsx`, `lib/bank-color.ts`): each account is a card in the bank's color, taken from its logo in the browser (dominant non-white, non-grey color of a CORS copy of the logo), else the bank's `brand_color`, else the theme surface. Text is white or ink and the base is darkened or lightened until every text passes 4.5:1 (`bank-color.test.mjs`). The account holder and the IBAN each have a copy button; only the IBAN copy is an analytics event (`bank.iban.copy`).
 - No embedding (TEC-1119): visitor pages (`/{username}`, `/c/*`, `/s/*`, `/share/*`) cannot be shown in an iframe on another site. Every route sends `X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors 'none'` (`config/security-headers.ts`, applied from `next.config.ts`). Only the storage preview responses the app frames itself (`/api/v1/platform/storage/objects/preview`, `/api/v1/public/storage/*`) allow `'self'`. Embedding on partner sites would need an explicit `frame-ancestors` allowlist, an owner decision.
 - The internal Linear feedback widget is not loaded on visitor pages (`components/common/feedback-widget.tsx`).
 - Bundle budget (TEC-858): `[username]`, `c` and `s` sit outside `app/(shell)`, so they get only the root `PublicProviders` (locale, theme, toasts) and the public i18n namespaces in `lib/i18n/messages.ts`.
@@ -102,14 +103,16 @@ Writes need an owner or admin role in the active account (docs/TENANCY_AND_ACCES
   - The backend only checks ids against allow-lists: `model.PublicThemes` and `model.PublicLayoutModes`. An unknown stored value reads as unset.
   - The visitor API returns the resolved `theme` and the `layout_mode` override.
 - Catalog: `features/public-profile/lib/themes.json` (tokens) and `themes.ts` (types, CSS variables).
-  - Themes: `classic_light`, `dark_minimal`, `compact_card`, `bold_gradient`, `elegant_serif`, `glass`.
+  - Themes: `classic_light`, `dark_minimal`, `compact_card`, `bold_gradient`, `elegant_serif`, `glass`, `legacy_comcode` ("Comcode V1", TEC-1309).
   - `bold_gradient`, `elegant_serif` and `glass` are premium (`premium`, `fallback` in `themes.json`; `model.PremiumThemes`). They need `design.premium`; without it visitors see the fallback theme (TEC-947).
   - A theme is a layout (`standard`, `compact`, `minimal`), color tokens, fonts (`sans` or `serif`), a heading weight, a cover gradient and a default backdrop.
   - To add a theme: add it to `themes.json`, `model.PublicThemes`, the `PublicTheme` enum in `openapi.yaml` and the `theme_name.*` strings. Then run `pnpm api:generate` and `pnpm test`.
 - Rendering (`public-profile-view.tsx`):
   - The tokens are set as CSS variables on the page root (`--card`, `--primary`, `--muted-foreground`, `--comcode-gradient`, ...). Existing components pick them up without theme-specific code.
   - A profile with no theme (and no company theme) keeps the app's own look and follows light/dark.
-  - Layout: `layout_mode` if set, else the theme's layout.
+  - Layout: always the theme's own layout (TEC-1309). The UI calls a theme a "template" and has no separate density switch; owner forms save `layout_mode: ""`. A stored override is accepted by the API but not applied.
+  - `legacy_comcode` layout (Comcode V1, `legacy-comcode-layout.tsx`): one glass card (avatar, name, a bio of at most 90 characters as tagline, title line, company logo card, icon row of social links and quick contacts, language switch inside the "save contact" button), a copyright line and a bottom tab bar ("Hesabım": forms, bio, contacts, addresses; "Banka Bilgileri" when bank accounts are published).
+  - Owner UI: template gallery (`theme-picker.tsx`) and Background Studio tile gallery (`background-picker.tsx`); template previews are drawn over the chosen background's thumbnail.
   - Backdrop: a Background Studio design (`background_uuid`) replaces the theme's backdrop. Cards, text and buttons keep the theme tokens.
   - Text never sits directly on the backdrop. Every text is on a themed surface (cards, language switch, footer pill), so contrast does not depend on the background.
 - Budget and accessibility:
@@ -130,7 +133,7 @@ Writes need an owner or admin role in the active account (docs/TENANCY_AND_ACCES
   - Profiles: `lead_capture_enabled` in `PUT /v1/profiles/{uuid}/public-page`.
   - Smart links: `presentation_config` via `PUT /v1/routes/{uuid}`.
   - Cards: the card's own `lead_capture_enabled` (card settings) also turns it on.
-- `/c/{code}` and `/s/{slug}` always open a profile target with `?via=c/{code}` (or `s/{slug}`), also when their own form is off (TEC-940). The page shows the card's form when it is on, else the profile's own form; either way the lead is stored against the card or link (`via` in `POST /v1/public/leads`), as long as it is live and opens the same profile. Visitor events carry `via` as a property. Direct URL / vCard targets have no form.
+- `/c/{code}` always opens a profile target with `?via=c/{code}`, and `/s/{slug}` renders its profile target in place with `via=s/{slug}` (TEC-1307), also when their own form is off (TEC-940). The page shows the card's form when it is on, else the profile's own form; either way the lead is stored against the card or link (`via` in `POST /v1/public/leads`), as long as it is live and opens the same profile. Visitor events carry `via` as a property. Direct URL / vCard targets have no form.
 - Visitor API (no auth):
   - `GET /v1/public/leads/form?path=` says whether a path's form is on.
   - `POST /v1/public/leads` stores the lead. It is limited per client IP, and needs a name, an email or a phone, and `consent: true` with a known `consent_version` (`kvkk-lead-v1`; bump it with the text in `leads.form.consent_text`).

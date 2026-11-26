@@ -341,7 +341,9 @@ func (u *AuthUseCase) createPasswordlessUser(ctx context.Context, email, name, s
 	if _, err := rand.Read(random); err != nil {
 		return model.User{}, err
 	}
-	hash, err := password.Hash(base64.RawURLEncoding.EncodeToString(random))
+	// HashSecret, not Hash: a random string can miss a digit or a case and fail the
+	// user-password policy, which would make passwordless sign-up fail at random.
+	hash, err := password.HashSecret(base64.RawURLEncoding.EncodeToString(random))
 	if err != nil {
 		return model.User{}, err
 	}
