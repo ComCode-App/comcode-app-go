@@ -41,5 +41,7 @@
   "tabs": "Profil bölümleri",
   "tab.profile": "Hesabım",
   "tab.bank_accounts": "Banka Bilgileri",
-  "next_language": "Dili değiştir: {{locale}}"
+  "next_language": "Dili değiştir: {{locale}}",
+  "copy_account_holder": "Hesap adını kopyala",
+  "account_holder_copied": "Hesap adı kopyalandı"
 }

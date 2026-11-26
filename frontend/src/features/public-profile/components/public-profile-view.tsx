@@ -2,8 +2,6 @@
 
 import { PROFILE_COVER_ENABLED } from "@/config/profile-media";
 import {
-  Building2,
-  Copy,
   Download,
   Globe,
   Mail,
@@ -21,6 +19,7 @@ import {
   LegacyComcodeLayout,
   isTagline,
 } from "@/features/public-profile/components/legacy-comcode-layout";
+import { PublicBankAccount } from "@/features/public-profile/components/public-bank-account";
 import { PublicProfileBackground } from "@/features/public-profile/components/public-profile-background";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -43,7 +42,6 @@ import {
   contactEvent,
   contactHref,
   displayName,
-  formatIban,
   headline,
   mapsHref,
   pickTranslation,
@@ -344,51 +342,11 @@ export function PublicProfileView({
       <Section className={section} title={t("public_profile.bank_accounts")}>
         <ul className="space-y-3">
           {profile.bank_accounts.map((b, i) => (
-            <li key={`${b.iban}-${i}`} className="rounded-xl border p-3">
-              <div className="flex items-center gap-2">
-                <span className="bg-muted flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md">
-                  {b.bank_icon_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- bank icons are API-owned
-                    <img
-                      src={b.bank_icon_url}
-                      alt=""
-                      className="size-6 object-contain"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <Building2 className="size-4" />
-                  )}
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">
-                    {b.bank_name || b.title}
-                  </p>
-                  <p className="text-muted-foreground truncate text-xs">
-                    {b.account_holder}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-2 flex items-center gap-2">
-                <code className="bg-muted min-w-0 flex-1 truncate rounded-md px-2 py-1.5 text-xs">
-                  {formatIban(b.iban)}
-                </code>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  aria-label={t("public_profile.copy_iban")}
-                  onClick={() => {
-                    void navigator.clipboard
-                      .writeText(b.iban.replace(/\s+/g, ""))
-                      .then(() =>
-                        appToast.success(t("public_profile.iban_copied")),
-                      );
-                    track("bank.iban.copy");
-                  }}
-                >
-                  <Copy className="size-4" />
-                </Button>
-              </div>
+            <li key={`${b.iban}-${i}`}>
+              <PublicBankAccount
+                account={b}
+                onIbanCopy={() => track("bank.iban.copy")}
+              />
             </li>
           ))}
         </ul>
