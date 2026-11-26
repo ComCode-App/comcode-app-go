@@ -54,6 +54,7 @@ Writes need an owner or admin role in the active account (docs/TENANCY_AND_ACCES
   - `contact.{phone,email,website,whatsapp,address}.click`
   - `social.link.click` (`platform` property)
   - `bank.iban.copy`
+- Bank accounts (TEC-1314, `public-bank-account.tsx`, `lib/bank-color.ts`): each account is a card in the bank's color, taken from its logo in the browser (dominant non-white, non-grey color of a CORS copy of the logo), else the bank's `brand_color`, else the theme surface. Text is white or ink and the base is darkened or lightened until every text passes 4.5:1 (`bank-color.test.mjs`). The account holder and the IBAN each have a copy button; only the IBAN copy is an analytics event (`bank.iban.copy`).
 - No embedding (TEC-1119): visitor pages (`/{username}`, `/c/*`, `/s/*`, `/share/*`) cannot be shown in an iframe on another site. Every route sends `X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors 'none'` (`config/security-headers.ts`, applied from `next.config.ts`). Only the storage preview responses the app frames itself (`/api/v1/platform/storage/objects/preview`, `/api/v1/public/storage/*`) allow `'self'`. Embedding on partner sites would need an explicit `frame-ancestors` allowlist, an owner decision.
 - The internal Linear feedback widget is not loaded on visitor pages (`components/common/feedback-widget.tsx`).
 - Bundle budget (TEC-858): `[username]`, `c` and `s` sit outside `app/(shell)`, so they get only the root `PublicProviders` (locale, theme, toasts) and the public i18n namespaces in `lib/i18n/messages.ts`.

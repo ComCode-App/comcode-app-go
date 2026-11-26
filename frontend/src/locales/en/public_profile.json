@@ -41,5 +41,7 @@
   "tabs": "Profile sections",
   "tab.profile": "Profile",
   "tab.bank_accounts": "Bank details",
-  "next_language": "Switch language: {{locale}}"
+  "next_language": "Switch language: {{locale}}",
+  "copy_account_holder": "Copy account holder",
+  "account_holder_copied": "Account holder copied"
 }
