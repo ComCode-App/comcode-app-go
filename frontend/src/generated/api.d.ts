@@ -2573,6 +2573,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/profiles/{uuid}/company-shares": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Companies the caller belongs to, with the share state of this profile
+         * @description Requires `app.profiles.read`. Profiles of the active personal account only (TEC-1315); in a company account the list is empty. Sharing is off by default.
+         */
+        get: operations["listProfileCompanyShares"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/profiles/{uuid}/company-shares/{company_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Share a personal profile with a company the caller belongs to
+         * @description Requires `app.profiles.write`. Active personal account only (TEC-1315). The company's owners and admins see the profile read-only. Idempotent; written to the activity log. The share is removed when the member leaves or is removed from the company.
+         */
+        put: operations["shareProfileWithCompany"];
+        post?: never;
+        /**
+         * Stop sharing a personal profile with a company
+         * @description Requires `app.profiles.write`. Active personal account only (TEC-1315). Idempotent; written to the activity log.
+         */
+        delete: operations["unshareProfileWithCompany"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/backgrounds": {
         parameters: {
             query?: never;
@@ -3644,6 +3688,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/orders/card-images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a card design image for an order being placed
+         * @description Requires `platform.orders.write` (TEC-1320). Multipart field `image`: PNG, JPEG or WebP up
+         *     to 5 MB, the type comes from the bytes. Returns the API-owned `url` to send as
+         *     `front_image_url` / `back_image_url` of the order or an item; provisioning copies the
+         *     item's (else the order's) images onto the card. Other URLs are rejected on create.
+         */
+        post: operations["uploadPlatformOrderCardImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/orders/bulk": {
         parameters: {
             query?: never;
@@ -3782,6 +3849,7 @@ export interface paths {
          * @description Moving an order to `refunded` first refunds its online payment at the provider (TEC-935,
          *     same as `POST /v1/platform/orders/{uuid}/refunds` without an amount) and needs a step-up
          *     grant. `502 REFUND_FAILED` leaves the order unchanged; `409 REFUND_IN_PROGRESS`.
+         *     `409 ORDER_AWAITING_APPROVAL` for an order awaiting approval (use approve/reject).
          */
         put: operations["updateOrderPaymentStatus"];
         post?: never;
@@ -3802,6 +3870,51 @@ export interface paths {
         /** Update fulfillment state machine */
         put: operations["updateOrderFulfillmentStatus"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/orders/{uuid}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a company bulk order awaiting approval
+         * @description Requires `platform.orders.approve` and a step-up grant (TEC-1317). Moves the order from
+         *     `awaiting_approval` to `pending` so the customer can pay, and notifies the customer.
+         *     `409 PROFILE_QUOTA_EXCEEDED` while the company holds more profiles than its plan allows
+         *     (error details `missing`, `used`, `limit`); `409 ORDER_NOT_AWAITING_APPROVAL` otherwise.
+         */
+        post: operations["approvePlatformOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/orders/{uuid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a company bulk order awaiting approval
+         * @description Requires `platform.orders.approve` and a step-up grant (TEC-1317). Cancels the order with
+         *     the required reason, deletes the draft profiles the order created (existing profiles
+         *     matched by e-mail are kept) and notifies the customer with the reason.
+         */
+        post: operations["rejectPlatformOrder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3965,7 +4078,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Place a bulk order with multiple recipients/cards */
+        /**
+         * Place a bulk order with multiple recipients/cards
+         * @description From a company account (TEC-1317) the order opens as `awaiting_approval`: each recipient
+         *     gets a profile in the company (an existing profile with the recipient's e-mail is linked,
+         *     otherwise a draft with a closed public page is created). It cannot be paid until a super
+         *     admin approves it; drafts go live once the order is paid. Personal accounts keep `pending`.
+         */
         post: operations["createMyBulkOrder"];
         delete?: never;
         options?: never;
@@ -7384,6 +7503,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/company/shared-profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Personal profiles members shared with the active company (read-only)
+         * @description Requires `app.profiles.read` and an owner/admin role in the active company account (TEC-1315). Only profiles a current member explicitly shared with this company are listed; other members get 403.
+         */
+        get: operations["listCompanySharedProfiles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/company/member-profiles/meta": {
         parameters: {
             query?: never;
@@ -7981,6 +8120,34 @@ export interface paths {
          */
         post: operations["reassignPlatformCard"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/cards/{uuid}/images/{side}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upload a card face's design image
+         * @description Stores the front or back design image of a card (TEC-1320), multipart field `image`.
+         *     PNG, JPEG or WebP up to 5 MB; the type comes from the bytes. Any aspect ratio is accepted
+         *     (previews crop with `object-fit: cover`). The previous image object is deleted. Writes
+         *     `card.image_updated` to the activity log. Requires `platform.cards.write` and a step-up grant.
+         */
+        put: operations["uploadPlatformCardImage"];
+        post?: never;
+        /**
+         * Remove a card face's design image
+         * @description Clears the front or back design image; previews show the default artwork again (TEC-1320).
+         *     Writes `card.image_removed`. Requires `platform.cards.write` and a step-up grant.
+         */
+        delete: operations["removePlatformCardImage"];
         options?: never;
         head?: never;
         patch?: never;
@@ -10215,6 +10382,62 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
+        ProfileCompanyShareTarget: {
+            /** Format: uuid */
+            company_uuid: string;
+            company_name: string;
+            /** @description Caller's role in the company */
+            role: string;
+            shared: boolean;
+        };
+        EnvelopeProfileCompanyShareTargets: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ProfileCompanyShareTarget"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeProfileCompanyShareState: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                shared: boolean;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        CompanySharedProfile: {
+            /** Format: uuid */
+            uuid: string;
+            first_name: string;
+            last_name: string;
+            title: string;
+            company_name: string;
+            avatar_url: string;
+            completion_rate: number;
+            /** @description Public path; empty until assigned */
+            username: string;
+            /** Format: date-time */
+            shared_at: string;
+            member: {
+                /** Format: uuid */
+                user_uuid: string;
+                email: string;
+                name: string;
+                surname: string;
+            };
+        };
+        EnvelopeCompanySharedProfilePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["CompanySharedProfile"][];
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
         CompanyMemberProfileLinkInput: {
             /** Format: uuid */
             profile_uuid: string | null;
@@ -11987,6 +12210,8 @@ export interface components {
             total_price: number;
             custom_print_data?: Record<string, never>;
             product_images?: string[];
+            /** @description Type of the ordered product, e.g. physical_card or badge. */
+            product_type?: string;
             recipient_name?: string;
             recipient_email?: string;
             recipient_phone?: string;
@@ -11995,6 +12220,12 @@ export interface components {
             /** Format: uuid */
             profile_uuid?: string;
             profile_avatar_url?: string;
+            /** @description The draft profile was created by this order (TEC-1317) */
+            profile_created_by_order?: boolean;
+            /** @description Card front design (TEC-1320) */
+            front_image_url?: string;
+            /** @description Card back design (TEC-1320) */
+            back_image_url?: string;
             /** Format: uuid */
             card_uuid?: string;
             card_smart_code?: string;
@@ -12074,6 +12305,7 @@ export interface components {
             customer_name?: string;
             customer_surname?: string;
             company_name?: string;
+            /** @description Pipeline status. `awaiting_approval` (TEC-1317): a company bulk order waiting for platform approval; it cannot be paid until approved. */
             status: string;
             subtotal?: number;
             tax_total?: number;
@@ -12100,6 +12332,12 @@ export interface components {
             delivered_at?: string;
             /** Format: date-time */
             cancelled_at?: string;
+            /** @description Why a super admin rejected the order (TEC-1317) */
+            rejection_reason?: string;
+            /** @description Card front design (TEC-1320) */
+            front_image_url?: string;
+            /** @description Card back design (TEC-1320) */
+            back_image_url?: string;
             items?: components["schemas"]["OrderItemSummary"][];
             asset_requests?: components["schemas"]["AssetRequestSummary"][];
             /** Format: date-time */
@@ -12131,6 +12369,10 @@ export interface components {
             /** Format: uuid */
             profile_uuid?: string;
             idempotency_key?: string;
+            /** @description Card front design (TEC-1320): a URL from POST /v1/platform/orders/card-images. Platform orders only; ignored on /v1/orders. */
+            front_image_url?: string;
+            /** @description Card back design (TEC-1320), as front_image_url. */
+            back_image_url?: string;
         };
         /** @description On `POST /v1/orders` the order always belongs to the caller's active account and the target fields are ignored. On `POST /v1/platform/orders` the target is `account_uuid`, else `company_uuid` (company account), else `user_uuid` (that user's personal account), else the admin's active account. */
         CreateOrderInput: {
@@ -12148,6 +12390,10 @@ export interface components {
             admin_note?: string;
             payment_provider?: string;
             metadata?: Record<string, never>;
+            /** @description Card front design for items without their own (TEC-1320): a URL from POST /v1/platform/orders/card-images. Platform orders only; ignored on /v1/orders. */
+            front_image_url?: string;
+            /** @description Card back design (TEC-1320), as front_image_url. */
+            back_image_url?: string;
         };
         BulkUpdateOrderItemsInput: {
             item_uuids: string[];
@@ -12281,6 +12527,12 @@ export interface components {
             is_locked: boolean;
             /** @enum {string} */
             activation_status: "pending" | "active" | "retired";
+            /** @description physical_nfc, badge (vertical badge preview), ... */
+            card_type?: string;
+            /** @description Front design image (TEC-1320); absent = default artwork */
+            front_image_url?: string;
+            /** @description Back design image (TEC-1320); absent = default artwork */
+            back_image_url?: string;
             account: components["schemas"]["SupportAccountRef"];
             owner: components["schemas"]["SupportUserRef"];
             profile?: components["schemas"]["SupportProfileRef"];
@@ -12540,9 +12792,13 @@ export interface components {
             direct_url?: string;
             custom_data?: Record<string, never>;
             /** @enum {string} */
-            card_type: "physical_nfc" | "metal_card" | "wood_card" | "pvc_card" | "digital_only";
+            card_type: "physical_nfc" | "metal_card" | "wood_card" | "pvc_card" | "digital_only" | "badge";
             material: string;
             color_hex: string;
+            /** @description Front design image (TEC-1320); absent = default artwork */
+            front_image_url?: string;
+            /** @description Back design image (TEC-1320); absent = default artwork */
+            back_image_url?: string;
             is_active: boolean;
             is_locked: boolean;
             lead_capture_enabled: boolean;
@@ -12573,9 +12829,13 @@ export interface components {
             direct_url?: string;
             custom_data?: Record<string, never>;
             /** @enum {string} */
-            card_type: "physical_nfc" | "metal_card" | "wood_card" | "pvc_card" | "digital_only";
+            card_type: "physical_nfc" | "metal_card" | "wood_card" | "pvc_card" | "digital_only" | "badge";
             material: string;
             color_hex: string;
+            /** @description Front design image (TEC-1320); absent = default artwork */
+            front_image_url?: string;
+            /** @description Back design image (TEC-1320); absent = default artwork */
+            back_image_url?: string;
             is_active: boolean;
             is_locked: boolean;
             lead_capture_enabled: boolean;
@@ -17582,6 +17842,86 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listProfileCompanyShares: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Share targets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProfileCompanyShareTargets"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    shareProfileWithCompany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                company_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shared */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProfileCompanyShareState"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unshareProfileWithCompany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                company_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Not shared */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProfileCompanyShareState"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listBackgrounds: {
         parameters: {
             query?: never;
@@ -19511,6 +19851,43 @@ export interface operations {
             };
         };
     };
+    uploadPlatformOrderCardImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    image: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Stored image */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: {
+                            url: string;
+                        };
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     createPlatformBulkOrder: {
         parameters: {
             query?: never;
@@ -19796,6 +20173,68 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeOrderDetail"];
                 };
             };
+        };
+    };
+    approvePlatformOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order approved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrderDetail"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    rejectPlatformOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Order rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrderDetail"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     updateOrderStatus: {
@@ -26004,6 +26443,31 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    listCompanySharedProfiles: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shared profile page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCompanySharedProfilePage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     getCompanyMemberProfilesMeta: {
         parameters: {
             query?: never;
@@ -27746,6 +28210,69 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    uploadPlatformCardImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                side: "front" | "back";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    image: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Card with the new image */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeSupportCard"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    removePlatformCardImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                side: "front" | "back";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Card without the image */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeSupportCard"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     searchPlatformRoutes: {

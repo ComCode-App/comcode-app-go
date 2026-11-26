@@ -93,6 +93,8 @@ type Querier interface {
 	CompletePaymentCardSession(ctx context.Context, argUuid uuid.UUID) (PaymentCardSession, error)
 	ConfirmUserTOTP(ctx context.Context, arg ConfirmUserTOTPParams) (UserTotp, error)
 	ConsumeOTP(ctx context.Context, id int64) (int64, error)
+	// The item's image wins, then the order's; NULL keeps the default artwork.
+	CopyOrderCardImagesToCard(ctx context.Context, arg CopyOrderCardImagesToCardParams) error
 	CountAccountActiveCardsUsage(ctx context.Context, accountID int64) (int64, error)
 	CountAccountBackgrounds(ctx context.Context, accountID int64) (int64, error)
 	CountAccountCards(ctx context.Context, arg CountAccountCardsParams) (int64, error)
@@ -116,6 +118,8 @@ type Querier interface {
 	CountCompanyAssetOrders(ctx context.Context, arg CountCompanyAssetOrdersParams) (int64, error)
 	CountCompanyMedia(ctx context.Context, arg CountCompanyMediaParams) (int64, error)
 	CountCompanyMemberProfiles(ctx context.Context, arg CountCompanyMemberProfilesParams) (int64, error)
+	// account-lint: cross-account counts the profiles members shared with the active company (TEC-1315)
+	CountCompanySharedProfiles(ctx context.Context, companyAccountID int64) (int64, error)
 	// Unique visitors are counted from raw events: the aggregate tables add 1 per event, so their
 	// unique_sessions column is an event count. A visitor is the session id, else the daily IP hash.
 	CountDistinctVisitors(ctx context.Context, arg CountDistinctVisitorsParams) (int64, error)
@@ -245,6 +249,7 @@ type Querier interface {
 	DeleteProfile(ctx context.Context, arg DeleteProfileParams) error
 	DeleteProfileAddresses(ctx context.Context, profileID int64) error
 	DeleteProfileBankAccounts(ctx context.Context, profileID int64) error
+	DeleteProfileCompanyShare(ctx context.Context, arg DeleteProfileCompanyShareParams) (int64, error)
 	DeleteProfileContactDetails(ctx context.Context, profileID int64) error
 	DeleteProfileSocialLinks(ctx context.Context, profileID int64) error
 	DeleteProfileTranslations(ctx context.Context, profileID int64) error
@@ -285,6 +290,8 @@ type Querier interface {
 	FailOrderPaymentSession(ctx context.Context, arg FailOrderPaymentSessionParams) (OrderPaymentSession, error)
 	// account-lint: cross-account payment provider callback / init failure: session id from that flow
 	FailPaymentCardSession(ctx context.Context, argUuid uuid.UUID) (PaymentCardSession, error)
+	// Company bulk order approval (TEC-1317).
+	FindAccountProfileByEmail(ctx context.Context, arg FindAccountProfileByEmailParams) (FindAccountProfileByEmailRow, error)
 	FindActiveUserByEmail(ctx context.Context, email string) (FindActiveUserByEmailRow, error)
 	FindCompanyGroupsByName(ctx context.Context, arg FindCompanyGroupsByNameParams) ([]FindCompanyGroupsByNameRow, error)
 	FindCompanyOfficesByName(ctx context.Context, arg FindCompanyOfficesByNameParams) ([]uuid.UUID, error)
@@ -358,6 +365,8 @@ type Querier interface {
 	GetCompanyMemberByUserUUID(ctx context.Context, arg GetCompanyMemberByUserUUIDParams) (GetCompanyMemberByUserUUIDRow, error)
 	// The member's linked profile, including a soft-deleted one (callers check deleted).
 	GetCompanyMemberLink(ctx context.Context, arg GetCompanyMemberLinkParams) (GetCompanyMemberLinkRow, error)
+	// account-lint: cross-account the caller's own membership in one company, filtered by their user id
+	GetCompanyMembershipForUser(ctx context.Context, arg GetCompanyMembershipForUserParams) (GetCompanyMembershipForUserRow, error)
 	// A live profile of the account with the office of the member it is linked to (if any).
 	GetCompanyProfileTarget(ctx context.Context, arg GetCompanyProfileTargetParams) (GetCompanyProfileTargetRow, error)
 	GetCompanySector(ctx context.Context, id int64) (pgtype.UUID, error)
@@ -489,6 +498,9 @@ type Querier interface {
 	GetRouteByUUID(ctx context.Context, argUuid uuid.UUID) (GetRouteByUUIDRow, error)
 	GetRouteQR(ctx context.Context, arg GetRouteQRParams) (GetRouteQRRow, error)
 	GetSectorAdmin(ctx context.Context, argUuid uuid.UUID) (Sector, error)
+	// Profile shares with companies (TEC-1315). A member shares a personal profile with a company
+	// they belong to; the company's owners and admins see it read-only.
+	GetShareableProfileID(ctx context.Context, arg GetShareableProfileIDParams) (int64, error)
 	GetSocialPlatformBySlug(ctx context.Context, slug string) (SocialPlatform, error)
 	GetSocialPlatformByUUID(ctx context.Context, argUuid uuid.UUID) (SocialPlatform, error)
 	GetStepupSettings(ctx context.Context) (StepupSetting, error)
@@ -539,6 +551,7 @@ type Querier interface {
 	InsertOrderStatusHistory(ctx context.Context, arg InsertOrderStatusHistoryParams) error
 	InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventParams) (OutboxEvent, error)
 	InsertProfileBankAccount(ctx context.Context, arg InsertProfileBankAccountParams) error
+	InsertProfileCompanyShare(ctx context.Context, arg InsertProfileCompanyShareParams) (int64, error)
 	InsertPushTicket(ctx context.Context, arg InsertPushTicketParams) error
 	InsertRolePermission(ctx context.Context, arg InsertRolePermissionParams) error
 	InsertRouteHistory(ctx context.Context, arg InsertRouteHistoryParams) error
@@ -626,6 +639,8 @@ type Querier interface {
 	// Company media library and company branding (TEC-946). Every query is scoped by account_id.
 	ListCompanyMedia(ctx context.Context, arg ListCompanyMediaParams) ([]ListCompanyMediaRow, error)
 	ListCompanyMemberProfiles(ctx context.Context, arg ListCompanyMemberProfilesParams) ([]ListCompanyMemberProfilesRow, error)
+	// account-lint: cross-account profiles members shared with the active company (read-only, TEC-1315)
+	ListCompanySharedProfiles(ctx context.Context, arg ListCompanySharedProfilesParams) ([]ListCompanySharedProfilesRow, error)
 	// account-lint: cross-account one-off deleted-profile media backfill (TEC-1177): walks soft-deleted profiles of every account by id cursor and returns only ids, uuids, media columns and locales
 	ListDeletedProfilesForMediaBackfill(ctx context.Context, arg ListDeletedProfilesForMediaBackfillParams) ([]ListDeletedProfilesForMediaBackfillRow, error)
 	// Worker-only unscoped discovery. Manual/legacy subscriptions are deliberately excluded.
@@ -654,6 +669,7 @@ type Querier interface {
 	ListOAuthAccountsForUserIDs(ctx context.Context, userIds []int64) ([]ListOAuthAccountsForUserIDsRow, error)
 	ListOAuthProviderSettings(ctx context.Context) ([]OauthProviderSetting, error)
 	ListOrderAssetRequests(ctx context.Context, orderID int64) ([]ListOrderAssetRequestsRow, error)
+	ListOrderCreatedProfiles(ctx context.Context, arg ListOrderCreatedProfilesParams) ([]uuid.UUID, error)
 	// account-lint: cross-account items of an order already loaded through a platform route or GetForAccount
 	ListOrderItemsByOrderID(ctx context.Context, orderID int64) ([]ListOrderItemsByOrderIDRow, error)
 	// account-lint: cross-account platform production manifest (platform.orders.read + step-up)
@@ -691,6 +707,8 @@ type Querier interface {
 	// Selected, active bank accounts of a profile with their bank's display data.
 	ListProfileBankAccountsPublic(ctx context.Context, profileID int64) ([]ListProfileBankAccountsPublicRow, error)
 	ListProfileContactDetails(ctx context.Context, profileID int64) ([]ProfileContactDetail, error)
+	// account-lint: cross-account the caller's own company memberships, filtered by their user id
+	ListProfileShareTargets(ctx context.Context, arg ListProfileShareTargetsParams) ([]ListProfileShareTargetsRow, error)
 	ListProfileSocialLinks(ctx context.Context, profileID int64) ([]ProfileSocialLink, error)
 	ListProfileTranslations(ctx context.Context, profileID int64) ([]ProfileTranslation, error)
 	// Owners and admins of the profile's account hear about review outcomes.
@@ -814,6 +832,7 @@ type Querier interface {
 	// and IN ('delivered', 'read') makes Postgres raise 42P08
 	// (inconsistent types deduced for parameter $2).
 	MarkNotificationSent(ctx context.Context, arg MarkNotificationSentParams) (Notification, error)
+	MarkOrderItemProfileCreated(ctx context.Context, arg MarkOrderItemProfileCreatedParams) error
 	MarkOrderNotificationDispatched(ctx context.Context, arg MarkOrderNotificationDispatchedParams) error
 	// account-lint: cross-account platform order refunds (platform.orders.write)
 	MarkOrderPaymentRefundFailed(ctx context.Context, arg MarkOrderPaymentRefundFailedParams) (OrderPaymentRefund, error)
@@ -828,6 +847,7 @@ type Querier interface {
 	MarkVisitorHour(ctx context.Context, arg MarkVisitorHourParams) error
 	// account-lint: cross-account subscription id from the account's own subscription (LockAccountPaymentSubscription)
 	NextUpgradeAttempt(ctx context.Context, arg NextUpgradeAttemptParams) (int32, error)
+	OpenOrderDraftProfileRoutes(ctx context.Context, arg OpenOrderDraftProfileRoutesParams) ([]uuid.UUID, error)
 	PingDB(ctx context.Context) (int32, error)
 	// Platform-wide event volume per local calendar day (TEC-859), read from the hourly rollups so
 	// days follow the viewer's time zone. Never touches the raw events partitions.
@@ -902,6 +922,9 @@ type Querier interface {
 	// Path search over every route, deleted smart links included (they hold their path for 30 days),
 	// plus routes whose renamed-away old path matches.
 	PlatformSearchRoutes(ctx context.Context, arg PlatformSearchRoutesParams) ([]int64, error)
+	// account-lint: cross-account platform support tools (platform.cards.write)
+	// Sets or clears (NULL) one face's design image of a card (TEC-1320).
+	PlatformSetCardImage(ctx context.Context, arg PlatformSetCardImageParams) (int64, error)
 	// Most frequent event types over a window of the hourly rollups (TEC-953).
 	PlatformTopEventTypes(ctx context.Context, arg PlatformTopEventTypesParams) ([]PlatformTopEventTypesRow, error)
 	// Platform-wide distinct visitors (TEC-953) for today, the last 7 and the last 30 local days,
@@ -986,6 +1009,12 @@ type Querier interface {
 	// Stores (or, with NULLs, clears) the encrypted refresh token of one linked
 	// identity and the client id it belongs to (TEC-1181).
 	SetOAuthAccountRefreshToken(ctx context.Context, arg SetOAuthAccountRefreshTokenParams) (int64, error)
+	// Card design images chosen when an order is placed (TEC-1320 B).
+	// account-lint: cross-account platform order creation sets the order's card images
+	SetOrderCardImages(ctx context.Context, arg SetOrderCardImagesParams) error
+	SetOrderItemCardImages(ctx context.Context, arg SetOrderItemCardImagesParams) error
+	// account-lint: cross-account platform order review (platform.orders.approve)
+	SetOrderRejectionReason(ctx context.Context, arg SetOrderRejectionReasonParams) error
 	SetPrimaryProfileByUUID(ctx context.Context, arg SetPrimaryProfileByUUIDParams) error
 	// UpdateProduct keeps the category when none is given; an import rollback (TEC-596) uses this
 	// to put back exactly the category a product had before, none included.

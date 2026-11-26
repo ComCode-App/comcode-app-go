@@ -54,24 +54,29 @@ type CardRef struct {
 
 // Card is one NFC card as platform support sees it.
 type Card struct {
-	ID               int64       `json:"-"`
-	UUID             uuid.UUID   `json:"uuid"`
-	Name             string      `json:"name"`
-	SmartCode        string      `json:"smart_code"`
-	CardUID          string      `json:"card_uid,omitempty"`
-	LegacySerial     string      `json:"legacy_serial,omitempty"`
-	TargetType       string      `json:"target_type"`
-	DirectURL        string      `json:"direct_url,omitempty"`
-	IsActive         bool        `json:"is_active"`
-	IsLocked         bool        `json:"is_locked"`
-	ActivationStatus string      `json:"activation_status"`
-	Account          AccountRef  `json:"account"`
-	Owner            UserRef     `json:"owner"`
-	Profile          *ProfileRef `json:"profile,omitempty"`
-	Order            *OrderRef   `json:"order,omitempty"`
-	Route            *RouteRef   `json:"route,omitempty"`
-	CreatedAt        time.Time   `json:"created_at"`
-	UpdatedAt        time.Time   `json:"updated_at"`
+	ID               int64     `json:"-"`
+	UUID             uuid.UUID `json:"uuid"`
+	Name             string    `json:"name"`
+	SmartCode        string    `json:"smart_code"`
+	CardUID          string    `json:"card_uid,omitempty"`
+	LegacySerial     string    `json:"legacy_serial,omitempty"`
+	TargetType       string    `json:"target_type"`
+	DirectURL        string    `json:"direct_url,omitempty"`
+	IsActive         bool      `json:"is_active"`
+	IsLocked         bool      `json:"is_locked"`
+	ActivationStatus string    `json:"activation_status"`
+	// FrontImageURL / BackImageURL are the card's design images (TEC-1320); empty = default artwork.
+	// CardType is physical_nfc, badge (yaka kartı, vertical preview) etc. (TEC-1320).
+	CardType      string      `json:"card_type,omitempty"`
+	FrontImageURL string      `json:"front_image_url,omitempty"`
+	BackImageURL  string      `json:"back_image_url,omitempty"`
+	Account       AccountRef  `json:"account"`
+	Owner         UserRef     `json:"owner"`
+	Profile       *ProfileRef `json:"profile,omitempty"`
+	Order         *OrderRef   `json:"order,omitempty"`
+	Route         *RouteRef   `json:"route,omitempty"`
+	CreatedAt     time.Time   `json:"created_at"`
+	UpdatedAt     time.Time   `json:"updated_at"`
 }
 
 // HistoryEntry is one route_history row. Quarantined means its old path is still held.

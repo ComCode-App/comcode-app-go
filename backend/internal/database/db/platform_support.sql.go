@@ -28,7 +28,8 @@ SELECT
     ), '')::text AS profile_username,
     o.uuid AS order_uuid, o.order_number AS order_number, o.status AS order_status,
     r.uuid AS route_uuid, r.path AS route_path, r.status AS route_status,
-    COALESCE(r.legacy_metadata->>'card_serial_number', '')::text AS legacy_serial
+    COALESCE(r.legacy_metadata->>'card_serial_number', '')::text AS legacy_serial,
+    c.front_image_url, c.back_image_url, c.card_type
 FROM nfc_cards c
 JOIN accounts a ON a.id = c.account_id
 JOIN users u ON u.id = c.user_id
@@ -69,6 +70,9 @@ type PlatformGetCardRow struct {
 	RoutePath         pgtype.Text        `json:"route_path"`
 	RouteStatus       pgtype.Text        `json:"route_status"`
 	LegacySerial      string             `json:"legacy_serial"`
+	FrontImageUrl     pgtype.Text        `json:"front_image_url"`
+	BackImageUrl      pgtype.Text        `json:"back_image_url"`
+	CardType          string             `json:"card_type"`
 }
 
 // account-lint: cross-account platform support tools (platform.* permission)
@@ -105,6 +109,9 @@ func (q *Queries) PlatformGetCard(ctx context.Context, argUuid uuid.UUID) (Platf
 		&i.RoutePath,
 		&i.RouteStatus,
 		&i.LegacySerial,
+		&i.FrontImageUrl,
+		&i.BackImageUrl,
+		&i.CardType,
 	)
 	return i, err
 }
@@ -482,7 +489,8 @@ SELECT
     ), '')::text AS profile_username,
     o.uuid AS order_uuid, o.order_number AS order_number, o.status AS order_status,
     r.uuid AS route_uuid, r.path AS route_path, r.status AS route_status,
-    COALESCE(r.legacy_metadata->>'card_serial_number', '')::text AS legacy_serial
+    COALESCE(r.legacy_metadata->>'card_serial_number', '')::text AS legacy_serial,
+    c.front_image_url, c.back_image_url, c.card_type
 FROM nfc_cards c
 JOIN accounts a ON a.id = c.account_id
 JOIN users u ON u.id = c.user_id
@@ -534,6 +542,9 @@ type PlatformSearchCardsRow struct {
 	RoutePath         pgtype.Text        `json:"route_path"`
 	RouteStatus       pgtype.Text        `json:"route_status"`
 	LegacySerial      string             `json:"legacy_serial"`
+	FrontImageUrl     pgtype.Text        `json:"front_image_url"`
+	BackImageUrl      pgtype.Text        `json:"back_image_url"`
+	CardType          string             `json:"card_type"`
 }
 
 // Platform card and route support screens (TEC-950). These are platform queries: they are not
@@ -579,6 +590,9 @@ func (q *Queries) PlatformSearchCards(ctx context.Context, arg PlatformSearchCar
 			&i.RoutePath,
 			&i.RouteStatus,
 			&i.LegacySerial,
+			&i.FrontImageUrl,
+			&i.BackImageUrl,
+			&i.CardType,
 		); err != nil {
 			return nil, err
 		}
@@ -631,4 +645,28 @@ func (q *Queries) PlatformSearchRoutes(ctx context.Context, arg PlatformSearchRo
 		return nil, err
 	}
 	return items, nil
+}
+
+const platformSetCardImage = `-- name: PlatformSetCardImage :execrows
+UPDATE nfc_cards
+SET front_image_url = CASE WHEN $1::text = 'front' THEN $2::text ELSE front_image_url END,
+    back_image_url  = CASE WHEN $1::text = 'back' THEN $2::text ELSE back_image_url END
+WHERE id = $3
+  AND deleted_at IS NULL
+`
+
+type PlatformSetCardImageParams struct {
+	Side   string      `json:"side"`
+	Url    pgtype.Text `json:"url"`
+	CardID int64       `json:"card_id"`
+}
+
+// account-lint: cross-account platform support tools (platform.cards.write)
+// Sets or clears (NULL) one face's design image of a card (TEC-1320).
+func (q *Queries) PlatformSetCardImage(ctx context.Context, arg PlatformSetCardImageParams) (int64, error) {
+	result, err := q.db.Exec(ctx, platformSetCardImage, arg.Side, arg.Url, arg.CardID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

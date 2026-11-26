@@ -103,5 +103,8 @@
   "viewbox.usdz_label": "Apple AR Quick Look Dosyası (.usdz)",
   "viewbox.usdz_uploading": "USDZ Dosyası Yükleniyor...",
   "viewbox.save_settings_btn": "Viewbox Ayarlarını Kaydet",
-  "viewbox.saved_success": "3D Viewbox ve Sahne Ayarları Kaydedildi"
+  "viewbox.saved_success": "3D Viewbox ve Sahne Ayarları Kaydedildi",
+  "types.physical_card": "NFC Kart",
+  "types.badge": "Yaka Kartı",
+  "type_hint": "Yaka kartı siparişleri dikey (54×85,6 mm) önizlemeyle yaka kartı olarak oluşturulur; NFC aktivasyonu ve akıllı link akışı kartla aynıdır."
 }

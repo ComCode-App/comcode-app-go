@@ -49,5 +49,9 @@
   "codes.oauth_invalid_token": "The sign-in could not be verified. Please try again.",
   "codes.oauth_account_not_linked": "An account with this email already exists. Sign in with your existing method, then link this provider from your profile.",
   "codes.oauth_email_unverified": "This provider did not confirm a verified email address, so it cannot be used to sign in.",
-  "codes.registration_disabled": "New sign-ups are currently closed."
+  "codes.registration_disabled": "New sign-ups are currently closed.",
+  "codes.order_awaiting_approval": "This order is awaiting approval. Approve or reject it first.",
+  "codes.order_not_awaiting_approval": "This order is no longer awaiting approval.",
+  "codes.profile_quota_exceeded": "The company is over its profile limit.",
+  "codes.storage_unavailable": "File storage is not available right now. Try again later."
 }

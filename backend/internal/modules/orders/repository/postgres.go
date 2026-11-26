@@ -159,6 +159,10 @@ func (r *PostgresRepository) Create(ctx context.Context, order model.CreateOrder
 		orderType = "standard"
 	}
 
+	initialStatus := order.InitialStatus
+	if initialStatus == "" {
+		initialStatus = "pending"
+	}
 	var row db.Order
 	err := r.withTx(ctx, func(q *db.Queries) error {
 		var err error
@@ -166,7 +170,7 @@ func (r *PostgresRepository) Create(ctx context.Context, order model.CreateOrder
 			AccountID:         accountID,
 			OrderNumber:       orderNumber,
 			UserID:            placedByUserID,
-			Status:            "pending",
+			Status:            initialStatus,
 			Subtotal:          floatToNumeric(subtotal),
 			TaxTotal:          floatToNumeric(taxTotal),
 			ShippingTotal:     floatToNumeric(0),
@@ -492,36 +496,40 @@ func (r *PostgresRepository) ListItems(ctx context.Context, orderID int64) ([]mo
 		cardUUID := pgUUIDToString(row.CardUuid)
 
 		result = append(result, model.OrderItemSummary{
-			ID:                  row.ID,
-			UUID:                row.Uuid.String(),
-			ProductID:           prodID,
-			ProductSlug:         pgtypeToString(row.ProductSlug),
-			ProductName:         row.ProductName,
-			VariantName:         row.VariantName,
-			SKU:                 row.Sku,
-			Quantity:            int(row.Quantity),
-			UnitPrice:           numericToFloat(row.UnitPrice),
-			TotalPrice:          numericToFloat(row.TotalPrice),
-			CustomPrintData:     customPrint,
-			ProductImages:       images,
-			RecipientName:       row.RecipientName,
-			RecipientEmail:      row.RecipientEmail,
-			RecipientPhone:      row.RecipientPhone,
-			RecipientTitle:      row.RecipientTitle,
-			RecipientDepartment: row.RecipientDepartment,
-			ProfileUUID:         profUUID,
-			ProfileAvatarURL:    pgtypeToString(row.ProfileAvatarUrl),
-			CardUUID:            cardUUID,
-			CardSmartCode:       pgtypeToString(row.CardSmartCode),
-			CardUID:             pgtypeToString(row.CardUid),
-			CardStatus:          pgtypeToString(row.CardStatus),
-			CardIsActive:        row.CardIsActive.Bool,
-			CardIsLocked:        row.CardIsLocked.Bool,
-			RoutePath:           pgtypeToString(row.RoutePath),
-			RouteStatus:         pgtypeToString(row.RouteStatus),
-			FulfillmentStatus:   row.FulfillmentStatus,
-			ProvisioningStatus:  row.ProvisioningStatus,
-			ProvisioningError:   row.ProvisioningError,
+			ID:                    row.ID,
+			UUID:                  row.Uuid.String(),
+			ProductID:             prodID,
+			ProductSlug:           pgtypeToString(row.ProductSlug),
+			ProductName:           row.ProductName,
+			VariantName:           row.VariantName,
+			SKU:                   row.Sku,
+			Quantity:              int(row.Quantity),
+			UnitPrice:             numericToFloat(row.UnitPrice),
+			TotalPrice:            numericToFloat(row.TotalPrice),
+			CustomPrintData:       customPrint,
+			ProductImages:         images,
+			ProductType:           row.ProductType,
+			RecipientName:         row.RecipientName,
+			RecipientEmail:        row.RecipientEmail,
+			RecipientPhone:        row.RecipientPhone,
+			RecipientTitle:        row.RecipientTitle,
+			RecipientDepartment:   row.RecipientDepartment,
+			ProfileUUID:           profUUID,
+			ProfileAvatarURL:      pgtypeToString(row.ProfileAvatarUrl),
+			ProfileCreatedByOrder: row.ProfileCreatedByOrder,
+			FrontImageURL:         pgtypeToString(row.FrontImageUrl),
+			BackImageURL:          pgtypeToString(row.BackImageUrl),
+			CardUUID:              cardUUID,
+			CardSmartCode:         pgtypeToString(row.CardSmartCode),
+			CardUID:               pgtypeToString(row.CardUid),
+			CardStatus:            pgtypeToString(row.CardStatus),
+			CardIsActive:          row.CardIsActive.Bool,
+			CardIsLocked:          row.CardIsLocked.Bool,
+			RoutePath:             pgtypeToString(row.RoutePath),
+			RouteStatus:           pgtypeToString(row.RouteStatus),
+			FulfillmentStatus:     row.FulfillmentStatus,
+			ProvisioningStatus:    row.ProvisioningStatus,
+			ProvisioningError:     row.ProvisioningError,
 		})
 	}
 	return result, nil
@@ -566,6 +574,7 @@ func (r *PostgresRepository) GetItemByUUID(ctx context.Context, itemUUID uuid.UU
 		TotalPrice:          numericToFloat(row.TotalPrice),
 		CustomPrintData:     customPrint,
 		ProductImages:       images,
+		ProductType:         row.ProductType,
 		RecipientName:       row.RecipientName,
 		RecipientEmail:      row.RecipientEmail,
 		RecipientPhone:      row.RecipientPhone,
@@ -673,7 +682,7 @@ func (r *PostgresRepository) UpdateItemFulfillment(ctx context.Context, itemUUID
 }
 
 // Card & Route Provisioning (TEC-77 Integration)
-func (r *PostgresRepository) CreateProvisionedCardAndRoute(ctx context.Context, orderID, orderItemID, accountID, userID int64, profileID *int64, cardName, smartCode, activationCode, cardUID, material, colorHex string) (int64, uuid.UUID, uuid.UUID, error) {
+func (r *PostgresRepository) CreateProvisionedCardAndRoute(ctx context.Context, orderID, orderItemID, accountID, userID int64, profileID *int64, cardName, smartCode, activationCode, cardUID, cardType, material, colorHex string) (int64, uuid.UUID, uuid.UUID, error) {
 	var createdCardID int64
 	var createdCardUUID uuid.UUID
 	var createdRouteUUID uuid.UUID
@@ -691,7 +700,7 @@ func (r *PostgresRepository) CreateProvisionedCardAndRoute(ctx context.Context, 
 			ProfileID:          int64ToPgtype(profileID),
 			DirectUrl:          "",
 			CustomData:         []byte("{}"),
-			CardType:           "physical_nfc",
+			CardType:           cardType,
 			Material:           material,
 			ColorHex:           colorHex,
 			IsActive:           false, // Unactivated until scanned/entered
@@ -992,6 +1001,9 @@ func toOrderDetailFromRow(row db.GetOrderByUUIDRow) *model.OrderDetail {
 		ShippedAt:         shippedAt,
 		DeliveredAt:       deliveredAt,
 		CancelledAt:       cancelledAt,
+		RejectionReason:   pgtypeToString(row.RejectionReason),
+		FrontImageURL:     pgtypeToString(row.FrontImageUrl),
+		BackImageURL:      pgtypeToString(row.BackImageUrl),
 		CreatedAt:         row.CreatedAt.Time,
 		UpdatedAt:         row.UpdatedAt.Time,
 	}

@@ -92,6 +92,7 @@ const (
 	PermPlatformOrdersRead           = "platform.orders.read"
 	PermPlatformOrdersExport         = "platform.orders.export"
 	PermPlatformOrdersWrite          = "platform.orders.write"
+	PermPlatformOrdersApprove        = "platform.orders.approve"
 	PermPlatformCardsRead            = "platform.cards.read"
 	PermPlatformCardsWrite           = "platform.cards.write"
 	PermPlatformRoutesRead           = "platform.routes.read"

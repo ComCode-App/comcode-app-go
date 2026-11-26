@@ -172,14 +172,21 @@ func (r *Postgres) Apply(ctx context.Context, in ApplyPublicPage) error {
 				}
 				break
 			}
-			if _, err := q.CreateCanonicalRoute(ctx, db.CreateCanonicalRouteParams{
+			created, err := q.CreateCanonicalRoute(ctx, db.CreateCanonicalRouteParams{
 				Path:               in.NewPath,
 				ProfileID:          pgtype.Int8{Int64: in.ProfileID, Valid: true},
 				AccountID:          in.AccountID,
 				OwnerUserID:        pgtype.Int8{Int64: in.OwnerUserID, Valid: in.OwnerUserID != 0},
 				PresentationConfig: in.Config,
-			}); err != nil {
+			})
+			if err != nil {
 				return fmt.Errorf("create route: %w", err)
+			}
+			// A new route starts active; "locked" keeps the page closed (TEC-1317 drafts).
+			if in.Status == "locked" {
+				if err := q.SetCanonicalRouteState(ctx, db.SetCanonicalRouteStateParams{ID: created.ID, Status: "locked", PresentationConfig: created.PresentationConfig}); err != nil {
+					return fmt.Errorf("lock route: %w", err)
+				}
 			}
 		case in.Current != nil:
 			if err := q.SetCanonicalRouteState(ctx, db.SetCanonicalRouteStateParams{ID: in.Current.ID, Status: in.Status, PresentationConfig: in.Config}); err != nil {

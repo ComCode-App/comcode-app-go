@@ -24,7 +24,7 @@ WITH card AS (
         status = 'active'
     WHERE nfc_cards.activation_code = $5
       AND nfc_cards.deleted_at IS NULL
-    RETURNING nfc_cards.id, nfc_cards.uuid, nfc_cards.user_id, nfc_cards.name, nfc_cards.card_uid, nfc_cards.activation_code, nfc_cards.smart_code, nfc_cards.target_type, nfc_cards.profile_id, nfc_cards.direct_url, nfc_cards.custom_data, nfc_cards.card_type, nfc_cards.material, nfc_cards.color_hex, nfc_cards.is_active, nfc_cards.is_locked, nfc_cards.lead_capture_enabled, nfc_cards.passcode, nfc_cards.created_at, nfc_cards.updated_at, nfc_cards.deleted_at, nfc_cards.order_id, nfc_cards.order_item_id, nfc_cards.status, nfc_cards.account_id
+    RETURNING nfc_cards.id, nfc_cards.uuid, nfc_cards.user_id, nfc_cards.name, nfc_cards.card_uid, nfc_cards.activation_code, nfc_cards.smart_code, nfc_cards.target_type, nfc_cards.profile_id, nfc_cards.direct_url, nfc_cards.custom_data, nfc_cards.card_type, nfc_cards.material, nfc_cards.color_hex, nfc_cards.is_active, nfc_cards.is_locked, nfc_cards.lead_capture_enabled, nfc_cards.passcode, nfc_cards.created_at, nfc_cards.updated_at, nfc_cards.deleted_at, nfc_cards.order_id, nfc_cards.order_item_id, nfc_cards.status, nfc_cards.account_id, nfc_cards.front_image_url, nfc_cards.back_image_url
 ), card_route AS (
     UPDATE routes
     SET status = 'active',
@@ -39,7 +39,7 @@ WITH card AS (
       AND routes.deleted_at IS NULL
     RETURNING routes.id
 )
-SELECT card.id, card.uuid, card.user_id, card.name, card.card_uid, card.activation_code, card.smart_code, card.target_type, card.profile_id, card.direct_url, card.custom_data, card.card_type, card.material, card.color_hex, card.is_active, card.is_locked, card.lead_capture_enabled, card.passcode, card.created_at, card.updated_at, card.deleted_at, card.order_id, card.order_item_id, card.status, card.account_id FROM card
+SELECT card.id, card.uuid, card.user_id, card.name, card.card_uid, card.activation_code, card.smart_code, card.target_type, card.profile_id, card.direct_url, card.custom_data, card.card_type, card.material, card.color_hex, card.is_active, card.is_locked, card.lead_capture_enabled, card.passcode, card.created_at, card.updated_at, card.deleted_at, card.order_id, card.order_item_id, card.status, card.account_id, card.front_image_url, card.back_image_url FROM card
 `
 
 type ActivateCardByCodeParams struct {
@@ -76,6 +76,8 @@ type ActivateCardByCodeRow struct {
 	OrderItemID        pgtype.Int8        `json:"order_item_id"`
 	Status             string             `json:"status"`
 	AccountID          int64              `json:"account_id"`
+	FrontImageUrl      pgtype.Text        `json:"front_image_url"`
+	BackImageUrl       pgtype.Text        `json:"back_image_url"`
 }
 
 // ActivateCardByCode moves an unactivated card into the activating account and activates its
@@ -116,6 +118,8 @@ func (q *Queries) ActivateCardByCode(ctx context.Context, arg ActivateCardByCode
 		&i.OrderItemID,
 		&i.Status,
 		&i.AccountID,
+		&i.FrontImageUrl,
+		&i.BackImageUrl,
 	)
 	return i, err
 }
@@ -211,14 +215,14 @@ INSERT INTO nfc_cards (
     $16,
     $17
 )
-RETURNING id, uuid, user_id, name, card_uid, activation_code, smart_code, target_type, profile_id, direct_url, custom_data, card_type, material, color_hex, is_active, is_locked, lead_capture_enabled, passcode, created_at, updated_at, deleted_at, order_id, order_item_id, status, account_id
+RETURNING id, uuid, user_id, name, card_uid, activation_code, smart_code, target_type, profile_id, direct_url, custom_data, card_type, material, color_hex, is_active, is_locked, lead_capture_enabled, passcode, created_at, updated_at, deleted_at, order_id, order_item_id, status, account_id, front_image_url, back_image_url
 ), card_route AS (
     INSERT INTO routes (path, route_type, status, is_immutable, target_type, profile_id, card_id, account_id, owner_user_id)
     SELECT 'c/' || card.smart_code, 'card_route', 'active', true, 'profile', card.profile_id, card.id, card.account_id, card.user_id
     FROM card
     RETURNING routes.id
 )
-SELECT card.id, card.uuid, card.user_id, card.name, card.card_uid, card.activation_code, card.smart_code, card.target_type, card.profile_id, card.direct_url, card.custom_data, card.card_type, card.material, card.color_hex, card.is_active, card.is_locked, card.lead_capture_enabled, card.passcode, card.created_at, card.updated_at, card.deleted_at, card.order_id, card.order_item_id, card.status, card.account_id FROM card
+SELECT card.id, card.uuid, card.user_id, card.name, card.card_uid, card.activation_code, card.smart_code, card.target_type, card.profile_id, card.direct_url, card.custom_data, card.card_type, card.material, card.color_hex, card.is_active, card.is_locked, card.lead_capture_enabled, card.passcode, card.created_at, card.updated_at, card.deleted_at, card.order_id, card.order_item_id, card.status, card.account_id, card.front_image_url, card.back_image_url FROM card
 `
 
 type CreateCardParams struct {
@@ -267,6 +271,8 @@ type CreateCardRow struct {
 	OrderItemID        pgtype.Int8        `json:"order_item_id"`
 	Status             string             `json:"status"`
 	AccountID          int64              `json:"account_id"`
+	FrontImageUrl      pgtype.Text        `json:"front_image_url"`
+	BackImageUrl       pgtype.Text        `json:"back_image_url"`
 }
 
 // CreateCard inserts an app-created card together with its active c/{smart_code} route, so the
@@ -318,6 +324,8 @@ func (q *Queries) CreateCard(ctx context.Context, arg CreateCardParams) (CreateC
 		&i.OrderItemID,
 		&i.Status,
 		&i.AccountID,
+		&i.FrontImageUrl,
+		&i.BackImageUrl,
 	)
 	return i, err
 }
@@ -364,7 +372,7 @@ INSERT INTO nfc_cards (
     $18,
     $19
 )
-RETURNING id, uuid, user_id, name, card_uid, activation_code, smart_code, target_type, profile_id, direct_url, custom_data, card_type, material, color_hex, is_active, is_locked, lead_capture_enabled, passcode, created_at, updated_at, deleted_at, order_id, order_item_id, status, account_id
+RETURNING id, uuid, user_id, name, card_uid, activation_code, smart_code, target_type, profile_id, direct_url, custom_data, card_type, material, color_hex, is_active, is_locked, lead_capture_enabled, passcode, created_at, updated_at, deleted_at, order_id, order_item_id, status, account_id, front_image_url, back_image_url
 `
 
 type CreateProvisionedCardParams struct {
@@ -438,6 +446,8 @@ func (q *Queries) CreateProvisionedCard(ctx context.Context, arg CreateProvision
 		&i.OrderItemID,
 		&i.Status,
 		&i.AccountID,
+		&i.FrontImageUrl,
+		&i.BackImageUrl,
 	)
 	return i, err
 }
@@ -462,7 +472,7 @@ func (q *Queries) DeleteCard(ctx context.Context, arg DeleteCardParams) error {
 
 const getAccountCardByUUID = `-- name: GetAccountCardByUUID :one
 SELECT 
-    c.id, c.uuid, c.user_id, c.name, c.card_uid, c.activation_code, c.smart_code, c.target_type, c.profile_id, c.direct_url, c.custom_data, c.card_type, c.material, c.color_hex, c.is_active, c.is_locked, c.lead_capture_enabled, c.passcode, c.created_at, c.updated_at, c.deleted_at, c.order_id, c.order_item_id, c.status, c.account_id,
+    c.id, c.uuid, c.user_id, c.name, c.card_uid, c.activation_code, c.smart_code, c.target_type, c.profile_id, c.direct_url, c.custom_data, c.card_type, c.material, c.color_hex, c.is_active, c.is_locked, c.lead_capture_enabled, c.passcode, c.created_at, c.updated_at, c.deleted_at, c.order_id, c.order_item_id, c.status, c.account_id, c.front_image_url, c.back_image_url,
     p.uuid as profile_uuid,
     p.avatar_url as profile_avatar_url,
     p.primary_locale as profile_primary_locale
@@ -504,6 +514,8 @@ type GetAccountCardByUUIDRow struct {
 	OrderItemID          pgtype.Int8        `json:"order_item_id"`
 	Status               string             `json:"status"`
 	AccountID            int64              `json:"account_id"`
+	FrontImageUrl        pgtype.Text        `json:"front_image_url"`
+	BackImageUrl         pgtype.Text        `json:"back_image_url"`
 	ProfileUuid          pgtype.UUID        `json:"profile_uuid"`
 	ProfileAvatarUrl     pgtype.Text        `json:"profile_avatar_url"`
 	ProfilePrimaryLocale pgtype.Text        `json:"profile_primary_locale"`
@@ -538,6 +550,8 @@ func (q *Queries) GetAccountCardByUUID(ctx context.Context, arg GetAccountCardBy
 		&i.OrderItemID,
 		&i.Status,
 		&i.AccountID,
+		&i.FrontImageUrl,
+		&i.BackImageUrl,
 		&i.ProfileUuid,
 		&i.ProfileAvatarUrl,
 		&i.ProfilePrimaryLocale,
@@ -546,7 +560,7 @@ func (q *Queries) GetAccountCardByUUID(ctx context.Context, arg GetAccountCardBy
 }
 
 const getCardByActivationCode = `-- name: GetCardByActivationCode :one
-SELECT id, uuid, user_id, name, card_uid, activation_code, smart_code, target_type, profile_id, direct_url, custom_data, card_type, material, color_hex, is_active, is_locked, lead_capture_enabled, passcode, created_at, updated_at, deleted_at, order_id, order_item_id, status, account_id
+SELECT id, uuid, user_id, name, card_uid, activation_code, smart_code, target_type, profile_id, direct_url, custom_data, card_type, material, color_hex, is_active, is_locked, lead_capture_enabled, passcode, created_at, updated_at, deleted_at, order_id, order_item_id, status, account_id, front_image_url, back_image_url
 FROM nfc_cards
 WHERE activation_code = $1
   AND deleted_at IS NULL
@@ -582,13 +596,15 @@ func (q *Queries) GetCardByActivationCode(ctx context.Context, activationCode pg
 		&i.OrderItemID,
 		&i.Status,
 		&i.AccountID,
+		&i.FrontImageUrl,
+		&i.BackImageUrl,
 	)
 	return i, err
 }
 
 const getCardBySmartCode = `-- name: GetCardBySmartCode :one
 SELECT 
-    c.id, c.uuid, c.user_id, c.name, c.card_uid, c.activation_code, c.smart_code, c.target_type, c.profile_id, c.direct_url, c.custom_data, c.card_type, c.material, c.color_hex, c.is_active, c.is_locked, c.lead_capture_enabled, c.passcode, c.created_at, c.updated_at, c.deleted_at, c.order_id, c.order_item_id, c.status, c.account_id,
+    c.id, c.uuid, c.user_id, c.name, c.card_uid, c.activation_code, c.smart_code, c.target_type, c.profile_id, c.direct_url, c.custom_data, c.card_type, c.material, c.color_hex, c.is_active, c.is_locked, c.lead_capture_enabled, c.passcode, c.created_at, c.updated_at, c.deleted_at, c.order_id, c.order_item_id, c.status, c.account_id, c.front_image_url, c.back_image_url,
     p.uuid as profile_uuid,
     p.avatar_url as profile_avatar_url,
     p.primary_locale as profile_primary_locale
@@ -624,6 +640,8 @@ type GetCardBySmartCodeRow struct {
 	OrderItemID          pgtype.Int8        `json:"order_item_id"`
 	Status               string             `json:"status"`
 	AccountID            int64              `json:"account_id"`
+	FrontImageUrl        pgtype.Text        `json:"front_image_url"`
+	BackImageUrl         pgtype.Text        `json:"back_image_url"`
 	ProfileUuid          pgtype.UUID        `json:"profile_uuid"`
 	ProfileAvatarUrl     pgtype.Text        `json:"profile_avatar_url"`
 	ProfilePrimaryLocale pgtype.Text        `json:"profile_primary_locale"`
@@ -659,6 +677,8 @@ func (q *Queries) GetCardBySmartCode(ctx context.Context, smartCode string) (Get
 		&i.OrderItemID,
 		&i.Status,
 		&i.AccountID,
+		&i.FrontImageUrl,
+		&i.BackImageUrl,
 		&i.ProfileUuid,
 		&i.ProfileAvatarUrl,
 		&i.ProfilePrimaryLocale,
@@ -721,7 +741,7 @@ func (q *Queries) ListAccountCardUUIDsForBulk(ctx context.Context, arg ListAccou
 
 const listAccountCards = `-- name: ListAccountCards :many
 SELECT 
-    c.id, c.uuid, c.user_id, c.name, c.card_uid, c.activation_code, c.smart_code, c.target_type, c.profile_id, c.direct_url, c.custom_data, c.card_type, c.material, c.color_hex, c.is_active, c.is_locked, c.lead_capture_enabled, c.passcode, c.created_at, c.updated_at, c.deleted_at, c.order_id, c.order_item_id, c.status, c.account_id,
+    c.id, c.uuid, c.user_id, c.name, c.card_uid, c.activation_code, c.smart_code, c.target_type, c.profile_id, c.direct_url, c.custom_data, c.card_type, c.material, c.color_hex, c.is_active, c.is_locked, c.lead_capture_enabled, c.passcode, c.created_at, c.updated_at, c.deleted_at, c.order_id, c.order_item_id, c.status, c.account_id, c.front_image_url, c.back_image_url,
     p.uuid as profile_uuid,
     p.avatar_url as profile_avatar_url,
     p.primary_locale as profile_primary_locale,
@@ -781,6 +801,8 @@ type ListAccountCardsRow struct {
 	OrderItemID          pgtype.Int8        `json:"order_item_id"`
 	Status               string             `json:"status"`
 	AccountID            int64              `json:"account_id"`
+	FrontImageUrl        pgtype.Text        `json:"front_image_url"`
+	BackImageUrl         pgtype.Text        `json:"back_image_url"`
 	ProfileUuid          pgtype.UUID        `json:"profile_uuid"`
 	ProfileAvatarUrl     pgtype.Text        `json:"profile_avatar_url"`
 	ProfilePrimaryLocale pgtype.Text        `json:"profile_primary_locale"`
@@ -829,6 +851,8 @@ func (q *Queries) ListAccountCards(ctx context.Context, arg ListAccountCardsPara
 			&i.OrderItemID,
 			&i.Status,
 			&i.AccountID,
+			&i.FrontImageUrl,
+			&i.BackImageUrl,
 			&i.ProfileUuid,
 			&i.ProfileAvatarUrl,
 			&i.ProfilePrimaryLocale,
@@ -915,7 +939,7 @@ SET
 WHERE uuid = $15
   AND account_id = $16
   AND deleted_at IS NULL
-RETURNING id, uuid, user_id, name, card_uid, activation_code, smart_code, target_type, profile_id, direct_url, custom_data, card_type, material, color_hex, is_active, is_locked, lead_capture_enabled, passcode, created_at, updated_at, deleted_at, order_id, order_item_id, status, account_id
+RETURNING id, uuid, user_id, name, card_uid, activation_code, smart_code, target_type, profile_id, direct_url, custom_data, card_type, material, color_hex, is_active, is_locked, lead_capture_enabled, passcode, created_at, updated_at, deleted_at, order_id, order_item_id, status, account_id, front_image_url, back_image_url
 `
 
 type UpdateCardParams struct {
@@ -983,6 +1007,8 @@ func (q *Queries) UpdateCard(ctx context.Context, arg UpdateCardParams) (NfcCard
 		&i.OrderItemID,
 		&i.Status,
 		&i.AccountID,
+		&i.FrontImageUrl,
+		&i.BackImageUrl,
 	)
 	return i, err
 }

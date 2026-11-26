@@ -7,6 +7,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/orders/handler"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/stepup"
 )
 
 func RegisterRoutes(
@@ -14,8 +15,13 @@ func RegisterRoutes(
 	h *handler.Handler,
 	tokens *jwt.Manager,
 	loader middleware.IdentityLoader,
+	stepUp *stepup.Service,
 ) {
 	authn := middleware.Authenticate(tokens, loader)
+	requireStepUp := func(next http.Handler) http.Handler { return next }
+	if stepUp != nil {
+		requireStepUp = middleware.RequireStepUp(stepUp)
+	}
 	require := func(slug string) func(http.Handler) http.Handler {
 		return middleware.RequirePermission(slug)
 	}
@@ -26,11 +32,20 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/platform/orders", authn(require(rbac.PermPlatformOrdersRead)(http.HandlerFunc(h.List))))
 	mux.Handle("POST /v1/platform/orders", authn(require(rbac.PermPlatformOrdersWrite)(http.HandlerFunc(h.Create))))
 	mux.Handle("POST /v1/platform/orders/bulk", authn(require(rbac.PermPlatformOrdersWrite)(http.HandlerFunc(h.Create))))
+	// Card design images for the order being placed (TEC-1320).
+	mux.Handle("POST /v1/platform/orders/card-images", authn(require(rbac.PermPlatformOrdersWrite)(http.HandlerFunc(h.UploadCardImage))))
 	mux.Handle("GET /v1/platform/orders/{uuid}", authn(require(rbac.PermPlatformOrdersRead)(http.HandlerFunc(h.Get))))
 	mux.Handle("GET /v1/platform/orders/{uuid}/manifest/qr-codes", authn(require(rbac.PermPlatformOrdersRead)(http.HandlerFunc(h.ManifestQRCodes))))
 	mux.Handle("POST /v1/platform/orders/{uuid}/provision", authn(require(rbac.PermPlatformOrdersWrite)(http.HandlerFunc(h.ProvisionOrder))))
 	mux.Handle("POST /v1/platform/orders/{uuid}/items/{itemUuid}/provision", authn(require(rbac.PermPlatformOrdersWrite)(http.HandlerFunc(h.ProvisionItem))))
 	mux.Handle("PUT /v1/platform/orders/{uuid}/items/bulk", authn(require(rbac.PermPlatformOrdersWrite)(http.HandlerFunc(h.BulkUpdateItems))))
+	// Company bulk order approval (TEC-1317): step-up and platform.orders.approve.
+	mux.Handle("POST /v1/platform/orders/{uuid}/approve", middleware.Chain(
+		http.HandlerFunc(h.ApproveOrder), authn, require(rbac.PermPlatformOrdersApprove), requireStepUp,
+	))
+	mux.Handle("POST /v1/platform/orders/{uuid}/reject", middleware.Chain(
+		http.HandlerFunc(h.RejectOrder), authn, require(rbac.PermPlatformOrdersApprove), requireStepUp,
+	))
 	mux.Handle("PUT /v1/platform/orders/{uuid}/status", authn(require(rbac.PermPlatformOrdersWrite)(http.HandlerFunc(h.UpdateStatus))))
 	mux.Handle("PUT /v1/platform/orders/{uuid}/payment", authn(require(rbac.PermPlatformOrdersWrite)(http.HandlerFunc(h.UpdatePaymentStatus))))
 	mux.Handle("PUT /v1/platform/orders/{uuid}/fulfillment", authn(require(rbac.PermPlatformOrdersWrite)(http.HandlerFunc(h.UpdateFulfillmentStatus))))

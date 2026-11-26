@@ -49,5 +49,9 @@
   "codes.oauth_invalid_token": "Giriş doğrulanamadı. Lütfen tekrar deneyin.",
   "codes.oauth_account_not_linked": "Bu e-posta adresiyle bir hesap zaten var. Mevcut yönteminizle giriş yapın, ardından bu sağlayıcıyı profilinizden bağlayın.",
   "codes.oauth_email_unverified": "Bu sağlayıcı doğrulanmış bir e-posta adresi bildirmedi, bu yüzden girişte kullanılamaz.",
-  "codes.registration_disabled": "Yeni kayıtlar şu anda kapalı."
+  "codes.registration_disabled": "Yeni kayıtlar şu anda kapalı.",
+  "codes.order_awaiting_approval": "Bu sipariş onay bekliyor. Önce onaylayın ya da reddedin.",
+  "codes.order_not_awaiting_approval": "Bu sipariş artık onay beklemiyor.",
+  "codes.profile_quota_exceeded": "Firma profil limitini aşıyor.",
+  "codes.storage_unavailable": "Dosya depolama şu an kullanılamıyor. Daha sonra tekrar deneyin."
 }

@@ -4367,6 +4367,81 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/profiles/{uuid}/company-shares:
+    get:
+      tags: [Profiles]
+      operationId: listProfileCompanyShares
+      summary: Companies the caller belongs to, with the share state of this profile
+      description: "Requires `app.profiles.read`. Profiles of the active personal account only (TEC-1315); in a company account the list is empty. Sharing is off by default."
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Share targets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeProfileCompanyShareTargets"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/profiles/{uuid}/company-shares/{company_uuid}:
+    put:
+      tags: [Profiles]
+      operationId: shareProfileWithCompany
+      summary: Share a personal profile with a company the caller belongs to
+      description: "Requires `app.profiles.write`. Active personal account only (TEC-1315). The company's owners and admins see the profile read-only. Idempotent; written to the activity log. The share is removed when the member leaves or is removed from the company."
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: company_uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Shared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeProfileCompanyShareState"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Profiles]
+      operationId: unshareProfileWithCompany
+      summary: Stop sharing a personal profile with a company
+      description: "Requires `app.profiles.write`. Active personal account only (TEC-1315). Idempotent; written to the activity log."
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: company_uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Not shared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeProfileCompanyShareState"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/backgrounds:
     get:
       tags: [Backgrounds]
@@ -6081,6 +6156,46 @@ paths:
               schema:
                 $ref: "#/components/schemas/EnvelopeSimpleSuccess"
 
+  /v1/platform/orders/card-images:
+    post:
+      tags: [Commerce Orders]
+      operationId: uploadPlatformOrderCardImage
+      summary: Upload a card design image for an order being placed
+      description: |
+        Requires `platform.orders.write` (TEC-1320). Multipart field `image`: PNG, JPEG or WebP up
+        to 5 MB, the type comes from the bytes. Returns the API-owned `url` to send as
+        `front_image_url` / `back_image_url` of the order or an item; provisioning copies the
+        item's (else the order's) images onto the card. Other URLs are rejected on create.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        "201":
+          description: Stored image
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data:
+                    type: object
+                    required: [url]
+                    properties:
+                      url: { type: string }
+                  meta: { $ref: "#/components/schemas/ResponseMeta" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/platform/orders/bulk:
     post:
       tags: [Commerce Orders]
@@ -6276,6 +6391,7 @@ paths:
         Moving an order to `refunded` first refunds its online payment at the provider (TEC-935,
         same as `POST /v1/platform/orders/{uuid}/refunds` without an amount) and needs a step-up
         grant. `502 REFUND_FAILED` leaves the order unchanged; `409 REFUND_IN_PROGRESS`.
+        `409 ORDER_AWAITING_APPROVAL` for an order awaiting approval (use approve/reject).
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/ResourceUUID"
@@ -6314,6 +6430,76 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeOrderDetail"
+
+  /v1/platform/orders/{uuid}/approve:
+    post:
+      tags: [Commerce Orders]
+      operationId: approvePlatformOrder
+      summary: Approve a company bulk order awaiting approval
+      description: |
+        Requires `platform.orders.approve` and a step-up grant (TEC-1317). Moves the order from
+        `awaiting_approval` to `pending` so the customer can pay, and notifies the customer.
+        `409 PROFILE_QUOTA_EXCEEDED` while the company holds more profiles than its plan allows
+        (error details `missing`, `used`, `limit`); `409 ORDER_NOT_AWAITING_APPROVAL` otherwise.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Order approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrderDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/platform/orders/{uuid}/reject:
+    post:
+      tags: [Commerce Orders]
+      operationId: rejectPlatformOrder
+      summary: Reject a company bulk order awaiting approval
+      description: |
+        Requires `platform.orders.approve` and a step-up grant (TEC-1317). Cancels the order with
+        the required reason, deletes the draft profiles the order created (existing profiles
+        matched by e-mail are kept) and notifies the customer with the reason.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 2000 }
+      responses:
+        "200":
+          description: Order rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrderDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /v1/platform/orders/{uuid}/status:
     put:
@@ -6538,6 +6724,11 @@ paths:
       tags: [Commerce Orders]
       operationId: createMyBulkOrder
       summary: Place a bulk order with multiple recipients/cards
+      description: |
+        From a company account (TEC-1317) the order opens as `awaiting_approval`: each recipient
+        gets a profile in the company (an existing profile with the recipient's e-mail is linked,
+        otherwise a draft with a closed public page is created). It cannot be paid until a super
+        admin approves it; drafts go live once the order is paid. Personal accounts keep `pending`.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -11248,6 +11439,29 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /v1/company/shared-profiles:
+    get:
+      tags: [App]
+      operationId: listCompanySharedProfiles
+      summary: Personal profiles members shared with the active company (read-only)
+      description: "Requires `app.profiles.read` and an owner/admin role in the active company account (TEC-1315). Only profiles a current member explicitly shared with this company are listed; other members get 403."
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Shared profile page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCompanySharedProfilePage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /v1/company/member-profiles/meta:
     get:
       tags: [App]
@@ -12632,6 +12846,61 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/platform/cards/{uuid}/images/{side}:
+    put:
+      tags: [Platform Support]
+      operationId: uploadPlatformCardImage
+      summary: Upload a card face's design image
+      description: |
+        Stores the front or back design image of a card (TEC-1320), multipart field `image`.
+        PNG, JPEG or WebP up to 5 MB; the type comes from the bytes. Any aspect ratio is accepted
+        (previews crop with `object-fit: cover`). The previous image object is deleted. Writes
+        `card.image_updated` to the activity log. Requires `platform.cards.write` and a step-up grant.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - { name: side, in: path, required: true, schema: { type: string, enum: [front, back] } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        "200":
+          description: Card with the new image
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeSupportCard" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Platform Support]
+      operationId: removePlatformCardImage
+      summary: Remove a card face's design image
+      description: |
+        Clears the front or back design image; previews show the default artwork again (TEC-1320).
+        Writes `card.image_removed`. Requires `platform.cards.write` and a step-up grant.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - { name: side, in: path, required: true, schema: { type: string, enum: [front, back] } }
+      responses:
+        "200":
+          description: Card without the image
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeSupportCard" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /v1/platform/routes:
     get:
@@ -15670,6 +15939,80 @@ components:
             offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
+    ProfileCompanyShareTarget:
+      type: object
+      required: [company_uuid, company_name, role, shared]
+      properties:
+        company_uuid: { type: string, format: uuid }
+        company_name: { type: string }
+        role: { type: string, description: "Caller's role in the company" }
+        shared: { type: boolean }
+
+    EnvelopeProfileCompanyShareTargets:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ProfileCompanyShareTarget" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeProfileCompanyShareState:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [shared]
+          properties:
+            shared: { type: boolean }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    CompanySharedProfile:
+      type: object
+      required: [uuid, first_name, last_name, title, company_name, avatar_url, completion_rate, username, shared_at, member]
+      properties:
+        uuid: { type: string, format: uuid }
+        first_name: { type: string }
+        last_name: { type: string }
+        title: { type: string }
+        company_name: { type: string }
+        avatar_url: { type: string }
+        completion_rate: { type: integer }
+        username: { type: string, description: "Public path; empty until assigned" }
+        shared_at: { type: string, format: date-time }
+        member:
+          type: object
+          required: [user_uuid, email, name, surname]
+          properties:
+            user_uuid: { type: string, format: uuid }
+            email: { type: string }
+            name: { type: string }
+            surname: { type: string }
+
+    EnvelopeCompanySharedProfilePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/CompanySharedProfile" }
+            total: { type: integer }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
     CompanyMemberProfileLinkInput:
       type: object
       required: [profile_uuid]
@@ -17733,6 +18076,7 @@ components:
         total_price: { type: number }
         custom_print_data: { type: object }
         product_images: { type: array, items: { type: string } }
+        product_type: { type: string, description: 'Type of the ordered product, e.g. physical_card or badge.' }
         recipient_name: { type: string }
         recipient_email: { type: string }
         recipient_phone: { type: string }
@@ -17740,6 +18084,9 @@ components:
         recipient_department: { type: string }
         profile_uuid: { type: string, format: uuid }
         profile_avatar_url: { type: string }
+        profile_created_by_order: { type: boolean, description: "The draft profile was created by this order (TEC-1317)" }
+        front_image_url: { type: string, description: "Card front design (TEC-1320)" }
+        back_image_url: { type: string, description: "Card back design (TEC-1320)" }
         card_uuid: { type: string, format: uuid }
         card_smart_code: { type: string }
         card_uid: { type: string }
@@ -17807,7 +18154,7 @@ components:
         customer_name: { type: string }
         customer_surname: { type: string }
         company_name: { type: string }
-        status: { type: string }
+        status: { type: string, description: "Pipeline status. `awaiting_approval` (TEC-1317): a company bulk order waiting for platform approval; it cannot be paid until approved." }
         subtotal: { type: number }
         tax_total: { type: number }
         shipping_total: { type: number }
@@ -17829,6 +18176,9 @@ components:
         shipped_at: { type: string, format: date-time }
         delivered_at: { type: string, format: date-time }
         cancelled_at: { type: string, format: date-time }
+        rejection_reason: { type: string, description: "Why a super admin rejected the order (TEC-1317)" }
+        front_image_url: { type: string, description: "Card front design (TEC-1320)" }
+        back_image_url: { type: string, description: "Card back design (TEC-1320)" }
         items: { type: array, items: { $ref: "#/components/schemas/OrderItemSummary" } }
         asset_requests: { type: array, items: { $ref: "#/components/schemas/AssetRequestSummary" } }
         created_at: { type: string, format: date-time }
@@ -17861,6 +18211,8 @@ components:
         recipient_department: { type: string }
         profile_uuid: { type: string, format: uuid }
         idempotency_key: { type: string }
+        front_image_url: { type: string, description: "Card front design (TEC-1320): a URL from POST /v1/platform/orders/card-images. Platform orders only; ignored on /v1/orders." }
+        back_image_url: { type: string, description: "Card back design (TEC-1320), as front_image_url." }
 
     CreateOrderInput:
       type: object
@@ -17882,6 +18234,8 @@ components:
         admin_note: { type: string }
         payment_provider: { type: string }
         metadata: { type: object }
+        front_image_url: { type: string, description: "Card front design for items without their own (TEC-1320): a URL from POST /v1/platform/orders/card-images. Platform orders only; ignored on /v1/orders." }
+        back_image_url: { type: string, description: "Card back design (TEC-1320), as front_image_url." }
 
     BulkUpdateOrderItemsInput:
       type: object
@@ -18076,6 +18430,9 @@ components:
         is_active: { type: boolean }
         is_locked: { type: boolean }
         activation_status: { type: string, enum: [pending, active, retired] }
+        card_type: { type: string, description: "physical_nfc, badge (vertical badge preview), ..." }
+        front_image_url: { type: string, description: "Front design image (TEC-1320); absent = default artwork" }
+        back_image_url: { type: string, description: "Back design image (TEC-1320); absent = default artwork" }
         account: { $ref: "#/components/schemas/SupportAccountRef" }
         owner: { $ref: "#/components/schemas/SupportUserRef" }
         profile: { $ref: "#/components/schemas/SupportProfileRef" }
@@ -18338,9 +18695,11 @@ components:
         profile_locale: { type: string }
         direct_url: { type: string }
         custom_data: { type: object }
-        card_type: { type: string, enum: [physical_nfc, metal_card, wood_card, pvc_card, digital_only] }
+        card_type: { type: string, enum: [physical_nfc, metal_card, wood_card, pvc_card, digital_only, badge] }
         material: { type: string }
         color_hex: { type: string }
+        front_image_url: { type: string, description: "Front design image (TEC-1320); absent = default artwork" }
+        back_image_url: { type: string, description: "Back design image (TEC-1320); absent = default artwork" }
         is_active: { type: boolean }
         is_locked: { type: boolean }
         lead_capture_enabled: { type: boolean }
@@ -18364,9 +18723,11 @@ components:
         profile_locale: { type: string }
         direct_url: { type: string }
         custom_data: { type: object }
-        card_type: { type: string, enum: [physical_nfc, metal_card, wood_card, pvc_card, digital_only] }
+        card_type: { type: string, enum: [physical_nfc, metal_card, wood_card, pvc_card, digital_only, badge] }
         material: { type: string }
         color_hex: { type: string }
+        front_image_url: { type: string, description: "Front design image (TEC-1320); absent = default artwork" }
+        back_image_url: { type: string, description: "Back design image (TEC-1320); absent = default artwork" }
         is_active: { type: boolean }
         is_locked: { type: boolean }
         lead_capture_enabled: { type: boolean }

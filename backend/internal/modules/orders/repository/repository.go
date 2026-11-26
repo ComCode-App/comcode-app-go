@@ -41,13 +41,25 @@ type Repository interface {
 	UpdateItemFulfillment(ctx context.Context, itemUUID uuid.UUID, fulfillmentStatus string) (*model.OrderItemSummary, error)
 
 	// Card & Route Provisioning (TEC-77 Integration)
-	CreateProvisionedCardAndRoute(ctx context.Context, orderID, orderItemID, accountID, userID int64, profileID *int64, cardName, smartCode, activationCode, cardUID, material, colorHex string) (cardID int64, cardUUID uuid.UUID, routeUUID uuid.UUID, err error)
+	CreateProvisionedCardAndRoute(ctx context.Context, orderID, orderItemID, accountID, userID int64, profileID *int64, cardName, smartCode, activationCode, cardUID, cardType, material, colorHex string) (cardID int64, cardUUID uuid.UUID, routeUUID uuid.UUID, err error)
 	GetProfileIDByUUID(ctx context.Context, profileUUID uuid.UUID, accountID int64) (*int64, error)
 	GetAccountIDByUUID(ctx context.Context, accountUUID uuid.UUID) (*int64, error)
 	GetPersonalAccountIDByUserUUID(ctx context.Context, userUUID uuid.UUID) (*int64, error)
 	GetUserIDByUUID(ctx context.Context, userUUID uuid.UUID) (*int64, error)
 	ListManifestCards(ctx context.Context, orderUUID uuid.UUID) ([]model.ManifestCard, error)
 	RetireCardRoutes(ctx context.Context, orderID int64) ([]model.RetiredCardRoute, error)
+
+	// Company bulk order approval (TEC-1317)
+	FindAccountProfileByEmail(ctx context.Context, accountID int64, email string) (int64, uuid.UUID, bool, error)
+	MarkItemProfileCreated(ctx context.Context, orderID int64, itemUUID uuid.UUID) error
+	ListOrderCreatedProfiles(ctx context.Context, accountID, orderID int64) ([]uuid.UUID, error)
+	OpenOrderDraftProfiles(ctx context.Context, accountID, orderID int64) ([]uuid.UUID, error)
+	ReviewOrder(ctx context.Context, id uuid.UUID, from, to, rejectionReason string, actorUserID *int64) (*model.OrderDetail, error)
+
+	// Card design images (TEC-1320)
+	SetOrderCardImages(ctx context.Context, orderID int64, front, back string) error
+	SetOrderItemCardImages(ctx context.Context, orderID int64, itemUUID uuid.UUID, front, back string) error
+	CopyOrderCardImagesToCard(ctx context.Context, accountID, cardID, orderItemID int64) error
 
 	// Asset Requests
 	ListAssetRequests(ctx context.Context, orderID int64) ([]model.AssetRequestSummary, error)

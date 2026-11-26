@@ -117,6 +117,10 @@ export function getOrdersColumns({
             variant: "default" | "secondary" | "danger" | "outline";
           }
         > = {
+          awaiting_approval: {
+            labelKey: "orders.status_awaiting_approval",
+            variant: "outline",
+          },
           pending: { labelKey: "orders.status_pending", variant: "outline" },
           paid: { labelKey: "orders.status_paid", variant: "secondary" },
           design_pending: {

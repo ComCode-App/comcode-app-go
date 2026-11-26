@@ -33,6 +33,8 @@ type Repository interface {
 	GetRoute(ctx context.Context, id uuid.UUID) (*model.Route, error)
 	// ReleasePath ends every quarantine hold on the path and returns the routes that held it.
 	ReleasePath(ctx context.Context, path string) ([]uuid.UUID, error)
+	// SetCardImage sets one face's design image URL; "" clears it (TEC-1320).
+	SetCardImage(ctx context.Context, cardID int64, side, url string) error
 }
 
 type Postgres struct {
@@ -244,6 +246,8 @@ func cardFromRow(row db.PlatformGetCardRow) model.Card {
 		ID: row.ID, UUID: row.Uuid, Name: row.Name, SmartCode: row.SmartCode, CardUID: row.CardUid.String,
 		LegacySerial: row.LegacySerial, TargetType: row.TargetType, DirectURL: row.DirectUrl,
 		IsActive: row.IsActive, IsLocked: row.IsLocked,
+		FrontImageURL: row.FrontImageUrl.String, BackImageURL: row.BackImageUrl.String,
+		CardType:  row.CardType,
 		Account:   model.AccountRef{UUID: row.AccountUuid, Name: row.AccountName, Type: row.AccountType},
 		Owner:     model.UserRef{UUID: row.OwnerUuid, Email: row.OwnerEmail, Name: row.OwnerName, Surname: row.OwnerSurname},
 		CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time,
@@ -274,4 +278,11 @@ func timePtr(t pgtype.Timestamptz) *time.Time {
 	}
 	v := t.Time
 	return &v
+}
+
+func (r *Postgres) SetCardImage(ctx context.Context, cardID int64, side, url string) error {
+	_, err := r.q.PlatformSetCardImage(ctx, db.PlatformSetCardImageParams{
+		CardID: cardID, Side: side, Url: pgtype.Text{String: url, Valid: url != ""},
+	})
+	return err
 }

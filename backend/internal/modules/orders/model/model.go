@@ -34,6 +34,8 @@ type OrderItemSummary struct {
 	TotalPrice      float64        `json:"total_price"`
 	CustomPrintData map[string]any `json:"custom_print_data,omitempty"`
 	ProductImages   []string       `json:"product_images,omitempty"`
+	// ProductType is the product's type, e.g. physical_card or badge (TEC-1320).
+	ProductType string `json:"product_type,omitempty"`
 
 	// Recipient Details
 	RecipientName       string `json:"recipient_name"`
@@ -45,6 +47,11 @@ type OrderItemSummary struct {
 	// Profile Link
 	ProfileUUID      *string `json:"profile_uuid,omitempty"`
 	ProfileAvatarURL string  `json:"profile_avatar_url,omitempty"`
+	// ProfileCreatedByOrder marks a draft profile the order created (TEC-1317).
+	ProfileCreatedByOrder bool `json:"profile_created_by_order"`
+	// FrontImageURL / BackImageURL: this item's own card design (TEC-1320).
+	FrontImageURL string `json:"front_image_url,omitempty"`
+	BackImageURL  string `json:"back_image_url,omitempty"`
 
 	// Card Link & Route (TEC-77)
 	CardUUID      *string `json:"card_uuid,omitempty"`
@@ -98,47 +105,52 @@ type OrderSummary struct {
 }
 
 type OrderDetail struct {
-	ID                int64                 `json:"-"`
-	UUID              string                `json:"uuid"`
-	OrderNumber       string                `json:"order_number"`
-	OrderType         string                `json:"order_type"`
-	AccountID         int64                 `json:"-"`
-	AccountUUID       string                `json:"account_uuid"`
-	AccountName       string                `json:"account_name"`
-	AccountType       string                `json:"account_type"`
-	UserID            int64                 `json:"-"`
-	UserUUID          string                `json:"user_uuid"`
-	CustomerEmail     string                `json:"customer_email"`
-	CustomerName      string                `json:"customer_name"`
-	CustomerSurname   string                `json:"customer_surname"`
-	CompanyName       string                `json:"company_name,omitempty"`
-	Status            string                `json:"status"`
-	FulfillmentStatus string                `json:"fulfillment_status"`
-	Subtotal          float64               `json:"subtotal"`
-	TaxTotal          float64               `json:"tax_total"`
-	ShippingTotal     float64               `json:"shipping_total"`
-	DiscountTotal     float64               `json:"discount_total"`
-	GrandTotal        float64               `json:"grand_total"`
-	Currency          string                `json:"currency"`
-	PaymentStatus     string                `json:"payment_status"`
-	PaymentProvider   string                `json:"payment_provider"`
-	PaymentReference  string                `json:"payment_reference"`
-	ShippingAddress   Address               `json:"shipping_address"`
-	BillingAddress    Address               `json:"billing_address"`
-	ShippingCarrier   string                `json:"shipping_carrier"`
-	TrackingNumber    string                `json:"tracking_number"`
-	TrackingURL       string                `json:"tracking_url"`
-	CustomerNote      string                `json:"customer_note"`
-	AdminNote         string                `json:"admin_note"`
-	Metadata          map[string]any        `json:"metadata,omitempty"`
-	PaidAt            *time.Time            `json:"paid_at,omitempty"`
-	ShippedAt         *time.Time            `json:"shipped_at,omitempty"`
-	DeliveredAt       *time.Time            `json:"delivered_at,omitempty"`
-	CancelledAt       *time.Time            `json:"cancelled_at,omitempty"`
-	Items             []OrderItemSummary    `json:"items"`
-	AssetRequests     []AssetRequestSummary `json:"asset_requests"`
-	CreatedAt         time.Time             `json:"created_at"`
-	UpdatedAt         time.Time             `json:"updated_at"`
+	ID                int64          `json:"-"`
+	UUID              string         `json:"uuid"`
+	OrderNumber       string         `json:"order_number"`
+	OrderType         string         `json:"order_type"`
+	AccountID         int64          `json:"-"`
+	AccountUUID       string         `json:"account_uuid"`
+	AccountName       string         `json:"account_name"`
+	AccountType       string         `json:"account_type"`
+	UserID            int64          `json:"-"`
+	UserUUID          string         `json:"user_uuid"`
+	CustomerEmail     string         `json:"customer_email"`
+	CustomerName      string         `json:"customer_name"`
+	CustomerSurname   string         `json:"customer_surname"`
+	CompanyName       string         `json:"company_name,omitempty"`
+	Status            string         `json:"status"`
+	FulfillmentStatus string         `json:"fulfillment_status"`
+	Subtotal          float64        `json:"subtotal"`
+	TaxTotal          float64        `json:"tax_total"`
+	ShippingTotal     float64        `json:"shipping_total"`
+	DiscountTotal     float64        `json:"discount_total"`
+	GrandTotal        float64        `json:"grand_total"`
+	Currency          string         `json:"currency"`
+	PaymentStatus     string         `json:"payment_status"`
+	PaymentProvider   string         `json:"payment_provider"`
+	PaymentReference  string         `json:"payment_reference"`
+	ShippingAddress   Address        `json:"shipping_address"`
+	BillingAddress    Address        `json:"billing_address"`
+	ShippingCarrier   string         `json:"shipping_carrier"`
+	TrackingNumber    string         `json:"tracking_number"`
+	TrackingURL       string         `json:"tracking_url"`
+	CustomerNote      string         `json:"customer_note"`
+	AdminNote         string         `json:"admin_note"`
+	Metadata          map[string]any `json:"metadata,omitempty"`
+	PaidAt            *time.Time     `json:"paid_at,omitempty"`
+	ShippedAt         *time.Time     `json:"shipped_at,omitempty"`
+	DeliveredAt       *time.Time     `json:"delivered_at,omitempty"`
+	CancelledAt       *time.Time     `json:"cancelled_at,omitempty"`
+	// RejectionReason is why a super admin rejected the order (TEC-1317); empty otherwise.
+	RejectionReason string `json:"rejection_reason,omitempty"`
+	// FrontImageURL / BackImageURL: the order's card design (TEC-1320).
+	FrontImageURL string                `json:"front_image_url,omitempty"`
+	BackImageURL  string                `json:"back_image_url,omitempty"`
+	Items         []OrderItemSummary    `json:"items"`
+	AssetRequests []AssetRequestSummary `json:"asset_requests"`
+	CreatedAt     time.Time             `json:"created_at"`
+	UpdatedAt     time.Time             `json:"updated_at"`
 }
 
 type OrderOverviewKPIs struct {
@@ -163,6 +175,9 @@ type CreateOrderItemInput struct {
 	RecipientDepartment string         `json:"recipient_department,omitempty"`
 	ProfileUUID         *string        `json:"profile_uuid,omitempty"`
 	IdempotencyKey      string         `json:"idempotency_key,omitempty"`
+	// FrontImageURL / BackImageURL: this recipient's card design (TEC-1320), platform orders only.
+	FrontImageURL string `json:"front_image_url,omitempty"`
+	BackImageURL  string `json:"back_image_url,omitempty"`
 }
 
 type CreateOrderInput struct {
@@ -177,6 +192,12 @@ type CreateOrderInput struct {
 	AdminNote       string                 `json:"admin_note,omitempty"`
 	PaymentProvider string                 `json:"payment_provider,omitempty"`
 	Metadata        map[string]any         `json:"metadata,omitempty"`
+	// FrontImageURL / BackImageURL: card design for items without their own (TEC-1320), platform
+	// orders only.
+	FrontImageURL string `json:"front_image_url,omitempty"`
+	BackImageURL  string `json:"back_image_url,omitempty"`
+	// InitialStatus is set by the service, never by clients ("" = pending).
+	InitialStatus string `json:"-"`
 }
 
 type UpdateOrderStatusInput struct {

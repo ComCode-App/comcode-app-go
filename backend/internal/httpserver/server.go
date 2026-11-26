@@ -134,6 +134,9 @@ import (
 	profileshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profiles/handler"
 	profilesrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profiles/repository"
 	profilesusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profiles/usecase"
+	profilesharesmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileshares"
+	profileshareshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileshares/handler"
+	profilesharesusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileshares/usecase"
 	profileverificationsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileverifications"
 	profileverificationshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileverifications/handler"
 	profileverificationsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileverifications/usecase"
@@ -514,6 +517,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	companyprofilesmodule.RegisterRoutes(mux, companyprofileshandler.New(
 		companyprofilesusecase.NewService(deps.Queries), companyBulk,
 	), tokens, loader)
+	profilesharesmodule.RegisterRoutes(mux, profileshareshandler.New(
+		profilesharesusecase.NewService(deps.Queries, activityRec),
+	), tokens, loader)
 	companybrandingmodule.RegisterRoutes(mux, companybrandinghandler.New(companyBrandingSvc), tokens, loader)
 	sysSvc := settingsusecase.NewSystemService(cfg, deps.DB, deps.Redis, deps.Storage, searchClient)
 	settingsmodule.RegisterRoutes(mux, settingshandler.New(settingsusecase.New(deps.Queries), deps.Storage, sysSvc), tokens, loader)
@@ -565,10 +571,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	ordersSvc.SetRouteCache(routeCache)
 	ordersSvc.SetSearchIndexer(searchIndexer)
 	ordersSvc.SetWebhooks(webhooksSvc)
+	ordersSvc.SetBulkApproval(profilesSvc, entitlementSvc)
 	ordersHandler := ordershandler.New(ordersSvc)
 	ordersHandler.SetActivity(activityRec)
 	ordersHandler.SetStepUp(stepUpSvc)
-	ordersmodule.RegisterRoutes(mux, ordersHandler, tokens, loader)
+	ordersmodule.RegisterRoutes(mux, ordersHandler, tokens, loader, stepUpSvc)
 	routesRepo := routesrepo.NewPostgres(deps.Queries)
 	routesSvc := routesusecase.NewService(routesRepo, cfg.Auth.FrontendURL, collector)
 	routesSvc.SetQR(routesRepo, deps.Storage)
@@ -592,6 +599,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	cardsmodule.RegisterRoutes(mux, cardshandler.New(cardsSvc, ratelimit.New(deps.Redis, cfg.App.Env)), tokens, loader)
 	// Platform card and route support screens (TEC-950).
 	supportSvc := platformsupportusecase.New(platformsupportrepo.NewPostgres(deps.DB, deps.Queries), routeCache, activityRec)
+	supportSvc.SetStorage(deps.Storage)
 	supportSvc.SetSearchIndexer(searchIndexer)
 	platformsupportmodule.RegisterRoutes(mux, platformsupporthandler.New(supportSvc), tokens, loader, stepUpSvc)
 	assetsSvc := assetsusecase.New(assetsrepo.New(deps.DB), entitlementSvc, routeCache)

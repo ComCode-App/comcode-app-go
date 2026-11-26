@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import { ProductTypeBadge } from "./product-type-badge";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -343,6 +344,34 @@ export function SubscriberOrderDetailPage() {
       />
 
       <div className="space-y-6 pb-12">
+        {order.status === "awaiting_approval" && (
+          <div className="flex items-start gap-3 rounded-xl border border-violet-500/30 bg-violet-500/5 p-4">
+            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
+            <div className="space-y-0.5">
+              <p className="text-sm font-semibold">
+                {t("orders.approval.awaiting_title")}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {t("orders.approval.awaiting_desc")}
+              </p>
+            </div>
+          </div>
+        )}
+        {order.status === "cancelled" && order.rejection_reason && (
+          <div className="flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-500/5 p-4">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+            <div className="space-y-0.5">
+              <p className="text-sm font-semibold">
+                {t("orders.approval.rejected_title")}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {t("orders.approval.rejected_reason", {
+                  reason: order.rejection_reason,
+                })}
+              </p>
+            </div>
+          </div>
+        )}
         {payable && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
             <div className="space-y-0.5">
@@ -416,6 +445,10 @@ export function SubscriberOrderDetailPage() {
                               {item.variant_name}
                             </span>
                           )}
+                          <ProductTypeBadge
+                            productType={item.product_type}
+                            className="ml-1.5 align-middle"
+                          />
                         </p>
 
                         <div className="flex flex-wrap items-center gap-2 pt-1">

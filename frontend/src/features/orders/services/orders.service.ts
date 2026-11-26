@@ -2,6 +2,7 @@ import type { ServerListParams } from "@/components/entity";
 import type { ResourceMeta } from "@/features/io/types";
 import type { components } from "@/generated/api";
 import { ApiError } from "@/lib/api/errors";
+import { platformFormRequest } from "@/lib/api/platform-form-request";
 import { platformRequest } from "@/lib/api/platform-request";
 
 /** Provider refunds of online order payments (TEC-935). */
@@ -12,6 +13,7 @@ export type OrderRefundablePayment =
 export type RefundOrderPayload = components["schemas"]["RefundOrderInput"];
 
 export type OrderStatus =
+  | "awaiting_approval"
   | "pending"
   | "paid"
   | "design_pending"
@@ -52,6 +54,8 @@ export type OrderItemSummary = {
   total_price: number;
   custom_print_data?: Record<string, unknown>;
   product_images?: string[];
+  /** physical_card, badge (yaka kartı) ... (TEC-1320). */
+  product_type?: string;
   recipient_name?: string;
   recipient_email?: string;
   recipient_phone?: string;
@@ -59,6 +63,11 @@ export type OrderItemSummary = {
   recipient_department?: string;
   profile_uuid?: string;
   profile_avatar_url?: string;
+  /** The draft profile was created by this order (TEC-1317). */
+  profile_created_by_order?: boolean;
+  /** This item's own card design (TEC-1320). */
+  front_image_url?: string;
+  back_image_url?: string;
   card_uuid?: string;
   card_smart_code?: string;
   card_uid?: string;
@@ -141,6 +150,11 @@ export type OrderDetail = OrderSummary & {
   shipped_at?: string;
   delivered_at?: string;
   cancelled_at?: string;
+  /** Why a super admin rejected the order (TEC-1317). */
+  rejection_reason?: string;
+  /** The order's card design (TEC-1320). */
+  front_image_url?: string;
+  back_image_url?: string;
   items: OrderItemSummary[];
   asset_requests: AssetRequestSummary[];
 };
@@ -166,6 +180,9 @@ export type OrderOverviewKPIs = {
 };
 
 export type CreateOrderItemPayload = {
+  /** Card design images (TEC-1320), URLs from uploadCardImage; platform orders only. */
+  front_image_url?: string;
+  back_image_url?: string;
   product_uuid?: string;
   variant_uuid?: string;
   product_name?: string;
@@ -182,6 +199,9 @@ export type CreateOrderItemPayload = {
 };
 
 export type CreateOrderPayload = {
+  /** Card design for items without their own (TEC-1320); platform orders only. */
+  front_image_url?: string;
+  back_image_url?: string;
   company_id?: number;
   company_uuid?: string;
   user_uuid?: string;
@@ -275,6 +295,34 @@ export const ordersService = {
     return platformRequest<OrderDetail>("POST", "/v1/platform/orders/bulk", {
       body: payload,
     });
+  },
+
+  /** Upload a card design image for an order being placed (TEC-1320). */
+  async uploadCardImage(file: File) {
+    const form = new FormData();
+    form.append("image", file);
+    return platformFormRequest<{ url: string }>(
+      "POST",
+      "/v1/platform/orders/card-images",
+      form,
+    );
+  },
+
+  /** Approve a company bulk order awaiting approval (TEC-1317); needs step-up. */
+  async approve(uuid: string) {
+    return platformRequest<OrderDetail>(
+      "POST",
+      `/v1/platform/orders/${uuid}/approve`,
+    );
+  },
+
+  /** Reject a company bulk order awaiting approval with a reason (TEC-1317). */
+  async reject(uuid: string, reason: string) {
+    return platformRequest<OrderDetail>(
+      "POST",
+      `/v1/platform/orders/${uuid}/reject`,
+      { body: { reason } },
+    );
   },
 
   async provisionOrder(uuid: string) {

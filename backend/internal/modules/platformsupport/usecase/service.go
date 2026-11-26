@@ -54,6 +54,8 @@ type Service struct {
 	cache    Cache
 	activity Recorder
 	search   searchengine.Enqueuer
+	// storage holds card design images (TEC-1320); nil = uploads unavailable.
+	storage ImageStore
 }
 
 func New(repo repository.Repository, cache Cache, rec Recorder) *Service {

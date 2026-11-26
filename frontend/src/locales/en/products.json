@@ -103,5 +103,8 @@
   "viewbox.usdz_label": "Apple AR Quick Look File (.usdz)",
   "viewbox.usdz_uploading": "Uploading USDZ File...",
   "viewbox.save_settings_btn": "Save Viewbox Settings",
-  "viewbox.saved_success": "3D Viewbox and Stage Settings Saved"
+  "viewbox.saved_success": "3D Viewbox and Stage Settings Saved",
+  "types.physical_card": "NFC card",
+  "types.badge": "Badge",
+  "type_hint": "Badge orders become badge cards with a portrait (54×85.6 mm) preview; NFC activation and the smart link flow are the same as for a card."
 }

@@ -42,6 +42,8 @@ func Register(mux *http.ServeMux, h *handler.Handler, authn, requireStepUp func(
 	mux.Handle("GET /v1/platform/cards/{uuid}", read(rbac.PermPlatformCardsRead, h.GetCard))
 	mux.Handle("POST /v1/platform/cards/{uuid}/retire", write(rbac.PermPlatformCardsWrite, h.RetireCard))
 	mux.Handle("POST /v1/platform/cards/{uuid}/reassign", write(rbac.PermPlatformCardsWrite, h.ReassignCard))
+	mux.Handle("PUT /v1/platform/cards/{uuid}/images/{side}", write(rbac.PermPlatformCardsWrite, h.UploadCardImage))
+	mux.Handle("DELETE /v1/platform/cards/{uuid}/images/{side}", write(rbac.PermPlatformCardsWrite, h.RemoveCardImage))
 
 	mux.Handle("GET /v1/platform/routes", read(rbac.PermPlatformRoutesRead, h.SearchRoutes))
 	mux.Handle("POST /v1/platform/routes/quarantine/release", write(rbac.PermPlatformRoutesWrite, h.ReleaseQuarantine))

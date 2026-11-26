@@ -355,7 +355,12 @@ func (s *Service) Delete(ctx context.Context, p authctx.Principal, profileUUID u
 	if err != nil {
 		return err
 	}
+	return s.deleteProfile(ctx, p.Account.ID, detail)
+}
 
+// deleteProfile deletes a loaded profile of accountID with its media, cache and index entries.
+func (s *Service) deleteProfile(ctx context.Context, accountID int64, detail *model.ProfileDetail) error {
+	profileUUID := detail.UUID
 	// Collect the object keys the row points at before it is deleted (TEC-1176).
 	locales := []string{detail.PrimaryLocale}
 	for _, tr := range detail.Translations {
@@ -363,7 +368,7 @@ func (s *Service) Delete(ctx context.Context, p authctx.Principal, profileUUID u
 	}
 	keys := s.profileMediaKeys(profileUUID, detail.AvatarURL, detail.CoverURL, locales)
 
-	if err := s.repo.Delete(ctx, p.Account.ID, profileUUID); err != nil {
+	if err := s.repo.Delete(ctx, accountID, profileUUID); err != nil {
 		return err
 	}
 	s.routeCache.InvalidateProfile(ctx, profileUUID)

@@ -7,23 +7,26 @@ import (
 )
 
 type CardSummary struct {
-	UUID               uuid.UUID      `json:"uuid"`
-	Name               string         `json:"name"`
-	CardUID            string         `json:"card_uid,omitempty"`
-	SmartCode          string         `json:"smart_code"`
-	TargetType         string         `json:"target_type"` // profile, direct_url, vcard_download, social_hub
-	ProfileUUID        *uuid.UUID     `json:"profile_uuid,omitempty"`
-	ProfileAvatarURL   string         `json:"profile_avatar_url,omitempty"`
-	ProfileLocale      string         `json:"profile_locale,omitempty"`
-	DirectURL          string         `json:"direct_url,omitempty"`
-	CustomData         map[string]any `json:"custom_data"`
-	CardType           string         `json:"card_type"` // physical_nfc, metal_card, wood_card, pvc_card, digital_only
-	Material           string         `json:"material"`
-	ColorHex           string         `json:"color_hex"`
-	IsActive           bool           `json:"is_active"`
-	IsLocked           bool           `json:"is_locked"`
-	LeadCaptureEnabled bool           `json:"lead_capture_enabled"`
-	HasPasscode        bool           `json:"has_passcode"`
+	UUID             uuid.UUID      `json:"uuid"`
+	Name             string         `json:"name"`
+	CardUID          string         `json:"card_uid,omitempty"`
+	SmartCode        string         `json:"smart_code"`
+	TargetType       string         `json:"target_type"` // profile, direct_url, vcard_download, social_hub
+	ProfileUUID      *uuid.UUID     `json:"profile_uuid,omitempty"`
+	ProfileAvatarURL string         `json:"profile_avatar_url,omitempty"`
+	ProfileLocale    string         `json:"profile_locale,omitempty"`
+	DirectURL        string         `json:"direct_url,omitempty"`
+	CustomData       map[string]any `json:"custom_data"`
+	CardType         string         `json:"card_type"` // physical_nfc, metal_card, wood_card, pvc_card, digital_only, badge (yaka kartı)
+	Material         string         `json:"material"`
+	ColorHex         string         `json:"color_hex"`
+	// FrontImageURL / BackImageURL are the card's design images (TEC-1320); empty = default artwork.
+	FrontImageURL      string `json:"front_image_url,omitempty"`
+	BackImageURL       string `json:"back_image_url,omitempty"`
+	IsActive           bool   `json:"is_active"`
+	IsLocked           bool   `json:"is_locked"`
+	LeadCaptureEnabled bool   `json:"lead_capture_enabled"`
+	HasPasscode        bool   `json:"has_passcode"`
 	// RouteUUID is the card's c/{code} route; its scans are analytics events of subject "route".
 	RouteUUID *uuid.UUID `json:"route_uuid,omitempty"`
 	CreatedAt time.Time  `json:"created_at"`
@@ -31,30 +34,33 @@ type CardSummary struct {
 }
 
 type CardDetail struct {
-	ID                 int64          `json:"-"`
-	UUID               uuid.UUID      `json:"uuid"`
-	UserID             int64          `json:"-"`
-	Name               string         `json:"name"`
-	CardUID            string         `json:"card_uid,omitempty"`
-	ActivationCode     string         `json:"activation_code,omitempty"`
-	SmartCode          string         `json:"smart_code"`
-	TargetType         string         `json:"target_type"`
-	ProfileID          *int64         `json:"-"`
-	ProfileUUID        *uuid.UUID     `json:"profile_uuid,omitempty"`
-	ProfileAvatarURL   string         `json:"profile_avatar_url,omitempty"`
-	ProfileLocale      string         `json:"profile_locale,omitempty"`
-	DirectURL          string         `json:"direct_url,omitempty"`
-	CustomData         map[string]any `json:"custom_data"`
-	CardType           string         `json:"card_type"`
-	Material           string         `json:"material"`
-	ColorHex           string         `json:"color_hex"`
-	IsActive           bool           `json:"is_active"`
-	IsLocked           bool           `json:"is_locked"`
-	LeadCaptureEnabled bool           `json:"lead_capture_enabled"`
-	HasPasscode        bool           `json:"has_passcode"`
-	Passcode           *string        `json:"-"`
-	CreatedAt          time.Time      `json:"created_at"`
-	UpdatedAt          time.Time      `json:"updated_at"`
+	ID               int64          `json:"-"`
+	UUID             uuid.UUID      `json:"uuid"`
+	UserID           int64          `json:"-"`
+	Name             string         `json:"name"`
+	CardUID          string         `json:"card_uid,omitempty"`
+	ActivationCode   string         `json:"activation_code,omitempty"`
+	SmartCode        string         `json:"smart_code"`
+	TargetType       string         `json:"target_type"`
+	ProfileID        *int64         `json:"-"`
+	ProfileUUID      *uuid.UUID     `json:"profile_uuid,omitempty"`
+	ProfileAvatarURL string         `json:"profile_avatar_url,omitempty"`
+	ProfileLocale    string         `json:"profile_locale,omitempty"`
+	DirectURL        string         `json:"direct_url,omitempty"`
+	CustomData       map[string]any `json:"custom_data"`
+	CardType         string         `json:"card_type"`
+	Material         string         `json:"material"`
+	ColorHex         string         `json:"color_hex"`
+	// FrontImageURL / BackImageURL are the card's design images (TEC-1320); empty = default artwork.
+	FrontImageURL      string    `json:"front_image_url,omitempty"`
+	BackImageURL       string    `json:"back_image_url,omitempty"`
+	IsActive           bool      `json:"is_active"`
+	IsLocked           bool      `json:"is_locked"`
+	LeadCaptureEnabled bool      `json:"lead_capture_enabled"`
+	HasPasscode        bool      `json:"has_passcode"`
+	Passcode           *string   `json:"-"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 type UpsertCardInput struct {

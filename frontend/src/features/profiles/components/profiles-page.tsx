@@ -13,6 +13,7 @@ import {
 } from "@/components/entity";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { CompanySharedProfilesSection } from "@/features/profiles/components/company-shared-profiles-section";
 import { useProfilesColumns } from "@/features/profiles/components/profiles-columns";
 import { ProfilePreviewCard } from "@/features/profiles/components/profile-preview-card";
 import type { ProfileRowActionHandlers } from "@/features/profiles/components/profile-row-actions";
@@ -175,6 +176,7 @@ export function ProfilesPage() {
           rowSelection: false,
         }}
       />
+      <CompanySharedProfilesSection />
     </EntityPage>
   );
 }
