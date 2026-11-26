@@ -12210,6 +12210,8 @@ export interface components {
             total_price: number;
             custom_print_data?: Record<string, never>;
             product_images?: string[];
+            /** @description Type of the ordered product, e.g. physical_card or badge. */
+            product_type?: string;
             recipient_name?: string;
             recipient_email?: string;
             recipient_phone?: string;
@@ -12525,6 +12527,8 @@ export interface components {
             is_locked: boolean;
             /** @enum {string} */
             activation_status: "pending" | "active" | "retired";
+            /** @description physical_nfc, badge (vertical badge preview), ... */
+            card_type?: string;
             /** @description Front design image (TEC-1320); absent = default artwork */
             front_image_url?: string;
             /** @description Back design image (TEC-1320); absent = default artwork */
@@ -12788,7 +12792,7 @@ export interface components {
             direct_url?: string;
             custom_data?: Record<string, never>;
             /** @enum {string} */
-            card_type: "physical_nfc" | "metal_card" | "wood_card" | "pvc_card" | "digital_only";
+            card_type: "physical_nfc" | "metal_card" | "wood_card" | "pvc_card" | "digital_only" | "badge";
             material: string;
             color_hex: string;
             /** @description Front design image (TEC-1320); absent = default artwork */
@@ -12825,7 +12829,7 @@ export interface components {
             direct_url?: string;
             custom_data?: Record<string, never>;
             /** @enum {string} */
-            card_type: "physical_nfc" | "metal_card" | "wood_card" | "pvc_card" | "digital_only";
+            card_type: "physical_nfc" | "metal_card" | "wood_card" | "pvc_card" | "digital_only" | "badge";
             material: string;
             color_hex: string;
             /** @description Front design image (TEC-1320); absent = default artwork */

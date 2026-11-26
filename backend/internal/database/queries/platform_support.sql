@@ -20,7 +20,7 @@ SELECT
     o.uuid AS order_uuid, o.order_number AS order_number, o.status AS order_status,
     r.uuid AS route_uuid, r.path AS route_path, r.status AS route_status,
     COALESCE(r.legacy_metadata->>'card_serial_number', '')::text AS legacy_serial,
-    c.front_image_url, c.back_image_url
+    c.front_image_url, c.back_image_url, c.card_type
 FROM nfc_cards c
 JOIN accounts a ON a.id = c.account_id
 JOIN users u ON u.id = c.user_id
@@ -54,7 +54,7 @@ SELECT
     o.uuid AS order_uuid, o.order_number AS order_number, o.status AS order_status,
     r.uuid AS route_uuid, r.path AS route_path, r.status AS route_status,
     COALESCE(r.legacy_metadata->>'card_serial_number', '')::text AS legacy_serial,
-    c.front_image_url, c.back_image_url
+    c.front_image_url, c.back_image_url, c.card_type
 FROM nfc_cards c
 JOIN accounts a ON a.id = c.account_id
 JOIN users u ON u.id = c.user_id

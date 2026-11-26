@@ -6,8 +6,13 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { FileInput } from "@/components/ui/file-input";
-import { cardFaceImage, type CardSide } from "@/features/cards/lib/card-art";
+import {
+  cardFaceImage,
+  type CardShape,
+  type CardSide,
+} from "@/features/cards/lib/card-art";
 import { isApiError } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 import { ordersService } from "../services/orders.service";
 
@@ -24,10 +29,13 @@ const SIDE_LABEL: Record<CardSide, string> = {
  */
 export function CardImagePicker({
   side,
+  shape = "card",
   value,
   onChange,
 }: {
   side: CardSide;
+  /** "badge" shows the portrait thumbnail of a yaka kartı design (TEC-1320). */
+  shape?: CardShape;
   value?: string;
   onChange: (url: string | undefined) => void;
 }) {
@@ -61,7 +69,10 @@ export function CardImagePicker({
         <img
           src={src}
           alt={t(SIDE_LABEL[side])}
-          className="h-7 w-11 rounded border object-cover"
+          className={cn(
+            "rounded border object-cover",
+            shape === "badge" ? "h-11 w-7" : "h-7 w-11",
+          )}
         />
         <Button
           type="button"

@@ -356,6 +356,7 @@
   "card_images.column": "Kart tasarımı",
   "card_images.order_heading": "Siparişin geneli için kart tasarımı",
   "card_images.hint": "PNG, JPEG veya WebP, en fazla 5 MB. Kart 85,6×54 mm yatay; farklı oranlar kırpılır. Önce alıcının kendi görseli, sonra bu görsel, o da yoksa varsayılan görsel kullanılır.",
+  "card_images.hint_badge": "PNG, JPEG veya WebP, en fazla 5 MB. Yaka kartı 54×85,6 mm dikey; farklı oranlar kırpılır. Önce alıcının kendi görseli, sonra bu görsel, o da yoksa varsayılan görsel kullanılır.",
   "card_images.too_large": "Görsel 5 MB'tan büyük",
   "card_images.upload_failed": "Görsel yüklenemedi"
 }

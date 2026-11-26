@@ -26,6 +26,9 @@ import { Separator } from "@/components/ui/separator";
 import { useLocale } from "@/providers/locale-provider";
 import { productsService } from "@/features/products";
 import { Bounded3DStage } from "@/features/products/components/Bounded3DStage";
+import { BadgePreview } from "@/features/cards/components/badge-preview";
+import { productShapeOf } from "@/features/cards/lib/card-art";
+import { ProductTypeBadge } from "./product-type-badge";
 import {
   ordersService,
   type CreateOrderPayload,
@@ -86,6 +89,9 @@ export function SubscriberOrderDialog({
     queryFn: () => productsService.getPublic(activeProductUuid),
     enabled: Boolean(activeProductUuid),
   });
+
+  const isBadgeProduct =
+    productShapeOf(currentProduct?.product_type) === "badge";
 
   const activeVariants =
     currentProduct?.variants?.filter((v) => v.is_active) || [];
@@ -249,23 +255,39 @@ export function SubscriberOrderDialog({
           <div className="space-y-4 py-2">
             {/* 3D Interactive Stage Preview */}
             <div className="relative h-64 w-full overflow-hidden rounded-2xl border bg-zinc-950/90 shadow-inner">
-              <Bounded3DStage
-                modelUrl={
-                  selectedVariant?.model_3d_file_url ||
-                  currentProduct?.model_3d_file_url
-                }
-                usdzUrl={
-                  selectedVariant?.model_3d_usdz_url ||
-                  currentProduct?.model_3d_usdz_url
-                }
-                viewbox={
-                  selectedVariant?.model_3d_viewbox ||
-                  currentProduct?.model_3d_viewbox
-                }
-                cardColor={selectedVariant?.color_code || "#18181b"}
-                interactive={true}
-                className="h-full w-full"
-              />
+              {/* A badge (yaka kartı) without its own 3D model gets a portrait preview (TEC-1320). */}
+              {isBadgeProduct &&
+              !(
+                selectedVariant?.model_3d_file_url ||
+                currentProduct?.model_3d_file_url
+              ) ? (
+                <div className="flex h-full w-full items-center justify-center p-4">
+                  <BadgePreview
+                    color={selectedVariant?.color_code || "#18181b"}
+                    name={printName}
+                    title={printTitle}
+                    className="h-full"
+                  />
+                </div>
+              ) : (
+                <Bounded3DStage
+                  modelUrl={
+                    selectedVariant?.model_3d_file_url ||
+                    currentProduct?.model_3d_file_url
+                  }
+                  usdzUrl={
+                    selectedVariant?.model_3d_usdz_url ||
+                    currentProduct?.model_3d_usdz_url
+                  }
+                  viewbox={
+                    selectedVariant?.model_3d_viewbox ||
+                    currentProduct?.model_3d_viewbox
+                  }
+                  cardColor={selectedVariant?.color_code || "#18181b"}
+                  interactive={true}
+                  className="h-full w-full"
+                />
+              )}
               <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/60 px-2.5 py-1 text-[11px] text-white backdrop-blur-md">
                 <Sparkles className="h-3.5 w-3.5 text-amber-400" />
                 <span>{t("orders.subscriber.live_3d_preview")}</span>
@@ -293,8 +315,9 @@ export function SubscriberOrderDialog({
                     )}
                   >
                     <div className="space-y-0.5">
-                      <p className="text-foreground text-sm font-semibold">
+                      <p className="text-foreground flex items-center gap-1.5 text-sm font-semibold">
                         {p.name}
+                        <ProductTypeBadge productType={p.product_type} />
                       </p>
                       <p className="text-muted-foreground line-clamp-1 text-xs">
                         {p.short_description}

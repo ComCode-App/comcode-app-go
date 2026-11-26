@@ -34,6 +34,8 @@ type OrderItemSummary struct {
 	TotalPrice      float64        `json:"total_price"`
 	CustomPrintData map[string]any `json:"custom_print_data,omitempty"`
 	ProductImages   []string       `json:"product_images,omitempty"`
+	// ProductType is the product's type, e.g. physical_card or badge (TEC-1320).
+	ProductType string `json:"product_type,omitempty"`
 
 	// Recipient Details
 	RecipientName       string `json:"recipient_name"`

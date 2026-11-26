@@ -356,6 +356,7 @@
   "card_images.column": "Card design",
   "card_images.order_heading": "Card design for the whole order",
   "card_images.hint": "PNG, JPEG or WebP, up to 5 MB. Card 85.6×54 mm landscape; other ratios are cropped. A recipient's own image wins, then this one, then the default artwork.",
+  "card_images.hint_badge": "PNG, JPEG or WebP, up to 5 MB. Badge 54×85.6 mm portrait; other ratios are cropped. A recipient's own image wins, then this one, then the default artwork.",
   "card_images.too_large": "The image is larger than 5 MB",
   "card_images.upload_failed": "The image could not be uploaded"
 }

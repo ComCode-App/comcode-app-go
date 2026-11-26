@@ -31,6 +31,8 @@ import {
 } from "../services/orders.service";
 import { ordersQueryKeys } from "../hooks/query-keys";
 import { CardImagePicker } from "./card-image-picker";
+import { ProductTypeBadge } from "./product-type-badge";
+import { productShapeOf } from "@/features/cards/lib/card-art";
 
 interface RecipientRow {
   id: string;
@@ -122,6 +124,9 @@ export function BulkOrderDialog({
     queryFn: () => productsService.getPublic(activeProductUuid),
     enabled: Boolean(activeProductUuid),
   });
+
+  // Badge (yaka kartı) designs are portrait 54×85.6 mm (TEC-1320).
+  const imageShape = productShapeOf(currentProduct?.product_type);
 
   const activeVariants =
     currentProduct?.variants?.filter((v) => v.is_active) || [];
@@ -385,8 +390,9 @@ export function BulkOrderDialog({
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="text-foreground text-sm font-bold">
+                        <h4 className="text-foreground flex items-center gap-1.5 text-sm font-bold">
                           {prod.name}
+                          <ProductTypeBadge productType={prod.product_type} />
                         </h4>
                         <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
                           {prod.short_description || prod.name}
@@ -537,17 +543,23 @@ export function BulkOrderDialog({
                         {t("orders.card_images.order_heading")}
                       </p>
                       <p className="text-muted-foreground text-[11px]">
-                        {t("orders.card_images.hint")}
+                        {t(
+                          imageShape === "badge"
+                            ? "orders.card_images.hint_badge"
+                            : "orders.card_images.hint",
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <CardImagePicker
                         side="front"
+                        shape={imageShape}
                         value={orderFrontImage}
                         onChange={setOrderFrontImage}
                       />
                       <CardImagePicker
                         side="back"
+                        shape={imageShape}
                         value={orderBackImage}
                         onChange={setOrderBackImage}
                       />
@@ -665,6 +677,7 @@ export function BulkOrderDialog({
                               <div className="flex items-center gap-1">
                                 <CardImagePicker
                                   side="front"
+                                  shape={imageShape}
                                   value={r.frontImage}
                                   onChange={(url) =>
                                     setRecipientImage(r.id, "frontImage", url)
@@ -672,6 +685,7 @@ export function BulkOrderDialog({
                                 />
                                 <CardImagePicker
                                   side="back"
+                                  shape={imageShape}
                                   value={r.backImage}
                                   onChange={(url) =>
                                     setRecipientImage(r.id, "backImage", url)

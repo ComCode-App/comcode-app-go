@@ -247,6 +247,7 @@ func cardFromRow(row db.PlatformGetCardRow) model.Card {
 		LegacySerial: row.LegacySerial, TargetType: row.TargetType, DirectURL: row.DirectUrl,
 		IsActive: row.IsActive, IsLocked: row.IsLocked,
 		FrontImageURL: row.FrontImageUrl.String, BackImageURL: row.BackImageUrl.String,
+		CardType:  row.CardType,
 		Account:   model.AccountRef{UUID: row.AccountUuid, Name: row.AccountName, Type: row.AccountType},
 		Owner:     model.UserRef{UUID: row.OwnerUuid, Email: row.OwnerEmail, Name: row.OwnerName, Surname: row.OwnerSurname},
 		CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time,

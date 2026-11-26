@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import { ProductTypeBadge } from "./product-type-badge";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -444,6 +445,10 @@ export function SubscriberOrderDetailPage() {
                               {item.variant_name}
                             </span>
                           )}
+                          <ProductTypeBadge
+                            productType={item.product_type}
+                            className="ml-1.5 align-middle"
+                          />
                         </p>
 
                         <div className="flex flex-wrap items-center gap-2 pt-1">
