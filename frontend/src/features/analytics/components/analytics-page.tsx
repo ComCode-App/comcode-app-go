@@ -35,6 +35,12 @@ import { useLocale } from "@/providers/locale-provider";
 import { TooltipHint } from "@/components/ui/tooltip";
 
 const RANGES = [7, 30, 90, 365] as const;
+/** "All time" (TEC-1322): back to the subject's creation, capped by the plan's history. */
+const ALL_TIME = "all";
+type RangeChoice = (typeof RANGES)[number] | typeof ALL_TIME;
+const DAY_MS = 86_400_000;
+/** Above this many days the activity chart shows one bar per month instead of per day. */
+const MONTHLY_CHART_AFTER_DAYS = 400;
 const DIMENSIONS = ["country", "city", "device", "browser", "referer"] as const;
 const CLICK_PREFIXES = ["contact.", "social.", "bank."];
 
@@ -45,6 +51,9 @@ function isoDay(d: Date) {
 type SubjectOption = {
   value: string;
   label: string;
+  /** Second line that tells same-named profiles apart: title · company (TEC-1322). */
+  detail?: string;
+  createdAt?: string;
   group: "profiles" | "cards" | "links";
 };
 
@@ -80,6 +89,10 @@ export function AnalyticsPage() {
       out.push({
         value: `profile:${p.uuid}`,
         label: `${p.first_name} ${p.last_name}`.trim() || p.uuid,
+        detail:
+          [p.title, p.company_name].filter(Boolean).join(" · ") ||
+          (p.username ? `/${p.username}` : undefined),
+        createdAt: p.created_at,
         group: "profiles",
       });
     }
@@ -88,6 +101,7 @@ export function AnalyticsPage() {
         out.push({
           value: `route:${c.route_uuid}`,
           label: `${c.name} · ${c.smart_code}`,
+          createdAt: c.created_at,
           group: "cards",
         });
       }
@@ -96,6 +110,7 @@ export function AnalyticsPage() {
       out.push({
         value: `route:${l.uuid}`,
         label: `/${l.path}`,
+        createdAt: l.created_at,
         group: "links",
       });
     }
@@ -116,13 +131,32 @@ export function AnalyticsPage() {
     (f) => f.key === "analytics.history_days",
   );
   const maxDays = history?.unlimited ? Infinity : (history?.int_value ?? 30);
-  const [days, setDays] = useState<number>(30);
-  const effectiveDays = Math.min(days, maxDays);
+  const [choice, setChoice] = useState<RangeChoice>(30);
+  const rangeValue =
+    choice === ALL_TIME ? ALL_TIME : String(Math.min(choice, maxDays));
+  // All time starts on the day the subject was created (no events before it); the plan's
+  // history window still caps it, as the API does.
+  const subjectCreatedAt = options.find(
+    (o) => o.value === subjectValue,
+  )?.createdAt;
   const range: AnalyticsRange = useMemo(() => {
     const to = new Date();
-    const from = new Date(to.getTime() - (effectiveDays - 1) * 86_400_000);
+    let span: number;
+    if (choice === ALL_TIME) {
+      const created = subjectCreatedAt ? Date.parse(subjectCreatedAt) : NaN;
+      const sinceCreated = Number.isNaN(created)
+        ? 365
+        : Math.floor(
+            (Date.parse(isoDay(to)) - Date.parse(isoDay(new Date(created)))) /
+              DAY_MS,
+          ) + 1;
+      span = Math.max(1, Math.min(sinceCreated, maxDays));
+    } else {
+      span = Math.min(choice, maxDays);
+    }
+    const from = new Date(to.getTime() - (span - 1) * DAY_MS);
     return { from: isoDay(from), to: isoDay(to) };
-  }, [effectiveDays]);
+  }, [choice, maxDays, subjectCreatedAt]);
 
   const [dimension, setDimension] =
     useState<(typeof DIMENSIONS)[number]>("country");
@@ -182,7 +216,7 @@ export function AnalyticsPage() {
     { key: "today", value: summary.data?.today_live_count ?? 0 },
   ];
 
-  // One point per day of the range: days without events are 0, not missing.
+  // One point per day of the range (per month for long all-time ranges): empty days are 0.
   const chartData = useMemo(() => {
     const byDay = new Map(
       (series.data?.points ?? []).map((p) => [
@@ -191,10 +225,36 @@ export function AnalyticsPage() {
       ]),
     );
     const out: { label: string; events: number }[] = [];
+    const spanDays =
+      (Date.parse(range.to) - Date.parse(range.from)) / DAY_MS + 1;
+    if (spanDays > MONTHLY_CHART_AFTER_DAYS) {
+      const byMonth = new Map<string, number>();
+      for (const [day, count] of byDay) {
+        byMonth.set(
+          day.slice(0, 7),
+          (byMonth.get(day.slice(0, 7)) ?? 0) + count,
+        );
+      }
+      for (
+        let d = new Date(`${range.from.slice(0, 7)}-01T00:00:00Z`);
+        isoDay(d).slice(0, 7) <= range.to.slice(0, 7);
+        d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1))
+      ) {
+        out.push({
+          label: d.toLocaleDateString(locale, {
+            month: "short",
+            year: "numeric",
+            timeZone: "UTC",
+          }),
+          events: byMonth.get(isoDay(d).slice(0, 7)) ?? 0,
+        });
+      }
+      return out;
+    }
     for (
       let d = new Date(`${range.from}T00:00:00Z`);
       isoDay(d) <= range.to;
-      d = new Date(d.getTime() + 86_400_000)
+      d = new Date(d.getTime() + DAY_MS)
     ) {
       out.push({
         label: d.toLocaleDateString(locale, {
@@ -230,13 +290,13 @@ export function AnalyticsPage() {
         <div className="space-y-6">
           {/* Filters: one row above the charts */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <label className="grid gap-1.5 text-sm sm:w-80">
+            <label className="grid min-w-0 gap-1.5 text-sm sm:w-96">
               <span className="font-medium">{t("analytics.subject")}</span>
               <Select
                 value={subjectValue ?? undefined}
                 onValueChange={setPicked}
               >
-                <SelectTrigger>
+                <SelectTrigger className="[&>span]:truncate">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -251,6 +311,11 @@ export function AnalyticsPage() {
                         {items.map((o) => (
                           <SelectItem key={o.value} value={o.value}>
                             {o.label}
+                            {o.detail ? (
+                              <span className="text-muted-foreground ms-1.5 text-xs">
+                                {o.detail}
+                              </span>
+                            ) : null}
                           </SelectItem>
                         ))}
                       </SelectGroup>
@@ -262,8 +327,12 @@ export function AnalyticsPage() {
             <label className="grid gap-1.5 text-sm sm:w-56">
               <span className="font-medium">{t("analytics.range")}</span>
               <Select
-                value={String(effectiveDays)}
-                onValueChange={(v) => setDays(Number(v))}
+                value={rangeValue}
+                onValueChange={(v) =>
+                  setChoice(
+                    v === ALL_TIME ? ALL_TIME : (Number(v) as RangeChoice),
+                  )
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -279,6 +348,9 @@ export function AnalyticsPage() {
                       {d > maxDays ? ` · ${t("analytics.range_locked")}` : ""}
                     </SelectItem>
                   ))}
+                  <SelectItem value={ALL_TIME}>
+                    {t("analytics.range.all")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </label>

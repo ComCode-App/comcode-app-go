@@ -10,6 +10,7 @@
   "range.30": "Last 30 days",
   "range.90": "Last 90 days",
   "range.365": "Last year",
+  "range.all": "All time",
   "range_locked": "not in your plan",
   "history_notice": "Your plan shows the last {{days}} days of analytics.",
   "kpi.views": "Views",
