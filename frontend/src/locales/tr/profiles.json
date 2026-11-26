@@ -364,5 +364,8 @@
   "keywords.hint": "Örnek: yazılım, bulut, siber güvenlik. Her dil için ayrı liste tutulur.",
   "public_page.theme_name.legacy_comcode": "Comcode V1",
   "public_page.layout_name.legacy_comcode": "Cam kart ve sekmeler",
-  "public_page.background_template": "Şablonun arka planı"
+  "public_page.background_template": "Şablonun arka planı",
+  "primary": "Birincil",
+  "picker.search": "Ad, unvan veya adresle ara",
+  "picker.empty": "Eşleşen profil yok"
 }
