@@ -134,6 +134,9 @@ import (
 	profileshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profiles/handler"
 	profilesrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profiles/repository"
 	profilesusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profiles/usecase"
+	profilesharesmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileshares"
+	profileshareshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileshares/handler"
+	profilesharesusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileshares/usecase"
 	profileverificationsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileverifications"
 	profileverificationshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileverifications/handler"
 	profileverificationsusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profileverifications/usecase"
@@ -513,6 +516,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	bulkmodule.RegisterRoutes(mux, bulkhandler.New(bulkSvc), tokens, loader)
 	companyprofilesmodule.RegisterRoutes(mux, companyprofileshandler.New(
 		companyprofilesusecase.NewService(deps.Queries), companyBulk,
+	), tokens, loader)
+	profilesharesmodule.RegisterRoutes(mux, profileshareshandler.New(
+		profilesharesusecase.NewService(deps.Queries, activityRec),
 	), tokens, loader)
 	companybrandingmodule.RegisterRoutes(mux, companybrandinghandler.New(companyBrandingSvc), tokens, loader)
 	sysSvc := settingsusecase.NewSystemService(cfg, deps.DB, deps.Redis, deps.Storage, searchClient)

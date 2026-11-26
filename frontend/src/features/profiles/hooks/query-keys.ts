@@ -10,4 +10,8 @@ export const profilesKeys = {
     [...profilesKeys.all, "public-page", uuid] as const,
   verification: (uuid: string) =>
     [...profilesKeys.all, "verification", uuid] as const,
+  companyShares: (uuid: string) =>
+    [...profilesKeys.all, "company-shares", uuid] as const,
+  companyShared: (params: Record<string, unknown>) =>
+    [...profilesKeys.all, "company-shared", params] as const,
 };

@@ -373,5 +373,16 @@
   "preview_card.published": "Live",
   "preview_card.unpublished": "Not live",
   "preview_card.save_contact": "Save contact",
-  "preview_card.no_address": "No public address"
+  "preview_card.no_address": "No public address",
+  "company_share.title": "Share with my company",
+  "company_share.description": "Show this profile to the companies you belong to. Sharing is off by default and set per company.",
+  "company_share.switch_label": "Share this profile with {{company}}",
+  "company_share.consent_hint": "The details of this profile can be viewed by the company's administrators.",
+  "company_share.shared_toast": "Profile shared with the company",
+  "company_share.unshared_toast": "Profile is no longer shared",
+  "company_share.error": "Could not change sharing",
+  "shared_profiles.title": "Member profiles",
+  "shared_profiles.description": "Personal profiles members chose to share with this company. You can view them but not edit them.",
+  "shared_profiles.read_only": "Read-only",
+  "shared_profiles.shared_by": "Shared by {{name}}"
 }
