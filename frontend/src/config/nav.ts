@@ -468,12 +468,6 @@ export const appNav = defineNav({
           href: routes.app.account.root,
           icon: UsersRound,
         },
-        {
-          id: "billing",
-          titleKey: "layout.nav_billing",
-          href: routes.app.billing.root,
-          icon: CreditCard,
-        },
         backgroundStudioNavItem,
       ],
     },

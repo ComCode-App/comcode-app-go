@@ -381,3 +381,9 @@ Billing and provider code logs structured events (`checkout_*`, `paytr_callback_
 
 - New provider: implement `payment.Provider`, add it to `Registry.providerFromConfig`, the `payment_provider` / `active_payment_provider` enums (migration), the settings usecase, and a public callback route (plus an entry in `backend/docs/openapi.yaml`).
 - New plan: create it in the platform panel (`/platform/plans`) or `POST /v1/platform/plans`; give it a value for every feature (ENTITLEMENTS.md).
+
+## Customer UI (TEC-1311)
+
+- Subscription has no page of its own. It is the "Subscription" tab of the account page: `/account?tab=subscription` (`routes.app.billing.root`).
+- The account page has three tabs in `?tab=`: overview (plan usage, sector), members, subscription (plans, subscription, saved cards, payments). Summary tiles on top show the plan, the member count and the subscription status or next payment.
+- `/billing` redirects to the subscription tab and keeps its query, so provider callbacks (`/billing?result=fail`) and notification links keep working. `/billing/checkout/*`, `/billing/cards/add/*` and `/billing/success` are unchanged.

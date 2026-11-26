@@ -1,12 +1,11 @@
 "use client";
 
-import { CreditCard, RefreshCw, Trash2 } from "lucide-react";
+import { RefreshCw, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
-import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +28,11 @@ const billingKeys = {
   cards: () => [...billingKeys.all, "cards"] as const,
 };
 
-export function BillingPage() {
+/**
+ * Subscription, plans, saved cards and payments of the active account. Rendered as the
+ * "Subscription" tab of the account page (TEC-1311); `/billing` redirects there.
+ */
+export function BillingSection() {
   const { t } = useLocale();
   const { can } = usePermission();
   const account = useAuthStore((s) => s.user?.account);
@@ -193,13 +196,7 @@ export function BillingPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-      <PageHeader
-        icon={<CreditCard className="size-7" />}
-        title={t("billing.title")}
-        description={t("billing.description")}
-      />
-
+    <div className="flex w-full flex-col gap-8">
       {subscription && canWrite ? (
         <p className="text-muted-foreground text-sm">
           {t("billing.subscription.change_rule")}
