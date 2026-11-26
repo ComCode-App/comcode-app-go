@@ -29,7 +29,7 @@ SELECT
     o.uuid AS order_uuid, o.order_number AS order_number, o.status AS order_status,
     r.uuid AS route_uuid, r.path AS route_path, r.status AS route_status,
     COALESCE(r.legacy_metadata->>'card_serial_number', '')::text AS legacy_serial,
-    c.front_image_url, c.back_image_url
+    c.front_image_url, c.back_image_url, c.card_type
 FROM nfc_cards c
 JOIN accounts a ON a.id = c.account_id
 JOIN users u ON u.id = c.user_id
@@ -72,6 +72,7 @@ type PlatformGetCardRow struct {
 	LegacySerial      string             `json:"legacy_serial"`
 	FrontImageUrl     pgtype.Text        `json:"front_image_url"`
 	BackImageUrl      pgtype.Text        `json:"back_image_url"`
+	CardType          string             `json:"card_type"`
 }
 
 // account-lint: cross-account platform support tools (platform.* permission)
@@ -110,6 +111,7 @@ func (q *Queries) PlatformGetCard(ctx context.Context, argUuid uuid.UUID) (Platf
 		&i.LegacySerial,
 		&i.FrontImageUrl,
 		&i.BackImageUrl,
+		&i.CardType,
 	)
 	return i, err
 }
@@ -488,7 +490,7 @@ SELECT
     o.uuid AS order_uuid, o.order_number AS order_number, o.status AS order_status,
     r.uuid AS route_uuid, r.path AS route_path, r.status AS route_status,
     COALESCE(r.legacy_metadata->>'card_serial_number', '')::text AS legacy_serial,
-    c.front_image_url, c.back_image_url
+    c.front_image_url, c.back_image_url, c.card_type
 FROM nfc_cards c
 JOIN accounts a ON a.id = c.account_id
 JOIN users u ON u.id = c.user_id
@@ -542,6 +544,7 @@ type PlatformSearchCardsRow struct {
 	LegacySerial      string             `json:"legacy_serial"`
 	FrontImageUrl     pgtype.Text        `json:"front_image_url"`
 	BackImageUrl      pgtype.Text        `json:"back_image_url"`
+	CardType          string             `json:"card_type"`
 }
 
 // Platform card and route support screens (TEC-950). These are platform queries: they are not
@@ -589,6 +592,7 @@ func (q *Queries) PlatformSearchCards(ctx context.Context, arg PlatformSearchCar
 			&i.LegacySerial,
 			&i.FrontImageUrl,
 			&i.BackImageUrl,
+			&i.CardType,
 		); err != nil {
 			return nil, err
 		}

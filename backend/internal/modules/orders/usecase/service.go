@@ -458,9 +458,13 @@ func (s *Service) provisionSingleItem(ctx context.Context, ord *model.OrderDetai
 	activationCode := s.generateActivationCode()
 	cardUID := fmt.Sprintf("CC-2026-%s", strings.ToUpper(uuid.New().String()[:8]))
 
+	cardType := cardTypeForProduct(item.ProductType)
 	cardName := item.RecipientName
 	if cardName == "" {
 		cardName = fmt.Sprintf("NFC Kart - %s", item.ProductName)
+		if cardType == CardTypeBadge {
+			cardName = fmt.Sprintf("Yaka Kartı - %s", item.ProductName)
+		}
 	}
 
 	var profileID *int64
@@ -491,6 +495,7 @@ func (s *Service) provisionSingleItem(ctx context.Context, ord *model.OrderDetai
 		smartCode,
 		activationCode,
 		cardUID,
+		cardType,
 		material,
 		colorHex,
 	)

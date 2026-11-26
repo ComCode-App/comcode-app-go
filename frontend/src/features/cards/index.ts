@@ -7,3 +7,4 @@ export * from "./components/card-activation-dialog";
 export * from "./components/card-settings-dialog";
 export * from "./components/cards-columns";
 export * from "./components/cards-page";
+export * from "./components/badge-preview";

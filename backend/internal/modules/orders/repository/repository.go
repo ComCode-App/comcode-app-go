@@ -41,7 +41,7 @@ type Repository interface {
 	UpdateItemFulfillment(ctx context.Context, itemUUID uuid.UUID, fulfillmentStatus string) (*model.OrderItemSummary, error)
 
 	// Card & Route Provisioning (TEC-77 Integration)
-	CreateProvisionedCardAndRoute(ctx context.Context, orderID, orderItemID, accountID, userID int64, profileID *int64, cardName, smartCode, activationCode, cardUID, material, colorHex string) (cardID int64, cardUUID uuid.UUID, routeUUID uuid.UUID, err error)
+	CreateProvisionedCardAndRoute(ctx context.Context, orderID, orderItemID, accountID, userID int64, profileID *int64, cardName, smartCode, activationCode, cardUID, cardType, material, colorHex string) (cardID int64, cardUUID uuid.UUID, routeUUID uuid.UUID, err error)
 	GetProfileIDByUUID(ctx context.Context, profileUUID uuid.UUID, accountID int64) (*int64, error)
 	GetAccountIDByUUID(ctx context.Context, accountUUID uuid.UUID) (*int64, error)
 	GetPersonalAccountIDByUserUUID(ctx context.Context, userUUID uuid.UUID) (*int64, error)

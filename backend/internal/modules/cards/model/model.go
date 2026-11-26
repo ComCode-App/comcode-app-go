@@ -17,7 +17,7 @@ type CardSummary struct {
 	ProfileLocale    string         `json:"profile_locale,omitempty"`
 	DirectURL        string         `json:"direct_url,omitempty"`
 	CustomData       map[string]any `json:"custom_data"`
-	CardType         string         `json:"card_type"` // physical_nfc, metal_card, wood_card, pvc_card, digital_only
+	CardType         string         `json:"card_type"` // physical_nfc, metal_card, wood_card, pvc_card, digital_only, badge (yaka kartı)
 	Material         string         `json:"material"`
 	ColorHex         string         `json:"color_hex"`
 	// FrontImageURL / BackImageURL are the card's design images (TEC-1320); empty = default artwork.

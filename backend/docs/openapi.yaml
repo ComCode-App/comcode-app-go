@@ -18076,6 +18076,7 @@ components:
         total_price: { type: number }
         custom_print_data: { type: object }
         product_images: { type: array, items: { type: string } }
+        product_type: { type: string, description: 'Type of the ordered product, e.g. physical_card or badge.' }
         recipient_name: { type: string }
         recipient_email: { type: string }
         recipient_phone: { type: string }
@@ -18429,6 +18430,7 @@ components:
         is_active: { type: boolean }
         is_locked: { type: boolean }
         activation_status: { type: string, enum: [pending, active, retired] }
+        card_type: { type: string, description: "physical_nfc, badge (vertical badge preview), ..." }
         front_image_url: { type: string, description: "Front design image (TEC-1320); absent = default artwork" }
         back_image_url: { type: string, description: "Back design image (TEC-1320); absent = default artwork" }
         account: { $ref: "#/components/schemas/SupportAccountRef" }
@@ -18693,7 +18695,7 @@ components:
         profile_locale: { type: string }
         direct_url: { type: string }
         custom_data: { type: object }
-        card_type: { type: string, enum: [physical_nfc, metal_card, wood_card, pvc_card, digital_only] }
+        card_type: { type: string, enum: [physical_nfc, metal_card, wood_card, pvc_card, digital_only, badge] }
         material: { type: string }
         color_hex: { type: string }
         front_image_url: { type: string, description: "Front design image (TEC-1320); absent = default artwork" }
@@ -18721,7 +18723,7 @@ components:
         profile_locale: { type: string }
         direct_url: { type: string }
         custom_data: { type: object }
-        card_type: { type: string, enum: [physical_nfc, metal_card, wood_card, pvc_card, digital_only] }
+        card_type: { type: string, enum: [physical_nfc, metal_card, wood_card, pvc_card, digital_only, badge] }
         material: { type: string }
         color_hex: { type: string }
         front_image_url: { type: string, description: "Front design image (TEC-1320); absent = default artwork" }

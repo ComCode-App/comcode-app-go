@@ -681,6 +681,7 @@ SELECT
     oi.id, oi.uuid, oi.order_id, oi.product_id, oi.variant_id, oi.product_name, oi.variant_name, oi.sku, oi.quantity, oi.unit_price, oi.total_price, oi.custom_print_data, oi.created_at, oi.updated_at, oi.recipient_name, oi.recipient_email, oi.recipient_phone, oi.recipient_title, oi.recipient_department, oi.profile_id, oi.card_id, oi.fulfillment_status, oi.provisioning_status, oi.provisioning_error, oi.idempotency_key, oi.profile_created_by_order, oi.front_image_url, oi.back_image_url,
     p.slug as product_slug,
     p.images as product_images,
+    COALESCE(p.product_type, '')::text as product_type,
     prof.uuid as profile_uuid,
     prof.avatar_url as profile_avatar_url,
     nc.uuid as card_uuid,
@@ -730,6 +731,7 @@ type GetOrderItemByUUIDRow struct {
 	BackImageUrl          pgtype.Text        `json:"back_image_url"`
 	ProductSlug           pgtype.Text        `json:"product_slug"`
 	ProductImages         []byte             `json:"product_images"`
+	ProductType           string             `json:"product_type"`
 	ProfileUuid           pgtype.UUID        `json:"profile_uuid"`
 	ProfileAvatarUrl      pgtype.Text        `json:"profile_avatar_url"`
 	CardUuid              pgtype.UUID        `json:"card_uuid"`
@@ -777,6 +779,7 @@ func (q *Queries) GetOrderItemByUUID(ctx context.Context, argUuid uuid.UUID) (Ge
 		&i.BackImageUrl,
 		&i.ProductSlug,
 		&i.ProductImages,
+		&i.ProductType,
 		&i.ProfileUuid,
 		&i.ProfileAvatarUrl,
 		&i.CardUuid,
@@ -924,6 +927,7 @@ SELECT
     oi.id, oi.uuid, oi.order_id, oi.product_id, oi.variant_id, oi.product_name, oi.variant_name, oi.sku, oi.quantity, oi.unit_price, oi.total_price, oi.custom_print_data, oi.created_at, oi.updated_at, oi.recipient_name, oi.recipient_email, oi.recipient_phone, oi.recipient_title, oi.recipient_department, oi.profile_id, oi.card_id, oi.fulfillment_status, oi.provisioning_status, oi.provisioning_error, oi.idempotency_key, oi.profile_created_by_order, oi.front_image_url, oi.back_image_url,
     p.slug as product_slug,
     p.images as product_images,
+    COALESCE(p.product_type, '')::text as product_type,
     prof.uuid as profile_uuid,
     prof.avatar_url as profile_avatar_url,
     nc.uuid as card_uuid,
@@ -974,6 +978,7 @@ type ListOrderItemsByOrderIDRow struct {
 	BackImageUrl          pgtype.Text        `json:"back_image_url"`
 	ProductSlug           pgtype.Text        `json:"product_slug"`
 	ProductImages         []byte             `json:"product_images"`
+	ProductType           string             `json:"product_type"`
 	ProfileUuid           pgtype.UUID        `json:"profile_uuid"`
 	ProfileAvatarUrl      pgtype.Text        `json:"profile_avatar_url"`
 	CardUuid              pgtype.UUID        `json:"card_uuid"`
@@ -1027,6 +1032,7 @@ func (q *Queries) ListOrderItemsByOrderID(ctx context.Context, orderID int64) ([
 			&i.BackImageUrl,
 			&i.ProductSlug,
 			&i.ProductImages,
+			&i.ProductType,
 			&i.ProfileUuid,
 			&i.ProfileAvatarUrl,
 			&i.CardUuid,

@@ -37,6 +37,7 @@ import {
   useDebouncedQuery,
 } from "@/features/platform-support/components/support-ui";
 import { CardFaceImages } from "@/features/platform-support/components/card-face-images";
+import { BADGE_CARD_TYPE } from "@/features/cards/lib/card-art";
 import { useStepUp } from "@/features/step-up-engine";
 import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -167,6 +168,11 @@ export function CardSupportPage() {
                         {card.is_locked ? (
                           <Badge variant="secondary" className="text-xs">
                             {t("routes.support.locked")}
+                          </Badge>
+                        ) : null}
+                        {card.card_type === BADGE_CARD_TYPE ? (
+                          <Badge variant="outline" className="text-xs">
+                            {t("cards.types.badge")}
                           </Badge>
                         ) : null}
                       </div>

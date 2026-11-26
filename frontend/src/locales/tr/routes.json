@@ -245,6 +245,7 @@
   "qr.shape_ball_cross": "Artı",
   "qr.download_dirty_hint": "İndir, geçerli tasarımı tarayıcınızda oluşturur; sunucu dosyası ve PDF için önce kaydedin.",
   "support.card_images.hint": "Kartın üzerine basılan tasarım görselleri. PNG, JPEG veya WebP, en fazla 5 MB. Kart 85,6×54 mm yatay; farklı oranlar kırpılır.",
+  "support.card_images.hint_badge": "Yaka kartının üzerine basılan tasarım görselleri. PNG, JPEG veya WebP, en fazla 5 MB. Yaka kartı 54×85,6 mm dikey; farklı oranlar kırpılır.",
   "support.card_images.front": "Ön yüz",
   "support.card_images.back": "Arka yüz",
   "support.card_images.default": "Varsayılan görsel",
