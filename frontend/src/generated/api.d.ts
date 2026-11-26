@@ -3688,6 +3688,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/orders/card-images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a card design image for an order being placed
+         * @description Requires `platform.orders.write` (TEC-1320). Multipart field `image`: PNG, JPEG or WebP up
+         *     to 5 MB, the type comes from the bytes. Returns the API-owned `url` to send as
+         *     `front_image_url` / `back_image_url` of the order or an item; provisioning copies the
+         *     item's (else the order's) images onto the card. Other URLs are rejected on create.
+         */
+        post: operations["uploadPlatformOrderCardImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/orders/bulk": {
         parameters: {
             query?: never;
@@ -12197,6 +12220,10 @@ export interface components {
             profile_avatar_url?: string;
             /** @description The draft profile was created by this order (TEC-1317) */
             profile_created_by_order?: boolean;
+            /** @description Card front design (TEC-1320) */
+            front_image_url?: string;
+            /** @description Card back design (TEC-1320) */
+            back_image_url?: string;
             /** Format: uuid */
             card_uuid?: string;
             card_smart_code?: string;
@@ -12305,6 +12332,10 @@ export interface components {
             cancelled_at?: string;
             /** @description Why a super admin rejected the order (TEC-1317) */
             rejection_reason?: string;
+            /** @description Card front design (TEC-1320) */
+            front_image_url?: string;
+            /** @description Card back design (TEC-1320) */
+            back_image_url?: string;
             items?: components["schemas"]["OrderItemSummary"][];
             asset_requests?: components["schemas"]["AssetRequestSummary"][];
             /** Format: date-time */
@@ -12336,6 +12367,10 @@ export interface components {
             /** Format: uuid */
             profile_uuid?: string;
             idempotency_key?: string;
+            /** @description Card front design (TEC-1320): a URL from POST /v1/platform/orders/card-images. Platform orders only; ignored on /v1/orders. */
+            front_image_url?: string;
+            /** @description Card back design (TEC-1320), as front_image_url. */
+            back_image_url?: string;
         };
         /** @description On `POST /v1/orders` the order always belongs to the caller's active account and the target fields are ignored. On `POST /v1/platform/orders` the target is `account_uuid`, else `company_uuid` (company account), else `user_uuid` (that user's personal account), else the admin's active account. */
         CreateOrderInput: {
@@ -12353,6 +12388,10 @@ export interface components {
             admin_note?: string;
             payment_provider?: string;
             metadata?: Record<string, never>;
+            /** @description Card front design for items without their own (TEC-1320): a URL from POST /v1/platform/orders/card-images. Platform orders only; ignored on /v1/orders. */
+            front_image_url?: string;
+            /** @description Card back design (TEC-1320), as front_image_url. */
+            back_image_url?: string;
         };
         BulkUpdateOrderItemsInput: {
             item_uuids: string[];
@@ -19806,6 +19845,43 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeSimpleSuccess"];
                 };
             };
+        };
+    };
+    uploadPlatformOrderCardImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    image: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Stored image */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: {
+                            url: string;
+                        };
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     createPlatformBulkOrder: {

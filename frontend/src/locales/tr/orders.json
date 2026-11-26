@@ -349,5 +349,13 @@
   "approval.awaiting_title": "Onay bekleniyor",
   "approval.awaiting_desc": "Siparişiniz inceleniyor. Onaylandığında ödeme yapabilirsiniz; size bildirim göndereceğiz.",
   "approval.rejected_title": "Sipariş reddedildi",
-  "approval.rejected_reason": "Neden: {{reason}}"
+  "approval.rejected_reason": "Neden: {{reason}}",
+  "card_images.front": "Ön",
+  "card_images.back": "Arka",
+  "card_images.remove": "Görseli kaldır",
+  "card_images.column": "Kart tasarımı",
+  "card_images.order_heading": "Siparişin geneli için kart tasarımı",
+  "card_images.hint": "PNG, JPEG veya WebP, en fazla 5 MB. Kart 85,6×54 mm yatay; farklı oranlar kırpılır. Önce alıcının kendi görseli, sonra bu görsel, o da yoksa varsayılan görsel kullanılır.",
+  "card_images.too_large": "Görsel 5 MB'tan büyük",
+  "card_images.upload_failed": "Görsel yüklenemedi"
 }

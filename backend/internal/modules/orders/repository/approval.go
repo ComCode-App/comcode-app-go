@@ -8,6 +8,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/orders/model"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // ErrStatusMismatch is returned by ReviewOrder when the order is not in the expected status.
@@ -74,4 +75,21 @@ func (r *PostgresRepository) ReviewOrder(ctx context.Context, id uuid.UUID, from
 		return nil, err
 	}
 	return r.GetByUUID(ctx, id)
+}
+
+func optText(v string) pgtype.Text { return pgtype.Text{String: v, Valid: v != ""} }
+
+// SetOrderCardImages stores the order's card design images (TEC-1320); "" = none.
+func (r *PostgresRepository) SetOrderCardImages(ctx context.Context, orderID int64, front, back string) error {
+	return r.q.SetOrderCardImages(ctx, db.SetOrderCardImagesParams{ID: orderID, FrontImageUrl: optText(front), BackImageUrl: optText(back)})
+}
+
+// SetOrderItemCardImages stores one item's card design images (TEC-1320); "" = none.
+func (r *PostgresRepository) SetOrderItemCardImages(ctx context.Context, orderID int64, itemUUID uuid.UUID, front, back string) error {
+	return r.q.SetOrderItemCardImages(ctx, db.SetOrderItemCardImagesParams{OrderID: orderID, ItemUuid: itemUUID, FrontImageUrl: optText(front), BackImageUrl: optText(back)})
+}
+
+// CopyOrderCardImagesToCard gives a provisioned card its item's (else the order's) design images.
+func (r *PostgresRepository) CopyOrderCardImagesToCard(ctx context.Context, accountID, cardID, orderItemID int64) error {
+	return r.q.CopyOrderCardImagesToCard(ctx, db.CopyOrderCardImagesToCardParams{CardID: cardID, AccountID: accountID, OrderItemID: orderItemID})
 }

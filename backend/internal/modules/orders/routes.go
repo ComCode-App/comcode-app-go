@@ -32,6 +32,8 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/platform/orders", authn(require(rbac.PermPlatformOrdersRead)(http.HandlerFunc(h.List))))
 	mux.Handle("POST /v1/platform/orders", authn(require(rbac.PermPlatformOrdersWrite)(http.HandlerFunc(h.Create))))
 	mux.Handle("POST /v1/platform/orders/bulk", authn(require(rbac.PermPlatformOrdersWrite)(http.HandlerFunc(h.Create))))
+	// Card design images for the order being placed (TEC-1320).
+	mux.Handle("POST /v1/platform/orders/card-images", authn(require(rbac.PermPlatformOrdersWrite)(http.HandlerFunc(h.UploadCardImage))))
 	mux.Handle("GET /v1/platform/orders/{uuid}", authn(require(rbac.PermPlatformOrdersRead)(http.HandlerFunc(h.Get))))
 	mux.Handle("GET /v1/platform/orders/{uuid}/manifest/qr-codes", authn(require(rbac.PermPlatformOrdersRead)(http.HandlerFunc(h.ManifestQRCodes))))
 	mux.Handle("POST /v1/platform/orders/{uuid}/provision", authn(require(rbac.PermPlatformOrdersWrite)(http.HandlerFunc(h.ProvisionOrder))))

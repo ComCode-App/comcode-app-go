@@ -278,7 +278,8 @@ func (h *Handler) CreateMine(w http.ResponseWriter, r *http.Request) {
 func writeCreateResult(w http.ResponseWriter, r *http.Request, ord *model.OrderDetail, err error) {
 	if err != nil {
 		switch {
-		case errors.Is(err, usecase.ErrEmptyItems), errors.Is(err, usecase.ErrInvalidProduct), errors.Is(err, usecase.ErrInvalidAccount):
+		case errors.Is(err, usecase.ErrEmptyItems), errors.Is(err, usecase.ErrInvalidProduct), errors.Is(err, usecase.ErrInvalidAccount),
+			errors.Is(err, usecase.ErrInvalidCardImage):
 			response.BadRequest(w, r, response.CodeValidationError, err.Error())
 		case errors.Is(err, usecase.ErrForbidden):
 			response.Forbidden(w, r, "your account role cannot place orders")

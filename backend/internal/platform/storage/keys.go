@@ -33,6 +33,14 @@ func CardImageObjectKey(cardUUID, side, version, ext string) string {
 	return fmt.Sprintf("cards/%s/%s-%s.%s", cardUUID, side, version, trimExt(ext))
 }
 
+// OrderCardImagePrefix holds card design images uploaded while the platform places an order.
+const OrderCardImagePrefix = "orders/card-images/"
+
+// OrderCardImageObjectKey builds orders/card-images/{imageUUID}.{ext} (TEC-1320).
+func OrderCardImageObjectKey(imageUUID, ext string) string {
+	return fmt.Sprintf("%s%s.%s", OrderCardImagePrefix, imageUUID, trimExt(ext))
+}
+
 // ProfileAvatarObjectKey builds profiles/{profileUUID}/avatar.{ext}.
 func ProfileAvatarObjectKey(profileUUID, ext string) string {
 	return fmt.Sprintf("profiles/%s/avatar.%s", profileUUID, trimExt(ext))

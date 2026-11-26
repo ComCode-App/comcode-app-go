@@ -56,6 +56,11 @@ type Repository interface {
 	OpenOrderDraftProfiles(ctx context.Context, accountID, orderID int64) ([]uuid.UUID, error)
 	ReviewOrder(ctx context.Context, id uuid.UUID, from, to, rejectionReason string, actorUserID *int64) (*model.OrderDetail, error)
 
+	// Card design images (TEC-1320)
+	SetOrderCardImages(ctx context.Context, orderID int64, front, back string) error
+	SetOrderItemCardImages(ctx context.Context, orderID int64, itemUUID uuid.UUID, front, back string) error
+	CopyOrderCardImagesToCard(ctx context.Context, accountID, cardID, orderItemID int64) error
+
 	// Asset Requests
 	ListAssetRequests(ctx context.Context, orderID int64) ([]model.AssetRequestSummary, error)
 	GetAssetRequestByUUID(ctx context.Context, id uuid.UUID) (*model.AssetRequestSummary, error)

@@ -51,3 +51,31 @@ UPDATE orders
 SET rejection_reason = sqlc.arg(reason)::text
 WHERE id = sqlc.arg(id)
   AND deleted_at IS NULL;
+
+-- Card design images chosen when an order is placed (TEC-1320 B).
+
+-- account-lint: cross-account platform order creation sets the order's card images
+-- name: SetOrderCardImages :exec
+UPDATE orders
+SET front_image_url = sqlc.narg(front_image_url)::text,
+    back_image_url  = sqlc.narg(back_image_url)::text
+WHERE id = sqlc.arg(id);
+
+-- name: SetOrderItemCardImages :exec
+UPDATE order_items
+SET front_image_url = sqlc.narg(front_image_url)::text,
+    back_image_url  = sqlc.narg(back_image_url)::text
+WHERE order_id = sqlc.arg(order_id)
+  AND uuid = sqlc.arg(item_uuid);
+
+-- name: CopyOrderCardImagesToCard :exec
+-- The item's image wins, then the order's; NULL keeps the default artwork.
+UPDATE nfc_cards c
+SET front_image_url = COALESCE(oi.front_image_url, o.front_image_url),
+    back_image_url  = COALESCE(oi.back_image_url, o.back_image_url)
+FROM order_items oi
+JOIN orders o ON o.id = oi.order_id
+WHERE c.id = sqlc.arg(card_id)
+  AND c.account_id = sqlc.arg(account_id)
+  AND o.account_id = sqlc.arg(account_id)
+  AND oi.id = sqlc.arg(order_item_id);

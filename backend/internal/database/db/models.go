@@ -1935,6 +1935,8 @@ type Order struct {
 	Metadata          []byte             `json:"metadata"`
 	AccountID         int64              `json:"account_id"`
 	RejectionReason   pgtype.Text        `json:"rejection_reason"`
+	FrontImageUrl     pgtype.Text        `json:"front_image_url"`
+	BackImageUrl      pgtype.Text        `json:"back_image_url"`
 }
 
 type OrderAssetRequest struct {
@@ -1980,6 +1982,8 @@ type OrderItem struct {
 	ProvisioningError     string             `json:"provisioning_error"`
 	IdempotencyKey        string             `json:"idempotency_key"`
 	ProfileCreatedByOrder bool               `json:"profile_created_by_order"`
+	FrontImageUrl         pgtype.Text        `json:"front_image_url"`
+	BackImageUrl          pgtype.Text        `json:"back_image_url"`
 }
 
 type OrderNotificationEvent struct {
