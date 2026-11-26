@@ -48,6 +48,9 @@ type Service struct {
 	search       searchengine.Enqueuer
 	refunder     PaymentRefunder
 	webhooks     Webhooks
+	// drafts and quota run the company bulk order approval flow (TEC-1317); nil = off.
+	drafts DraftProfiles
+	quota  ProfileQuota
 }
 
 func NewService(repo repository.Repository, prodRepo productsRepo.Repository, notifSvc orderNotifier, store storage.Driver, frontendURL string) *Service {
@@ -388,6 +391,8 @@ func (s *Service) ProvisionOrder(ctx context.Context, orderUUID uuid.UUID) (*mod
 	if provisionedCount > 0 {
 		_, _ = s.repo.UpdateFulfillmentStatus(ctx, orderUUID, "in_production")
 	}
+	// Recipients' draft profiles go live once the order is paid (TEC-1317).
+	s.openOrderDrafts(ctx, ord)
 
 	return s.repo.GetByUUID(ctx, orderUUID)
 }
@@ -481,6 +486,9 @@ func (s *Service) provisionSingleItem(ctx context.Context, ord *model.OrderDetai
 }
 
 func (s *Service) UpdateStatus(ctx context.Context, id uuid.UUID, input model.UpdateOrderStatusInput) (*model.OrderDetail, error) {
+	if err := s.guardAwaitingApproval(ctx, id); err != nil {
+		return nil, err
+	}
 	if input.Status == "refunded" {
 		if err := s.refundAtProvider(ctx, id); err != nil {
 			return nil, err
@@ -521,6 +529,9 @@ func actorUserID(ctx context.Context) *int64 {
 }
 
 func (s *Service) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, input model.UpdateOrderPaymentStatusInput) (*model.OrderDetail, error) {
+	if err := s.guardAwaitingApproval(ctx, id); err != nil {
+		return nil, err
+	}
 	if input.PaymentStatus == model.PaymentStatusRefunded {
 		if err := s.refundAtProvider(ctx, id); err != nil {
 			return nil, err

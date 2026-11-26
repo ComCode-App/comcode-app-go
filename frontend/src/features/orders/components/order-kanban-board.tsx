@@ -33,6 +33,13 @@ interface ColumnConfig {
 
 const KANBAN_COLUMNS: ColumnConfig[] = [
   {
+    // Approved or rejected from the order detail (TEC-1317), never moved by the board.
+    id: "awaiting_approval",
+    titleKey: "orders.status_awaiting_approval",
+    badgeColor: "bg-violet-500/10 text-violet-500 border-violet-500/20",
+    icon: Clock,
+  },
+  {
     id: "pending",
     titleKey: "orders.status_pending",
     badgeColor: "bg-blue-500/10 text-blue-500 border-blue-500/20",

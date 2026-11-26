@@ -152,7 +152,7 @@ func newOrderPayFixture(t *testing.T) *orderPayFixture {
 	// Registered together to prove the new /v1/orders patterns do not collide with the orders module.
 	ordersHandler := ordershandler.New(ordersSvc)
 	ordersHandler.SetStepUp(f.stepUp)
-	orders.RegisterRoutes(mux, ordersHandler, tokens, who)
+	orders.RegisterRoutes(mux, ordersHandler, tokens, who, nil)
 	f.mux = mux
 	return f
 }

@@ -288,6 +288,8 @@ type Querier interface {
 	FailOrderPaymentSession(ctx context.Context, arg FailOrderPaymentSessionParams) (OrderPaymentSession, error)
 	// account-lint: cross-account payment provider callback / init failure: session id from that flow
 	FailPaymentCardSession(ctx context.Context, argUuid uuid.UUID) (PaymentCardSession, error)
+	// Company bulk order approval (TEC-1317).
+	FindAccountProfileByEmail(ctx context.Context, arg FindAccountProfileByEmailParams) (FindAccountProfileByEmailRow, error)
 	FindActiveUserByEmail(ctx context.Context, email string) (FindActiveUserByEmailRow, error)
 	FindCompanyGroupsByName(ctx context.Context, arg FindCompanyGroupsByNameParams) ([]FindCompanyGroupsByNameRow, error)
 	FindCompanyOfficesByName(ctx context.Context, arg FindCompanyOfficesByNameParams) ([]uuid.UUID, error)
@@ -665,6 +667,7 @@ type Querier interface {
 	ListOAuthAccountsForUserIDs(ctx context.Context, userIds []int64) ([]ListOAuthAccountsForUserIDsRow, error)
 	ListOAuthProviderSettings(ctx context.Context) ([]OauthProviderSetting, error)
 	ListOrderAssetRequests(ctx context.Context, orderID int64) ([]ListOrderAssetRequestsRow, error)
+	ListOrderCreatedProfiles(ctx context.Context, arg ListOrderCreatedProfilesParams) ([]uuid.UUID, error)
 	// account-lint: cross-account items of an order already loaded through a platform route or GetForAccount
 	ListOrderItemsByOrderID(ctx context.Context, orderID int64) ([]ListOrderItemsByOrderIDRow, error)
 	// account-lint: cross-account platform production manifest (platform.orders.read + step-up)
@@ -827,6 +830,7 @@ type Querier interface {
 	// and IN ('delivered', 'read') makes Postgres raise 42P08
 	// (inconsistent types deduced for parameter $2).
 	MarkNotificationSent(ctx context.Context, arg MarkNotificationSentParams) (Notification, error)
+	MarkOrderItemProfileCreated(ctx context.Context, arg MarkOrderItemProfileCreatedParams) error
 	MarkOrderNotificationDispatched(ctx context.Context, arg MarkOrderNotificationDispatchedParams) error
 	// account-lint: cross-account platform order refunds (platform.orders.write)
 	MarkOrderPaymentRefundFailed(ctx context.Context, arg MarkOrderPaymentRefundFailedParams) (OrderPaymentRefund, error)
@@ -841,6 +845,7 @@ type Querier interface {
 	MarkVisitorHour(ctx context.Context, arg MarkVisitorHourParams) error
 	// account-lint: cross-account subscription id from the account's own subscription (LockAccountPaymentSubscription)
 	NextUpgradeAttempt(ctx context.Context, arg NextUpgradeAttemptParams) (int32, error)
+	OpenOrderDraftProfileRoutes(ctx context.Context, arg OpenOrderDraftProfileRoutesParams) ([]uuid.UUID, error)
 	PingDB(ctx context.Context) (int32, error)
 	// Platform-wide event volume per local calendar day (TEC-859), read from the hourly rollups so
 	// days follow the viewer's time zone. Never touches the raw events partitions.
@@ -999,6 +1004,8 @@ type Querier interface {
 	// Stores (or, with NULLs, clears) the encrypted refresh token of one linked
 	// identity and the client id it belongs to (TEC-1181).
 	SetOAuthAccountRefreshToken(ctx context.Context, arg SetOAuthAccountRefreshTokenParams) (int64, error)
+	// account-lint: cross-account platform order review (platform.orders.approve)
+	SetOrderRejectionReason(ctx context.Context, arg SetOrderRejectionReasonParams) error
 	SetPrimaryProfileByUUID(ctx context.Context, arg SetPrimaryProfileByUUIDParams) error
 	// UpdateProduct keeps the category when none is given; an import rollback (TEC-596) uses this
 	// to put back exactly the category a product had before, none included.

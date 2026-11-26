@@ -12,6 +12,7 @@ export type OrderRefundablePayment =
 export type RefundOrderPayload = components["schemas"]["RefundOrderInput"];
 
 export type OrderStatus =
+  | "awaiting_approval"
   | "pending"
   | "paid"
   | "design_pending"
@@ -59,6 +60,8 @@ export type OrderItemSummary = {
   recipient_department?: string;
   profile_uuid?: string;
   profile_avatar_url?: string;
+  /** The draft profile was created by this order (TEC-1317). */
+  profile_created_by_order?: boolean;
   card_uuid?: string;
   card_smart_code?: string;
   card_uid?: string;
@@ -141,6 +144,8 @@ export type OrderDetail = OrderSummary & {
   shipped_at?: string;
   delivered_at?: string;
   cancelled_at?: string;
+  /** Why a super admin rejected the order (TEC-1317). */
+  rejection_reason?: string;
   items: OrderItemSummary[];
   asset_requests: AssetRequestSummary[];
 };
@@ -275,6 +280,23 @@ export const ordersService = {
     return platformRequest<OrderDetail>("POST", "/v1/platform/orders/bulk", {
       body: payload,
     });
+  },
+
+  /** Approve a company bulk order awaiting approval (TEC-1317); needs step-up. */
+  async approve(uuid: string) {
+    return platformRequest<OrderDetail>(
+      "POST",
+      `/v1/platform/orders/${uuid}/approve`,
+    );
+  },
+
+  /** Reject a company bulk order awaiting approval with a reason (TEC-1317). */
+  async reject(uuid: string, reason: string) {
+    return platformRequest<OrderDetail>(
+      "POST",
+      `/v1/platform/orders/${uuid}/reject`,
+      { body: { reason } },
+    );
   },
 
   async provisionOrder(uuid: string) {

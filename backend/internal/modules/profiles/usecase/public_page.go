@@ -438,6 +438,12 @@ func (s *Service) UpdatePublicPage(ctx context.Context, p authctx.Principal, pro
 // ensureUsername gives a profile its first username, derived from its name. Best effort on
 // create: a failure leaves the profile without a public page until GetPublicPage retries.
 func (s *Service) ensureUsername(ctx context.Context, accountID int64, detail *model.ProfileDetail) error {
+	return s.ensureUsernameStatus(ctx, accountID, detail, "active")
+}
+
+// ensureUsernameStatus is ensureUsername with the initial route status: "locked" keeps the
+// public page closed (order draft profiles, TEC-1317).
+func (s *Service) ensureUsernameStatus(ctx context.Context, accountID int64, detail *model.ProfileDetail, status string) error {
 	if s.pages == nil {
 		return ErrPublicPagesUnavailable
 	}
@@ -467,7 +473,7 @@ func (s *Service) ensureUsername(ctx context.Context, accountID int64, detail *m
 		cfg, _ := mergeConfig(nil, configPatch{modules: model.PublicModules})
 		return s.pages.Apply(ctx, repository.ApplyPublicPage{
 			ProfileID: profileID, AccountID: accountID, OwnerUserID: ownerUserID,
-			NewPath: candidate, Status: "active", Config: cfg,
+			NewPath: candidate, Status: status, Config: cfg,
 		})
 	}
 	return fmt.Errorf("public page: no free username for %q", base)
