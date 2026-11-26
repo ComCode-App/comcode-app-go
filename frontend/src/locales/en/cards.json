@@ -112,5 +112,7 @@
   "resolver_view_profile": "View Profile",
   "resolver_retired_title": "Card deactivated",
   "resolver_retired_desc": "This card or link is no longer in use.",
-  "delete_title": "Delete card"
+  "delete_title": "Delete card",
+  "art.front_alt": "Card front design",
+  "art.back_alt": "Card back design"
 }

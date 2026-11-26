@@ -243,5 +243,15 @@
   "qr.shape_ball_rough": "Rough",
   "qr.shape_ball_cushion": "Cushion",
   "qr.shape_ball_cross": "Cross",
-  "qr.download_dirty_hint": "Download creates the current design in your browser; save first for the server file and PDF."
+  "qr.download_dirty_hint": "Download creates the current design in your browser; save first for the server file and PDF.",
+  "support.card_images.hint": "Design images printed on the card. PNG, JPEG or WebP, up to 5 MB. Card 85.6×54 mm landscape; other ratios are cropped.",
+  "support.card_images.front": "Front",
+  "support.card_images.back": "Back",
+  "support.card_images.default": "Default artwork",
+  "support.card_images.upload": "Upload image",
+  "support.card_images.replace": "Replace image",
+  "support.card_images.remove": "Remove",
+  "support.card_images.uploaded": "Card image saved",
+  "support.card_images.removed": "Card image removed",
+  "support.card_images.too_large": "The image is larger than 5 MB"
 }

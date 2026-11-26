@@ -52,5 +52,6 @@
   "codes.registration_disabled": "New sign-ups are currently closed.",
   "codes.order_awaiting_approval": "This order is awaiting approval. Approve or reject it first.",
   "codes.order_not_awaiting_approval": "This order is no longer awaiting approval.",
-  "codes.profile_quota_exceeded": "The company is over its profile limit."
+  "codes.profile_quota_exceeded": "The company is over its profile limit.",
+  "codes.storage_unavailable": "File storage is not available right now. Try again later."
 }

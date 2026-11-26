@@ -36,6 +36,7 @@ import {
   Field,
   useDebouncedQuery,
 } from "@/features/platform-support/components/support-ui";
+import { CardFaceImages } from "@/features/platform-support/components/card-face-images";
 import { useStepUp } from "@/features/step-up-engine";
 import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -214,6 +215,7 @@ export function CardSupportPage() {
                           mono
                         />
                       </dl>
+                      <CardFaceImages card={card} canWrite={canWrite} />
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2">
                       {card.profile?.username ? (

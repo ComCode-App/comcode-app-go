@@ -19,7 +19,8 @@ SELECT
     ), '')::text AS profile_username,
     o.uuid AS order_uuid, o.order_number AS order_number, o.status AS order_status,
     r.uuid AS route_uuid, r.path AS route_path, r.status AS route_status,
-    COALESCE(r.legacy_metadata->>'card_serial_number', '')::text AS legacy_serial
+    COALESCE(r.legacy_metadata->>'card_serial_number', '')::text AS legacy_serial,
+    c.front_image_url, c.back_image_url
 FROM nfc_cards c
 JOIN accounts a ON a.id = c.account_id
 JOIN users u ON u.id = c.user_id
@@ -52,7 +53,8 @@ SELECT
     ), '')::text AS profile_username,
     o.uuid AS order_uuid, o.order_number AS order_number, o.status AS order_status,
     r.uuid AS route_uuid, r.path AS route_path, r.status AS route_status,
-    COALESCE(r.legacy_metadata->>'card_serial_number', '')::text AS legacy_serial
+    COALESCE(r.legacy_metadata->>'card_serial_number', '')::text AS legacy_serial,
+    c.front_image_url, c.back_image_url
 FROM nfc_cards c
 JOIN accounts a ON a.id = c.account_id
 JOIN users u ON u.id = c.user_id
@@ -207,3 +209,12 @@ WHERE r.id = h.route_id
   AND h.created_at > NOW() - INTERVAL '30 days'
   AND h.quarantine_released_at IS NULL
 RETURNING r.uuid;
+
+-- account-lint: cross-account platform support tools (platform.cards.write)
+-- name: PlatformSetCardImage :execrows
+-- Sets or clears (NULL) one face's design image of a card (TEC-1320).
+UPDATE nfc_cards
+SET front_image_url = CASE WHEN sqlc.arg(side)::text = 'front' THEN sqlc.narg(url)::text ELSE front_image_url END,
+    back_image_url  = CASE WHEN sqlc.arg(side)::text = 'back' THEN sqlc.narg(url)::text ELSE back_image_url END
+WHERE id = sqlc.arg(card_id)
+  AND deleted_at IS NULL;

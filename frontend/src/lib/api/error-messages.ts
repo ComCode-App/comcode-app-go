@@ -63,6 +63,8 @@ export const API_ERROR_MESSAGE_KEYS: Readonly<Record<string, string>> = {
   REFUND_FAILED: "errors.codes.refund_failed",
   REFUND_IN_PROGRESS: "errors.codes.refund_in_progress",
   NOTHING_TO_REFUND: "errors.codes.nothing_to_refund",
+  // Card design images (TEC-1320).
+  STORAGE_UNAVAILABLE: "errors.codes.storage_unavailable",
   // Company bulk order approval (TEC-1317).
   ORDER_AWAITING_APPROVAL: "errors.codes.order_awaiting_approval",
   ORDER_NOT_AWAITING_APPROVAL: "errors.codes.order_not_awaiting_approval",

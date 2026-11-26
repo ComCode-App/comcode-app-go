@@ -30,13 +30,26 @@ var (
 )
 
 // fakeRepo answers every call with an activated card and a quarantined path.
-type fakeRepo struct{ writes []string }
+type fakeRepo struct {
+	writes      []string
+	front, back string
+}
 
 func (f *fakeRepo) card() *model.Card {
 	return &model.Card{
 		ID: 1, UUID: cardUUID, SmartCode: "abc123", ActivationStatus: model.ActivationActive,
-		Route: &model.RouteRef{UUID: routeUUID, Path: "c/abc123", Status: "active"},
+		Route:         &model.RouteRef{UUID: routeUUID, Path: "c/abc123", Status: "active"},
+		FrontImageURL: f.front, BackImageURL: f.back,
 	}
+}
+func (f *fakeRepo) SetCardImage(_ context.Context, _ int64, side, url string) error {
+	f.writes = append(f.writes, "image:"+side)
+	if side == "front" {
+		f.front = url
+	} else {
+		f.back = url
+	}
+	return nil
 }
 func (f *fakeRepo) SearchCards(context.Context, string, int32) ([]model.Card, error) {
 	return []model.Card{*f.card()}, nil
@@ -74,6 +87,7 @@ func (c *fakeCache) InvalidateCard(_ context.Context, id uuid.UUID) {
 }
 
 type fixture struct {
+	svc   *usecase.Service
 	mux   *http.ServeMux
 	repo  *fakeRepo
 	cache *fakeCache
@@ -98,7 +112,7 @@ func newFixture(t *testing.T) fixture {
 	}
 	svc := usecase.New(repo, cache, nil)
 	platformsupport.Register(mux, handler.New(svc), authn, middleware.RequireStepUp(stepup.NewService(nil, store, nil, nil)))
-	return fixture{mux: mux, repo: repo, cache: cache, store: store}
+	return fixture{svc: svc, mux: mux, repo: repo, cache: cache, store: store}
 }
 
 var staffUUID = uuid.New()
@@ -134,6 +148,8 @@ var cases = []routeCase{
 	{method: "GET", path: "/v1/platform/cards/" + cardUUID.String(), read: rbac.PermPlatformCardsRead},
 	{method: "POST", path: "/v1/platform/cards/" + cardUUID.String() + "/retire", write: rbac.PermPlatformCardsWrite},
 	{method: "POST", path: "/v1/platform/cards/" + cardUUID.String() + "/reassign", body: `{"profile_uuid":"` + profileUUID.String() + `"}`, write: rbac.PermPlatformCardsWrite},
+	// No image set on the fake card: removing it is a no-op that still needs write + step-up.
+	{method: "DELETE", path: "/v1/platform/cards/" + cardUUID.String() + "/images/front", write: rbac.PermPlatformCardsWrite},
 	{method: "GET", path: "/v1/platform/routes?q=s/x", read: rbac.PermPlatformRoutesRead},
 	{method: "GET", path: "/v1/platform/routes/" + routeUUID.String(), read: rbac.PermPlatformRoutesRead},
 	{method: "POST", path: "/v1/platform/routes/quarantine/release", body: `{"path":"s/x"}`, write: rbac.PermPlatformRoutesWrite},

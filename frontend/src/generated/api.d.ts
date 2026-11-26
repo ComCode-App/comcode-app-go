@@ -8102,6 +8102,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/cards/{uuid}/images/{side}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upload a card face's design image
+         * @description Stores the front or back design image of a card (TEC-1320), multipart field `image`.
+         *     PNG, JPEG or WebP up to 5 MB; the type comes from the bytes. Any aspect ratio is accepted
+         *     (previews crop with `object-fit: cover`). The previous image object is deleted. Writes
+         *     `card.image_updated` to the activity log. Requires `platform.cards.write` and a step-up grant.
+         */
+        put: operations["uploadPlatformCardImage"];
+        post?: never;
+        /**
+         * Remove a card face's design image
+         * @description Clears the front or back design image; previews show the default artwork again (TEC-1320).
+         *     Writes `card.image_removed`. Requires `platform.cards.write` and a step-up grant.
+         */
+        delete: operations["removePlatformCardImage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/routes": {
         parameters: {
             query?: never;
@@ -12458,6 +12486,10 @@ export interface components {
             is_locked: boolean;
             /** @enum {string} */
             activation_status: "pending" | "active" | "retired";
+            /** @description Front design image (TEC-1320); absent = default artwork */
+            front_image_url?: string;
+            /** @description Back design image (TEC-1320); absent = default artwork */
+            back_image_url?: string;
             account: components["schemas"]["SupportAccountRef"];
             owner: components["schemas"]["SupportUserRef"];
             profile?: components["schemas"]["SupportProfileRef"];
@@ -12720,6 +12752,10 @@ export interface components {
             card_type: "physical_nfc" | "metal_card" | "wood_card" | "pvc_card" | "digital_only";
             material: string;
             color_hex: string;
+            /** @description Front design image (TEC-1320); absent = default artwork */
+            front_image_url?: string;
+            /** @description Back design image (TEC-1320); absent = default artwork */
+            back_image_url?: string;
             is_active: boolean;
             is_locked: boolean;
             lead_capture_enabled: boolean;
@@ -12753,6 +12789,10 @@ export interface components {
             card_type: "physical_nfc" | "metal_card" | "wood_card" | "pvc_card" | "digital_only";
             material: string;
             color_hex: string;
+            /** @description Front design image (TEC-1320); absent = default artwork */
+            front_image_url?: string;
+            /** @description Back design image (TEC-1320); absent = default artwork */
+            back_image_url?: string;
             is_active: boolean;
             is_locked: boolean;
             lead_capture_enabled: boolean;
@@ -28090,6 +28130,69 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    uploadPlatformCardImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                side: "front" | "back";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    image: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Card with the new image */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeSupportCard"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    removePlatformCardImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                side: "front" | "back";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Card without the image */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeSupportCard"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     searchPlatformRoutes: {

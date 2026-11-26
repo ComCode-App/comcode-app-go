@@ -920,6 +920,9 @@ type Querier interface {
 	// Path search over every route, deleted smart links included (they hold their path for 30 days),
 	// plus routes whose renamed-away old path matches.
 	PlatformSearchRoutes(ctx context.Context, arg PlatformSearchRoutesParams) ([]int64, error)
+	// account-lint: cross-account platform support tools (platform.cards.write)
+	// Sets or clears (NULL) one face's design image of a card (TEC-1320).
+	PlatformSetCardImage(ctx context.Context, arg PlatformSetCardImageParams) (int64, error)
 	// Most frequent event types over a window of the hourly rollups (TEC-953).
 	PlatformTopEventTypes(ctx context.Context, arg PlatformTopEventTypesParams) ([]PlatformTopEventTypesRow, error)
 	// Platform-wide distinct visitors (TEC-953) for today, the last 7 and the last 30 local days,

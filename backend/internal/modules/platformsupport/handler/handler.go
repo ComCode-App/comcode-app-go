@@ -10,6 +10,7 @@ import (
 
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/platformsupport/usecase"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/response"
 )
 
@@ -165,9 +166,50 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, "CARD_HAS_NO_ROUTE", "Card has no card route")
 	case errors.Is(err, usecase.ErrCardNotActivated):
 		response.Conflict(w, r, "CARD_NOT_ACTIVATED", "Card is not activated yet")
+	case errors.Is(err, usecase.ErrInvalidCardSide):
+		response.ValidationError(w, r, []response.Detail{{Field: "side", Message: "Side must be front or back", Code: "invalid"}})
+	case errors.Is(err, usecase.ErrStorageUnavailable):
+		response.Error(w, r, http.StatusServiceUnavailable, "STORAGE_UNAVAILABLE", "Object storage is not configured")
 	case errors.Is(err, usecase.ErrPathNotQuarantined):
 		response.Conflict(w, r, "PATH_NOT_QUARANTINED", "Path is not quarantined")
 	default:
 		response.InternalErr(w, r, err, "Support request failed")
 	}
+}
+
+// UploadCardImage stores a card face's design image (multipart field "image", TEC-1320).
+func (h *Handler) UploadCardImage(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	file, header, ok := upload.FormFile(w, r, upload.MaxImageBytes, "image")
+	defer upload.Cleanup(r)
+	if !ok {
+		return
+	}
+	defer func() { _ = file.Close() }()
+	card, err := h.svc.UploadCardImage(r.Context(), actor(r), id, r.PathValue("side"), file, header.Filename, header.Size)
+	if err != nil {
+		if upload.WriteError(w, r, err) {
+			return
+		}
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, card)
+}
+
+// RemoveCardImage clears a card face's design image; the default artwork is shown again.
+func (h *Handler) RemoveCardImage(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	card, err := h.svc.RemoveCardImage(r.Context(), actor(r), id, r.PathValue("side"))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, card)
 }

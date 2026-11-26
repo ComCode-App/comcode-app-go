@@ -12807,6 +12807,61 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /v1/platform/cards/{uuid}/images/{side}:
+    put:
+      tags: [Platform Support]
+      operationId: uploadPlatformCardImage
+      summary: Upload a card face's design image
+      description: |
+        Stores the front or back design image of a card (TEC-1320), multipart field `image`.
+        PNG, JPEG or WebP up to 5 MB; the type comes from the bytes. Any aspect ratio is accepted
+        (previews crop with `object-fit: cover`). The previous image object is deleted. Writes
+        `card.image_updated` to the activity log. Requires `platform.cards.write` and a step-up grant.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - { name: side, in: path, required: true, schema: { type: string, enum: [front, back] } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        "200":
+          description: Card with the new image
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeSupportCard" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Platform Support]
+      operationId: removePlatformCardImage
+      summary: Remove a card face's design image
+      description: |
+        Clears the front or back design image; previews show the default artwork again (TEC-1320).
+        Writes `card.image_removed`. Requires `platform.cards.write` and a step-up grant.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - { name: side, in: path, required: true, schema: { type: string, enum: [front, back] } }
+      responses:
+        "200":
+          description: Card without the image
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeSupportCard" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /v1/platform/routes:
     get:
       tags: [Platform Support]
@@ -18326,6 +18381,8 @@ components:
         is_active: { type: boolean }
         is_locked: { type: boolean }
         activation_status: { type: string, enum: [pending, active, retired] }
+        front_image_url: { type: string, description: "Front design image (TEC-1320); absent = default artwork" }
+        back_image_url: { type: string, description: "Back design image (TEC-1320); absent = default artwork" }
         account: { $ref: "#/components/schemas/SupportAccountRef" }
         owner: { $ref: "#/components/schemas/SupportUserRef" }
         profile: { $ref: "#/components/schemas/SupportProfileRef" }
@@ -18591,6 +18648,8 @@ components:
         card_type: { type: string, enum: [physical_nfc, metal_card, wood_card, pvc_card, digital_only] }
         material: { type: string }
         color_hex: { type: string }
+        front_image_url: { type: string, description: "Front design image (TEC-1320); absent = default artwork" }
+        back_image_url: { type: string, description: "Back design image (TEC-1320); absent = default artwork" }
         is_active: { type: boolean }
         is_locked: { type: boolean }
         lead_capture_enabled: { type: boolean }
@@ -18617,6 +18676,8 @@ components:
         card_type: { type: string, enum: [physical_nfc, metal_card, wood_card, pvc_card, digital_only] }
         material: { type: string }
         color_hex: { type: string }
+        front_image_url: { type: string, description: "Front design image (TEC-1320); absent = default artwork" }
+        back_image_url: { type: string, description: "Back design image (TEC-1320); absent = default artwork" }
         is_active: { type: boolean }
         is_locked: { type: boolean }
         lead_capture_enabled: { type: boolean }
