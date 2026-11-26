@@ -3782,6 +3782,7 @@ export interface paths {
          * @description Moving an order to `refunded` first refunds its online payment at the provider (TEC-935,
          *     same as `POST /v1/platform/orders/{uuid}/refunds` without an amount) and needs a step-up
          *     grant. `502 REFUND_FAILED` leaves the order unchanged; `409 REFUND_IN_PROGRESS`.
+         *     `409 ORDER_AWAITING_APPROVAL` for an order awaiting approval (use approve/reject).
          */
         put: operations["updateOrderPaymentStatus"];
         post?: never;
@@ -3802,6 +3803,51 @@ export interface paths {
         /** Update fulfillment state machine */
         put: operations["updateOrderFulfillmentStatus"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/orders/{uuid}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a company bulk order awaiting approval
+         * @description Requires `platform.orders.approve` and a step-up grant (TEC-1317). Moves the order from
+         *     `awaiting_approval` to `pending` so the customer can pay, and notifies the customer.
+         *     `409 PROFILE_QUOTA_EXCEEDED` while the company holds more profiles than its plan allows
+         *     (error details `missing`, `used`, `limit`); `409 ORDER_NOT_AWAITING_APPROVAL` otherwise.
+         */
+        post: operations["approvePlatformOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/orders/{uuid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a company bulk order awaiting approval
+         * @description Requires `platform.orders.approve` and a step-up grant (TEC-1317). Cancels the order with
+         *     the required reason, deletes the draft profiles the order created (existing profiles
+         *     matched by e-mail are kept) and notifies the customer with the reason.
+         */
+        post: operations["rejectPlatformOrder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3965,7 +4011,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Place a bulk order with multiple recipients/cards */
+        /**
+         * Place a bulk order with multiple recipients/cards
+         * @description From a company account (TEC-1317) the order opens as `awaiting_approval`: each recipient
+         *     gets a profile in the company (an existing profile with the recipient's e-mail is linked,
+         *     otherwise a draft with a closed public page is created). It cannot be paid until a super
+         *     admin approves it; drafts go live once the order is paid. Personal accounts keep `pending`.
+         */
         post: operations["createMyBulkOrder"];
         delete?: never;
         options?: never;
@@ -11995,6 +12047,8 @@ export interface components {
             /** Format: uuid */
             profile_uuid?: string;
             profile_avatar_url?: string;
+            /** @description The draft profile was created by this order (TEC-1317) */
+            profile_created_by_order?: boolean;
             /** Format: uuid */
             card_uuid?: string;
             card_smart_code?: string;
@@ -12074,6 +12128,7 @@ export interface components {
             customer_name?: string;
             customer_surname?: string;
             company_name?: string;
+            /** @description Pipeline status. `awaiting_approval` (TEC-1317): a company bulk order waiting for platform approval; it cannot be paid until approved. */
             status: string;
             subtotal?: number;
             tax_total?: number;
@@ -12100,6 +12155,8 @@ export interface components {
             delivered_at?: string;
             /** Format: date-time */
             cancelled_at?: string;
+            /** @description Why a super admin rejected the order (TEC-1317) */
+            rejection_reason?: string;
             items?: components["schemas"]["OrderItemSummary"][];
             asset_requests?: components["schemas"]["AssetRequestSummary"][];
             /** Format: date-time */
@@ -19796,6 +19853,68 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeOrderDetail"];
                 };
             };
+        };
+    };
+    approvePlatformOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order approved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrderDetail"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    rejectPlatformOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Order rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrderDetail"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     updateOrderStatus: {

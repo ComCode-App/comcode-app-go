@@ -40,6 +40,7 @@ import { ordersQueryKeys } from "../hooks/query-keys";
 import { useOrderMutations } from "../hooks/use-orders";
 import { OrderManifestMenu } from "./order-manifest-menu";
 import { OrderRequestAssetDialog } from "./order-request-asset-dialog";
+import { OrderApprovalPanel } from "./order-approval-panel";
 import { OrderRefundsPanel } from "./order-refunds-panel";
 import { useLocale } from "@/providers/locale-provider";
 import { useDialogs } from "@/providers/dialog-provider";
@@ -201,12 +202,18 @@ export function OrderDetailDialog({
                         onValueChange={(val) =>
                           handleStatusChange(val as OrderStatus)
                         }
-                        disabled={updateStatusMutation.isPending}
+                        disabled={
+                          updateStatusMutation.isPending ||
+                          order.status === "awaiting_approval"
+                        }
                       >
                         <SelectTrigger className="h-8 w-36 text-xs font-semibold">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="awaiting_approval" disabled>
+                            🕒 {t("orders.status_awaiting_approval")}
+                          </SelectItem>
                           <SelectItem value="pending">
                             ⏳ {t("orders.status_pending")}
                           </SelectItem>
@@ -266,7 +273,10 @@ export function OrderDetailDialog({
                             paymentStatus: val,
                           });
                         }}
-                        disabled={updatePaymentStatusMutation.isPending}
+                        disabled={
+                          updatePaymentStatusMutation.isPending ||
+                          order.status === "awaiting_approval"
+                        }
                       >
                         <SelectTrigger className="h-8 w-32 text-xs font-semibold">
                           <SelectValue />
@@ -334,6 +344,20 @@ export function OrderDetailDialog({
                   </div>
                 </div>
               </DialogHeader>
+
+              {order.status === "awaiting_approval" && (
+                <OrderApprovalPanel order={order} />
+              )}
+              {order.status === "cancelled" && order.rejection_reason && (
+                <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-3 text-sm">
+                  <span className="font-semibold">
+                    {t("orders.approval.rejected_title")}:{" "}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {order.rejection_reason}
+                  </span>
+                </div>
+              )}
 
               {/* Order Tabs */}
               <Tabs defaultValue="items" className="w-full">

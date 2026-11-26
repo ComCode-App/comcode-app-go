@@ -333,3 +333,37 @@ func (s *Service) OverviewForAccount(ctx context.Context, accountID int64) (Over
 	}
 	return out, nil
 }
+
+// QuotaUsage is an account's usage of a quota feature against its plan limit.
+type QuotaUsage struct {
+	Used      int64
+	Limit     int32
+	Unlimited bool
+}
+
+// Missing is how many resources the account holds above its limit (0 when within it).
+func (u QuotaUsage) Missing() int64 {
+	if u.Unlimited || u.Used <= int64(u.Limit) {
+		return 0
+	}
+	return u.Used - int64(u.Limit)
+}
+
+// QuotaUsageFor counts the account's usage of a quota feature and resolves its limit. A feature
+// missing from the plan has limit 0.
+func (s *Service) QuotaUsageFor(ctx context.Context, accountID int64, key string) (QuotaUsage, error) {
+	used, err := s.usage(ctx, accountID, key)
+	if err != nil {
+		return QuotaUsage{}, err
+	}
+	lim, err := s.limit(ctx, accountID, key)
+	if err != nil {
+		return QuotaUsage{}, err
+	}
+	u := QuotaUsage{Used: used}
+	if lim != nil && lim.IntValue != nil {
+		u.Limit = *lim.IntValue
+		u.Unlimited = *lim.IntValue == Unlimited
+	}
+	return u, nil
+}

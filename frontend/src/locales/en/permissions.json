@@ -124,5 +124,6 @@
   "labels.app.company_branding.read": "Read company branding and media",
   "labels.app.company_branding.write": "Manage company branding and media",
   "labels.app.webhooks.read": "Read webhooks",
-  "labels.app.webhooks.write": "Manage webhooks"
+  "labels.app.webhooks.write": "Manage webhooks",
+  "labels.platform.orders.approve": "Approve or reject platform orders"
 }

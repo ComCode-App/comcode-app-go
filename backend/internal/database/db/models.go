@@ -1932,6 +1932,7 @@ type Order struct {
 	FulfillmentStatus string             `json:"fulfillment_status"`
 	Metadata          []byte             `json:"metadata"`
 	AccountID         int64              `json:"account_id"`
+	RejectionReason   pgtype.Text        `json:"rejection_reason"`
 }
 
 type OrderAssetRequest struct {
@@ -1951,31 +1952,32 @@ type OrderAssetRequest struct {
 }
 
 type OrderItem struct {
-	ID                  int64              `json:"id"`
-	Uuid                uuid.UUID          `json:"uuid"`
-	OrderID             int64              `json:"order_id"`
-	ProductID           pgtype.Int8        `json:"product_id"`
-	VariantID           pgtype.Int8        `json:"variant_id"`
-	ProductName         string             `json:"product_name"`
-	VariantName         string             `json:"variant_name"`
-	Sku                 string             `json:"sku"`
-	Quantity            int32              `json:"quantity"`
-	UnitPrice           pgtype.Numeric     `json:"unit_price"`
-	TotalPrice          pgtype.Numeric     `json:"total_price"`
-	CustomPrintData     []byte             `json:"custom_print_data"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	RecipientName       string             `json:"recipient_name"`
-	RecipientEmail      string             `json:"recipient_email"`
-	RecipientPhone      string             `json:"recipient_phone"`
-	RecipientTitle      string             `json:"recipient_title"`
-	RecipientDepartment string             `json:"recipient_department"`
-	ProfileID           pgtype.Int8        `json:"profile_id"`
-	CardID              pgtype.Int8        `json:"card_id"`
-	FulfillmentStatus   string             `json:"fulfillment_status"`
-	ProvisioningStatus  string             `json:"provisioning_status"`
-	ProvisioningError   string             `json:"provisioning_error"`
-	IdempotencyKey      string             `json:"idempotency_key"`
+	ID                    int64              `json:"id"`
+	Uuid                  uuid.UUID          `json:"uuid"`
+	OrderID               int64              `json:"order_id"`
+	ProductID             pgtype.Int8        `json:"product_id"`
+	VariantID             pgtype.Int8        `json:"variant_id"`
+	ProductName           string             `json:"product_name"`
+	VariantName           string             `json:"variant_name"`
+	Sku                   string             `json:"sku"`
+	Quantity              int32              `json:"quantity"`
+	UnitPrice             pgtype.Numeric     `json:"unit_price"`
+	TotalPrice            pgtype.Numeric     `json:"total_price"`
+	CustomPrintData       []byte             `json:"custom_print_data"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+	RecipientName         string             `json:"recipient_name"`
+	RecipientEmail        string             `json:"recipient_email"`
+	RecipientPhone        string             `json:"recipient_phone"`
+	RecipientTitle        string             `json:"recipient_title"`
+	RecipientDepartment   string             `json:"recipient_department"`
+	ProfileID             pgtype.Int8        `json:"profile_id"`
+	CardID                pgtype.Int8        `json:"card_id"`
+	FulfillmentStatus     string             `json:"fulfillment_status"`
+	ProvisioningStatus    string             `json:"provisioning_status"`
+	ProvisioningError     string             `json:"provisioning_error"`
+	IdempotencyKey        string             `json:"idempotency_key"`
+	ProfileCreatedByOrder bool               `json:"profile_created_by_order"`
 }
 
 type OrderNotificationEvent struct {

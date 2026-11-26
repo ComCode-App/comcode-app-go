@@ -65,6 +65,11 @@ const STATUS_CONFIG: Record<
     variant: "danger",
     icon: AlertCircle,
   },
+  awaiting_approval: {
+    labelKey: "orders.status_awaiting_approval",
+    variant: "warning",
+    icon: Clock,
+  },
   pending: {
     labelKey: "orders.status_pending",
     variant: "secondary",

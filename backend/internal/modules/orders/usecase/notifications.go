@@ -49,16 +49,17 @@ func (s *Service) emitOrderWebhook(ctx context.Context, ord *model.OrderDetail, 
 
 // Milestones shared by status and payment changes use the same template and dedupe key.
 var orderStatusLabels = map[string][2]string{
-	"pending":         {"Sipariş alındı", "Order received"},
-	"paid":            {"Ödeme onaylandı", "Payment confirmed"},
-	"design_pending":  {"Tasarım bekleniyor", "Awaiting design"},
-	"design_approved": {"Tasarım onaylandı", "Design approved"},
-	"in_production":   {"Üretimde", "In production"},
-	"ready_to_ship":   {"Kargoya hazır", "Ready to ship"},
-	"shipped":         {"Kargoya verildi", "Shipped"},
-	"delivered":       {"Teslim edildi", "Delivered"},
-	"cancelled":       {"İptal edildi", "Cancelled"},
-	"refunded":        {"İade edildi", "Refunded"},
+	"pending":           {"Sipariş alındı", "Order received"},
+	"awaiting_approval": {"Onay bekleniyor", "Awaiting approval"},
+	"paid":              {"Ödeme onaylandı", "Payment confirmed"},
+	"design_pending":    {"Tasarım bekleniyor", "Awaiting design"},
+	"design_approved":   {"Tasarım onaylandı", "Design approved"},
+	"in_production":     {"Üretimde", "In production"},
+	"ready_to_ship":     {"Kargoya hazır", "Ready to ship"},
+	"shipped":           {"Kargoya verildi", "Shipped"},
+	"delivered":         {"Teslim edildi", "Delivered"},
+	"cancelled":         {"İptal edildi", "Cancelled"},
+	"refunded":          {"İade edildi", "Refunded"},
 }
 
 func orderNotificationLanguage(locale string) string {
@@ -117,25 +118,38 @@ func orderNotificationInput(event model.NotificationEvent, frontendURL string) n
 // notifyOrderTransitions reads only committed events after a repository mutation.
 // Failed/partial enqueues remain pending and are retried on the next mutation of this order.
 func (s *Service) notifyOrderTransitions(ctx context.Context, ord *model.OrderDetail) {
+	s.notifyOrderTransitionsWith(ctx, ord, nil)
+}
+
+// notificationOverride rewrites the default content of one milestone (approval and rejection
+// messages of TEC-1317).
+type notificationOverride func(lang string, in notifModel.EnqueueInput) notifModel.EnqueueInput
+
+// notifyOrderTransitionsWith is notifyOrderTransitions with per-milestone content overrides.
+func (s *Service) notifyOrderTransitionsWith(ctx context.Context, ord *model.OrderDetail, overrides map[string]notificationOverride) {
 	if s.notifSvc == nil || ord == nil {
 		return
 	}
 	// Keep request correlation, but finish the committed side effect if the client disconnects.
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 	defer cancel()
-	if err := s.dispatchOrderNotifications(ctx, ord); err != nil {
+	if err := s.dispatchOrderNotifications(ctx, ord, overrides); err != nil {
 		slog.ErrorContext(ctx, "order_notification_enqueue_failed", "request_id", reqid.From(ctx),
 			"account_id", ord.AccountID, "order_uuid", ord.UUID, "error", err)
 	}
 }
 
-func (s *Service) dispatchOrderNotifications(ctx context.Context, ord *model.OrderDetail) error {
+func (s *Service) dispatchOrderNotifications(ctx context.Context, ord *model.OrderDetail, overrides map[string]notificationOverride) error {
 	events, err := s.repo.ListPendingNotifications(ctx, ord.AccountID, ord.ID)
 	if err != nil {
 		return fmt.Errorf("list order notification events: %w", err)
 	}
 	for _, event := range events {
-		if _, err := s.notifSvc.Enqueue(ctx, orderNotificationInput(event, s.frontendURL)); err != nil {
+		in := orderNotificationInput(event, s.frontendURL)
+		if override, ok := overrides[event.Status]; ok {
+			in = override(orderNotificationLanguage(event.CustomerLocale), in)
+		}
+		if _, err := s.notifSvc.Enqueue(ctx, in); err != nil {
 			return fmt.Errorf("enqueue order milestone %s: %w", event.Status, err)
 		}
 		// After the notification is queued: a failed enqueue re-runs this milestone later, and the

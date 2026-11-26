@@ -66,6 +66,8 @@ func writeRefundError(w http.ResponseWriter, r *http.Request, err error) bool {
 		response.Error(w, r, http.StatusBadGateway, "REFUND_FAILED", err.Error())
 	case errors.Is(err, usecase.ErrRefundInProgress):
 		response.Conflict(w, r, "REFUND_IN_PROGRESS", err.Error())
+	case errors.Is(err, usecase.ErrAwaitingApproval):
+		response.Conflict(w, r, "ORDER_AWAITING_APPROVAL", err.Error())
 	default:
 		return false
 	}
@@ -266,7 +268,10 @@ func (h *Handler) CreateMine(w http.ResponseWriter, r *http.Request) {
 	// The target account is always the session's active account on app routes.
 	input.AccountUUID, input.CompanyUUID, input.UserUUID = nil, nil, nil
 
-	ord, err := h.svc.CreateForAccount(r.Context(), p.Account, p.UserInternal, input)
+	if strings.HasSuffix(r.URL.Path, "/bulk") {
+		input.OrderType = "bulk"
+	}
+	ord, err := h.svc.CreateForPrincipal(r.Context(), p, input)
 	writeCreateResult(w, r, ord, err)
 }
 

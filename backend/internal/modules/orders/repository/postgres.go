@@ -159,6 +159,10 @@ func (r *PostgresRepository) Create(ctx context.Context, order model.CreateOrder
 		orderType = "standard"
 	}
 
+	initialStatus := order.InitialStatus
+	if initialStatus == "" {
+		initialStatus = "pending"
+	}
 	var row db.Order
 	err := r.withTx(ctx, func(q *db.Queries) error {
 		var err error
@@ -166,7 +170,7 @@ func (r *PostgresRepository) Create(ctx context.Context, order model.CreateOrder
 			AccountID:         accountID,
 			OrderNumber:       orderNumber,
 			UserID:            placedByUserID,
-			Status:            "pending",
+			Status:            initialStatus,
 			Subtotal:          floatToNumeric(subtotal),
 			TaxTotal:          floatToNumeric(taxTotal),
 			ShippingTotal:     floatToNumeric(0),
@@ -492,36 +496,37 @@ func (r *PostgresRepository) ListItems(ctx context.Context, orderID int64) ([]mo
 		cardUUID := pgUUIDToString(row.CardUuid)
 
 		result = append(result, model.OrderItemSummary{
-			ID:                  row.ID,
-			UUID:                row.Uuid.String(),
-			ProductID:           prodID,
-			ProductSlug:         pgtypeToString(row.ProductSlug),
-			ProductName:         row.ProductName,
-			VariantName:         row.VariantName,
-			SKU:                 row.Sku,
-			Quantity:            int(row.Quantity),
-			UnitPrice:           numericToFloat(row.UnitPrice),
-			TotalPrice:          numericToFloat(row.TotalPrice),
-			CustomPrintData:     customPrint,
-			ProductImages:       images,
-			RecipientName:       row.RecipientName,
-			RecipientEmail:      row.RecipientEmail,
-			RecipientPhone:      row.RecipientPhone,
-			RecipientTitle:      row.RecipientTitle,
-			RecipientDepartment: row.RecipientDepartment,
-			ProfileUUID:         profUUID,
-			ProfileAvatarURL:    pgtypeToString(row.ProfileAvatarUrl),
-			CardUUID:            cardUUID,
-			CardSmartCode:       pgtypeToString(row.CardSmartCode),
-			CardUID:             pgtypeToString(row.CardUid),
-			CardStatus:          pgtypeToString(row.CardStatus),
-			CardIsActive:        row.CardIsActive.Bool,
-			CardIsLocked:        row.CardIsLocked.Bool,
-			RoutePath:           pgtypeToString(row.RoutePath),
-			RouteStatus:         pgtypeToString(row.RouteStatus),
-			FulfillmentStatus:   row.FulfillmentStatus,
-			ProvisioningStatus:  row.ProvisioningStatus,
-			ProvisioningError:   row.ProvisioningError,
+			ID:                    row.ID,
+			UUID:                  row.Uuid.String(),
+			ProductID:             prodID,
+			ProductSlug:           pgtypeToString(row.ProductSlug),
+			ProductName:           row.ProductName,
+			VariantName:           row.VariantName,
+			SKU:                   row.Sku,
+			Quantity:              int(row.Quantity),
+			UnitPrice:             numericToFloat(row.UnitPrice),
+			TotalPrice:            numericToFloat(row.TotalPrice),
+			CustomPrintData:       customPrint,
+			ProductImages:         images,
+			RecipientName:         row.RecipientName,
+			RecipientEmail:        row.RecipientEmail,
+			RecipientPhone:        row.RecipientPhone,
+			RecipientTitle:        row.RecipientTitle,
+			RecipientDepartment:   row.RecipientDepartment,
+			ProfileUUID:           profUUID,
+			ProfileAvatarURL:      pgtypeToString(row.ProfileAvatarUrl),
+			ProfileCreatedByOrder: row.ProfileCreatedByOrder,
+			CardUUID:              cardUUID,
+			CardSmartCode:         pgtypeToString(row.CardSmartCode),
+			CardUID:               pgtypeToString(row.CardUid),
+			CardStatus:            pgtypeToString(row.CardStatus),
+			CardIsActive:          row.CardIsActive.Bool,
+			CardIsLocked:          row.CardIsLocked.Bool,
+			RoutePath:             pgtypeToString(row.RoutePath),
+			RouteStatus:           pgtypeToString(row.RouteStatus),
+			FulfillmentStatus:     row.FulfillmentStatus,
+			ProvisioningStatus:    row.ProvisioningStatus,
+			ProvisioningError:     row.ProvisioningError,
 		})
 	}
 	return result, nil
@@ -992,6 +997,7 @@ func toOrderDetailFromRow(row db.GetOrderByUUIDRow) *model.OrderDetail {
 		ShippedAt:         shippedAt,
 		DeliveredAt:       deliveredAt,
 		CancelledAt:       cancelledAt,
+		RejectionReason:   pgtypeToString(row.RejectionReason),
 		CreatedAt:         row.CreatedAt.Time,
 		UpdatedAt:         row.UpdatedAt.Time,
 	}

@@ -149,7 +149,7 @@ INSERT INTO orders (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
 )
-RETURNING id, uuid, order_number, user_id, status, subtotal, tax_total, shipping_total, discount_total, grand_total, currency, payment_status, payment_provider, payment_reference, shipping_address, billing_address, shipping_carrier, tracking_number, tracking_url, customer_note, admin_note, paid_at, shipped_at, delivered_at, cancelled_at, created_at, updated_at, deleted_at, order_type, fulfillment_status, metadata, account_id
+RETURNING id, uuid, order_number, user_id, status, subtotal, tax_total, shipping_total, discount_total, grand_total, currency, payment_status, payment_provider, payment_reference, shipping_address, billing_address, shipping_carrier, tracking_number, tracking_url, customer_note, admin_note, paid_at, shipped_at, delivered_at, cancelled_at, created_at, updated_at, deleted_at, order_type, fulfillment_status, metadata, account_id, rejection_reason
 `
 
 type CreateOrderParams struct {
@@ -232,6 +232,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		&i.FulfillmentStatus,
 		&i.Metadata,
 		&i.AccountID,
+		&i.RejectionReason,
 	)
 	return i, err
 }
@@ -262,7 +263,7 @@ INSERT INTO order_items (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
 )
-RETURNING id, uuid, order_id, product_id, variant_id, product_name, variant_name, sku, quantity, unit_price, total_price, custom_print_data, created_at, updated_at, recipient_name, recipient_email, recipient_phone, recipient_title, recipient_department, profile_id, card_id, fulfillment_status, provisioning_status, provisioning_error, idempotency_key
+RETURNING id, uuid, order_id, product_id, variant_id, product_name, variant_name, sku, quantity, unit_price, total_price, custom_print_data, created_at, updated_at, recipient_name, recipient_email, recipient_phone, recipient_title, recipient_department, profile_id, card_id, fulfillment_status, provisioning_status, provisioning_error, idempotency_key, profile_created_by_order
 `
 
 type CreateOrderItemParams struct {
@@ -340,6 +341,7 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		&i.ProvisioningStatus,
 		&i.ProvisioningError,
 		&i.IdempotencyKey,
+		&i.ProfileCreatedByOrder,
 	)
 	return i, err
 }
@@ -438,7 +440,7 @@ func (q *Queries) GetAssetRequestByUUID(ctx context.Context, argUuid uuid.UUID) 
 
 const getOrderByOrderNumber = `-- name: GetOrderByOrderNumber :one
 SELECT 
-    o.id, o.uuid, o.order_number, o.user_id, o.status, o.subtotal, o.tax_total, o.shipping_total, o.discount_total, o.grand_total, o.currency, o.payment_status, o.payment_provider, o.payment_reference, o.shipping_address, o.billing_address, o.shipping_carrier, o.tracking_number, o.tracking_url, o.customer_note, o.admin_note, o.paid_at, o.shipped_at, o.delivered_at, o.cancelled_at, o.created_at, o.updated_at, o.deleted_at, o.order_type, o.fulfillment_status, o.metadata, o.account_id,
+    o.id, o.uuid, o.order_number, o.user_id, o.status, o.subtotal, o.tax_total, o.shipping_total, o.discount_total, o.grand_total, o.currency, o.payment_status, o.payment_provider, o.payment_reference, o.shipping_address, o.billing_address, o.shipping_carrier, o.tracking_number, o.tracking_url, o.customer_note, o.admin_note, o.paid_at, o.shipped_at, o.delivered_at, o.cancelled_at, o.created_at, o.updated_at, o.deleted_at, o.order_type, o.fulfillment_status, o.metadata, o.account_id, o.rejection_reason,
     u.uuid as user_uuid,
     u.email as customer_email,
     u.name as customer_name,
@@ -488,6 +490,7 @@ type GetOrderByOrderNumberRow struct {
 	FulfillmentStatus string             `json:"fulfillment_status"`
 	Metadata          []byte             `json:"metadata"`
 	AccountID         int64              `json:"account_id"`
+	RejectionReason   pgtype.Text        `json:"rejection_reason"`
 	UserUuid          uuid.UUID          `json:"user_uuid"`
 	CustomerEmail     string             `json:"customer_email"`
 	CustomerName      string             `json:"customer_name"`
@@ -535,6 +538,7 @@ func (q *Queries) GetOrderByOrderNumber(ctx context.Context, orderNumber string)
 		&i.FulfillmentStatus,
 		&i.Metadata,
 		&i.AccountID,
+		&i.RejectionReason,
 		&i.UserUuid,
 		&i.CustomerEmail,
 		&i.CustomerName,
@@ -549,7 +553,7 @@ func (q *Queries) GetOrderByOrderNumber(ctx context.Context, orderNumber string)
 
 const getOrderByUUID = `-- name: GetOrderByUUID :one
 SELECT 
-    o.id, o.uuid, o.order_number, o.user_id, o.status, o.subtotal, o.tax_total, o.shipping_total, o.discount_total, o.grand_total, o.currency, o.payment_status, o.payment_provider, o.payment_reference, o.shipping_address, o.billing_address, o.shipping_carrier, o.tracking_number, o.tracking_url, o.customer_note, o.admin_note, o.paid_at, o.shipped_at, o.delivered_at, o.cancelled_at, o.created_at, o.updated_at, o.deleted_at, o.order_type, o.fulfillment_status, o.metadata, o.account_id,
+    o.id, o.uuid, o.order_number, o.user_id, o.status, o.subtotal, o.tax_total, o.shipping_total, o.discount_total, o.grand_total, o.currency, o.payment_status, o.payment_provider, o.payment_reference, o.shipping_address, o.billing_address, o.shipping_carrier, o.tracking_number, o.tracking_url, o.customer_note, o.admin_note, o.paid_at, o.shipped_at, o.delivered_at, o.cancelled_at, o.created_at, o.updated_at, o.deleted_at, o.order_type, o.fulfillment_status, o.metadata, o.account_id, o.rejection_reason,
     u.uuid as user_uuid,
     u.email as customer_email,
     u.name as customer_name,
@@ -599,6 +603,7 @@ type GetOrderByUUIDRow struct {
 	FulfillmentStatus string             `json:"fulfillment_status"`
 	Metadata          []byte             `json:"metadata"`
 	AccountID         int64              `json:"account_id"`
+	RejectionReason   pgtype.Text        `json:"rejection_reason"`
 	UserUuid          uuid.UUID          `json:"user_uuid"`
 	CustomerEmail     string             `json:"customer_email"`
 	CustomerName      string             `json:"customer_name"`
@@ -646,6 +651,7 @@ func (q *Queries) GetOrderByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrd
 		&i.FulfillmentStatus,
 		&i.Metadata,
 		&i.AccountID,
+		&i.RejectionReason,
 		&i.UserUuid,
 		&i.CustomerEmail,
 		&i.CustomerName,
@@ -660,7 +666,7 @@ func (q *Queries) GetOrderByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrd
 
 const getOrderItemByUUID = `-- name: GetOrderItemByUUID :one
 SELECT 
-    oi.id, oi.uuid, oi.order_id, oi.product_id, oi.variant_id, oi.product_name, oi.variant_name, oi.sku, oi.quantity, oi.unit_price, oi.total_price, oi.custom_print_data, oi.created_at, oi.updated_at, oi.recipient_name, oi.recipient_email, oi.recipient_phone, oi.recipient_title, oi.recipient_department, oi.profile_id, oi.card_id, oi.fulfillment_status, oi.provisioning_status, oi.provisioning_error, oi.idempotency_key,
+    oi.id, oi.uuid, oi.order_id, oi.product_id, oi.variant_id, oi.product_name, oi.variant_name, oi.sku, oi.quantity, oi.unit_price, oi.total_price, oi.custom_print_data, oi.created_at, oi.updated_at, oi.recipient_name, oi.recipient_email, oi.recipient_phone, oi.recipient_title, oi.recipient_department, oi.profile_id, oi.card_id, oi.fulfillment_status, oi.provisioning_status, oi.provisioning_error, oi.idempotency_key, oi.profile_created_by_order,
     p.slug as product_slug,
     p.images as product_images,
     prof.uuid as profile_uuid,
@@ -682,43 +688,44 @@ WHERE oi.uuid = $1
 `
 
 type GetOrderItemByUUIDRow struct {
-	ID                  int64              `json:"id"`
-	Uuid                uuid.UUID          `json:"uuid"`
-	OrderID             int64              `json:"order_id"`
-	ProductID           pgtype.Int8        `json:"product_id"`
-	VariantID           pgtype.Int8        `json:"variant_id"`
-	ProductName         string             `json:"product_name"`
-	VariantName         string             `json:"variant_name"`
-	Sku                 string             `json:"sku"`
-	Quantity            int32              `json:"quantity"`
-	UnitPrice           pgtype.Numeric     `json:"unit_price"`
-	TotalPrice          pgtype.Numeric     `json:"total_price"`
-	CustomPrintData     []byte             `json:"custom_print_data"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	RecipientName       string             `json:"recipient_name"`
-	RecipientEmail      string             `json:"recipient_email"`
-	RecipientPhone      string             `json:"recipient_phone"`
-	RecipientTitle      string             `json:"recipient_title"`
-	RecipientDepartment string             `json:"recipient_department"`
-	ProfileID           pgtype.Int8        `json:"profile_id"`
-	CardID              pgtype.Int8        `json:"card_id"`
-	FulfillmentStatus   string             `json:"fulfillment_status"`
-	ProvisioningStatus  string             `json:"provisioning_status"`
-	ProvisioningError   string             `json:"provisioning_error"`
-	IdempotencyKey      string             `json:"idempotency_key"`
-	ProductSlug         pgtype.Text        `json:"product_slug"`
-	ProductImages       []byte             `json:"product_images"`
-	ProfileUuid         pgtype.UUID        `json:"profile_uuid"`
-	ProfileAvatarUrl    pgtype.Text        `json:"profile_avatar_url"`
-	CardUuid            pgtype.UUID        `json:"card_uuid"`
-	CardSmartCode       pgtype.Text        `json:"card_smart_code"`
-	CardUid             pgtype.Text        `json:"card_uid"`
-	CardStatus          pgtype.Text        `json:"card_status"`
-	CardIsActive        pgtype.Bool        `json:"card_is_active"`
-	CardIsLocked        pgtype.Bool        `json:"card_is_locked"`
-	RoutePath           pgtype.Text        `json:"route_path"`
-	RouteStatus         pgtype.Text        `json:"route_status"`
+	ID                    int64              `json:"id"`
+	Uuid                  uuid.UUID          `json:"uuid"`
+	OrderID               int64              `json:"order_id"`
+	ProductID             pgtype.Int8        `json:"product_id"`
+	VariantID             pgtype.Int8        `json:"variant_id"`
+	ProductName           string             `json:"product_name"`
+	VariantName           string             `json:"variant_name"`
+	Sku                   string             `json:"sku"`
+	Quantity              int32              `json:"quantity"`
+	UnitPrice             pgtype.Numeric     `json:"unit_price"`
+	TotalPrice            pgtype.Numeric     `json:"total_price"`
+	CustomPrintData       []byte             `json:"custom_print_data"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+	RecipientName         string             `json:"recipient_name"`
+	RecipientEmail        string             `json:"recipient_email"`
+	RecipientPhone        string             `json:"recipient_phone"`
+	RecipientTitle        string             `json:"recipient_title"`
+	RecipientDepartment   string             `json:"recipient_department"`
+	ProfileID             pgtype.Int8        `json:"profile_id"`
+	CardID                pgtype.Int8        `json:"card_id"`
+	FulfillmentStatus     string             `json:"fulfillment_status"`
+	ProvisioningStatus    string             `json:"provisioning_status"`
+	ProvisioningError     string             `json:"provisioning_error"`
+	IdempotencyKey        string             `json:"idempotency_key"`
+	ProfileCreatedByOrder bool               `json:"profile_created_by_order"`
+	ProductSlug           pgtype.Text        `json:"product_slug"`
+	ProductImages         []byte             `json:"product_images"`
+	ProfileUuid           pgtype.UUID        `json:"profile_uuid"`
+	ProfileAvatarUrl      pgtype.Text        `json:"profile_avatar_url"`
+	CardUuid              pgtype.UUID        `json:"card_uuid"`
+	CardSmartCode         pgtype.Text        `json:"card_smart_code"`
+	CardUid               pgtype.Text        `json:"card_uid"`
+	CardStatus            pgtype.Text        `json:"card_status"`
+	CardIsActive          pgtype.Bool        `json:"card_is_active"`
+	CardIsLocked          pgtype.Bool        `json:"card_is_locked"`
+	RoutePath             pgtype.Text        `json:"route_path"`
+	RouteStatus           pgtype.Text        `json:"route_status"`
 }
 
 // account-lint: cross-account platform order provisioning (platform.orders.write)
@@ -751,6 +758,7 @@ func (q *Queries) GetOrderItemByUUID(ctx context.Context, argUuid uuid.UUID) (Ge
 		&i.ProvisioningStatus,
 		&i.ProvisioningError,
 		&i.IdempotencyKey,
+		&i.ProfileCreatedByOrder,
 		&i.ProductSlug,
 		&i.ProductImages,
 		&i.ProfileUuid,
@@ -897,7 +905,7 @@ func (q *Queries) ListOrderAssetRequests(ctx context.Context, orderID int64) ([]
 
 const listOrderItemsByOrderID = `-- name: ListOrderItemsByOrderID :many
 SELECT 
-    oi.id, oi.uuid, oi.order_id, oi.product_id, oi.variant_id, oi.product_name, oi.variant_name, oi.sku, oi.quantity, oi.unit_price, oi.total_price, oi.custom_print_data, oi.created_at, oi.updated_at, oi.recipient_name, oi.recipient_email, oi.recipient_phone, oi.recipient_title, oi.recipient_department, oi.profile_id, oi.card_id, oi.fulfillment_status, oi.provisioning_status, oi.provisioning_error, oi.idempotency_key,
+    oi.id, oi.uuid, oi.order_id, oi.product_id, oi.variant_id, oi.product_name, oi.variant_name, oi.sku, oi.quantity, oi.unit_price, oi.total_price, oi.custom_print_data, oi.created_at, oi.updated_at, oi.recipient_name, oi.recipient_email, oi.recipient_phone, oi.recipient_title, oi.recipient_department, oi.profile_id, oi.card_id, oi.fulfillment_status, oi.provisioning_status, oi.provisioning_error, oi.idempotency_key, oi.profile_created_by_order,
     p.slug as product_slug,
     p.images as product_images,
     prof.uuid as profile_uuid,
@@ -920,43 +928,44 @@ ORDER BY oi.id ASC
 `
 
 type ListOrderItemsByOrderIDRow struct {
-	ID                  int64              `json:"id"`
-	Uuid                uuid.UUID          `json:"uuid"`
-	OrderID             int64              `json:"order_id"`
-	ProductID           pgtype.Int8        `json:"product_id"`
-	VariantID           pgtype.Int8        `json:"variant_id"`
-	ProductName         string             `json:"product_name"`
-	VariantName         string             `json:"variant_name"`
-	Sku                 string             `json:"sku"`
-	Quantity            int32              `json:"quantity"`
-	UnitPrice           pgtype.Numeric     `json:"unit_price"`
-	TotalPrice          pgtype.Numeric     `json:"total_price"`
-	CustomPrintData     []byte             `json:"custom_print_data"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	RecipientName       string             `json:"recipient_name"`
-	RecipientEmail      string             `json:"recipient_email"`
-	RecipientPhone      string             `json:"recipient_phone"`
-	RecipientTitle      string             `json:"recipient_title"`
-	RecipientDepartment string             `json:"recipient_department"`
-	ProfileID           pgtype.Int8        `json:"profile_id"`
-	CardID              pgtype.Int8        `json:"card_id"`
-	FulfillmentStatus   string             `json:"fulfillment_status"`
-	ProvisioningStatus  string             `json:"provisioning_status"`
-	ProvisioningError   string             `json:"provisioning_error"`
-	IdempotencyKey      string             `json:"idempotency_key"`
-	ProductSlug         pgtype.Text        `json:"product_slug"`
-	ProductImages       []byte             `json:"product_images"`
-	ProfileUuid         pgtype.UUID        `json:"profile_uuid"`
-	ProfileAvatarUrl    pgtype.Text        `json:"profile_avatar_url"`
-	CardUuid            pgtype.UUID        `json:"card_uuid"`
-	CardSmartCode       pgtype.Text        `json:"card_smart_code"`
-	CardUid             pgtype.Text        `json:"card_uid"`
-	CardStatus          pgtype.Text        `json:"card_status"`
-	CardIsActive        pgtype.Bool        `json:"card_is_active"`
-	CardIsLocked        pgtype.Bool        `json:"card_is_locked"`
-	RoutePath           pgtype.Text        `json:"route_path"`
-	RouteStatus         pgtype.Text        `json:"route_status"`
+	ID                    int64              `json:"id"`
+	Uuid                  uuid.UUID          `json:"uuid"`
+	OrderID               int64              `json:"order_id"`
+	ProductID             pgtype.Int8        `json:"product_id"`
+	VariantID             pgtype.Int8        `json:"variant_id"`
+	ProductName           string             `json:"product_name"`
+	VariantName           string             `json:"variant_name"`
+	Sku                   string             `json:"sku"`
+	Quantity              int32              `json:"quantity"`
+	UnitPrice             pgtype.Numeric     `json:"unit_price"`
+	TotalPrice            pgtype.Numeric     `json:"total_price"`
+	CustomPrintData       []byte             `json:"custom_print_data"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+	RecipientName         string             `json:"recipient_name"`
+	RecipientEmail        string             `json:"recipient_email"`
+	RecipientPhone        string             `json:"recipient_phone"`
+	RecipientTitle        string             `json:"recipient_title"`
+	RecipientDepartment   string             `json:"recipient_department"`
+	ProfileID             pgtype.Int8        `json:"profile_id"`
+	CardID                pgtype.Int8        `json:"card_id"`
+	FulfillmentStatus     string             `json:"fulfillment_status"`
+	ProvisioningStatus    string             `json:"provisioning_status"`
+	ProvisioningError     string             `json:"provisioning_error"`
+	IdempotencyKey        string             `json:"idempotency_key"`
+	ProfileCreatedByOrder bool               `json:"profile_created_by_order"`
+	ProductSlug           pgtype.Text        `json:"product_slug"`
+	ProductImages         []byte             `json:"product_images"`
+	ProfileUuid           pgtype.UUID        `json:"profile_uuid"`
+	ProfileAvatarUrl      pgtype.Text        `json:"profile_avatar_url"`
+	CardUuid              pgtype.UUID        `json:"card_uuid"`
+	CardSmartCode         pgtype.Text        `json:"card_smart_code"`
+	CardUid               pgtype.Text        `json:"card_uid"`
+	CardStatus            pgtype.Text        `json:"card_status"`
+	CardIsActive          pgtype.Bool        `json:"card_is_active"`
+	CardIsLocked          pgtype.Bool        `json:"card_is_locked"`
+	RoutePath             pgtype.Text        `json:"route_path"`
+	RouteStatus           pgtype.Text        `json:"route_status"`
 }
 
 // account-lint: cross-account items of an order already loaded through a platform route or GetForAccount
@@ -995,6 +1004,7 @@ func (q *Queries) ListOrderItemsByOrderID(ctx context.Context, orderID int64) ([
 			&i.ProvisioningStatus,
 			&i.ProvisioningError,
 			&i.IdempotencyKey,
+			&i.ProfileCreatedByOrder,
 			&i.ProductSlug,
 			&i.ProductImages,
 			&i.ProfileUuid,
@@ -1092,7 +1102,7 @@ func (q *Queries) ListOrderManifest(ctx context.Context, argUuid uuid.UUID) ([]L
 
 const listOrders = `-- name: ListOrders :many
 SELECT 
-    o.id, o.uuid, o.order_number, o.user_id, o.status, o.subtotal, o.tax_total, o.shipping_total, o.discount_total, o.grand_total, o.currency, o.payment_status, o.payment_provider, o.payment_reference, o.shipping_address, o.billing_address, o.shipping_carrier, o.tracking_number, o.tracking_url, o.customer_note, o.admin_note, o.paid_at, o.shipped_at, o.delivered_at, o.cancelled_at, o.created_at, o.updated_at, o.deleted_at, o.order_type, o.fulfillment_status, o.metadata, o.account_id,
+    o.id, o.uuid, o.order_number, o.user_id, o.status, o.subtotal, o.tax_total, o.shipping_total, o.discount_total, o.grand_total, o.currency, o.payment_status, o.payment_provider, o.payment_reference, o.shipping_address, o.billing_address, o.shipping_carrier, o.tracking_number, o.tracking_url, o.customer_note, o.admin_note, o.paid_at, o.shipped_at, o.delivered_at, o.cancelled_at, o.created_at, o.updated_at, o.deleted_at, o.order_type, o.fulfillment_status, o.metadata, o.account_id, o.rejection_reason,
     u.email as customer_email,
     u.name as customer_name,
     u.surname as customer_surname,
@@ -1182,6 +1192,7 @@ type ListOrdersRow struct {
 	FulfillmentStatus string             `json:"fulfillment_status"`
 	Metadata          []byte             `json:"metadata"`
 	AccountID         int64              `json:"account_id"`
+	RejectionReason   pgtype.Text        `json:"rejection_reason"`
 	CustomerEmail     string             `json:"customer_email"`
 	CustomerName      string             `json:"customer_name"`
 	CustomerSurname   string             `json:"customer_surname"`
@@ -1243,6 +1254,7 @@ func (q *Queries) ListOrders(ctx context.Context, arg ListOrdersParams) ([]ListO
 			&i.FulfillmentStatus,
 			&i.Metadata,
 			&i.AccountID,
+			&i.RejectionReason,
 			&i.CustomerEmail,
 			&i.CustomerName,
 			&i.CustomerSurname,
@@ -1384,7 +1396,7 @@ SET fulfillment_status = $1::text,
     delivered_at = CASE WHEN $1::text = 'delivered' AND delivered_at IS NULL THEN NOW() ELSE delivered_at END
 WHERE uuid = $2::uuid
   AND deleted_at IS NULL
-RETURNING id, uuid, order_number, user_id, status, subtotal, tax_total, shipping_total, discount_total, grand_total, currency, payment_status, payment_provider, payment_reference, shipping_address, billing_address, shipping_carrier, tracking_number, tracking_url, customer_note, admin_note, paid_at, shipped_at, delivered_at, cancelled_at, created_at, updated_at, deleted_at, order_type, fulfillment_status, metadata, account_id
+RETURNING id, uuid, order_number, user_id, status, subtotal, tax_total, shipping_total, discount_total, grand_total, currency, payment_status, payment_provider, payment_reference, shipping_address, billing_address, shipping_carrier, tracking_number, tracking_url, customer_note, admin_note, paid_at, shipped_at, delivered_at, cancelled_at, created_at, updated_at, deleted_at, order_type, fulfillment_status, metadata, account_id, rejection_reason
 `
 
 type UpdateOrderFulfillmentStatusParams struct {
@@ -1429,6 +1441,7 @@ func (q *Queries) UpdateOrderFulfillmentStatus(ctx context.Context, arg UpdateOr
 		&i.FulfillmentStatus,
 		&i.Metadata,
 		&i.AccountID,
+		&i.RejectionReason,
 	)
 	return i, err
 }
@@ -1437,7 +1450,7 @@ const updateOrderItemFulfillment = `-- name: UpdateOrderItemFulfillment :one
 UPDATE order_items
 SET fulfillment_status = $1
 WHERE uuid = $2
-RETURNING id, uuid, order_id, product_id, variant_id, product_name, variant_name, sku, quantity, unit_price, total_price, custom_print_data, created_at, updated_at, recipient_name, recipient_email, recipient_phone, recipient_title, recipient_department, profile_id, card_id, fulfillment_status, provisioning_status, provisioning_error, idempotency_key
+RETURNING id, uuid, order_id, product_id, variant_id, product_name, variant_name, sku, quantity, unit_price, total_price, custom_print_data, created_at, updated_at, recipient_name, recipient_email, recipient_phone, recipient_title, recipient_department, profile_id, card_id, fulfillment_status, provisioning_status, provisioning_error, idempotency_key, profile_created_by_order
 `
 
 type UpdateOrderItemFulfillmentParams struct {
@@ -1474,6 +1487,7 @@ func (q *Queries) UpdateOrderItemFulfillment(ctx context.Context, arg UpdateOrde
 		&i.ProvisioningStatus,
 		&i.ProvisioningError,
 		&i.IdempotencyKey,
+		&i.ProfileCreatedByOrder,
 	)
 	return i, err
 }
@@ -1485,7 +1499,7 @@ SET
     provisioning_status = $2,
     provisioning_error = $3
 WHERE uuid = $4
-RETURNING id, uuid, order_id, product_id, variant_id, product_name, variant_name, sku, quantity, unit_price, total_price, custom_print_data, created_at, updated_at, recipient_name, recipient_email, recipient_phone, recipient_title, recipient_department, profile_id, card_id, fulfillment_status, provisioning_status, provisioning_error, idempotency_key
+RETURNING id, uuid, order_id, product_id, variant_id, product_name, variant_name, sku, quantity, unit_price, total_price, custom_print_data, created_at, updated_at, recipient_name, recipient_email, recipient_phone, recipient_title, recipient_department, profile_id, card_id, fulfillment_status, provisioning_status, provisioning_error, idempotency_key, profile_created_by_order
 `
 
 type UpdateOrderItemProvisioningParams struct {
@@ -1529,6 +1543,7 @@ func (q *Queries) UpdateOrderItemProvisioning(ctx context.Context, arg UpdateOrd
 		&i.ProvisioningStatus,
 		&i.ProvisioningError,
 		&i.IdempotencyKey,
+		&i.ProfileCreatedByOrder,
 	)
 	return i, err
 }
@@ -1539,7 +1554,7 @@ SET admin_note = COALESCE($1, admin_note),
     customer_note = COALESCE($2, customer_note)
 WHERE uuid = $3
   AND deleted_at IS NULL
-RETURNING id, uuid, order_number, user_id, status, subtotal, tax_total, shipping_total, discount_total, grand_total, currency, payment_status, payment_provider, payment_reference, shipping_address, billing_address, shipping_carrier, tracking_number, tracking_url, customer_note, admin_note, paid_at, shipped_at, delivered_at, cancelled_at, created_at, updated_at, deleted_at, order_type, fulfillment_status, metadata, account_id
+RETURNING id, uuid, order_number, user_id, status, subtotal, tax_total, shipping_total, discount_total, grand_total, currency, payment_status, payment_provider, payment_reference, shipping_address, billing_address, shipping_carrier, tracking_number, tracking_url, customer_note, admin_note, paid_at, shipped_at, delivered_at, cancelled_at, created_at, updated_at, deleted_at, order_type, fulfillment_status, metadata, account_id, rejection_reason
 `
 
 type UpdateOrderNotesParams struct {
@@ -1585,6 +1600,7 @@ func (q *Queries) UpdateOrderNotes(ctx context.Context, arg UpdateOrderNotesPara
 		&i.FulfillmentStatus,
 		&i.Metadata,
 		&i.AccountID,
+		&i.RejectionReason,
 	)
 	return i, err
 }
@@ -1597,7 +1613,7 @@ SET payment_status = $1::text,
     paid_at = CASE WHEN $1::text = 'paid' AND paid_at IS NULL THEN NOW() ELSE paid_at END
 WHERE uuid = $4::uuid
   AND deleted_at IS NULL
-RETURNING id, uuid, order_number, user_id, status, subtotal, tax_total, shipping_total, discount_total, grand_total, currency, payment_status, payment_provider, payment_reference, shipping_address, billing_address, shipping_carrier, tracking_number, tracking_url, customer_note, admin_note, paid_at, shipped_at, delivered_at, cancelled_at, created_at, updated_at, deleted_at, order_type, fulfillment_status, metadata, account_id
+RETURNING id, uuid, order_number, user_id, status, subtotal, tax_total, shipping_total, discount_total, grand_total, currency, payment_status, payment_provider, payment_reference, shipping_address, billing_address, shipping_carrier, tracking_number, tracking_url, customer_note, admin_note, paid_at, shipped_at, delivered_at, cancelled_at, created_at, updated_at, deleted_at, order_type, fulfillment_status, metadata, account_id, rejection_reason
 `
 
 type UpdateOrderPaymentStatusParams struct {
@@ -1649,6 +1665,7 @@ func (q *Queries) UpdateOrderPaymentStatus(ctx context.Context, arg UpdateOrderP
 		&i.FulfillmentStatus,
 		&i.Metadata,
 		&i.AccountID,
+		&i.RejectionReason,
 	)
 	return i, err
 }
@@ -1663,7 +1680,7 @@ SET shipping_carrier = $1,
     shipped_at = CASE WHEN $4::text = 'shipped' AND shipped_at IS NULL THEN NOW() ELSE shipped_at END
 WHERE uuid = $5
   AND deleted_at IS NULL
-RETURNING id, uuid, order_number, user_id, status, subtotal, tax_total, shipping_total, discount_total, grand_total, currency, payment_status, payment_provider, payment_reference, shipping_address, billing_address, shipping_carrier, tracking_number, tracking_url, customer_note, admin_note, paid_at, shipped_at, delivered_at, cancelled_at, created_at, updated_at, deleted_at, order_type, fulfillment_status, metadata, account_id
+RETURNING id, uuid, order_number, user_id, status, subtotal, tax_total, shipping_total, discount_total, grand_total, currency, payment_status, payment_provider, payment_reference, shipping_address, billing_address, shipping_carrier, tracking_number, tracking_url, customer_note, admin_note, paid_at, shipped_at, delivered_at, cancelled_at, created_at, updated_at, deleted_at, order_type, fulfillment_status, metadata, account_id, rejection_reason
 `
 
 type UpdateOrderShippingParams struct {
@@ -1717,6 +1734,7 @@ func (q *Queries) UpdateOrderShipping(ctx context.Context, arg UpdateOrderShippi
 		&i.FulfillmentStatus,
 		&i.Metadata,
 		&i.AccountID,
+		&i.RejectionReason,
 	)
 	return i, err
 }
@@ -1730,7 +1748,7 @@ SET status = $1::text,
     cancelled_at = CASE WHEN $1::text = 'cancelled' AND cancelled_at IS NULL THEN NOW() ELSE cancelled_at END
 WHERE uuid = $2::uuid
   AND deleted_at IS NULL
-RETURNING id, uuid, order_number, user_id, status, subtotal, tax_total, shipping_total, discount_total, grand_total, currency, payment_status, payment_provider, payment_reference, shipping_address, billing_address, shipping_carrier, tracking_number, tracking_url, customer_note, admin_note, paid_at, shipped_at, delivered_at, cancelled_at, created_at, updated_at, deleted_at, order_type, fulfillment_status, metadata, account_id
+RETURNING id, uuid, order_number, user_id, status, subtotal, tax_total, shipping_total, discount_total, grand_total, currency, payment_status, payment_provider, payment_reference, shipping_address, billing_address, shipping_carrier, tracking_number, tracking_url, customer_note, admin_note, paid_at, shipped_at, delivered_at, cancelled_at, created_at, updated_at, deleted_at, order_type, fulfillment_status, metadata, account_id, rejection_reason
 `
 
 type UpdateOrderStatusParams struct {
@@ -1775,6 +1793,7 @@ func (q *Queries) UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusPa
 		&i.FulfillmentStatus,
 		&i.Metadata,
 		&i.AccountID,
+		&i.RejectionReason,
 	)
 	return i, err
 }

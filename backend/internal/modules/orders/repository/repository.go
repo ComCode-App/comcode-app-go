@@ -49,6 +49,13 @@ type Repository interface {
 	ListManifestCards(ctx context.Context, orderUUID uuid.UUID) ([]model.ManifestCard, error)
 	RetireCardRoutes(ctx context.Context, orderID int64) ([]model.RetiredCardRoute, error)
 
+	// Company bulk order approval (TEC-1317)
+	FindAccountProfileByEmail(ctx context.Context, accountID int64, email string) (int64, uuid.UUID, bool, error)
+	MarkItemProfileCreated(ctx context.Context, orderID int64, itemUUID uuid.UUID) error
+	ListOrderCreatedProfiles(ctx context.Context, accountID, orderID int64) ([]uuid.UUID, error)
+	OpenOrderDraftProfiles(ctx context.Context, accountID, orderID int64) ([]uuid.UUID, error)
+	ReviewOrder(ctx context.Context, id uuid.UUID, from, to, rejectionReason string, actorUserID *int64) (*model.OrderDetail, error)
+
 	// Asset Requests
 	ListAssetRequests(ctx context.Context, orderID int64) ([]model.AssetRequestSummary, error)
 	GetAssetRequestByUUID(ctx context.Context, id uuid.UUID) (*model.AssetRequestSummary, error)
