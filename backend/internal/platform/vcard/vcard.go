@@ -320,7 +320,39 @@ func (g *Generator) Generate(contact Contact) string {
 	fmt.Fprintf(&sb, "REV:%s\r\n", time.Now().UTC().Format("20060102T150405Z"))
 	sb.WriteString("END:VCARD\r\n")
 
+	if version == Version30 {
+		return markUTF8Lines(sb.String())
+	}
 	return sb.String()
+}
+
+// markUTF8Lines adds CHARSET=UTF-8 to every vCard 3.0 property whose value is not plain ASCII
+// (TEC-1312). Readers such as Outlook and Windows Contacts otherwise decode the file with the
+// system code page and show "HÃ¼seyin" for "Hüseyin". iOS, macOS, Android and Google Contacts
+// accept the parameter. 4.0 is UTF-8 by definition and does not allow it.
+func markUTF8Lines(card string) string {
+	lines := strings.Split(card, "\r\n")
+	for i, line := range lines {
+		colon := strings.IndexByte(line, ':')
+		if colon <= 0 || isASCII(line) {
+			continue
+		}
+		name := line[:colon]
+		if strings.Contains(strings.ToUpper(name), "CHARSET=") {
+			continue
+		}
+		lines[i] = name + ";CHARSET=UTF-8" + line[colon:]
+	}
+	return strings.Join(lines, "\r\n")
+}
+
+func isASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] >= 0x80 {
+			return false
+		}
+	}
+	return true
 }
 
 func isStandardType(s string) bool {

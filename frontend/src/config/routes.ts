@@ -68,7 +68,8 @@ export const routes = {
       branding: "/company/branding",
     },
     billing: {
-      root: "/billing",
+      /** Subscription tab of the account page (TEC-1311); `/billing` redirects here. */
+      root: "/account?tab=subscription",
       checkout: (sessionUuid: string) => `/billing/checkout/${sessionUuid}`,
       addCard: (sessionUuid: string) => `/billing/cards/add/${sessionUuid}`,
       success: "/billing/success",

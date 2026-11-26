@@ -592,7 +592,10 @@ func (s *Service) buildContactVCard(ctx context.Context, detail *model.ProfileDe
 		Emails:        emails,
 		Addresses:     addresses,
 		SocialLinks:   socials,
-		Version:       vcard.Version40, // Standard RFC 6350 (vCard 4.0)
+		// vCard 3.0 with CHARSET=UTF-8 on non-ASCII lines (TEC-1312): 4.0 is not read by
+		// Outlook / Windows Contacts and several Android contact apps, which then show
+		// Turkish letters garbled or refuse the file.
+		Version: vcard.Version30,
 	}
 
 	filename := fmt.Sprintf("%s_%s.vcf", sanitizeFilename(tr.FirstName), sanitizeFilename(tr.LastName))
