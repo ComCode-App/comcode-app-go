@@ -14,6 +14,7 @@ import {
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { useProfilesColumns } from "@/features/profiles/components/profiles-columns";
+import { ProfilePreviewCard } from "@/features/profiles/components/profile-preview-card";
 import type { ProfileRowActionHandlers } from "@/features/profiles/components/profile-row-actions";
 import { profilesKeys } from "@/features/profiles/hooks/query-keys";
 import {
@@ -163,8 +164,14 @@ export function ProfilesPage() {
         emptyDescription={t("profiles.empty_description")}
         pageCount={pageCount}
         state={listState.tableState}
+        // Preview cards by default (TEC-1321); the table stays one toggle away.
+        initialState={{ viewMode: "grid" }}
+        renderGridItem={(profile) => (
+          <ProfilePreviewCard profile={profile} handlers={rowHandlers} />
+        )}
         features={{
-          persistKey: "app-profiles-v1",
+          // v2: earlier saved state pinned the table view.
+          persistKey: "app-profiles-v2",
           rowSelection: false,
         }}
       />

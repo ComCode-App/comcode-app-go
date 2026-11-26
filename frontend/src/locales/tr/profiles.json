@@ -367,5 +367,11 @@
   "public_page.background_template": "Şablonun arka planı",
   "primary": "Birincil",
   "picker.search": "Ad, unvan veya adresle ara",
-  "picker.empty": "Eşleşen profil yok"
+  "picker.empty": "Eşleşen profil yok",
+  "preview_card.untitled": "Adsız profil",
+  "preview_card.primary": "Birincil",
+  "preview_card.published": "Yayında",
+  "preview_card.unpublished": "Yayında değil",
+  "preview_card.save_contact": "Rehbere kaydet",
+  "preview_card.no_address": "Public adres yok"
 }

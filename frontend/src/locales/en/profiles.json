@@ -367,5 +367,11 @@
   "public_page.background_template": "Template background",
   "primary": "Primary",
   "picker.search": "Search by name, title or address",
-  "picker.empty": "No matching profile"
+  "picker.empty": "No matching profile",
+  "preview_card.untitled": "Untitled profile",
+  "preview_card.primary": "Primary",
+  "preview_card.published": "Live",
+  "preview_card.unpublished": "Not live",
+  "preview_card.save_contact": "Save contact",
+  "preview_card.no_address": "No public address"
 }
