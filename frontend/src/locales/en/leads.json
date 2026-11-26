@@ -107,5 +107,7 @@
   "locked.description": "It arrived over your monthly quota, so its name and contact details are hidden. It unlocks when you upgrade your plan or a new month starts.",
   "export.remaining": "{{count}} exports left this month",
   "export.quota_reached": "This month's export quota is used up ({{used}}/{{limit}}). It renews on {{date}}.",
-  "export.off": "Lead export is not included in your plan."
+  "export.off": "Lead export is not included in your plan.",
+  "columns.contact": "Contact",
+  "empty_title": "No requests yet"
 }
