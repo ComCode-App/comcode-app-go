@@ -7,17 +7,21 @@ import {
   Lock,
   Mail,
   Phone,
-  Search,
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
+import {
+  EntityTable,
+  EntityToolbar,
+  useServerListState,
+} from "@/components/entity";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -26,10 +30,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { useLeadMutations, useLeads } from "@/features/leads/hooks/use-leads";
+import { getLeadsColumns } from "@/features/leads/components/leads-columns";
 import { LeadsExportMenu } from "@/features/leads/components/leads-export-menu";
 import { LeadsQuotaMeter } from "@/features/leads/components/leads-quota-meter";
 import {
@@ -37,8 +41,10 @@ import {
   type Lead,
   type LeadSource,
 } from "@/features/leads/services/leads.service";
+import { cardsService } from "@/features/cards";
+import { profilesKeys } from "@/features/profiles/hooks/query-keys";
+import { profilesService } from "@/features/profiles/services/profiles.service";
 import { canManageAccount } from "@/lib/auth/types";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
@@ -75,34 +81,58 @@ export function LeadsPage() {
   const searchParams = useSearchParams();
   const canWrite = can(permissions.leads.write) && canManageAccount(user);
 
-  const [search, setSearch] = useState("");
-  const [q, setQ] = useState("");
   const [view, setView] = useState<View>("all");
-  const [offset, setOffset] = useState(0);
   const [open, setOpen] = useState<Lead | null>(null);
 
-  useEffect(() => {
-    const id = setTimeout(() => {
-      setQ(search.trim());
-      setOffset(0);
-    }, 300);
-    return () => clearTimeout(id);
-  }, [search]);
-
+  // Search and paging through the shared table state (TEC-1324).
+  const listState = useServerListState({ initialPageSize: PAGE_SIZE });
+  const { setPagination } = listState;
+  const q = listState.params.q;
   const params = useMemo(
     () => ({
-      limit: PAGE_SIZE,
-      offset,
+      limit: listState.params.limit,
+      offset: listState.params.offset,
       q: q || undefined,
       unread: view === "unread" || undefined,
       kind: view === "exchanges" ? ("exchange" as const) : undefined,
     }),
-    [offset, q, view],
+    [listState.params.limit, listState.params.offset, q, view],
   );
-  const { data, isLoading } = useLeads(params);
+  const { data, isLoading, isError, isFetching, refetch } = useLeads(params);
   const { markRead, remove } = useLeadMutations();
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
+  const pageCount = Math.max(
+    1,
+    Math.ceil(total / (listState.pagination.pageSize || PAGE_SIZE)),
+  );
+
+  // Which profile or card a lead came through, by name (the API returns their uuids).
+  const profileNamesQuery = useQuery({
+    queryKey: profilesKeys.list({ picker: true }),
+    queryFn: () => profilesService.list({ limit: 100, offset: 0 }),
+    staleTime: 5 * 60_000,
+  });
+  const cardNamesQuery = useQuery({
+    queryKey: ["cards", "leads-source-names"],
+    queryFn: () => cardsService.list({ page: 1, pageSize: 100 }),
+    staleTime: 5 * 60_000,
+  });
+  const profileNames = useMemo(
+    () =>
+      new Map(
+        (profileNamesQuery.data?.items ?? []).map((p) => [
+          p.uuid,
+          `${p.first_name} ${p.last_name}`.trim(),
+        ]),
+      ),
+    [profileNamesQuery.data],
+  );
+  const cardNames = useMemo(
+    () =>
+      new Map((cardNamesQuery.data?.items ?? []).map((c) => [c.uuid, c.name])),
+    [cardNamesQuery.data],
+  );
 
   const leadParam = searchParams.get("lead");
   useEffect(() => {
@@ -148,6 +178,16 @@ export function LeadsPage() {
     remove.mutate(lead.uuid, { onSuccess: () => closeLead() });
   };
 
+  const columns = getLeadsColumns({
+    t,
+    locale,
+    canWrite,
+    profileNames,
+    cardNames,
+    onOpen: openLead,
+    onDelete: (lead) => void deleteLead(lead),
+  });
+
   return (
     <div className="space-y-6 pb-12">
       <div className="flex flex-col justify-between gap-4 border-b pb-2 md:flex-row md:items-center">
@@ -176,135 +216,50 @@ export function LeadsPage() {
 
       <LeadsQuotaMeter />
 
-      <div className="bg-card flex flex-col items-center justify-between gap-3 rounded-xl border p-3 sm:flex-row">
-        <div className="relative w-full sm:w-72">
-          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-          <Input
-            placeholder={t("leads.search_placeholder")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-9 pl-9 text-sm"
-          />
-        </div>
-        <div className="bg-muted/70 flex items-center rounded-lg border p-0.5">
-          {(Object.keys(VIEW_KEYS) as View[]).map((value) => (
-            <Button
-              key={value}
-              size="sm"
-              variant={view === value ? "default" : "ghost"}
-              className="h-7 rounded-md px-2.5 text-xs"
-              onClick={() => {
-                setView(value);
-                setOffset(0);
-              }}
-            >
-              {t(VIEW_KEYS[value])}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {!isLoading && items.length === 0 ? (
-        <Card>
-          <CardContent className="text-muted-foreground p-8 text-center text-sm">
-            {t("leads.empty")}
-          </CardContent>
-        </Card>
-      ) : (
-        <ul className="bg-card divide-y rounded-xl border">
-          {items.map((lead) => (
-            <li key={lead.uuid}>
-              <button
-                type="button"
-                onClick={() => openLead(lead)}
-                className="hover:bg-muted/50 flex w-full items-start gap-3 px-4 py-3 text-left"
-              >
-                <span
-                  aria-hidden
-                  className={cn(
-                    "mt-2 size-2 shrink-0 rounded-full",
-                    lead.read_at ? "bg-transparent" : "bg-primary",
-                  )}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "truncate text-sm",
-                        !lead.read_at && "font-semibold",
-                      )}
-                    >
-                      {lead.name}
-                    </span>
-                    {!lead.read_at ? (
-                      <Badge className="text-[10px]">
-                        {t("leads.status.new")}
-                      </Badge>
-                    ) : null}
-                    {lead.kind === "exchange" ? (
-                      <ExchangeBadge label={t("leads.kind.exchange")} />
-                    ) : null}
-                    {lead.locked ? (
-                      <LockedBadge label={t("leads.locked.badge")} />
-                    ) : null}
-                  </span>
-                  {lead.company || lead.job_title ? (
-                    <span className="text-muted-foreground block truncate text-xs">
-                      {[lead.job_title, lead.company]
-                        .filter(Boolean)
-                        .join(", ")}
-                    </span>
-                  ) : null}
-                  <span className="text-muted-foreground block truncate text-xs">
-                    {[lead.email, lead.phone].filter(Boolean).join(" · ")}
-                  </span>
-                  {lead.message ? (
-                    <span className="text-muted-foreground mt-1 line-clamp-1 block text-xs">
-                      {lead.message}
-                    </span>
-                  ) : null}
-                </span>
-                <span className="text-muted-foreground shrink-0 text-right text-xs">
-                  <span className="block">{fmt(lead.created_at)}</span>
-                  <span className="block">
-                    {t(SOURCE_KEYS[lead.source_type])} · /{lead.route_path}
-                  </span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {total > PAGE_SIZE ? (
-        <div className="flex items-center justify-between gap-2 text-sm">
-          <span className="text-muted-foreground">
-            {t("leads.pagination.range", {
-              from: offset + 1,
-              to: Math.min(offset + PAGE_SIZE, total),
-              total,
-            })}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-            >
-              {t("leads.pagination.previous")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={offset + PAGE_SIZE >= total}
-              onClick={() => setOffset(offset + PAGE_SIZE)}
-            >
-              {t("leads.pagination.next")}
-            </Button>
+      <EntityTable
+        columns={columns}
+        data={items}
+        getRowId={(row) => row.uuid}
+        onRowClick={openLead}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => void refetch()}
+        emptyTitle={t("leads.empty_title")}
+        emptyDescription={t("leads.empty")}
+        pageCount={pageCount}
+        state={listState.tableState}
+        features={{
+          persistKey: "app-leads-v1",
+          sorting: false,
+          rowSelection: false,
+          columnFilters: false,
+          facetedFilters: false,
+        }}
+        toolbarExtra={
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="bg-muted/70 flex items-center rounded-lg border p-0.5">
+              {(Object.keys(VIEW_KEYS) as View[]).map((value) => (
+                <Button
+                  key={value}
+                  size="sm"
+                  variant={view === value ? "default" : "ghost"}
+                  className="h-7 rounded-md px-2.5 text-xs"
+                  onClick={() => {
+                    setView(value);
+                    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+                  }}
+                >
+                  {t(VIEW_KEYS[value])}
+                </Button>
+              ))}
+            </div>
+            <EntityToolbar
+              onRefresh={() => void refetch()}
+              refreshDisabled={isFetching}
+            />
           </div>
-        </div>
-      ) : null}
+        }
+      />
 
       <Dialog
         open={Boolean(open)}
