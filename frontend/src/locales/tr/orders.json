@@ -327,5 +327,8 @@
   "refund.attempts": "{{count}} deneme",
   "refund.retry": "Tekrar dene",
   "refund.unknown_outcome_hint": "Sağlayıcıdan yanıt alınamadı. Tekrar denemeden önce iyzico/PayTR panelinde iadenin yapılıp yapılmadığını kontrol edin.",
-  "refund.pending_hint": "İade sağlayıcıda işleniyor. Uzun süre bu durumda kalırsa sağlayıcı panelini kontrol edin."
+  "refund.pending_hint": "İade sağlayıcıda işleniyor. Uzun süre bu durumda kalırsa sağlayıcı panelini kontrol edin.",
+  "subscriber.col_date": "Sipariş Tarihi",
+  "subscriber.col_items": "Kalem",
+  "subscriber.no_results": "Aramanızla eşleşen sipariş bulunamadı"
 }
