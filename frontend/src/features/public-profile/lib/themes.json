@@ -2,7 +2,10 @@
   "classic_light": {
     "layout": "standard",
     "scheme": "light",
-    "fonts": { "heading": "sans", "body": "sans" },
+    "fonts": {
+      "heading": "sans",
+      "body": "sans"
+    },
     "headingWeight": 600,
     "colors": {
       "background": "#ffffff",
@@ -25,7 +28,10 @@
   "dark_minimal": {
     "layout": "minimal",
     "scheme": "dark",
-    "fonts": { "heading": "sans", "body": "sans" },
+    "fonts": {
+      "heading": "sans",
+      "body": "sans"
+    },
     "headingWeight": 500,
     "colors": {
       "background": "#0b0d10",
@@ -48,7 +54,10 @@
   "compact_card": {
     "layout": "compact",
     "scheme": "light",
-    "fonts": { "heading": "sans", "body": "sans" },
+    "fonts": {
+      "heading": "sans",
+      "body": "sans"
+    },
     "headingWeight": 700,
     "colors": {
       "background": "#ffffff",
@@ -73,7 +82,10 @@
     "fallback": "classic_light",
     "layout": "standard",
     "scheme": "light",
-    "fonts": { "heading": "sans", "body": "sans" },
+    "fonts": {
+      "heading": "sans",
+      "body": "sans"
+    },
     "headingWeight": 700,
     "colors": {
       "background": "#ffffff",
@@ -98,7 +110,10 @@
     "fallback": "classic_light",
     "layout": "standard",
     "scheme": "light",
-    "fonts": { "heading": "serif", "body": "sans" },
+    "fonts": {
+      "heading": "serif",
+      "body": "sans"
+    },
     "headingWeight": 600,
     "colors": {
       "background": "#fffdf9",
@@ -123,7 +138,10 @@
     "fallback": "dark_minimal",
     "layout": "standard",
     "scheme": "dark",
-    "fonts": { "heading": "sans", "body": "sans" },
+    "fonts": {
+      "heading": "sans",
+      "body": "sans"
+    },
     "headingWeight": 600,
     "colors": {
       "background": "#ffffff14",
@@ -141,6 +159,32 @@
     "cover": "linear-gradient(135deg, #0ea5e9 0%, #6366f1 60%, #a855f7 100%)",
     "backdrop": "radial-gradient(circle at 20% 15%, #6366f1 0%, transparent 45%), radial-gradient(circle at 85% 40%, #0ea5e9 0%, transparent 40%), radial-gradient(circle at 40% 90%, #a855f7 0%, transparent 45%), #0b1220",
     "backdropBase": "#0b1220",
+    "glass": true
+  },
+  "legacy_comcode": {
+    "layout": "legacy_comcode",
+    "scheme": "dark",
+    "fonts": {
+      "heading": "sans",
+      "body": "sans"
+    },
+    "headingWeight": 700,
+    "colors": {
+      "background": "#ffffff0d",
+      "foreground": "#ffffff",
+      "card": "#1d0f2be0",
+      "muted": "#ffffff14",
+      "mutedForeground": "#d9cfe6",
+      "primary": "#c9b6f5",
+      "primaryEnd": "#a98bea",
+      "primaryForeground": "#1a0b2b",
+      "accent": "#ffffff1f",
+      "accentForeground": "#ffffff",
+      "border": "#b9a3e04d"
+    },
+    "cover": "linear-gradient(135deg, #3b1d5c 0%, #1d0f2b 100%)",
+    "backdrop": "radial-gradient(120% 80% at 50% 0%, #3a1650 0%, transparent 60%), radial-gradient(90% 60% at 100% 100%, #4a1236 0%, transparent 55%), #120818",
+    "backdropBase": "#120818",
     "glass": true
   }
 }

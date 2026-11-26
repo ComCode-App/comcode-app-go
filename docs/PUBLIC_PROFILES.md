@@ -102,14 +102,16 @@ Writes need an owner or admin role in the active account (docs/TENANCY_AND_ACCES
   - The backend only checks ids against allow-lists: `model.PublicThemes` and `model.PublicLayoutModes`. An unknown stored value reads as unset.
   - The visitor API returns the resolved `theme` and the `layout_mode` override.
 - Catalog: `features/public-profile/lib/themes.json` (tokens) and `themes.ts` (types, CSS variables).
-  - Themes: `classic_light`, `dark_minimal`, `compact_card`, `bold_gradient`, `elegant_serif`, `glass`.
+  - Themes: `classic_light`, `dark_minimal`, `compact_card`, `bold_gradient`, `elegant_serif`, `glass`, `legacy_comcode` ("Comcode V1", TEC-1309).
   - `bold_gradient`, `elegant_serif` and `glass` are premium (`premium`, `fallback` in `themes.json`; `model.PremiumThemes`). They need `design.premium`; without it visitors see the fallback theme (TEC-947).
   - A theme is a layout (`standard`, `compact`, `minimal`), color tokens, fonts (`sans` or `serif`), a heading weight, a cover gradient and a default backdrop.
   - To add a theme: add it to `themes.json`, `model.PublicThemes`, the `PublicTheme` enum in `openapi.yaml` and the `theme_name.*` strings. Then run `pnpm api:generate` and `pnpm test`.
 - Rendering (`public-profile-view.tsx`):
   - The tokens are set as CSS variables on the page root (`--card`, `--primary`, `--muted-foreground`, `--comcode-gradient`, ...). Existing components pick them up without theme-specific code.
   - A profile with no theme (and no company theme) keeps the app's own look and follows light/dark.
-  - Layout: `layout_mode` if set, else the theme's layout.
+  - Layout: always the theme's own layout (TEC-1309). The UI calls a theme a "template" and has no separate density switch; owner forms save `layout_mode: ""`. A stored override is accepted by the API but not applied.
+  - `legacy_comcode` layout (Comcode V1, `legacy-comcode-layout.tsx`): one glass card (avatar, name, a bio of at most 90 characters as tagline, title line, company logo card, icon row of social links and quick contacts, language switch inside the "save contact" button), a copyright line and a bottom tab bar ("Hesabım": forms, bio, contacts, addresses; "Banka Bilgileri" when bank accounts are published).
+  - Owner UI: template gallery (`theme-picker.tsx`) and Background Studio tile gallery (`background-picker.tsx`); template previews are drawn over the chosen background's thumbnail.
   - Backdrop: a Background Studio design (`background_uuid`) replaces the theme's backdrop. Cards, text and buttons keep the theme tokens.
   - Text never sits directly on the backdrop. Every text is on a themed surface (cards, language switch, footer pill), so contrast does not depend on the background.
 - Budget and accessibility:

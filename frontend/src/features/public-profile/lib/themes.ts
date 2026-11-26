@@ -7,7 +7,8 @@ import catalog from "./themes.json";
 /**
  * Public profile theme catalog (TEC-601).
  *
- * A theme is a layout mode plus color and typography tokens plus a default backdrop. The tokens
+ * A theme ("template" in the UI) is a layout plus color and typography tokens plus a
+ * default backdrop. The tokens
  * live in `themes.json` so `themes.test.mjs` can check every theme's text contrast (≥ 4.5:1)
  * without a TS toolchain; the ids mirror the backend allow-list (`model.PublicThemes`).
  *
@@ -61,7 +62,12 @@ export type ProfileTheme = {
 };
 
 export const THEME_IDS = Object.keys(catalog) as ThemeId[];
-export const LAYOUT_MODES: LayoutMode[] = ["standard", "compact", "minimal"];
+export const LAYOUT_MODES: LayoutMode[] = [
+  "standard",
+  "compact",
+  "minimal",
+  "legacy_comcode",
+];
 
 const THEMES = Object.fromEntries(
   Object.entries(catalog).map(([id, def]) => [
@@ -95,12 +101,12 @@ export function getTheme(id: string | null | undefined): ProfileTheme | null {
   return isThemeId(id) ? THEMES[id] : null;
 }
 
-/** Layout override first, then the theme's layout, then the classic layout. */
-export function resolveLayout(
-  theme: ProfileTheme | null,
-  override: string | null | undefined,
-): LayoutMode {
-  if (isLayoutMode(override)) return override;
+/**
+ * The layout a page renders: every theme brings its own layout (TEC-1309), so picking a
+ * template sets colors, fonts, card chrome and structure together. A stored
+ * `layout_mode` override (the old density switch) is no longer applied.
+ */
+export function resolveLayout(theme: ProfileTheme | null): LayoutMode {
   return theme?.layout ?? "standard";
 }
 
