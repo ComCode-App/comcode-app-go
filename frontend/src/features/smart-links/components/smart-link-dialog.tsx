@@ -29,6 +29,7 @@ import { Switch } from "@/components/ui/switch";
 import type { components } from "@/generated/api";
 import { entitlementKeys } from "@/features/entitlements/hooks/use-entitlements";
 import { profilesKeys } from "@/features/profiles/hooks/query-keys";
+import { ProfilePicker } from "@/features/profiles/components/profile-picker";
 import { profilesService } from "@/features/profiles/services/profiles.service";
 import { ProfileThemePicker } from "@/features/public-profile/components/theme-picker";
 import { isThemeId, type ThemeId } from "@/features/public-profile/lib/themes";
@@ -296,22 +297,17 @@ function SmartLinkForm({
 
         {needsProfile ? (
           <div className="grid gap-1.5">
-            <Label>{t("smart_links.profile")}</Label>
-            <Select value={profileUuid} onValueChange={setProfileUuid}>
-              <SelectTrigger>
-                <SelectValue
-                  placeholder={t("smart_links.profile_placeholder")}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {(profilesQuery.data?.items ?? []).map((p) => (
-                  <SelectItem key={p.uuid} value={p.uuid}>
-                    {`${p.first_name} ${p.last_name}`.trim()}
-                    {p.username ? ` · /${p.username}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label id="smart-link-profile-label">
+              {t("smart_links.profile")}
+            </Label>
+            <ProfilePicker
+              profiles={profilesQuery.data?.items ?? []}
+              value={profileUuid}
+              onChange={setProfileUuid}
+              labelId="smart-link-profile-label"
+              placeholder={t("smart_links.profile_placeholder")}
+              disabled={save.isPending}
+            />
           </div>
         ) : (
           <div className="grid gap-1.5">

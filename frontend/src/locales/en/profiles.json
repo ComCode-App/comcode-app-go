@@ -364,5 +364,8 @@
   "keywords.hint": "Example: software, cloud, cybersecurity. Each language keeps its own list.",
   "public_page.theme_name.legacy_comcode": "Comcode V1",
   "public_page.layout_name.legacy_comcode": "Glass card with tabs",
-  "public_page.background_template": "Template background"
+  "public_page.background_template": "Template background",
+  "primary": "Primary",
+  "picker.search": "Search by name, title or address",
+  "picker.empty": "No matching profile"
 }

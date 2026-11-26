@@ -13,13 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ProfilePicker } from "@/features/profiles/components/profile-picker";
 import { profilesService } from "@/features/profiles/services/profiles.service";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -72,21 +66,16 @@ function LinkProfileDialogBody({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5">
-          <Label>{t("company_bulk.link.profile")}</Label>
-          <Select value={profile} onValueChange={setProfile}>
-            <SelectTrigger>
-              <SelectValue placeholder={t("company_bulk.link.pick")} />
-            </SelectTrigger>
-            <SelectContent>
-              {(profilesQuery.data?.items ?? []).map((p) => (
-                <SelectItem key={p.uuid} value={p.uuid}>
-                  {`${p.first_name} ${p.last_name}`.trim() ||
-                    p.username ||
-                    p.uuid}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label id="link-profile-label">
+            {t("company_bulk.link.profile")}
+          </Label>
+          <ProfilePicker
+            profiles={profilesQuery.data?.items ?? []}
+            value={profile}
+            onChange={setProfile}
+            labelId="link-profile-label"
+            placeholder={t("company_bulk.link.pick")}
+          />
           <p className="text-muted-foreground text-xs">
             {t("company_bulk.link.hint")}
           </p>
