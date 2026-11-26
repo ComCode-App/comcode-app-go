@@ -2573,6 +2573,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/profiles/{uuid}/company-shares": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Companies the caller belongs to, with the share state of this profile
+         * @description Requires `app.profiles.read`. Profiles of the active personal account only (TEC-1315); in a company account the list is empty. Sharing is off by default.
+         */
+        get: operations["listProfileCompanyShares"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/profiles/{uuid}/company-shares/{company_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Share a personal profile with a company the caller belongs to
+         * @description Requires `app.profiles.write`. Active personal account only (TEC-1315). The company's owners and admins see the profile read-only. Idempotent; written to the activity log. The share is removed when the member leaves or is removed from the company.
+         */
+        put: operations["shareProfileWithCompany"];
+        post?: never;
+        /**
+         * Stop sharing a personal profile with a company
+         * @description Requires `app.profiles.write`. Active personal account only (TEC-1315). Idempotent; written to the activity log.
+         */
+        delete: operations["unshareProfileWithCompany"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/backgrounds": {
         parameters: {
             query?: never;
@@ -7436,6 +7480,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/company/shared-profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Personal profiles members shared with the active company (read-only)
+         * @description Requires `app.profiles.read` and an owner/admin role in the active company account (TEC-1315). Only profiles a current member explicitly shared with this company are listed; other members get 403.
+         */
+        get: operations["listCompanySharedProfiles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/company/member-profiles/meta": {
         parameters: {
             query?: never;
@@ -10261,6 +10325,62 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["CompanyMemberProfile"][];
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        ProfileCompanyShareTarget: {
+            /** Format: uuid */
+            company_uuid: string;
+            company_name: string;
+            /** @description Caller's role in the company */
+            role: string;
+            shared: boolean;
+        };
+        EnvelopeProfileCompanyShareTargets: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ProfileCompanyShareTarget"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeProfileCompanyShareState: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                shared: boolean;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        CompanySharedProfile: {
+            /** Format: uuid */
+            uuid: string;
+            first_name: string;
+            last_name: string;
+            title: string;
+            company_name: string;
+            avatar_url: string;
+            completion_rate: number;
+            /** @description Public path; empty until assigned */
+            username: string;
+            /** Format: date-time */
+            shared_at: string;
+            member: {
+                /** Format: uuid */
+                user_uuid: string;
+                email: string;
+                name: string;
+                surname: string;
+            };
+        };
+        EnvelopeCompanySharedProfilePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["CompanySharedProfile"][];
                 total: number;
                 limit: number;
                 offset: number;
@@ -17631,6 +17751,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeSimpleSuccess"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listProfileCompanyShares: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Share targets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProfileCompanyShareTargets"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    shareProfileWithCompany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                company_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shared */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProfileCompanyShareState"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unshareProfileWithCompany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                company_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Not shared */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProfileCompanyShareState"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -26119,6 +26319,31 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listCompanySharedProfiles: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shared profile page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCompanySharedProfilePage"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };

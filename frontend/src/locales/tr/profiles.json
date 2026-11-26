@@ -373,5 +373,16 @@
   "preview_card.published": "Yayında",
   "preview_card.unpublished": "Yayında değil",
   "preview_card.save_contact": "Rehbere kaydet",
-  "preview_card.no_address": "Public adres yok"
+  "preview_card.no_address": "Public adres yok",
+  "company_share.title": "Firmamla paylaş",
+  "company_share.description": "Bu profili üyesi olduğunuz firmalarla paylaşın. Paylaşım varsayılan olarak kapalıdır ve her firma için ayrı seçilir.",
+  "company_share.switch_label": "Bu profili {{company}} ile paylaş",
+  "company_share.consent_hint": "Bu profilin bilgileri firma yöneticileri tarafından görüntülenebilir.",
+  "company_share.shared_toast": "Profil firmayla paylaşıldı",
+  "company_share.unshared_toast": "Profil artık paylaşılmıyor",
+  "company_share.error": "Paylaşım değiştirilemedi",
+  "shared_profiles.title": "Üye profilleri",
+  "shared_profiles.description": "Üyelerin bu firmayla paylaşmayı seçtiği kişisel profiller. Görüntüleyebilirsiniz, düzenleyemezsiniz.",
+  "shared_profiles.read_only": "Salt okunur",
+  "shared_profiles.shared_by": "Paylaşan: {{name}}"
 }

@@ -302,3 +302,50 @@ export const profilesService = {
     );
   },
 };
+
+/** A company the user belongs to and whether a personal profile is shared with it (TEC-1315). */
+export type ProfileCompanyShareTarget = {
+  company_uuid: string;
+  company_name: string;
+  role: string;
+  shared: boolean;
+};
+
+/** A member's personal profile shared with the active company; read-only (TEC-1315). */
+export type CompanySharedProfile = {
+  uuid: string;
+  first_name: string;
+  last_name: string;
+  title: string;
+  company_name: string;
+  avatar_url: string;
+  completion_rate: number;
+  username: string;
+  shared_at: string;
+  member: { user_uuid: string; email: string; name: string; surname: string };
+};
+
+export const profileSharesService = {
+  async targets(profileUuid: string) {
+    return platformRequest<{ items: ProfileCompanyShareTarget[] }>(
+      "GET",
+      `/v1/profiles/${profileUuid}/company-shares`,
+    );
+  },
+
+  async setShared(profileUuid: string, companyUuid: string, shared: boolean) {
+    return platformRequest<{ shared: boolean }>(
+      shared ? "PUT" : "DELETE",
+      `/v1/profiles/${profileUuid}/company-shares/${companyUuid}`,
+    );
+  },
+
+  async companyProfiles(params: { limit: number; offset: number }) {
+    return platformRequest<{
+      items: CompanySharedProfile[];
+      total: number;
+      limit: number;
+      offset: number;
+    }>("GET", "/v1/company/shared-profiles", { query: params });
+  },
+};

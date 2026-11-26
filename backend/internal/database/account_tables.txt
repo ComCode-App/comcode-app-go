@@ -43,6 +43,7 @@ payment_card_sessions
 payment_checkout_sessions
 payment_provider_customers
 payment_saved_cards
+profile_company_shares
 profile_verification_requests
 profiles
 route_history

@@ -116,6 +116,8 @@ type Querier interface {
 	CountCompanyAssetOrders(ctx context.Context, arg CountCompanyAssetOrdersParams) (int64, error)
 	CountCompanyMedia(ctx context.Context, arg CountCompanyMediaParams) (int64, error)
 	CountCompanyMemberProfiles(ctx context.Context, arg CountCompanyMemberProfilesParams) (int64, error)
+	// account-lint: cross-account counts the profiles members shared with the active company (TEC-1315)
+	CountCompanySharedProfiles(ctx context.Context, companyAccountID int64) (int64, error)
 	// Unique visitors are counted from raw events: the aggregate tables add 1 per event, so their
 	// unique_sessions column is an event count. A visitor is the session id, else the daily IP hash.
 	CountDistinctVisitors(ctx context.Context, arg CountDistinctVisitorsParams) (int64, error)
@@ -245,6 +247,7 @@ type Querier interface {
 	DeleteProfile(ctx context.Context, arg DeleteProfileParams) error
 	DeleteProfileAddresses(ctx context.Context, profileID int64) error
 	DeleteProfileBankAccounts(ctx context.Context, profileID int64) error
+	DeleteProfileCompanyShare(ctx context.Context, arg DeleteProfileCompanyShareParams) (int64, error)
 	DeleteProfileContactDetails(ctx context.Context, profileID int64) error
 	DeleteProfileSocialLinks(ctx context.Context, profileID int64) error
 	DeleteProfileTranslations(ctx context.Context, profileID int64) error
@@ -360,6 +363,8 @@ type Querier interface {
 	GetCompanyMemberByUserUUID(ctx context.Context, arg GetCompanyMemberByUserUUIDParams) (GetCompanyMemberByUserUUIDRow, error)
 	// The member's linked profile, including a soft-deleted one (callers check deleted).
 	GetCompanyMemberLink(ctx context.Context, arg GetCompanyMemberLinkParams) (GetCompanyMemberLinkRow, error)
+	// account-lint: cross-account the caller's own membership in one company, filtered by their user id
+	GetCompanyMembershipForUser(ctx context.Context, arg GetCompanyMembershipForUserParams) (GetCompanyMembershipForUserRow, error)
 	// A live profile of the account with the office of the member it is linked to (if any).
 	GetCompanyProfileTarget(ctx context.Context, arg GetCompanyProfileTargetParams) (GetCompanyProfileTargetRow, error)
 	GetCompanySector(ctx context.Context, id int64) (pgtype.UUID, error)
@@ -491,6 +496,9 @@ type Querier interface {
 	GetRouteByUUID(ctx context.Context, argUuid uuid.UUID) (GetRouteByUUIDRow, error)
 	GetRouteQR(ctx context.Context, arg GetRouteQRParams) (GetRouteQRRow, error)
 	GetSectorAdmin(ctx context.Context, argUuid uuid.UUID) (Sector, error)
+	// Profile shares with companies (TEC-1315). A member shares a personal profile with a company
+	// they belong to; the company's owners and admins see it read-only.
+	GetShareableProfileID(ctx context.Context, arg GetShareableProfileIDParams) (int64, error)
 	GetSocialPlatformBySlug(ctx context.Context, slug string) (SocialPlatform, error)
 	GetSocialPlatformByUUID(ctx context.Context, argUuid uuid.UUID) (SocialPlatform, error)
 	GetStepupSettings(ctx context.Context) (StepupSetting, error)
@@ -541,6 +549,7 @@ type Querier interface {
 	InsertOrderStatusHistory(ctx context.Context, arg InsertOrderStatusHistoryParams) error
 	InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventParams) (OutboxEvent, error)
 	InsertProfileBankAccount(ctx context.Context, arg InsertProfileBankAccountParams) error
+	InsertProfileCompanyShare(ctx context.Context, arg InsertProfileCompanyShareParams) (int64, error)
 	InsertPushTicket(ctx context.Context, arg InsertPushTicketParams) error
 	InsertRolePermission(ctx context.Context, arg InsertRolePermissionParams) error
 	InsertRouteHistory(ctx context.Context, arg InsertRouteHistoryParams) error
@@ -628,6 +637,8 @@ type Querier interface {
 	// Company media library and company branding (TEC-946). Every query is scoped by account_id.
 	ListCompanyMedia(ctx context.Context, arg ListCompanyMediaParams) ([]ListCompanyMediaRow, error)
 	ListCompanyMemberProfiles(ctx context.Context, arg ListCompanyMemberProfilesParams) ([]ListCompanyMemberProfilesRow, error)
+	// account-lint: cross-account profiles members shared with the active company (read-only, TEC-1315)
+	ListCompanySharedProfiles(ctx context.Context, arg ListCompanySharedProfilesParams) ([]ListCompanySharedProfilesRow, error)
 	// account-lint: cross-account one-off deleted-profile media backfill (TEC-1177): walks soft-deleted profiles of every account by id cursor and returns only ids, uuids, media columns and locales
 	ListDeletedProfilesForMediaBackfill(ctx context.Context, arg ListDeletedProfilesForMediaBackfillParams) ([]ListDeletedProfilesForMediaBackfillRow, error)
 	// Worker-only unscoped discovery. Manual/legacy subscriptions are deliberately excluded.
@@ -694,6 +705,8 @@ type Querier interface {
 	// Selected, active bank accounts of a profile with their bank's display data.
 	ListProfileBankAccountsPublic(ctx context.Context, profileID int64) ([]ListProfileBankAccountsPublicRow, error)
 	ListProfileContactDetails(ctx context.Context, profileID int64) ([]ProfileContactDetail, error)
+	// account-lint: cross-account the caller's own company memberships, filtered by their user id
+	ListProfileShareTargets(ctx context.Context, arg ListProfileShareTargetsParams) ([]ListProfileShareTargetsRow, error)
 	ListProfileSocialLinks(ctx context.Context, profileID int64) ([]ProfileSocialLink, error)
 	ListProfileTranslations(ctx context.Context, profileID int64) ([]ProfileTranslation, error)
 	// Owners and admins of the profile's account hear about review outcomes.
