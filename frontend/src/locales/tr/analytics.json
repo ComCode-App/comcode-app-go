@@ -10,6 +10,7 @@
   "range.30": "Son 30 gün",
   "range.90": "Son 90 gün",
   "range.365": "Son 1 yıl",
+  "range.all": "Tüm zamanlar",
   "range_locked": "planınızda yok",
   "history_notice": "Planınız analitiğin son {{days}} gününü gösterir.",
   "kpi.views": "Görüntülenme",
