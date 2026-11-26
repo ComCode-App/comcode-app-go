@@ -23,16 +23,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import {
-  PremiumLockIcon,
-  PremiumNotice,
-  useDesignPremium,
-} from "@/features/entitlements/components/premium-lock";
-import {
-  LAYOUT_MODES,
-  THEME_IDS,
-  isPremiumTheme,
-} from "@/features/public-profile/lib/themes";
+import { useDesignPremium } from "@/features/entitlements/components/premium-lock";
+import { ProfileThemePicker } from "@/features/public-profile/components/theme-picker";
+import type { ThemeId } from "@/features/public-profile/lib/themes";
 import { ApiError } from "@/lib/api/errors";
 import { uploadErrorKey } from "@/lib/api/upload-errors";
 import { assertServiceMediaURL } from "@/lib/media/urls";
@@ -129,7 +122,6 @@ function useLibrary() {
 
 type BrandingForm = {
   theme: string;
-  layout: string;
   color: string;
   logo: string;
   cover: string;
@@ -139,7 +131,6 @@ type BrandingForm = {
 function toForm(b: CompanyBranding): BrandingForm {
   return {
     theme: b.theme || NONE,
-    layout: b.layout_mode || NONE,
     color: b.primary_color,
     logo: b.logo?.uuid ?? NONE,
     cover: b.cover?.uuid ?? NONE,
@@ -209,7 +200,8 @@ function BrandingFormCard({
     if (colorInvalid) return;
     save.mutate({
       theme: pick(form.theme) ?? "",
-      layout_mode: pick(form.layout) ?? "",
+      // The template brings its own layout (TEC-1309): clear the old density override.
+      layout_mode: "",
       primary_color: color,
       logo_media_uuid: pick(form.logo),
       cover_media_uuid: pick(form.cover),
@@ -262,65 +254,15 @@ function BrandingFormCard({
         <p className="text-muted-foreground text-sm">
           {t("company_branding.branding.hint")}
         </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="grid gap-1.5">
-            <Label htmlFor="branding-theme">
-              {t("company_branding.branding.theme")}
-            </Label>
-            <Select
-              value={form.theme}
-              onValueChange={(v) => set({ theme: v })}
-              disabled={disabled}
-            >
-              <SelectTrigger id="branding-theme" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>
-                  {t("company_branding.branding.theme_none")}
-                </SelectItem>
-                {THEME_IDS.map((id) => {
-                  const locked = !allowPremium && isPremiumTheme(id);
-                  return (
-                    <SelectItem
-                      key={id}
-                      value={id}
-                      disabled={locked && id !== branding.theme}
-                    >
-                      {t(`profiles.public_page.theme_name.${id}`)}
-                      {locked ? <PremiumLockIcon /> : null}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-            {!allowPremium ? <PremiumNotice /> : null}
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="branding-layout">
-              {t("company_branding.branding.layout")}
-            </Label>
-            <Select
-              value={form.layout}
-              onValueChange={(v) => set({ layout: v })}
-              disabled={disabled}
-            >
-              <SelectTrigger id="branding-layout" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>
-                  {t("company_branding.branding.layout_theme")}
-                </SelectItem>
-                {LAYOUT_MODES.map((id) => (
-                  <SelectItem key={id} value={id}>
-                    {t(`profiles.public_page.layout_name.${id}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <ProfileThemePicker
+          theme={form.theme === NONE ? "" : (form.theme as ThemeId)}
+          inheritedTheme=""
+          disabled={disabled}
+          noneLabel={t("company_branding.branding.theme_none")}
+          hint={t("company_branding.branding.theme_hint")}
+          premiumAllowed={allowPremium}
+          onThemeChange={(id) => set({ theme: id || NONE })}
+        />
 
         <div className="grid gap-1.5">
           <Label htmlFor="branding-color">

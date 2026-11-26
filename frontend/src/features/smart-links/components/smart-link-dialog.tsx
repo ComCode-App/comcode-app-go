@@ -31,12 +31,7 @@ import { entitlementKeys } from "@/features/entitlements/hooks/use-entitlements"
 import { profilesKeys } from "@/features/profiles/hooks/query-keys";
 import { profilesService } from "@/features/profiles/services/profiles.service";
 import { ProfileThemePicker } from "@/features/public-profile/components/theme-picker";
-import {
-  isLayoutMode,
-  isThemeId,
-  type LayoutMode,
-  type ThemeId,
-} from "@/features/public-profile/lib/themes";
+import { isThemeId, type ThemeId } from "@/features/public-profile/lib/themes";
 import {
   PROFILE_PAGE_TARGETS,
   type SmartLink,
@@ -156,9 +151,6 @@ function SmartLinkForm({
   const [theme, setTheme] = useState<ThemeId | "">(
     isThemeId(stored.theme) ? stored.theme : "",
   );
-  const [layoutMode, setLayoutMode] = useState<LayoutMode | "">(
-    isLayoutMode(stored.layout_mode) ? stored.layout_mode : "",
-  );
   // null = the profile's own sections.
   const [modules, setModules] = useState<PublicModule[] | null>(
     stored.visible_modules ?? null,
@@ -185,7 +177,6 @@ function SmartLinkForm({
     };
     if (opensProfilePage) {
       if (theme) cfg.theme = theme;
-      if (layoutMode) cfg.layout_mode = layoutMode;
       if (modules && target === "profile") cfg.visible_modules = modules;
       cfg.primary_action = { type: primaryAction };
     }
@@ -349,13 +340,11 @@ function SmartLinkForm({
           <>
             <ProfileThemePicker
               theme={theme}
-              layoutMode={layoutMode}
               inheritedTheme=""
               disabled={save.isPending}
               noneLabel={t("smart_links.presentation.theme_profile")}
               hint={t("smart_links.presentation.theme_hint")}
               onThemeChange={setTheme}
-              onLayoutModeChange={setLayoutMode}
             />
 
             {target === "profile" ? (

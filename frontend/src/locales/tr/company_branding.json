@@ -13,8 +13,6 @@
   "branding.hint": "Çalışanların public sayfaları bu görünümü kullanır. Kilitli değilse varsayılandır; her çalışan kendi temasını, layout'unu ve kapağını seçebilir. Kilitliyse burada ayarlanan her alan onlarınkini geçersiz kılar.",
   "branding.theme": "Tema",
   "branding.theme_none": "Firma teması yok",
-  "branding.layout": "Layout",
-  "branding.layout_theme": "Temanın layout'u",
   "branding.primary_color": "Ana renk",
   "branding.color_hint": "Çalışan sayfalarındaki buton ve vurgular; boş bırakılırsa temanın rengi kullanılır.",
   "branding.color_invalid": "#rrggbb biçiminde bir renk girin.",
@@ -49,5 +47,6 @@
   "usage.branding_logo": "Marka logosu",
   "usage.branding_cover": "Marka kapağı",
   "usage.profile_avatar": "Profil fotoğrafı",
-  "usage.profile_cover": "Profil kapağı"
+  "usage.profile_cover": "Profil kapağı",
+  "branding.theme_hint": "Firmadaki profillerin varsayılan şablonu. Her şablon kendi sayfa düzenini getirir."
 }

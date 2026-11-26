@@ -11381,9 +11381,12 @@ export interface components {
          * @description Public profile theme catalog (TEC-601); tokens live in the frontend (features/public-profile/lib/themes.ts). Premium (design.premium, TEC-947): bold_gradient, elegant_serif, glass
          * @enum {string}
          */
-        PublicTheme: "classic_light" | "dark_minimal" | "compact_card" | "bold_gradient" | "elegant_serif" | "glass";
-        /** @enum {string} */
-        PublicLayoutMode: "standard" | "compact" | "minimal";
+        PublicTheme: "classic_light" | "dark_minimal" | "compact_card" | "bold_gradient" | "elegant_serif" | "glass" | "legacy_comcode";
+        /**
+         * @description Layout a theme brings (TEC-1309). legacy_comcode is the Comcode V1 glass card with bottom tabs. The public page renders the theme's own layout; a stored override is kept for API compatibility
+         * @enum {string}
+         */
+        PublicLayoutMode: "standard" | "compact" | "minimal" | "legacy_comcode";
         /** @enum {string} */
         PublicModule: "bio" | "contacts" | "social_links" | "addresses" | "bank_accounts";
         UpdatePublicPageRequest: {

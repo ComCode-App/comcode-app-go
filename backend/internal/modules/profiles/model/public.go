@@ -20,7 +20,7 @@ var PublicModules = []string{ModuleBio, ModuleContacts, ModuleSocialLinks, Modul
 
 // PublicThemes is the allow-list for presentation_config.theme (TEC-601). It mirrors the
 // frontend catalog in features/public-profile/lib/themes.ts; the tokens live there.
-var PublicThemes = []string{"classic_light", "dark_minimal", "compact_card", "bold_gradient", "elegant_serif", "glass"}
+var PublicThemes = []string{"classic_light", "dark_minimal", "compact_card", "bold_gradient", "elegant_serif", "glass", "legacy_comcode"}
 
 // PremiumThemes are the themes that need the design.premium entitlement (TEC-947), each mapped
 // to the basic theme a public page shows instead while the plan lacks it. Mirrors `premium` in
@@ -29,7 +29,7 @@ var PremiumThemes = map[string]string{"bold_gradient": "classic_light", "elegant
 
 // PublicLayoutModes is the allow-list for presentation_config.layout_mode. An empty layout
 // mode means "the theme's own layout".
-var PublicLayoutModes = []string{"standard", "compact", "minimal"}
+var PublicLayoutModes = []string{"standard", "compact", "minimal", "legacy_comcode"}
 
 // PublicPageSettings is the owner's view of a profile's public page.
 type PublicPageSettings struct {

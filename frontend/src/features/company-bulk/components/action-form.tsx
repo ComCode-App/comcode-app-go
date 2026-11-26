@@ -27,7 +27,6 @@ import {
   useDesignPremium,
 } from "@/features/entitlements/components/premium-lock";
 import {
-  LAYOUT_MODES,
   THEME_IDS,
   isPremiumTheme,
 } from "@/features/public-profile/lib/themes";
@@ -72,7 +71,6 @@ export type ActionFormState = {
   brandingSource: "logo" | "cover";
   targetField: "avatar" | "cover";
   theme: string;
-  layout: string;
   links: { platform: string; label: string; url: string }[];
   replaceSamePlatform: boolean;
 };
@@ -97,7 +95,6 @@ export function initialActionForm(): ActionFormState {
     brandingSource: "logo",
     targetField: "avatar",
     theme: KEEP,
-    layout: KEEP,
     links: [{ platform: "custom", label: "", url: "" }],
     replaceSamePlatform: true,
   };
@@ -189,21 +186,13 @@ export function buildAction(
       const params: Record<string, string> = {};
       if (s.theme !== KEEP) {
         params.theme = s.theme === CLEAR ? "" : s.theme;
+        // The template brings its own layout (TEC-1309): clear the old density override.
+        params.layout_mode = "";
         summary.push(
           `${t("company_bulk.form.theme")}: ${
             s.theme === CLEAR
               ? t("company_bulk.form.theme_inherit")
               : t(`profiles.public_page.theme_name.${s.theme}`)
-          }`,
-        );
-      }
-      if (s.layout !== KEEP) {
-        params.layout_mode = s.layout === CLEAR ? "" : s.layout;
-        summary.push(
-          `${t("company_bulk.form.layout")}: ${
-            s.layout === CLEAR
-              ? t("company_bulk.form.layout_theme")
-              : t(`profiles.public_page.layout_name.${s.layout}`)
           }`,
         );
       }
@@ -488,28 +477,6 @@ function ThemeForm({ state, set }: SubProps) {
           </SelectContent>
         </Select>
         {!allowPremium ? <PremiumNotice /> : null}
-      </div>
-      <div className="space-y-1.5">
-        <Label>{t("company_bulk.form.layout")}</Label>
-        <Select
-          value={state.layout}
-          onValueChange={(layout) => set({ layout })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={KEEP}>{t("company_bulk.form.keep")}</SelectItem>
-            <SelectItem value={CLEAR}>
-              {t("company_bulk.form.layout_theme")}
-            </SelectItem>
-            {LAYOUT_MODES.map((id) => (
-              <SelectItem key={id} value={id}>
-                {t(`profiles.public_page.layout_name.${id}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
     </div>
   );
