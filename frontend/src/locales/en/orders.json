@@ -327,5 +327,8 @@
   "refund.attempts": "{{count}} attempts",
   "refund.retry": "Retry",
   "refund.unknown_outcome_hint": "The provider did not answer. Check the iyzico/PayTR panel for this refund before retrying.",
-  "refund.pending_hint": "The refund is being processed at the provider. If it stays here, check the provider panel."
+  "refund.pending_hint": "The refund is being processed at the provider. If it stays here, check the provider panel.",
+  "subscriber.col_date": "Order date",
+  "subscriber.col_items": "Items",
+  "subscriber.no_results": "No orders match your search"
 }
