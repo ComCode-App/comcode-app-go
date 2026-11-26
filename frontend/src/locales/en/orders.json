@@ -349,5 +349,13 @@
   "approval.awaiting_title": "Awaiting approval",
   "approval.awaiting_desc": "Your order is being reviewed. You can pay once it is approved; we will notify you.",
   "approval.rejected_title": "Order rejected",
-  "approval.rejected_reason": "Reason: {{reason}}"
+  "approval.rejected_reason": "Reason: {{reason}}",
+  "card_images.front": "Front",
+  "card_images.back": "Back",
+  "card_images.remove": "Remove image",
+  "card_images.column": "Card design",
+  "card_images.order_heading": "Card design for the whole order",
+  "card_images.hint": "PNG, JPEG or WebP, up to 5 MB. Card 85.6×54 mm landscape; other ratios are cropped. A recipient's own image wins, then this one, then the default artwork.",
+  "card_images.too_large": "The image is larger than 5 MB",
+  "card_images.upload_failed": "The image could not be uploaded"
 }

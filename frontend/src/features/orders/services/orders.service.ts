@@ -2,6 +2,7 @@ import type { ServerListParams } from "@/components/entity";
 import type { ResourceMeta } from "@/features/io/types";
 import type { components } from "@/generated/api";
 import { ApiError } from "@/lib/api/errors";
+import { platformFormRequest } from "@/lib/api/platform-form-request";
 import { platformRequest } from "@/lib/api/platform-request";
 
 /** Provider refunds of online order payments (TEC-935). */
@@ -62,6 +63,9 @@ export type OrderItemSummary = {
   profile_avatar_url?: string;
   /** The draft profile was created by this order (TEC-1317). */
   profile_created_by_order?: boolean;
+  /** This item's own card design (TEC-1320). */
+  front_image_url?: string;
+  back_image_url?: string;
   card_uuid?: string;
   card_smart_code?: string;
   card_uid?: string;
@@ -146,6 +150,9 @@ export type OrderDetail = OrderSummary & {
   cancelled_at?: string;
   /** Why a super admin rejected the order (TEC-1317). */
   rejection_reason?: string;
+  /** The order's card design (TEC-1320). */
+  front_image_url?: string;
+  back_image_url?: string;
   items: OrderItemSummary[];
   asset_requests: AssetRequestSummary[];
 };
@@ -171,6 +178,9 @@ export type OrderOverviewKPIs = {
 };
 
 export type CreateOrderItemPayload = {
+  /** Card design images (TEC-1320), URLs from uploadCardImage; platform orders only. */
+  front_image_url?: string;
+  back_image_url?: string;
   product_uuid?: string;
   variant_uuid?: string;
   product_name?: string;
@@ -187,6 +197,9 @@ export type CreateOrderItemPayload = {
 };
 
 export type CreateOrderPayload = {
+  /** Card design for items without their own (TEC-1320); platform orders only. */
+  front_image_url?: string;
+  back_image_url?: string;
   company_id?: number;
   company_uuid?: string;
   user_uuid?: string;
@@ -280,6 +293,17 @@ export const ordersService = {
     return platformRequest<OrderDetail>("POST", "/v1/platform/orders/bulk", {
       body: payload,
     });
+  },
+
+  /** Upload a card design image for an order being placed (TEC-1320). */
+  async uploadCardImage(file: File) {
+    const form = new FormData();
+    form.append("image", file);
+    return platformFormRequest<{ url: string }>(
+      "POST",
+      "/v1/platform/orders/card-images",
+      form,
+    );
   },
 
   /** Approve a company bulk order awaiting approval (TEC-1317); needs step-up. */

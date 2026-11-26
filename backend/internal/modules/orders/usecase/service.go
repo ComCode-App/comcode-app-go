@@ -138,6 +138,7 @@ func (s *Service) CreateForAccount(ctx context.Context, account authctx.Account,
 	if !account.CanWrite() {
 		return nil, ErrForbidden
 	}
+	stripCardImages(&input)
 	return s.indexed(s.create(ctx, input, account.ID, placedByUserID))
 }
 
@@ -145,6 +146,9 @@ func (s *Service) CreateForAccount(ctx context.Context, account authctx.Account,
 // (account_uuid, company_uuid or user_uuid -> personal account); without a target it uses
 // fallbackAccountID (the admin's active account).
 func (s *Service) CreateOnBehalf(ctx context.Context, input model.CreateOrderInput, placedByUserID, fallbackAccountID int64) (*model.OrderDetail, error) {
+	if err := s.validateCardImages(input); err != nil {
+		return nil, err
+	}
 	accountID, err := s.resolveTargetAccount(ctx, input, fallbackAccountID)
 	if err != nil {
 		return nil, err
@@ -213,6 +217,8 @@ func (s *Service) create(ctx context.Context, input model.CreateOrderInput, acco
 		recipientDept  string
 		profileID      *int64
 		idempotencyKey string
+		frontImage     string
+		backImage      string
 	}
 
 	var pItems []processedItem
@@ -301,6 +307,8 @@ func (s *Service) create(ctx context.Context, input model.CreateOrderInput, acco
 			recipientDept:  it.RecipientDepartment,
 			profileID:      profileID,
 			idempotencyKey: idempotencyKey,
+			frontImage:     it.FrontImageURL,
+			backImage:      it.BackImageURL,
 		})
 	}
 
@@ -320,8 +328,13 @@ func (s *Service) create(ctx context.Context, input model.CreateOrderInput, acco
 		return nil, fmt.Errorf("failed to create order: %w", err)
 	}
 
+	if input.FrontImageURL != "" || input.BackImageURL != "" {
+		if err := s.repo.SetOrderCardImages(ctx, order.ID, input.FrontImageURL, input.BackImageURL); err != nil {
+			return nil, fmt.Errorf("order card images: %w", err)
+		}
+	}
 	for _, pi := range pItems {
-		_, _ = s.repo.CreateItem(
+		created, _ := s.repo.CreateItem(
 			ctx,
 			order.ID,
 			pi.productID,
@@ -345,6 +358,11 @@ func (s *Service) create(ctx context.Context, input model.CreateOrderInput, acco
 			"",
 			pi.idempotencyKey,
 		)
+		if created != nil && (pi.frontImage != "" || pi.backImage != "") {
+			if err := s.repo.SetOrderItemCardImages(ctx, order.ID, uuid.MustParse(created.UUID), pi.frontImage, pi.backImage); err != nil {
+				return nil, fmt.Errorf("item card images: %w", err)
+			}
+		}
 	}
 
 	s.notifyOrderTransitions(ctx, order)
@@ -478,6 +496,11 @@ func (s *Service) provisionSingleItem(ctx context.Context, ord *model.OrderDetai
 	)
 	if err != nil {
 		return fmt.Errorf("create card & route: %w", err)
+	}
+
+	// The card takes the item's (else the order's) design images (TEC-1320).
+	if err := s.repo.CopyOrderCardImagesToCard(ctx, ord.AccountID, cardID, item.ID); err != nil {
+		return fmt.Errorf("copy card images: %w", err)
 	}
 
 	// Update item with card ID and success

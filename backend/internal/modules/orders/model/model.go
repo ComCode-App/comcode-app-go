@@ -47,6 +47,9 @@ type OrderItemSummary struct {
 	ProfileAvatarURL string  `json:"profile_avatar_url,omitempty"`
 	// ProfileCreatedByOrder marks a draft profile the order created (TEC-1317).
 	ProfileCreatedByOrder bool `json:"profile_created_by_order"`
+	// FrontImageURL / BackImageURL: this item's own card design (TEC-1320).
+	FrontImageURL string `json:"front_image_url,omitempty"`
+	BackImageURL  string `json:"back_image_url,omitempty"`
 
 	// Card Link & Route (TEC-77)
 	CardUUID      *string `json:"card_uuid,omitempty"`
@@ -138,11 +141,14 @@ type OrderDetail struct {
 	DeliveredAt       *time.Time     `json:"delivered_at,omitempty"`
 	CancelledAt       *time.Time     `json:"cancelled_at,omitempty"`
 	// RejectionReason is why a super admin rejected the order (TEC-1317); empty otherwise.
-	RejectionReason string                `json:"rejection_reason,omitempty"`
-	Items           []OrderItemSummary    `json:"items"`
-	AssetRequests   []AssetRequestSummary `json:"asset_requests"`
-	CreatedAt       time.Time             `json:"created_at"`
-	UpdatedAt       time.Time             `json:"updated_at"`
+	RejectionReason string `json:"rejection_reason,omitempty"`
+	// FrontImageURL / BackImageURL: the order's card design (TEC-1320).
+	FrontImageURL string                `json:"front_image_url,omitempty"`
+	BackImageURL  string                `json:"back_image_url,omitempty"`
+	Items         []OrderItemSummary    `json:"items"`
+	AssetRequests []AssetRequestSummary `json:"asset_requests"`
+	CreatedAt     time.Time             `json:"created_at"`
+	UpdatedAt     time.Time             `json:"updated_at"`
 }
 
 type OrderOverviewKPIs struct {
@@ -167,6 +173,9 @@ type CreateOrderItemInput struct {
 	RecipientDepartment string         `json:"recipient_department,omitempty"`
 	ProfileUUID         *string        `json:"profile_uuid,omitempty"`
 	IdempotencyKey      string         `json:"idempotency_key,omitempty"`
+	// FrontImageURL / BackImageURL: this recipient's card design (TEC-1320), platform orders only.
+	FrontImageURL string `json:"front_image_url,omitempty"`
+	BackImageURL  string `json:"back_image_url,omitempty"`
 }
 
 type CreateOrderInput struct {
@@ -181,6 +190,10 @@ type CreateOrderInput struct {
 	AdminNote       string                 `json:"admin_note,omitempty"`
 	PaymentProvider string                 `json:"payment_provider,omitempty"`
 	Metadata        map[string]any         `json:"metadata,omitempty"`
+	// FrontImageURL / BackImageURL: card design for items without their own (TEC-1320), platform
+	// orders only.
+	FrontImageURL string `json:"front_image_url,omitempty"`
+	BackImageURL  string `json:"back_image_url,omitempty"`
 	// InitialStatus is set by the service, never by clients ("" = pending).
 	InitialStatus string `json:"-"`
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/orders/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/orders/usecase"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/upload"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/pkg/response"
 	"github.com/google/uuid"
 )
@@ -93,4 +94,28 @@ func (h *Handler) RejectOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	h.recordReview(r, ord, "order.rejected", map[string]any{"reason": ord.RejectionReason})
 	response.JSON(w, r, http.StatusOK, ord)
+}
+
+// UploadCardImage stores a card design image for an order being placed from the platform
+// (multipart field "image", TEC-1320) and returns its URL for the order payload.
+func (h *Handler) UploadCardImage(w http.ResponseWriter, r *http.Request) {
+	file, header, ok := upload.FormFile(w, r, upload.MaxImageBytes, "image")
+	defer upload.Cleanup(r)
+	if !ok {
+		return
+	}
+	defer func() { _ = file.Close() }()
+	url, err := h.svc.UploadCardImage(r.Context(), file, header.Filename, header.Size)
+	if err != nil {
+		if upload.WriteError(w, r, err) {
+			return
+		}
+		if errors.Is(err, usecase.ErrStorageUnavailable) {
+			response.Error(w, r, http.StatusServiceUnavailable, "STORAGE_UNAVAILABLE", err.Error())
+			return
+		}
+		response.InternalErr(w, r, err, "failed to upload card image")
+		return
+	}
+	response.JSON(w, r, http.StatusCreated, map[string]string{"url": url})
 }

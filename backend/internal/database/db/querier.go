@@ -93,6 +93,8 @@ type Querier interface {
 	CompletePaymentCardSession(ctx context.Context, argUuid uuid.UUID) (PaymentCardSession, error)
 	ConfirmUserTOTP(ctx context.Context, arg ConfirmUserTOTPParams) (UserTotp, error)
 	ConsumeOTP(ctx context.Context, id int64) (int64, error)
+	// The item's image wins, then the order's; NULL keeps the default artwork.
+	CopyOrderCardImagesToCard(ctx context.Context, arg CopyOrderCardImagesToCardParams) error
 	CountAccountActiveCardsUsage(ctx context.Context, accountID int64) (int64, error)
 	CountAccountBackgrounds(ctx context.Context, accountID int64) (int64, error)
 	CountAccountCards(ctx context.Context, arg CountAccountCardsParams) (int64, error)
@@ -1007,6 +1009,10 @@ type Querier interface {
 	// Stores (or, with NULLs, clears) the encrypted refresh token of one linked
 	// identity and the client id it belongs to (TEC-1181).
 	SetOAuthAccountRefreshToken(ctx context.Context, arg SetOAuthAccountRefreshTokenParams) (int64, error)
+	// Card design images chosen when an order is placed (TEC-1320 B).
+	// account-lint: cross-account platform order creation sets the order's card images
+	SetOrderCardImages(ctx context.Context, arg SetOrderCardImagesParams) error
+	SetOrderItemCardImages(ctx context.Context, arg SetOrderItemCardImagesParams) error
 	// account-lint: cross-account platform order review (platform.orders.approve)
 	SetOrderRejectionReason(ctx context.Context, arg SetOrderRejectionReasonParams) error
 	SetPrimaryProfileByUUID(ctx context.Context, arg SetPrimaryProfileByUUIDParams) error

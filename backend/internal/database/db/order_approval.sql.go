@@ -9,7 +9,32 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const copyOrderCardImagesToCard = `-- name: CopyOrderCardImagesToCard :exec
+UPDATE nfc_cards c
+SET front_image_url = COALESCE(oi.front_image_url, o.front_image_url),
+    back_image_url  = COALESCE(oi.back_image_url, o.back_image_url)
+FROM order_items oi
+JOIN orders o ON o.id = oi.order_id
+WHERE c.id = $1
+  AND c.account_id = $2
+  AND o.account_id = $2
+  AND oi.id = $3
+`
+
+type CopyOrderCardImagesToCardParams struct {
+	CardID      int64 `json:"card_id"`
+	AccountID   int64 `json:"account_id"`
+	OrderItemID int64 `json:"order_item_id"`
+}
+
+// The item's image wins, then the order's; NULL keeps the default artwork.
+func (q *Queries) CopyOrderCardImagesToCard(ctx context.Context, arg CopyOrderCardImagesToCardParams) error {
+	_, err := q.db.Exec(ctx, copyOrderCardImagesToCard, arg.CardID, arg.AccountID, arg.OrderItemID)
+	return err
+}
 
 const findAccountProfileByEmail = `-- name: FindAccountProfileByEmail :one
 
@@ -137,6 +162,52 @@ func (q *Queries) OpenOrderDraftProfileRoutes(ctx context.Context, arg OpenOrder
 		return nil, err
 	}
 	return items, nil
+}
+
+const setOrderCardImages = `-- name: SetOrderCardImages :exec
+
+UPDATE orders
+SET front_image_url = $1::text,
+    back_image_url  = $2::text
+WHERE id = $3
+`
+
+type SetOrderCardImagesParams struct {
+	FrontImageUrl pgtype.Text `json:"front_image_url"`
+	BackImageUrl  pgtype.Text `json:"back_image_url"`
+	ID            int64       `json:"id"`
+}
+
+// Card design images chosen when an order is placed (TEC-1320 B).
+// account-lint: cross-account platform order creation sets the order's card images
+func (q *Queries) SetOrderCardImages(ctx context.Context, arg SetOrderCardImagesParams) error {
+	_, err := q.db.Exec(ctx, setOrderCardImages, arg.FrontImageUrl, arg.BackImageUrl, arg.ID)
+	return err
+}
+
+const setOrderItemCardImages = `-- name: SetOrderItemCardImages :exec
+UPDATE order_items
+SET front_image_url = $1::text,
+    back_image_url  = $2::text
+WHERE order_id = $3
+  AND uuid = $4
+`
+
+type SetOrderItemCardImagesParams struct {
+	FrontImageUrl pgtype.Text `json:"front_image_url"`
+	BackImageUrl  pgtype.Text `json:"back_image_url"`
+	OrderID       int64       `json:"order_id"`
+	ItemUuid      uuid.UUID   `json:"item_uuid"`
+}
+
+func (q *Queries) SetOrderItemCardImages(ctx context.Context, arg SetOrderItemCardImagesParams) error {
+	_, err := q.db.Exec(ctx, setOrderItemCardImages,
+		arg.FrontImageUrl,
+		arg.BackImageUrl,
+		arg.OrderID,
+		arg.ItemUuid,
+	)
+	return err
 }
 
 const setOrderRejectionReason = `-- name: SetOrderRejectionReason :exec

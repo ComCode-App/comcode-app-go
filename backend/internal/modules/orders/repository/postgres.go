@@ -516,6 +516,8 @@ func (r *PostgresRepository) ListItems(ctx context.Context, orderID int64) ([]mo
 			ProfileUUID:           profUUID,
 			ProfileAvatarURL:      pgtypeToString(row.ProfileAvatarUrl),
 			ProfileCreatedByOrder: row.ProfileCreatedByOrder,
+			FrontImageURL:         pgtypeToString(row.FrontImageUrl),
+			BackImageURL:          pgtypeToString(row.BackImageUrl),
 			CardUUID:              cardUUID,
 			CardSmartCode:         pgtypeToString(row.CardSmartCode),
 			CardUID:               pgtypeToString(row.CardUid),
@@ -998,6 +1000,8 @@ func toOrderDetailFromRow(row db.GetOrderByUUIDRow) *model.OrderDetail {
 		DeliveredAt:       deliveredAt,
 		CancelledAt:       cancelledAt,
 		RejectionReason:   pgtypeToString(row.RejectionReason),
+		FrontImageURL:     pgtypeToString(row.FrontImageUrl),
+		BackImageURL:      pgtypeToString(row.BackImageUrl),
 		CreatedAt:         row.CreatedAt.Time,
 		UpdatedAt:         row.UpdatedAt.Time,
 	}

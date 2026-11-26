@@ -6156,6 +6156,46 @@ paths:
               schema:
                 $ref: "#/components/schemas/EnvelopeSimpleSuccess"
 
+  /v1/platform/orders/card-images:
+    post:
+      tags: [Commerce Orders]
+      operationId: uploadPlatformOrderCardImage
+      summary: Upload a card design image for an order being placed
+      description: |
+        Requires `platform.orders.write` (TEC-1320). Multipart field `image`: PNG, JPEG or WebP up
+        to 5 MB, the type comes from the bytes. Returns the API-owned `url` to send as
+        `front_image_url` / `back_image_url` of the order or an item; provisioning copies the
+        item's (else the order's) images onto the card. Other URLs are rejected on create.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        "201":
+          description: Stored image
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data:
+                    type: object
+                    required: [url]
+                    properties:
+                      url: { type: string }
+                  meta: { $ref: "#/components/schemas/ResponseMeta" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/platform/orders/bulk:
     post:
       tags: [Commerce Orders]
@@ -18044,6 +18084,8 @@ components:
         profile_uuid: { type: string, format: uuid }
         profile_avatar_url: { type: string }
         profile_created_by_order: { type: boolean, description: "The draft profile was created by this order (TEC-1317)" }
+        front_image_url: { type: string, description: "Card front design (TEC-1320)" }
+        back_image_url: { type: string, description: "Card back design (TEC-1320)" }
         card_uuid: { type: string, format: uuid }
         card_smart_code: { type: string }
         card_uid: { type: string }
@@ -18134,6 +18176,8 @@ components:
         delivered_at: { type: string, format: date-time }
         cancelled_at: { type: string, format: date-time }
         rejection_reason: { type: string, description: "Why a super admin rejected the order (TEC-1317)" }
+        front_image_url: { type: string, description: "Card front design (TEC-1320)" }
+        back_image_url: { type: string, description: "Card back design (TEC-1320)" }
         items: { type: array, items: { $ref: "#/components/schemas/OrderItemSummary" } }
         asset_requests: { type: array, items: { $ref: "#/components/schemas/AssetRequestSummary" } }
         created_at: { type: string, format: date-time }
@@ -18166,6 +18210,8 @@ components:
         recipient_department: { type: string }
         profile_uuid: { type: string, format: uuid }
         idempotency_key: { type: string }
+        front_image_url: { type: string, description: "Card front design (TEC-1320): a URL from POST /v1/platform/orders/card-images. Platform orders only; ignored on /v1/orders." }
+        back_image_url: { type: string, description: "Card back design (TEC-1320), as front_image_url." }
 
     CreateOrderInput:
       type: object
@@ -18187,6 +18233,8 @@ components:
         admin_note: { type: string }
         payment_provider: { type: string }
         metadata: { type: object }
+        front_image_url: { type: string, description: "Card front design for items without their own (TEC-1320): a URL from POST /v1/platform/orders/card-images. Platform orders only; ignored on /v1/orders." }
+        back_image_url: { type: string, description: "Card back design (TEC-1320), as front_image_url." }
 
     BulkUpdateOrderItemsInput:
       type: object

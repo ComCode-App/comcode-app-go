@@ -30,6 +30,7 @@ import {
   type CreateOrderItemPayload,
 } from "../services/orders.service";
 import { ordersQueryKeys } from "../hooks/query-keys";
+import { CardImagePicker } from "./card-image-picker";
 
 interface RecipientRow {
   id: string;
@@ -39,6 +40,8 @@ interface RecipientRow {
   email: string;
   phone: string;
   printName: string;
+  frontImage?: string;
+  backImage?: string;
 }
 
 interface BulkOrderDialogProps {
@@ -90,6 +93,17 @@ export function BulkOrderDialog({
   const [shippingPostalCode, setShippingPostalCode] = useState("");
   const [shippingCountry, setShippingCountry] = useState("Türkiye");
   const [customerNote, setCustomerNote] = useState("");
+  // Order-wide card design (TEC-1320), used for recipients without their own.
+  const [orderFrontImage, setOrderFrontImage] = useState<string>();
+  const [orderBackImage, setOrderBackImage] = useState<string>();
+  const setRecipientImage = (
+    id: string,
+    field: "frontImage" | "backImage",
+    url: string | undefined,
+  ) =>
+    setRecipients((rows) =>
+      rows.map((row) => (row.id === id ? { ...row, [field]: url } : row)),
+    );
 
   // Fetch Public Products
   const { data: productsData } = useQuery({
@@ -251,6 +265,9 @@ export function BulkOrderDialog({
       recipient_department: r.department,
       recipient_email: r.email,
       recipient_phone: r.phone,
+      ...(isPlatformAdmin
+        ? { front_image_url: r.frontImage, back_image_url: r.backImage }
+        : {}),
       custom_print_data: {
         print_name: r.printName || r.name,
         title: r.title,
@@ -260,6 +277,9 @@ export function BulkOrderDialog({
 
     const payload: CreateOrderPayload = {
       order_type: "bulk",
+      ...(isPlatformAdmin
+        ? { front_image_url: orderFrontImage, back_image_url: orderBackImage }
+        : {}),
       items,
       shipping_address: {
         full_name: shippingFullName,
@@ -509,122 +529,173 @@ export function BulkOrderDialog({
               </div>
             ) : (
               /* Editable Recipients Data Table */
-              <div className="max-h-[360px] overflow-x-auto rounded-xl border">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-muted/80 text-muted-foreground sticky top-0 z-10 font-mono text-[11px]">
-                    <tr>
-                      <th className="w-10 p-2.5 text-center">
-                        {t("orders.bulk.table_col_index")}
-                      </th>
-                      <th className="min-w-[140px] p-2.5">
-                        {t("orders.bulk.table_col_name")}
-                      </th>
-                      <th className="min-w-[120px] p-2.5">
-                        {t("orders.bulk.table_col_title")}
-                      </th>
-                      <th className="min-w-[120px] p-2.5">
-                        {t("orders.bulk.table_col_department")}
-                      </th>
-                      <th className="min-w-[140px] p-2.5">
-                        {t("orders.bulk.table_col_email")}
-                      </th>
-                      <th className="min-w-[110px] p-2.5">
-                        {t("orders.bulk.table_col_phone")}
-                      </th>
-                      <th className="w-10 p-2.5"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-border divide-y">
-                    {recipients.map((r, idx) => (
-                      <tr key={r.id} className="hover:bg-muted/30">
-                        <td className="text-muted-foreground p-2 text-center font-mono font-bold">
-                          {idx + 1}
-                        </td>
-                        <td className="p-1.5">
-                          <Input
-                            placeholder="John Doe"
-                            className="h-8 text-xs"
-                            value={r.name}
-                            onChange={(e) =>
-                              handleUpdateRecipient(
-                                r.id,
-                                "name",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-1.5">
-                          <Input
-                            placeholder="CTO"
-                            className="h-8 text-xs"
-                            value={r.title}
-                            onChange={(e) =>
-                              handleUpdateRecipient(
-                                r.id,
-                                "title",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-1.5">
-                          <Input
-                            placeholder="Engineering"
-                            className="h-8 text-xs"
-                            value={r.department}
-                            onChange={(e) =>
-                              handleUpdateRecipient(
-                                r.id,
-                                "department",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-1.5">
-                          <Input
-                            placeholder="john@example.com"
-                            className="h-8 font-mono text-xs"
-                            value={r.email}
-                            onChange={(e) =>
-                              handleUpdateRecipient(
-                                r.id,
-                                "email",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-1.5">
-                          <Input
-                            placeholder="+123456789"
-                            className="h-8 font-mono text-xs"
-                            value={r.phone}
-                            onChange={(e) =>
-                              handleUpdateRecipient(
-                                r.id,
-                                "phone",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-1.5 text-center">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-muted-foreground hover:text-destructive h-7 w-7"
-                            onClick={() => handleRemoveRecipient(r.id)}
-                            disabled={recipients.length <= 1}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </td>
+              <div className="space-y-3">
+                {isPlatformAdmin ? (
+                  <div className="bg-muted/30 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-semibold">
+                        {t("orders.card_images.order_heading")}
+                      </p>
+                      <p className="text-muted-foreground text-[11px]">
+                        {t("orders.card_images.hint")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CardImagePicker
+                        side="front"
+                        value={orderFrontImage}
+                        onChange={setOrderFrontImage}
+                      />
+                      <CardImagePicker
+                        side="back"
+                        value={orderBackImage}
+                        onChange={setOrderBackImage}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+                <div className="max-h-[360px] overflow-x-auto rounded-xl border">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-muted/80 text-muted-foreground sticky top-0 z-10 font-mono text-[11px]">
+                      <tr>
+                        <th className="w-10 p-2.5 text-center">
+                          {t("orders.bulk.table_col_index")}
+                        </th>
+                        <th className="min-w-[140px] p-2.5">
+                          {t("orders.bulk.table_col_name")}
+                        </th>
+                        <th className="min-w-[120px] p-2.5">
+                          {t("orders.bulk.table_col_title")}
+                        </th>
+                        <th className="min-w-[120px] p-2.5">
+                          {t("orders.bulk.table_col_department")}
+                        </th>
+                        <th className="min-w-[140px] p-2.5">
+                          {t("orders.bulk.table_col_email")}
+                        </th>
+                        <th className="min-w-[110px] p-2.5">
+                          {t("orders.bulk.table_col_phone")}
+                        </th>
+                        {isPlatformAdmin ? (
+                          <th className="min-w-[150px] p-2.5">
+                            {t("orders.card_images.column")}
+                          </th>
+                        ) : null}
+                        <th className="w-10 p-2.5"></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-border divide-y">
+                      {recipients.map((r, idx) => (
+                        <tr key={r.id} className="hover:bg-muted/30">
+                          <td className="text-muted-foreground p-2 text-center font-mono font-bold">
+                            {idx + 1}
+                          </td>
+                          <td className="p-1.5">
+                            <Input
+                              placeholder="John Doe"
+                              className="h-8 text-xs"
+                              value={r.name}
+                              onChange={(e) =>
+                                handleUpdateRecipient(
+                                  r.id,
+                                  "name",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </td>
+                          <td className="p-1.5">
+                            <Input
+                              placeholder="CTO"
+                              className="h-8 text-xs"
+                              value={r.title}
+                              onChange={(e) =>
+                                handleUpdateRecipient(
+                                  r.id,
+                                  "title",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </td>
+                          <td className="p-1.5">
+                            <Input
+                              placeholder="Engineering"
+                              className="h-8 text-xs"
+                              value={r.department}
+                              onChange={(e) =>
+                                handleUpdateRecipient(
+                                  r.id,
+                                  "department",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </td>
+                          <td className="p-1.5">
+                            <Input
+                              placeholder="john@example.com"
+                              className="h-8 font-mono text-xs"
+                              value={r.email}
+                              onChange={(e) =>
+                                handleUpdateRecipient(
+                                  r.id,
+                                  "email",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </td>
+                          <td className="p-1.5">
+                            <Input
+                              placeholder="+123456789"
+                              className="h-8 font-mono text-xs"
+                              value={r.phone}
+                              onChange={(e) =>
+                                handleUpdateRecipient(
+                                  r.id,
+                                  "phone",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </td>
+                          {isPlatformAdmin ? (
+                            <td className="p-1.5">
+                              <div className="flex items-center gap-1">
+                                <CardImagePicker
+                                  side="front"
+                                  value={r.frontImage}
+                                  onChange={(url) =>
+                                    setRecipientImage(r.id, "frontImage", url)
+                                  }
+                                />
+                                <CardImagePicker
+                                  side="back"
+                                  value={r.backImage}
+                                  onChange={(url) =>
+                                    setRecipientImage(r.id, "backImage", url)
+                                  }
+                                />
+                              </div>
+                            </td>
+                          ) : null}
+                          <td className="p-1.5 text-center">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-muted-foreground hover:text-destructive h-7 w-7"
+                              onClick={() => handleRemoveRecipient(r.id)}
+                              disabled={recipients.length <= 1}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 

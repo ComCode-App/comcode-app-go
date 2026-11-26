@@ -118,6 +118,7 @@ func (s *Service) CreateForPrincipal(ctx context.Context, p authctx.Principal, i
 		it.ProfileUUID = &v
 		created[v] = true
 	}
+	stripCardImages(&input)
 	input.InitialStatus = StatusAwaitingApproval
 	ord, err := s.create(ctx, input, p.Account.ID, p.UserInternal)
 	if err != nil {
