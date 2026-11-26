@@ -1801,6 +1801,8 @@ type NfcCard struct {
 	OrderItemID        pgtype.Int8        `json:"order_item_id"`
 	Status             string             `json:"status"`
 	AccountID          int64              `json:"account_id"`
+	FrontImageUrl      pgtype.Text        `json:"front_image_url"`
+	BackImageUrl       pgtype.Text        `json:"back_image_url"`
 }
 
 type Notification struct {

@@ -599,6 +599,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	cardsmodule.RegisterRoutes(mux, cardshandler.New(cardsSvc, ratelimit.New(deps.Redis, cfg.App.Env)), tokens, loader)
 	// Platform card and route support screens (TEC-950).
 	supportSvc := platformsupportusecase.New(platformsupportrepo.NewPostgres(deps.DB, deps.Queries), routeCache, activityRec)
+	supportSvc.SetStorage(deps.Storage)
 	supportSvc.SetSearchIndexer(searchIndexer)
 	platformsupportmodule.RegisterRoutes(mux, platformsupporthandler.New(supportSvc), tokens, loader, stepUpSvc)
 	assetsSvc := assetsusecase.New(assetsrepo.New(deps.DB), entitlementSvc, routeCache)

@@ -243,5 +243,15 @@
   "qr.shape_ball_rough": "Pürüzlü",
   "qr.shape_ball_cushion": "Yastık",
   "qr.shape_ball_cross": "Artı",
-  "qr.download_dirty_hint": "İndir, geçerli tasarımı tarayıcınızda oluşturur; sunucu dosyası ve PDF için önce kaydedin."
+  "qr.download_dirty_hint": "İndir, geçerli tasarımı tarayıcınızda oluşturur; sunucu dosyası ve PDF için önce kaydedin.",
+  "support.card_images.hint": "Kartın üzerine basılan tasarım görselleri. PNG, JPEG veya WebP, en fazla 5 MB. Kart 85,6×54 mm yatay; farklı oranlar kırpılır.",
+  "support.card_images.front": "Ön yüz",
+  "support.card_images.back": "Arka yüz",
+  "support.card_images.default": "Varsayılan görsel",
+  "support.card_images.upload": "Görsel yükle",
+  "support.card_images.replace": "Görseli değiştir",
+  "support.card_images.remove": "Kaldır",
+  "support.card_images.uploaded": "Kart görseli kaydedildi",
+  "support.card_images.removed": "Kart görseli kaldırıldı",
+  "support.card_images.too_large": "Görsel 5 MB'tan büyük"
 }

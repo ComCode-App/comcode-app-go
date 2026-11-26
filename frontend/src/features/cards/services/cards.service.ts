@@ -24,6 +24,9 @@ export type CardSummary = {
     | "digital_only"
     | string;
   material: string;
+  /** Design images of the card faces (TEC-1320); absent = ComCode default artwork. */
+  front_image_url?: string;
+  back_image_url?: string;
   color_hex: string;
   is_active: boolean;
   is_locked: boolean;
@@ -54,6 +57,9 @@ export type CardDetail = {
     | "digital_only"
     | string;
   material: string;
+  /** Design images of the card faces (TEC-1320); absent = ComCode default artwork. */
+  front_image_url?: string;
+  back_image_url?: string;
   color_hex: string;
   is_active: boolean;
   is_locked: boolean;
