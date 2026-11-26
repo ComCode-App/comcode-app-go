@@ -128,3 +128,47 @@ func TestGenerator_Generate_Base64Photo(t *testing.T) {
 		t.Errorf("expected base64 photo data URI for vCard 4.0, got:\n%s", result40)
 	}
 }
+
+// TEC-1312: vCard 3.0 marks non-ASCII values as UTF-8 so Outlook and Windows Contacts do not
+// read Turkish letters with the system code page; ASCII lines and 4.0 cards stay unmarked.
+func TestGenerate30MarksUTF8Lines(t *testing.T) {
+	g := NewGenerator()
+	c := Contact{
+		FirstName:   "Hüseyin",
+		LastName:    "Ülken",
+		CompanyName: "Şirket A.Ş.",
+		Title:       "Designer",
+		Phones:      []Phone{{Type: "cell", Number: "+905550000000"}},
+		Addresses:   []Address{{Type: "work", Label: "Ofis Çarşı", City: "İstanbul"}},
+		Version:     Version30,
+	}
+	out := g.Generate(c)
+	for _, want := range []string{
+		"FN;CHARSET=UTF-8:Hüseyin Ülken\r\n",
+		"N;CHARSET=UTF-8:Ülken;Hüseyin;;;\r\n",
+		"ORG;CHARSET=UTF-8:Şirket A.Ş.\r\n",
+		"TITLE:Designer\r\n",
+		"X-ABLabel;CHARSET=UTF-8:Ofis Çarşı\r\n",
+		"TEL;TYPE=CELL,VOICE:+905550000000\r\n",
+		"ADR;TYPE=WORK;CHARSET=UTF-8:;;;İstanbul;;;\r\n",
+		"VERSION:3.0\r\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+	if strings.Count(out, "CHARSET=UTF-8;CHARSET") > 0 {
+		t.Errorf("charset added twice:\n%s", out)
+	}
+
+	c.Version = Version40
+	if out40 := g.Generate(c); strings.Contains(out40, "CHARSET") {
+		t.Errorf("4.0 must not carry CHARSET:\n%s", out40)
+	}
+
+	// Round trip through our own parser keeps the letters.
+	parsed, err := NewParser().ParseReader(strings.NewReader(out))
+	if err != nil || len(parsed) != 1 || parsed[0].FirstName != "Hüseyin" || parsed[0].CompanyName != "Şirket A.Ş." {
+		t.Fatalf("round trip: %v %+v", err, parsed)
+	}
+}

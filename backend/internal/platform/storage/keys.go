@@ -53,12 +53,14 @@ func CompanyMediaObjectKey(accountUUID, mediaUUID, ext string) string {
 	return fmt.Sprintf("%s%s.%s", CompanyMediaPrefix(accountUUID), mediaUUID, trimExt(ext))
 }
 
-// ProfileVCardObjectKey builds profiles/{profileUUID}/vcard_{locale}.vcf cached file in storage.
+// ProfileVCardObjectKey builds profiles/{profileUUID}/vcard3_{locale}.vcf, the cached vCard in
+// storage. The "3" marks vCard 3.0 (TEC-1312), so 4.0 files cached before the switch are not
+// served again.
 func ProfileVCardObjectKey(profileUUID, locale string) string {
 	if locale == "" {
 		locale = "default"
 	}
-	return fmt.Sprintf("profiles/%s/vcard_%s.vcf", profileUUID, locale)
+	return fmt.Sprintf("profiles/%s/vcard3_%s.vcf", profileUUID, locale)
 }
 
 // BackgroundThumbnailObjectKey builds backgrounds/{backgroundUUID}/thumb-{hash}.{ext}: the static

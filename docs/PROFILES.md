@@ -137,6 +137,8 @@ Locally: `cd backend && go run ./cmd/profile-media-backfill [-apply]` with the r
 ## vCard
 
 - `GET /v1/profiles/{uuid}/vcard?locale=&version=` generates the owner's vCard from the stored translations, contacts, addresses and social links. Generated files are cached in object storage per locale and re-built in the background after every update/avatar change.
+- Format (TEC-1312): every generated vCard (owner download, visitor `/{username}/vcard`) is vCard 3.0, the `version` query is ignored. Lines with non-ASCII values carry `CHARSET=UTF-8` so Outlook / Windows Contacts do not decode Turkish letters with the system code page. The cache key is `profiles/{uuid}/vcard3_{locale}.vcf`; older `vcard_{locale}.vcf` 4.0 files are no longer read and go with the profile's other objects when it is deleted.
+- The download name goes out as `Content-Disposition: attachment; filename*=utf-8''…` (RFC 6266), so a name like "Hüseyin_Ülken.vcf" is not mangled.
 - `POST /v1/profiles/vcard/parse` reads an uploaded `.vcf` and returns fields for the create form to autofill (`ParsedVCardProfile`); nothing is saved. The UI entry is `vcard-import-dialog.tsx`.
 - The public vCard (`/v1/public/p/{username}/vcard`) honours visible modules; see PUBLIC_PROFILES.md.
 
