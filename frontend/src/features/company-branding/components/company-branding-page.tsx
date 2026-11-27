@@ -126,6 +126,8 @@ type BrandingForm = {
   logo: string;
   cover: string;
   locked: boolean;
+  /** Members cannot close their employee profile (TEC-1326). */
+  alwaysOpen: boolean;
 };
 
 function toForm(b: CompanyBranding): BrandingForm {
@@ -135,6 +137,7 @@ function toForm(b: CompanyBranding): BrandingForm {
     logo: b.logo?.uuid ?? NONE,
     cover: b.cover?.uuid ?? NONE,
     locked: b.locked,
+    alwaysOpen: b.profiles_always_open ?? false,
   };
 }
 
@@ -206,6 +209,7 @@ function BrandingFormCard({
       logo_media_uuid: pick(form.logo),
       cover_media_uuid: pick(form.cover),
       locked: form.locked,
+      profiles_always_open: form.alwaysOpen,
     });
   };
 
@@ -346,6 +350,25 @@ function BrandingFormCard({
             id="branding-locked"
             checked={form.locked}
             onCheckedChange={(v) => set({ locked: v })}
+            disabled={disabled}
+          />
+        </div>
+
+        <div className="flex items-start justify-between gap-4 rounded-md border p-3">
+          <div>
+            <Label htmlFor="branding-always-open">
+              {t("company_branding.branding.always_open")}
+            </Label>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {form.alwaysOpen
+                ? t("company_branding.branding.always_open_on")
+                : t("company_branding.branding.always_open_off")}
+            </p>
+          </div>
+          <Switch
+            id="branding-always-open"
+            checked={form.alwaysOpen}
+            onCheckedChange={(v) => set({ alwaysOpen: v })}
             disabled={disabled}
           />
         </div>

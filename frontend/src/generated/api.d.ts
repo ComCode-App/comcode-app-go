@@ -2730,6 +2730,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/profiles/{uuid}/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Open switch of a profile
+         * @description Whether the profile is shared on the public page and in the profile swipe (TEC-1326), and whether the caller may change it.
+         */
+        get: operations["getProfileOpen"];
+        /**
+         * Open or close a profile
+         * @description Requires `app.profiles.write`, and an owner/admin role in the active account or the profile
+         *     being the caller's own employee profile (`company_member_profiles`); 403 otherwise.
+         *     A closed profile is never shown: its links, cards and QR show the person's first open
+         *     profile, or "not shared" when none is open. While the company keeps employee profiles open
+         *     (`profiles_always_open`), closing an employee profile is 409.
+         */
+        put: operations["setProfileOpen"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/profiles/{uuid}/verification": {
         parameters: {
             query?: never;
@@ -2880,6 +2908,9 @@ export interface paths {
          *     suspended accounts and unknown usernames are 404. Legacy hashes (including username
          *     collision aliases) return 307 to their destination; provenance is never exposed.
          *     Static app paths are blocked by the migration importer.
+         *     Profile swipe (TEC-1326): `siblings` lists the person's open profiles. A closed profile is
+         *     answered with the person's first open profile (its own data is never included), or with
+         *     `not_shared: true` when none is open.
          */
         get: operations["getPublicProfile"];
         put?: never;
@@ -10292,6 +10323,8 @@ export interface components {
             cover: components["schemas"]["CompanyMediaRef"] | null;
             /** @description Employees always render the company look */
             locked: boolean;
+            /** @description Members cannot close their employee profile; it always takes part in their profile swipe (TEC-1326) */
+            profiles_always_open?: boolean;
             /**
              * Format: date-time
              * @description null = never saved
@@ -10316,6 +10349,8 @@ export interface components {
             /** Format: uuid */
             cover_media_uuid?: string | null;
             locked?: boolean;
+            /** @description Omit to keep the stored value (TEC-1326) */
+            profiles_always_open?: boolean;
         };
         /** @description set_logo. Points each target's avatar or cover at the company branding logo or cover (a company media library file, TEC-946); nothing is copied. Fails when the branding has no such file. */
         CompanyBulkLogoParams: {
@@ -11094,6 +11129,12 @@ export interface components {
             completion_rate: number;
             /** @description Public path (comcode.../{username}); empty until assigned */
             username?: string;
+            /** @description Shared on the public page and in the profile swipe (TEC-1326); effective value, an employee profile the company keeps open reads true */
+            is_open?: boolean;
+            /** @description The company keeps employee profiles open; the switch cannot close it */
+            open_locked?: boolean;
+            /** @description The caller may change the switch (owner/admin, or the employee on their own company profile) */
+            can_toggle_open?: boolean;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -11167,6 +11208,8 @@ export interface components {
             avatar_url?: string;
             cover_url?: string;
             is_primary: boolean;
+            /** @description Stored open switch (TEC-1326); GET /v1/profiles/{uuid}/open has the effective value */
+            is_open?: boolean;
             completion_rate: number;
             /** @description What is missing for 100%, highest gain first. Score plus open points is always 100. */
             completion_suggestions?: components["schemas"]["ProfileCompletionSuggestion"][];
@@ -11743,6 +11786,30 @@ export interface components {
             data: components["schemas"]["PublicPageSettings"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        PublicProfileSibling: {
+            username: string;
+            /** Format: uuid */
+            profile_uuid: string;
+            /** @description Company name, else the person's name, else the username */
+            short_name: string;
+        };
+        ProfileOpenState: {
+            /** @description Effective switch: an employee profile the company keeps open is open */
+            is_open: boolean;
+            /** @description The company keeps employee profiles open (company branding `profiles_always_open`) */
+            open_locked: boolean;
+            /** @description Owner/admin of the account, or the employee on their own company profile */
+            can_toggle_open: boolean;
+        };
+        EnvelopeProfileOpenState: {
+            /** @constant */
+            success: true;
+            data: components["schemas"]["ProfileOpenState"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        SetProfileOpenRequest: {
+            is_open: boolean;
+        };
         PublicProfile: {
             username: string;
             /** @description Set when the username was renamed; other fields are empty */
@@ -11828,6 +11895,10 @@ export interface components {
             };
             /** @description Company brand color (#rrggbb, TEC-946); empty = the theme's */
             primary_color?: string;
+            /** @description Every profile of the person is closed (TEC-1326). Only `username` is set; the page shows "not shared right now" without contact data or save contact */
+            not_shared?: boolean;
+            /** @description The person's open profiles in swipe order, this one included (TEC-1326). Omitted when this is the only open one. When the requested profile is closed, the response is the person's first open profile */
+            siblings?: components["schemas"]["PublicProfileSibling"][];
             /** @description Company branding logo; empty = none */
             company_logo_url?: string;
         };
@@ -18176,6 +18247,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopePublicPageSettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getProfileOpen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Switch state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProfileOpenState"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setProfileOpen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetProfileOpenRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated switch */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProfileOpenState"];
                 };
             };
             400: components["responses"]["BadRequest"];

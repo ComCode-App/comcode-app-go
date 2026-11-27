@@ -22,7 +22,15 @@ SELECT
         WHERE r.profile_id = p.id AND r.route_type = 'canonical_profile'
           AND r.status IN ('active', 'locked') AND r.deleted_at IS NULL
         LIMIT 1
-    ), '')::text AS username
+    ), '')::text AS username,
+    p.is_open,
+    -- TEC-1326: an employee profile stays open while the company keeps them always open.
+    (EXISTS (
+        SELECT 1 FROM company_member_profiles cmp
+        WHERE cmp.account_id = sqlc.arg(account_id) AND cmp.profile_id = p.id
+    ) AND COALESCE((
+        SELECT ab.profiles_always_open FROM account_branding ab WHERE ab.account_id = sqlc.arg(account_id)
+    ), false))::boolean AS open_locked
 FROM profiles p
 LEFT JOIN profile_translations pt ON pt.profile_id = p.id AND (pt.locale = p.primary_locale OR pt.is_default = true)
 WHERE p.account_id = sqlc.arg(account_id)

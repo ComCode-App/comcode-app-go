@@ -558,6 +558,15 @@ func (s *Service) PublicProfileVia(ctx context.Context, username, via string) (*
 	if redirect != "" {
 		return &model.PublicProfile{Username: route.Path, RedirectTo: redirect}, nil
 	}
+	// The open switch (TEC-1326): a closed profile is replaced by the person's first open one.
+	shown, err := s.swipeTarget(ctx, route, detail)
+	if err != nil {
+		return nil, err
+	}
+	if shown == nil {
+		return &model.PublicProfile{Username: route.Path, NotShared: true}, nil
+	}
+	route, detail = shown.route, shown.detail
 	cfg := decodeConfig(route.PresentationConfig)
 	modules := cfg.VisibleModules
 	// A smart link's theme and layout count as the profile's own: locked company branding and
@@ -602,6 +611,7 @@ func (s *Service) PublicProfileVia(ctx context.Context, username, via string) (*
 		PrimaryColor:   brand.PrimaryColor,
 		CompanyLogoURL: brand.LogoURL,
 		PrimaryAction:  primaryAction,
+		Siblings:       shown.siblings,
 	}
 	if s.verifications != nil {
 		// Fail-soft: a lookup error hides the badge rather than breaking the page.
@@ -694,6 +704,15 @@ func (s *Service) PublicVCard(ctx context.Context, username, locale string) (con
 	if err != nil || redirect != "" {
 		return "", "", redirect, err
 	}
+	// A closed profile's card falls back like its page (TEC-1326); nothing open is not found.
+	shown, err := s.swipeTarget(ctx, route, detail)
+	if err != nil {
+		return "", "", "", err
+	}
+	if shown == nil {
+		return "", "", "", ErrNotFound
+	}
+	route, detail = shown.route, shown.detail
 	modules := decodeConfig(route.PresentationConfig).VisibleModules
 	safe := *detail
 	safe.Birthday = nil

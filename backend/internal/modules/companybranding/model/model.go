@@ -86,13 +86,16 @@ type MediaRef struct {
 
 // Branding is the company look (account_branding). Empty strings and nil refs are unset.
 type Branding struct {
-	Theme        string     `json:"theme"`
-	LayoutMode   string     `json:"layout_mode"`
-	PrimaryColor string     `json:"primary_color"`
-	Logo         *MediaRef  `json:"logo"`
-	Cover        *MediaRef  `json:"cover"`
-	Locked       bool       `json:"locked"`
-	UpdatedAt    *time.Time `json:"updated_at"`
+	Theme        string    `json:"theme"`
+	LayoutMode   string    `json:"layout_mode"`
+	PrimaryColor string    `json:"primary_color"`
+	Logo         *MediaRef `json:"logo"`
+	Cover        *MediaRef `json:"cover"`
+	Locked       bool      `json:"locked"`
+	// ProfilesAlwaysOpen: members cannot close their employee profile; it always takes part in
+	// their profile swipe (TEC-1326).
+	ProfilesAlwaysOpen bool       `json:"profiles_always_open"`
+	UpdatedAt          *time.Time `json:"updated_at"`
 }
 
 // UpdateBrandingInput replaces the branding. Logo and cover are library file uuids (null = none).
@@ -103,6 +106,8 @@ type UpdateBrandingInput struct {
 	LogoMediaUUID  *uuid.UUID `json:"logo_media_uuid"`
 	CoverMediaUUID *uuid.UUID `json:"cover_media_uuid"`
 	Locked         bool       `json:"locked"`
+	// ProfilesAlwaysOpen: nil keeps the stored value (TEC-1326).
+	ProfilesAlwaysOpen *bool `json:"profiles_always_open"`
 }
 
 // InUseError carries the usages that block a delete.

@@ -9,6 +9,8 @@ export type PublicProfileResult =
   | { kind: "ok"; profile: PublicProfile }
   | { kind: "redirect"; username: string }
   | { kind: "legacy_redirect"; target: string }
+  /** Every profile of the person is closed (TEC-1326). */
+  | { kind: "not_shared" }
   | { kind: "not_found" };
 
 /** Same rule as backend platform/publicpath: 3-40 chars, a-z 0-9 and single . _ - between. */
@@ -69,6 +71,7 @@ export const loadPublicProfile = cache(
     if (!profile) return { kind: "not_found" };
     if (profile.redirect_to)
       return { kind: "redirect", username: profile.redirect_to };
+    if (profile.not_shared) return { kind: "not_shared" };
     return { kind: "ok", profile };
   },
 );

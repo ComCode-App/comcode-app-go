@@ -36,6 +36,8 @@ func writePublicPageErr(w http.ResponseWriter, r *http.Request, err error) {
 		response.Forbidden(w, r, "your account role cannot change public pages")
 	case errors.Is(err, profilesusecase.ErrUsernameTaken):
 		response.Conflict(w, r, response.CodeConflict, err.Error())
+	case errors.Is(err, profilesusecase.ErrOpenLocked):
+		response.Conflict(w, r, response.CodeConflict, err.Error())
 	case errors.Is(err, profilesusecase.ErrInvalidRequest):
 		response.BadRequest(w, r, response.CodeValidationError, err.Error())
 	default:
@@ -52,6 +54,42 @@ func (h *Handler) GetPublicPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out, err := h.svc.GetPublicPage(r.Context(), p, profileUUID)
+	if err != nil {
+		writePublicPageErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+// GetOpen returns a profile's open switch (TEC-1326).
+func (h *Handler) GetOpen(w http.ResponseWriter, r *http.Request) {
+	p := authctx.MustPrincipal(r.Context())
+	profileUUID, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "invalid profile uuid")
+		return
+	}
+	out, err := h.svc.OpenState(r.Context(), p, profileUUID)
+	if err != nil {
+		writePublicPageErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+// SetOpen turns a profile's open switch on or off (TEC-1326).
+func (h *Handler) SetOpen(w http.ResponseWriter, r *http.Request) {
+	p := authctx.MustPrincipal(r.Context())
+	profileUUID, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "invalid profile uuid")
+		return
+	}
+	var in model.SetOpenInput
+	if err := decodeJSON(w, r, &in); err != nil {
+		return
+	}
+	out, err := h.svc.SetOpen(r.Context(), p, profileUUID, in)
 	if err != nil {
 		writePublicPageErr(w, r, err)
 		return

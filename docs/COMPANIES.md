@@ -265,7 +265,9 @@ allow-lists, `""` = unset), `primary_color` (`#rrggbb`), a logo and a cover pick
 library (images only), and `locked`. `GET`/`PUT /v1/company/branding`; `PUT` replaces the whole
 row. Employee public pages inherit it ([PUBLIC_PROFILES.md](./PUBLIC_PROFILES.md#themes-tec-601)):
 unlocked it is their default, locked the company's set fields override the employee's theme,
-layout and cover. Deleting a library file clears the branding pick (FK `ON DELETE SET NULL`),
+layout and cover. `profiles_always_open` (TEC-1326; omitted in `PUT` keeps it) stops members from
+closing their employee profile: it always takes part in their profile swipe
+([PUBLIC_PROFILES.md](./PUBLIC_PROFILES.md#profile-swipe-tec-1326)). Deleting a library file clears the branding pick (FK `ON DELETE SET NULL`),
 but the API refuses that delete first.
 
 ## Cards & orders (TEC-572)

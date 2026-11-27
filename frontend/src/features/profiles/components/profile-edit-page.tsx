@@ -13,6 +13,7 @@ import { routes } from "@/config/routes";
 import { ProfileCompletionBadge } from "@/features/profiles/components/profile-completion-badge";
 import { ProfileCompletionChecklist } from "@/features/profiles/components/profile-completion-checklist";
 import { ProfileForm } from "@/features/profiles/components/profile-form";
+import { ProfileOpenSwitch } from "@/features/profiles/components/profile-open-switch";
 import { profilesKeys } from "@/features/profiles/hooks/query-keys";
 import {
   useSetPrimaryProfile,
@@ -141,6 +142,12 @@ export function ProfileEditPage() {
       }
     >
       <div className="w-full space-y-4 py-2">
+        <div className="bg-card flex flex-col gap-1 rounded-xl border p-4">
+          <p className="text-sm font-semibold">
+            {t("profiles.open_switch.title")}
+          </p>
+          <ProfileOpenSwitch profileUuid={profile.uuid} withHint />
+        </div>
         <ProfileCompletionChecklist
           profileUuid={profile.uuid}
           rate={profile.completion_rate}

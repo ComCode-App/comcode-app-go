@@ -18,9 +18,29 @@ type ProfileSummary struct {
 	IsPrimary      bool      `json:"is_primary"`
 	CompletionRate int       `json:"completion_rate"`
 	// Username is the public path (comcode.../{username}); empty until one is assigned.
-	Username  string    `json:"username"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Username string `json:"username"`
+	// IsOpen: the profile is shared on the public page and in the swipe group (TEC-1326). It is
+	// the effective value, so an employee profile the company keeps open reads as open.
+	IsOpen bool `json:"is_open"`
+	// OpenLocked: the company keeps employee profiles always open; the switch cannot close it.
+	OpenLocked bool `json:"open_locked"`
+	// CanToggleOpen: the caller may flip the switch (owner/admin, or the employee on their own
+	// company profile).
+	CanToggleOpen bool      `json:"can_toggle_open"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// OpenState is the open switch of one profile (TEC-1326).
+type OpenState struct {
+	IsOpen        bool `json:"is_open"`
+	OpenLocked    bool `json:"open_locked"`
+	CanToggleOpen bool `json:"can_toggle_open"`
+}
+
+// SetOpenInput turns a profile's open switch on or off.
+type SetOpenInput struct {
+	IsOpen *bool `json:"is_open"`
 }
 
 // ProfileTranslationDTO represents localized content for a profile.
@@ -81,15 +101,18 @@ type SocialLinkDTO struct {
 
 // ProfileDetail is the full profile aggregate including translations and nested lists.
 type ProfileDetail struct {
-	UUID           uuid.UUID `json:"uuid"`
-	UserUUID       uuid.UUID `json:"user_uuid"`
-	PrimaryLocale  string    `json:"primary_locale"`
-	Birthday       *string   `json:"birthday,omitempty"` // YYYY-MM-DD
-	Gender         string    `json:"gender"`
-	AvatarURL      string    `json:"avatar_url"`
-	CoverURL       string    `json:"cover_url"`
-	IsPrimary      bool      `json:"is_primary"`
-	CompletionRate int       `json:"completion_rate"`
+	UUID          uuid.UUID `json:"uuid"`
+	UserUUID      uuid.UUID `json:"user_uuid"`
+	PrimaryLocale string    `json:"primary_locale"`
+	Birthday      *string   `json:"birthday,omitempty"` // YYYY-MM-DD
+	Gender        string    `json:"gender"`
+	AvatarURL     string    `json:"avatar_url"`
+	CoverURL      string    `json:"cover_url"`
+	IsPrimary     bool      `json:"is_primary"`
+	// IsOpen is the stored open switch (TEC-1326); see GET /v1/profiles/{uuid}/open for the
+	// effective value and who may change it.
+	IsOpen         bool `json:"is_open"`
+	CompletionRate int  `json:"completion_rate"`
 	// CompletionSuggestions lists what is missing for 100%, highest gain first (TEC-549).
 	CompletionSuggestions []CompletionSuggestion `json:"completion_suggestions"`
 	// VerificationStatus is none | pending | verified | rejected (TEC-549).

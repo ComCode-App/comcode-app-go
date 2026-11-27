@@ -4645,6 +4645,53 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /v1/profiles/{uuid}/open:
+    get:
+      tags: [Profiles]
+      operationId: getProfileOpen
+      summary: Open switch of a profile
+      description: Whether the profile is shared on the public page and in the profile swipe (TEC-1326), and whether the caller may change it.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Switch state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeProfileOpenState" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Profiles]
+      operationId: setProfileOpen
+      summary: Open or close a profile
+      description: |
+        Requires `app.profiles.write`, and an owner/admin role in the active account or the profile
+        being the caller's own employee profile (`company_member_profiles`); 403 otherwise.
+        A closed profile is never shown: its links, cards and QR show the person's first open
+        profile, or "not shared" when none is open. While the company keeps employee profiles open
+        (`profiles_always_open`), closing an employee profile is 409.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SetProfileOpenRequest" }
+      responses:
+        "200":
+          description: Updated switch
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeProfileOpenState" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /v1/profiles/{uuid}/verification:
     # Scoped to the active account (other accounts' profiles are 404). Request and cancel need
     # app.profiles.write and an owner/admin account role (403 otherwise).
@@ -4847,6 +4894,9 @@ paths:
         suspended accounts and unknown usernames are 404. Legacy hashes (including username
         collision aliases) return 307 to their destination; provenance is never exposed.
         Static app paths are blocked by the migration importer.
+        Profile swipe (TEC-1326): `siblings` lists the person's open profiles. A closed profile is
+        answered with the person's first open profile (its own data is never included), or with
+        `not_shared: true` when none is open.
       security: []
       parameters:
         - name: src
@@ -15822,6 +15872,7 @@ components:
             - { $ref: "#/components/schemas/CompanyMediaRef" }
             - { type: "null" }
         locked: { type: boolean, description: "Employees always render the company look" }
+        profiles_always_open: { type: boolean, description: "Members cannot close their employee profile; it always takes part in their profile swipe (TEC-1326)" }
         updated_at: { type: [string, "null"], format: date-time, description: "null = never saved" }
     EnvelopeCompanyBranding:
       type: object
@@ -15840,6 +15891,7 @@ components:
         logo_media_uuid: { type: [string, "null"], format: uuid }
         cover_media_uuid: { type: [string, "null"], format: uuid }
         locked: { type: boolean }
+        profiles_always_open: { type: boolean, description: "Omit to keep the stored value (TEC-1326)" }
 
     CompanyBulkLogoParams:
       type: object
@@ -16771,6 +16823,9 @@ components:
         is_primary: { type: boolean }
         completion_rate: { type: integer }
         username: { type: string, description: "Public path (comcode.../{username}); empty until assigned" }
+        is_open: { type: boolean, description: "Shared on the public page and in the profile swipe (TEC-1326); effective value, an employee profile the company keeps open reads true" }
+        open_locked: { type: boolean, description: "The company keeps employee profiles open; the switch cannot close it" }
+        can_toggle_open: { type: boolean, description: "The caller may change the switch (owner/admin, or the employee on their own company profile)" }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
@@ -16846,6 +16901,7 @@ components:
         avatar_url: { type: string }
         cover_url: { type: string }
         is_primary: { type: boolean }
+        is_open: { type: boolean, description: "Stored open switch (TEC-1326); GET /v1/profiles/{uuid}/open has the effective value" }
         completion_rate: { type: integer, minimum: 0, maximum: 100 }
         completion_suggestions:
           type: array
@@ -17525,6 +17581,35 @@ components:
         data: { $ref: "#/components/schemas/PublicPageSettings" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
+    PublicProfileSibling:
+      type: object
+      required: [username, profile_uuid, short_name]
+      properties:
+        username: { type: string }
+        profile_uuid: { type: string, format: uuid }
+        short_name: { type: string, description: "Company name, else the person's name, else the username" }
+
+    ProfileOpenState:
+      type: object
+      required: [is_open, open_locked, can_toggle_open]
+      properties:
+        is_open: { type: boolean, description: "Effective switch: an employee profile the company keeps open is open" }
+        open_locked: { type: boolean, description: "The company keeps employee profiles open (company branding `profiles_always_open`)" }
+        can_toggle_open: { type: boolean, description: "Owner/admin of the account, or the employee on their own company profile" }
+    EnvelopeProfileOpenState:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: "#/components/schemas/ProfileOpenState" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    SetProfileOpenRequest:
+      type: object
+      additionalProperties: false
+      required: [is_open]
+      properties:
+        is_open: { type: boolean }
+
     PublicProfile:
       type: object
       required: [username, profile_uuid, primary_locale, avatar_url, cover_url, visible_modules, translations, contacts, addresses, social_links, bank_accounts]
@@ -17638,6 +17723,13 @@ components:
             value: { type: string }
             is_primary: { type: boolean }
         primary_color: { type: string, description: "Company brand color (#rrggbb, TEC-946); empty = the theme's" }
+        not_shared:
+          type: boolean
+          description: "Every profile of the person is closed (TEC-1326). Only `username` is set; the page shows \"not shared right now\" without contact data or save contact"
+        siblings:
+          type: array
+          description: "The person's open profiles in swipe order, this one included (TEC-1326). Omitted when this is the only open one. When the requested profile is closed, the response is the person's first open profile"
+          items: { $ref: "#/components/schemas/PublicProfileSibling" }
         company_logo_url: { type: string, description: "Company branding logo; empty = none" }
 
     EnvelopePublicProfile:

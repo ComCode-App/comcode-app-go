@@ -392,6 +392,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	exchangeCopyFiles.VCards = profilesSvc
 	profilesSvc.SetQuotas(entitlementSvc)
 	profilesSvc.SetPublicPages(profilesRepo)
+	profilesSvc.SetProfileGroups(profilesRepo) // open switch and swipe group (TEC-1326)
 	profilesSvc.SetRouteCache(routeCache)
 	profilesSvc.SetActivity(activityRec)
 	backgroundsSvc := backgroundsusecase.New(deps.Queries)

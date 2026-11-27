@@ -174,6 +174,7 @@ func main() {
 	exchangeCopyFiles.VCards = profilesSvc
 	profilesSvc.SetQuotas(entitlement.New(queries))
 	profilesSvc.SetPublicPages(profilesRepo)
+	profilesSvc.SetProfileGroups(profilesRepo) // open switch and swipe group (TEC-1326)
 	profilesSvc.SetRouteCache(routecache.New(rdb, cfg.App.Env, routecache.DefaultTTL))
 	profilesSvc.SetActivity(activityRec)
 	profilesSvc.SetBackgrounds(backgroundsusecase.New(queries))

@@ -384,5 +384,12 @@
   "shared_profiles.title": "Member profiles",
   "shared_profiles.description": "Personal profiles members chose to share with this company. You can view them but not edit them.",
   "shared_profiles.read_only": "Read-only",
-  "shared_profiles.shared_by": "Shared by {{name}}"
+  "shared_profiles.shared_by": "Shared by {{name}}",
+  "open_switch.title": "Sharing",
+  "open_switch.open": "Open",
+  "open_switch.off": "Closed",
+  "open_switch.hint": "A closed profile is not shown to visitors; its link, card and QR open your first open profile. Visitors can swipe between your open profiles.",
+  "open_switch.locked_hint": "The company keeps employee profiles always open.",
+  "open_switch.opened": "Profile opened.",
+  "open_switch.closed": "Profile closed."
 }

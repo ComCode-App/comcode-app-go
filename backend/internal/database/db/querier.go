@@ -440,6 +440,8 @@ type Querier interface {
 	// account-lint: cross-account platform order KPIs
 	GetOrderStats(ctx context.Context) (GetOrderStatsRow, error)
 	GetOrderStatusNotification(ctx context.Context, arg GetOrderStatusNotificationParams) (Notification, error)
+	// The caller's own employee profile in a company account (none: no rows).
+	GetOwnMemberProfileUUID(ctx context.Context, arg GetOwnMemberProfileUUIDParams) (uuid.UUID, error)
 	// account-lint: cross-account payment provider callback: merchant oid is the provider's reference
 	GetPaymentCardSessionByMerchantOID(ctx context.Context, merchantOid string) (PaymentCardSession, error)
 	// account-lint: cross-account payment provider callback: provider token is the reference
@@ -475,6 +477,9 @@ type Querier interface {
 	GetProductVariantByUUID(ctx context.Context, argUuid uuid.UUID) (ProductVariant, error)
 	GetProfileByUUIDForAccount(ctx context.Context, arg GetProfileByUUIDForAccountParams) (Profile, error)
 	GetProfileIDForAccount(ctx context.Context, arg GetProfileIDForAccountParams) (GetProfileIDForAccountRow, error)
+	// The open switch of a profile in the account, whether it is the caller's own employee profile,
+	// and whether the company keeps employee profiles always open.
+	GetProfileOpenState(ctx context.Context, arg GetProfileOpenStateParams) (GetProfileOpenStateRow, error)
 	// account-lint: cross-account platform /v1/platform/profile-verifications review queue
 	GetProfileVerificationRow(ctx context.Context, argUuid uuid.UUID) (GetProfileVerificationRowRow, error)
 	// Background shown on a public page: the owner account's or a preset.
@@ -692,6 +697,11 @@ type Querier interface {
 	ListPermissionSlugsByRoleID(ctx context.Context, roleID int64) ([]string, error)
 	ListPermissionSlugsByRoleSlug(ctx context.Context, slug string) ([]string, error)
 	ListPermissionsFiltered(ctx context.Context, arg ListPermissionsFilteredParams) ([]Permission, error)
+	// Profile swipe (TEC-1326). A person's profiles are the profiles of their personal account and
+	// the company profiles linked to them as a member (company_member_profiles). Only profiles with
+	// an active public page in an active account take part.
+	// account-lint: cross-account public visitor read: the profiles of the one person behind a resolved public profile (TEC-1326)
+	ListPersonProfileGroup(ctx context.Context, profileID int64) ([]ListPersonProfileGroupRow, error)
 	ListPlanLimitsByPlanID(ctx context.Context, planID int64) ([]ListPlanLimitsByPlanIDRow, error)
 	ListPlanLimitsForPlanID(ctx context.Context, planID int64) ([]ListPlanLimitsForPlanIDRow, error)
 	ListPlanLimitsForPlanSlug(ctx context.Context, slug string) ([]ListPlanLimitsForPlanSlugRow, error)
@@ -1019,6 +1029,7 @@ type Querier interface {
 	// UpdateProduct keeps the category when none is given; an import rollback (TEC-596) uses this
 	// to put back exactly the category a product had before, none included.
 	SetProductCategory(ctx context.Context, arg SetProductCategoryParams) error
+	SetProfileOpen(ctx context.Context, arg SetProfileOpenParams) (int64, error)
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetStructureAssignment(ctx context.Context, arg SetStructureAssignmentParams) (int64, error)
 	SetUserEmailVerified(ctx context.Context, id int64) (User, error)

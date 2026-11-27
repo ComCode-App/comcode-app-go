@@ -6,8 +6,11 @@ import {
   loadExchangeForm,
   loadLeadForm,
 } from "@/features/leads/lib/form-config";
+import { ProfileNotShared } from "@/features/public-profile/components/profile-not-shared";
+import { ProfileSwipe } from "@/features/public-profile/components/profile-swipe";
 import { PublicProfileView } from "@/features/public-profile/components/public-profile-view";
 import { loadPublicProfile } from "@/features/public-profile/lib/load";
+import { getTheme, resolveLayout } from "@/features/public-profile/lib/themes";
 import {
   displayName,
   headline,
@@ -52,13 +55,14 @@ export async function renderPublicProfile({
     const qs = query.toString();
     permanentRedirect(`/${result.username}${qs ? `?${qs}` : ""}`);
   }
+  if (result.kind === "not_shared") return <ProfileNotShared />;
   // Cards and smart links attribute leads and exchanges to themselves (TEC-552, TEC-940).
   const [leadForm, exchange] = await Promise.all([
     loadLeadForm(result.profile.username, result.profile.profile_uuid, via),
     // Contact exchange (TEC-567): the profile's own switch; `via` only attributes it.
     loadExchangeForm(result.profile.username, result.profile.profile_uuid, via),
   ]);
-  return (
+  const view = (
     <PublicProfileView
       profile={result.profile}
       lang={lang}
@@ -66,6 +70,20 @@ export async function renderPublicProfile({
       exchange={exchange}
       via={via}
     />
+  );
+  // The person's other open profiles (TEC-1326); one open profile renders as before.
+  const siblings = result.profile.siblings ?? [];
+  if (siblings.length < 2) return view;
+  return (
+    <ProfileSwipe
+      siblings={siblings}
+      current={result.profile.username}
+      raised={
+        resolveLayout(getTheme(result.profile.theme)) === "legacy_comcode"
+      }
+    >
+      {view}
+    </ProfileSwipe>
   );
 }
 
