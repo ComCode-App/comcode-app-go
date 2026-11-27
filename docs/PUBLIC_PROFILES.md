@@ -93,6 +93,28 @@ company profile for a meeting). Visitors move between the open ones.
   screen. `card.view` is recorded for each profile shown, and a move records `profile.swipe` on the
   new profile with `from` = the previous profile uuid.
 
+## Business pages (TEC-1327)
+
+A company business page shares the `/{username}` namespace with profiles (a `business_page` row
+in the routes registry, see [COMPANIES.md](./COMPANIES.md#business-page-tec-1327)).
+
+- `app/[username]/page.tsx` loads the profile first (same arguments as `renderPublicProfile`, so
+  React cache keeps one upstream call and one QR scan). A username that is no profile is looked
+  up with `GET /v1/public/business/{username}` (`features/business-page/lib/load.ts`); a renamed
+  one redirects (308), a draft or unknown one is the usual 404.
+- `business-page-public.tsx` renders `business-page-view.tsx` (the same view as the panel
+  preview) with a language switch (locales that have texts), the lead form and visitor events.
+- Lead form: an enabled `lead_form` button sets the route's `presentation_config.lead_capture`,
+  so the lead module (`GET /v1/public/leads/form?path=`, `POST /v1/public/leads`) serves it like
+  a profile form. The lead's `source_type` is `business_page` (migration 000093); it reaches the
+  company inbox for owners and admins only (it has no profile). Without a live form (quota 0) the
+  button is left out.
+- Events (subject `{type: "business_page", id: page_uuid}`): `business.page.view`,
+  `business.button.click` (`target` property), and the shared `contact.address.click`,
+  `contact.phone.click`, `social.link.click`, `bank.iban.copy`.
+- Visitor bundle: the page imports the view and the public helpers directly, never the
+  `features/business-page` index (it pulls the panel editor).
+
 ## Backgrounds (TEC-599)
 
 - `backgrounds` table:

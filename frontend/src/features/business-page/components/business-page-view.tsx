@@ -173,6 +173,8 @@ export function BusinessPageView({
         const click = () =>
           onEvent?.("business.button.click", { target: b.button!.target });
         if (b.button.target === "lead_form") {
+          // Without a live form (quota 0, not saved yet) the public page leaves the button out.
+          if (!onLeadForm && !preview) return null;
           return (
             <button
               key={i}

@@ -63,6 +63,8 @@ type Save struct {
 	NewPath  string
 	ReviveID int64  // a retired route of this account that holds NewPath
 	Status   string // route status for a new or revived route: active | locked
+	// LeadForm: an enabled lead_form button is on the page; the route's lead capture follows it.
+	LeadForm bool
 }
 
 // Postgres is the sqlc-backed store.
@@ -162,42 +164,52 @@ func (r *Postgres) Save(ctx context.Context, in Save) error {
 				return fmt.Errorf("add block: %w", err)
 			}
 		}
-		if in.NewPath == "" {
-			return nil
-		}
-		if in.Current != nil {
-			if err := q.RetireBusinessPageRoute(ctx, db.RetireBusinessPageRouteParams{ID: in.Current.ID, AccountID: in.AccountID}); err != nil {
-				return fmt.Errorf("retire route: %w", err)
-			}
-			// The old username keeps redirecting to the new one.
-			if err := q.InsertRouteHistory(ctx, db.InsertRouteHistoryParams{
-				RouteID: in.Current.ID, RouteType: "business_page",
-				AccountID: pgtype.Int8{Int64: in.AccountID, Valid: true},
-				OldPath:   in.Current.Path, NewPath: in.NewPath,
-				ChangedByUserID: pgtype.Int8{Int64: in.UserID, Valid: in.UserID > 0},
-				Reason:          "username_change",
-			}); err != nil {
-				return fmt.Errorf("route history: %w", err)
+		if in.NewPath != "" {
+			if err := r.saveRoute(ctx, q, in); err != nil {
+				return err
 			}
 		}
-		if in.ReviveID != 0 {
-			n, err := q.ReviveBusinessPageRoute(ctx, db.ReviveBusinessPageRouteParams{Status: in.Status, ID: in.ReviveID, AccountID: in.AccountID})
-			if err != nil {
-				return fmt.Errorf("revive route: %w", err)
-			}
-			if n == 0 {
-				return ErrNotFound
-			}
-			return nil
-		}
-		if _, err := q.CreateBusinessPageRoute(ctx, db.CreateBusinessPageRouteParams{
-			Path: in.NewPath, Status: in.Status, AccountID: in.AccountID,
-			OwnerUserID: pgtype.Int8{Int64: in.UserID, Valid: in.UserID > 0},
-		}); err != nil {
-			return fmt.Errorf("create route: %w", err)
+		if err := q.SetBusinessPageRouteLeadCapture(ctx, db.SetBusinessPageRouteLeadCaptureParams{Enabled: in.LeadForm, AccountID: in.AccountID}); err != nil {
+			return fmt.Errorf("route lead capture: %w", err)
 		}
 		return nil
 	})
+}
+
+// saveRoute assigns or renames the page username inside Save's transaction.
+func (r *Postgres) saveRoute(ctx context.Context, q *db.Queries, in Save) error {
+	if in.Current != nil {
+		if err := q.RetireBusinessPageRoute(ctx, db.RetireBusinessPageRouteParams{ID: in.Current.ID, AccountID: in.AccountID}); err != nil {
+			return fmt.Errorf("retire route: %w", err)
+		}
+		// The old username keeps redirecting to the new one.
+		if err := q.InsertRouteHistory(ctx, db.InsertRouteHistoryParams{
+			RouteID: in.Current.ID, RouteType: "business_page",
+			AccountID: pgtype.Int8{Int64: in.AccountID, Valid: true},
+			OldPath:   in.Current.Path, NewPath: in.NewPath,
+			ChangedByUserID: pgtype.Int8{Int64: in.UserID, Valid: in.UserID > 0},
+			Reason:          "username_change",
+		}); err != nil {
+			return fmt.Errorf("route history: %w", err)
+		}
+	}
+	if in.ReviveID != 0 {
+		n, err := q.ReviveBusinessPageRoute(ctx, db.ReviveBusinessPageRouteParams{Status: in.Status, ID: in.ReviveID, AccountID: in.AccountID})
+		if err != nil {
+			return fmt.Errorf("revive route: %w", err)
+		}
+		if n == 0 {
+			return ErrNotFound
+		}
+		return nil
+	}
+	if _, err := q.CreateBusinessPageRoute(ctx, db.CreateBusinessPageRouteParams{
+		Path: in.NewPath, Status: in.Status, AccountID: in.AccountID,
+		OwnerUserID: pgtype.Int8{Int64: in.UserID, Valid: in.UserID > 0},
+	}); err != nil {
+		return fmt.Errorf("create route: %w", err)
+	}
+	return nil
 }
 
 // SetStatus publishes (route active) or unpublishes (route locked) the page.

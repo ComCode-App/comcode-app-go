@@ -25,6 +25,7 @@
   "source.profile": "Profil",
   "source.card": "Kart",
   "source.smart_link": "Akıllı bağlantı",
+  "source.business_page": "İşletme sayfası",
   "status.new": "Yeni",
   "detail.title": "İletişim talebi",
   "detail.consent_given": "{{date}} tarihinde verildi (metin {{version}})",

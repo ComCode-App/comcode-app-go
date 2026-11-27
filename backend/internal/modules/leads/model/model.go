@@ -22,10 +22,12 @@ const (
 	SourceProfile   = "profile"
 	SourceCard      = "card"
 	SourceSmartLink = "smart_link"
+	// SourceBusinessPage is the lead form of a company business page (TEC-1327).
+	SourceBusinessPage = "business_page"
 )
 
 // Sources lists every valid source_type.
-var Sources = []string{SourceProfile, SourceCard, SourceSmartLink}
+var Sources = []string{SourceProfile, SourceCard, SourceSmartLink, SourceBusinessPage}
 
 // Lead kinds: a contact form the owner asked for, or a visitor sharing their details back.
 const (

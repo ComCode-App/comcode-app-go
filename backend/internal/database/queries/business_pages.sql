@@ -130,3 +130,11 @@ WHERE m.account_id = sqlc.arg(account_id) AND m.uuid = ANY(sqlc.arg(uuids)::uuid
 SELECT sp.slug, sp.icon_url
 FROM social_platforms sp
 WHERE sp.slug = ANY(sqlc.arg(slugs)::text[]) AND sp.deleted_at IS NULL AND sp.is_active = true;
+
+-- name: SetBusinessPageRouteLeadCapture :exec
+-- Mirrors "the page has an enabled lead form button" onto the live route, where the lead module
+-- reads presentation_config.lead_capture.enabled (TEC-552).
+UPDATE routes
+SET presentation_config = jsonb_set(presentation_config, '{lead_capture}', jsonb_build_object('enabled', sqlc.arg(enabled)::boolean), true)
+WHERE account_id = sqlc.arg(account_id)::bigint AND route_type = 'business_page'
+  AND status IN ('active', 'locked') AND deleted_at IS NULL;

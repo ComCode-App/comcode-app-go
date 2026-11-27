@@ -274,7 +274,9 @@ but the API refuses that delete first.
 
 ComCode Business: the company's own link page at `/{username}` (logo, cover, name, a tagline and
 large action buttons). Module `backend/internal/modules/businesspages`, panel
-`frontend/src/features/business-page`; the public page comes in part C.
+`frontend/src/features/business-page`; the public page at `/{username}` (part C) is in
+[PUBLIC_PROFILES.md](./PUBLIC_PROFILES.md#business-pages-tec-1327). Still open: cards, QR codes
+and smart links that target the page, and a "business page" source in company analytics.
 
 - Data (migration 000092): `business_pages` (one per company: `status` draft/published, `theme`
   (`""` = company branding), `primary_locale`, `translations` `{tr|en: {name, tagline}}`) and

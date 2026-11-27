@@ -11699,7 +11699,7 @@ export interface components {
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
-        LeadSource: "profile" | "card" | "smart_link";
+        LeadSource: "profile" | "card" | "smart_link" | "business_page";
         /**
          * @description form = the owner's contact form (TEC-552); exchange = a visitor shared their details back (TEC-567)
          * @enum {string}
