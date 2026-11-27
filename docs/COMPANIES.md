@@ -265,8 +265,41 @@ allow-lists, `""` = unset), `primary_color` (`#rrggbb`), a logo and a cover pick
 library (images only), and `locked`. `GET`/`PUT /v1/company/branding`; `PUT` replaces the whole
 row. Employee public pages inherit it ([PUBLIC_PROFILES.md](./PUBLIC_PROFILES.md#themes-tec-601)):
 unlocked it is their default, locked the company's set fields override the employee's theme,
-layout and cover. Deleting a library file clears the branding pick (FK `ON DELETE SET NULL`),
+layout and cover. `profiles_always_open` (TEC-1326; omitted in `PUT` keeps it) stops members from
+closing their employee profile: it always takes part in their profile swipe
+([PUBLIC_PROFILES.md](./PUBLIC_PROFILES.md#profile-swipe-tec-1326)). Deleting a library file clears the branding pick (FK `ON DELETE SET NULL`),
 but the API refuses that delete first.
+
+## Business page (TEC-1327)
+
+ComCode Business: the company's own link page at `/{username}` (logo, cover, name, a tagline and
+large action buttons). Module `backend/internal/modules/businesspages`, panel
+`frontend/src/features/business-page`; the public page at `/{username}` (part C) is in
+[PUBLIC_PROFILES.md](./PUBLIC_PROFILES.md#business-pages-tec-1327). Still open: cards, QR codes
+and smart links that target the page, and a "business page" source in company analytics.
+
+- Data (migration 000092): `business_pages` (one per company: `status` draft/published, `theme`
+  (`""` = company branding), `primary_locale`, `translations` `{tr|en: {name, tagline}}`) and
+  `business_page_blocks` (ordered, `enabled`, `config`, `translations` `{tr|en: {title, subtitle}}`).
+  Block types: `header` (logo and cover from the media library, else branding), `button`
+  (target `url`, `phone`, `whatsapp`, `email`, `maps`, `google_review` or `lead_form`), `social`,
+  `offices` (all company offices), `team` (published, open employee profiles) and
+  `bank_accounts` (picked active company accounts).
+- Username: a `business_page` route in the routes registry, the same namespace and rules as
+  profile usernames. A rename retires the old route, which redirects. Draft = route `locked`
+  (404), published = `active`.
+- App API: `GET`/`PUT /v1/business-page`, `POST /v1/business-page/publish|unpublish`. Company
+  accounts only; reads need `app.business_page.read`, writes `app.business_page.write` and an
+  owner/admin role; saving and publishing need the `business_page.enabled` plan feature.
+- Panel (part B): company menu → "İşletme Sayfası" (`/company/business-page`). Left: status
+  (draft / published, save, publish, unpublish), page settings (address, main language, the
+  language being edited, name, tagline, template) and the block list (add from a menu, drag to
+  reorder with dnd-kit, switch on/off, edit, delete with a confirm dialog). Right: a live preview
+  drawn by `business-page-view.tsx`, the same component part C renders publicly. Publishing saves
+  unsaved changes first. Members see the page read-only; personal accounts get no menu item.
+- Visitor API: `GET /v1/public/business/{username}` (published page of an active company whose
+  plan has the feature; disabled blocks left out; theme, color, logo and cover fall back to the
+  branding).
 
 ## Cards & orders (TEC-572)
 

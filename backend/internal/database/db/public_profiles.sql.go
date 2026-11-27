@@ -136,6 +136,27 @@ func (q *Queries) GetLiveCanonicalRouteForProfile(ctx context.Context, profileID
 	return i, err
 }
 
+const getOwnMemberProfileUUID = `-- name: GetOwnMemberProfileUUID :one
+SELECT p.uuid
+FROM company_member_profiles cmp
+JOIN account_members am ON am.account_id = $1 AND am.id = cmp.member_id
+JOIN profiles p ON p.account_id = $1 AND p.id = cmp.profile_id AND p.deleted_at IS NULL
+WHERE cmp.account_id = $1 AND am.user_id = $2
+`
+
+type GetOwnMemberProfileUUIDParams struct {
+	AccountID int64 `json:"account_id"`
+	UserID    int64 `json:"user_id"`
+}
+
+// The caller's own employee profile in a company account (none: no rows).
+func (q *Queries) GetOwnMemberProfileUUID(ctx context.Context, arg GetOwnMemberProfileUUIDParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, getOwnMemberProfileUUID, arg.AccountID, arg.UserID)
+	var uuid uuid.UUID
+	err := row.Scan(&uuid)
+	return uuid, err
+}
+
 const getProfileIDForAccount = `-- name: GetProfileIDForAccount :one
 SELECT p.id, p.user_id FROM profiles p
 WHERE p.uuid = $1 AND p.account_id = $2 AND p.deleted_at IS NULL
@@ -155,6 +176,55 @@ func (q *Queries) GetProfileIDForAccount(ctx context.Context, arg GetProfileIDFo
 	row := q.db.QueryRow(ctx, getProfileIDForAccount, arg.Uuid, arg.AccountID)
 	var i GetProfileIDForAccountRow
 	err := row.Scan(&i.ID, &i.UserID)
+	return i, err
+}
+
+const getProfileOpenState = `-- name: GetProfileOpenState :one
+SELECT p.id, p.is_open,
+       EXISTS (
+           SELECT 1 FROM company_member_profiles cmp
+           WHERE cmp.account_id = $1 AND cmp.profile_id = p.id
+       )::boolean AS is_member_profile,
+       EXISTS (
+           SELECT 1 FROM company_member_profiles cmp
+           JOIN account_members am ON am.account_id = $1 AND am.id = cmp.member_id
+           WHERE cmp.account_id = $1 AND cmp.profile_id = p.id
+             AND am.user_id = $2
+       )::boolean AS is_own_member_profile,
+       COALESCE((
+           SELECT ab.profiles_always_open FROM account_branding ab
+           WHERE ab.account_id = $1
+       ), false)::boolean AS always_open
+FROM profiles p
+WHERE p.account_id = $1 AND p.uuid = $3 AND p.deleted_at IS NULL
+`
+
+type GetProfileOpenStateParams struct {
+	AccountID int64     `json:"account_id"`
+	UserID    int64     `json:"user_id"`
+	Uuid      uuid.UUID `json:"uuid"`
+}
+
+type GetProfileOpenStateRow struct {
+	ID                 int64 `json:"id"`
+	IsOpen             bool  `json:"is_open"`
+	IsMemberProfile    bool  `json:"is_member_profile"`
+	IsOwnMemberProfile bool  `json:"is_own_member_profile"`
+	AlwaysOpen         bool  `json:"always_open"`
+}
+
+// The open switch of a profile in the account, whether it is the caller's own employee profile,
+// and whether the company keeps employee profiles always open.
+func (q *Queries) GetProfileOpenState(ctx context.Context, arg GetProfileOpenStateParams) (GetProfileOpenStateRow, error) {
+	row := q.db.QueryRow(ctx, getProfileOpenState, arg.AccountID, arg.UserID, arg.Uuid)
+	var i GetProfileOpenStateRow
+	err := row.Scan(
+		&i.ID,
+		&i.IsOpen,
+		&i.IsMemberProfile,
+		&i.IsOwnMemberProfile,
+		&i.AlwaysOpen,
+	)
 	return i, err
 }
 
@@ -228,6 +298,92 @@ func (q *Queries) ListAccountBankAccountIDsByUUID(ctx context.Context, arg ListA
 	for rows.Next() {
 		var i ListAccountBankAccountIDsByUUIDRow
 		if err := rows.Scan(&i.ID, &i.Uuid); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPersonProfileGroup = `-- name: ListPersonProfileGroup :many
+
+WITH person AS (
+    SELECT COALESCE(am.user_id, a.personal_user_id) AS user_id
+    FROM profiles p
+    JOIN accounts a ON a.id = p.account_id
+    LEFT JOIN company_member_profiles cmp ON cmp.account_id = p.account_id AND cmp.profile_id = p.id
+    LEFT JOIN account_members am ON am.account_id = cmp.account_id AND am.id = cmp.member_id
+    WHERE p.id = $1 AND p.deleted_at IS NULL
+),
+grp AS (
+    SELECT p.id, p.uuid, p.primary_locale, p.is_open, p.is_primary, p.created_at,
+           0 AS account_rank, a.created_at AS linked_at, false AS always_open
+    FROM person
+    JOIN accounts a ON a.personal_user_id = person.user_id AND a.type = 'personal' AND a.status = 'active'
+    JOIN profiles p ON p.account_id = a.id AND p.deleted_at IS NULL
+    UNION ALL
+    SELECT p.id, p.uuid, p.primary_locale, p.is_open, p.is_primary, p.created_at,
+           1 AS account_rank, cmp.created_at AS linked_at, COALESCE(ab.profiles_always_open, false) AS always_open
+    FROM person
+    JOIN account_members am ON am.user_id = person.user_id
+    JOIN accounts a ON a.id = am.account_id AND a.type = 'company' AND a.status = 'active'
+    JOIN company_member_profiles cmp ON cmp.account_id = am.account_id AND cmp.member_id = am.id
+    JOIN profiles p ON p.account_id = cmp.account_id AND p.id = cmp.profile_id AND p.deleted_at IS NULL
+    LEFT JOIN account_branding ab ON ab.account_id = a.id
+)
+SELECT g.id AS profile_id, g.uuid AS profile_uuid, r.path::text AS username,
+       (g.is_open OR g.always_open)::boolean AS is_open,
+       COALESCE(t.first_name, '')::text AS first_name,
+       COALESCE(t.last_name, '')::text AS last_name,
+       COALESCE(t.company_name, '')::text AS company_name
+FROM grp g
+JOIN routes r ON r.profile_id = g.id AND r.route_type = 'canonical_profile'
+ AND r.status = 'active' AND r.deleted_at IS NULL
+LEFT JOIN LATERAL (
+    SELECT pt.first_name, pt.last_name, pt.company_name
+    FROM profile_translations pt
+    WHERE pt.profile_id = g.id
+    ORDER BY (pt.locale = g.primary_locale) DESC, pt.is_default DESC, pt.id
+    LIMIT 1
+) t ON true
+ORDER BY g.account_rank, g.linked_at, g.is_primary DESC, g.created_at DESC, g.id
+`
+
+type ListPersonProfileGroupRow struct {
+	ProfileID   int64     `json:"profile_id"`
+	ProfileUuid uuid.UUID `json:"profile_uuid"`
+	Username    string    `json:"username"`
+	IsOpen      bool      `json:"is_open"`
+	FirstName   string    `json:"first_name"`
+	LastName    string    `json:"last_name"`
+	CompanyName string    `json:"company_name"`
+}
+
+// Profile swipe (TEC-1326). A person's profiles are the profiles of their personal account and
+// the company profiles linked to them as a member (company_member_profiles). Only profiles with
+// an active public page in an active account take part.
+// account-lint: cross-account public visitor read: the profiles of the one person behind a resolved public profile (TEC-1326)
+func (q *Queries) ListPersonProfileGroup(ctx context.Context, profileID int64) ([]ListPersonProfileGroupRow, error) {
+	rows, err := q.db.Query(ctx, listPersonProfileGroup, profileID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPersonProfileGroupRow{}
+	for rows.Next() {
+		var i ListPersonProfileGroupRow
+		if err := rows.Scan(
+			&i.ProfileID,
+			&i.ProfileUuid,
+			&i.Username,
+			&i.IsOpen,
+			&i.FirstName,
+			&i.LastName,
+			&i.CompanyName,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -335,4 +491,23 @@ type SetCanonicalRouteStateParams struct {
 func (q *Queries) SetCanonicalRouteState(ctx context.Context, arg SetCanonicalRouteStateParams) error {
 	_, err := q.db.Exec(ctx, setCanonicalRouteState, arg.Status, arg.PresentationConfig, arg.ID)
 	return err
+}
+
+const setProfileOpen = `-- name: SetProfileOpen :execrows
+UPDATE profiles SET is_open = $1
+WHERE account_id = $2 AND uuid = $3 AND deleted_at IS NULL
+`
+
+type SetProfileOpenParams struct {
+	IsOpen    bool      `json:"is_open"`
+	AccountID int64     `json:"account_id"`
+	Uuid      uuid.UUID `json:"uuid"`
+}
+
+func (q *Queries) SetProfileOpen(ctx context.Context, arg SetProfileOpenParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setProfileOpen, arg.IsOpen, arg.AccountID, arg.Uuid)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

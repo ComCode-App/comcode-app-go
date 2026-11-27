@@ -27,6 +27,7 @@
   "per_month": "Monthly · resets on {{date}}",
   "off": "Off",
   "features.design.premium": "Premium design",
+  "features.business_page.enabled": "Business page",
   "premium": "Premium",
   "premium_locked": "Premium themes and animated backgrounds are on paid plans."
 }

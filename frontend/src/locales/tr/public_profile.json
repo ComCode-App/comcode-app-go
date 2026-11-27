@@ -43,5 +43,21 @@
   "tab.bank_accounts": "Banka Bilgileri",
   "next_language": "Dili değiştir: {{locale}}",
   "copy_account_holder": "Hesap adını kopyala",
-  "account_holder_copied": "Hesap adı kopyalandı"
+  "account_holder_copied": "Hesap adı kopyalandı",
+  "not_shared_title": "Bu profil şu an paylaşılmıyor",
+  "not_shared_body": "Profil sahibi bu profili şimdilik kapattı. Daha sonra tekrar deneyebilirsiniz.",
+  "swipe.label": "Profiller",
+  "swipe.previous": "Önceki profil: {{name}}",
+  "swipe.next": "Sonraki profil: {{name}}",
+  "business.offices": "Ofislerimiz",
+  "business.team": "Ekibimiz",
+  "business.directions": "Yol tarifi",
+  "business.preview_empty": "Yayındaki sayfada bu bölüm veriyle dolar.",
+  "business.target.url": "Web sitesi",
+  "business.target.phone": "Ara",
+  "business.target.whatsapp": "WhatsApp",
+  "business.target.email": "E-posta",
+  "business.target.maps": "Konum",
+  "business.target.google_review": "Google'da yorum bırak",
+  "business.target.lead_form": "Teklif al"
 }

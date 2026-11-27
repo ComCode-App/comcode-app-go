@@ -160,6 +160,14 @@ type PublicBankAccount struct {
 	Title          string `json:"title"`
 }
 
+// PublicSibling is one open profile of the same person, in swipe order (TEC-1326).
+type PublicSibling struct {
+	Username    string    `json:"username"`
+	ProfileUUID uuid.UUID `json:"profile_uuid"`
+	// ShortName labels the dot under the swipe: the company name, else the person's name.
+	ShortName string `json:"short_name"`
+}
+
 // PublicProfile is what GET /v1/public/p/{username} returns. Hidden modules come back empty.
 // When the requested username was renamed, only Username and RedirectTo are set.
 type PublicProfile struct {
@@ -197,4 +205,10 @@ type PublicProfile struct {
 	// PrimaryContact is the contact the primary action opens, also when the link hides the
 	// contacts section (TEC-1307). Nil when there is no action or no matching contact.
 	PrimaryContact *PublicContact `json:"primary_contact,omitempty"`
+	// NotShared: every profile of the person is closed (TEC-1326). Only Username is set; the
+	// page says the profile is not shared right now.
+	NotShared bool `json:"not_shared,omitempty"`
+	// Siblings are the person's open profiles in swipe order, this one included. Omitted when
+	// this is the only open profile.
+	Siblings []PublicSibling `json:"siblings,omitempty"`
 }

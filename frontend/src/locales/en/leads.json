@@ -25,6 +25,7 @@
   "source.profile": "Profile",
   "source.card": "Card",
   "source.smart_link": "Smart link",
+  "source.business_page": "Business page",
   "status.new": "New",
   "detail.title": "Lead",
   "detail.consent_given": "Given on {{date}} (text {{version}})",

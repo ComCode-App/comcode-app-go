@@ -62,6 +62,10 @@ type Service struct {
 
 	// mediaCleaner deletes a deleted profile's storage objects (TEC-1176); nil = vCards only.
 	mediaCleaner *MediaCleaner
+
+	// groups is the open switch and a person's swipe group (TEC-1326); nil = every profile is
+	// shown on its own, as before.
+	groups repository.ProfileGroupStore
 }
 
 func NewService(repo repository.Repository, store storage.Driver) *Service {
@@ -87,7 +91,14 @@ func (s *Service) List(ctx context.Context, p authctx.Principal, limit, offset i
 		offset = 0
 	}
 
-	return s.repo.ListByAccountID(ctx, p.Account.ID, limit, offset, q, status)
+	items, total, err := s.repo.ListByAccountID(ctx, p.Account.ID, limit, offset, q, status)
+	if err != nil {
+		return nil, 0, err
+	}
+	if err := s.markCanToggleOpen(ctx, p, items); err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
 }
 
 // get loads a profile of the caller's active account; profiles of other accounts are not found.

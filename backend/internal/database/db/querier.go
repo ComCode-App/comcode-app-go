@@ -167,6 +167,7 @@ type Querier interface {
 	CreateBackground(ctx context.Context, arg CreateBackgroundParams) (CreateBackgroundRow, error)
 	CreateBank(ctx context.Context, arg CreateBankParams) (Bank, error)
 	CreateBulkJob(ctx context.Context, arg CreateBulkJobParams) (BulkJob, error)
+	CreateBusinessPageRoute(ctx context.Context, arg CreateBusinessPageRouteParams) (int64, error)
 	CreateCanonicalRoute(ctx context.Context, arg CreateCanonicalRouteParams) (CreateCanonicalRouteRow, error)
 	// CreateCard inserts an app-created card together with its active c/{smart_code} route, so the
 	// card's QR / NFC link resolves immediately (provisioned cards get a reserved route instead).
@@ -224,6 +225,7 @@ type Querier interface {
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
 	DeleteBackgroundPreset(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	DeleteBank(ctx context.Context, argUuid uuid.UUID) error
+	DeleteBusinessPageBlocks(ctx context.Context, arg DeleteBusinessPageBlocksParams) error
 	DeleteCard(ctx context.Context, arg DeleteCardParams) error
 	DeleteCompanyMedia(ctx context.Context, arg DeleteCompanyMediaParams) (int64, error)
 	DeleteCompanyMemberProfile(ctx context.Context, arg DeleteCompanyMemberProfileParams) (int64, error)
@@ -345,6 +347,13 @@ type Querier interface {
 	GetBankByUUID(ctx context.Context, argUuid uuid.UUID) (Bank, error)
 	// account-lint: cross-account bulk worker: job id from the queue
 	GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error)
+	// ComCode Business pages (TEC-1327). App queries are scoped by account_id; the visitor read
+	// resolves a published page by its username route.
+	GetBusinessPage(ctx context.Context, accountID int64) (GetBusinessPageRow, error)
+	// The live (active or locked) username route of the account's business page.
+	GetBusinessPageRoute(ctx context.Context, accountID int64) (GetBusinessPageRouteRow, error)
+	// account-lint: cross-account public path lookup: paths are globally unique
+	GetBusinessPathOwner(ctx context.Context, path string) (GetBusinessPathOwnerRow, error)
 	// Public profile pages (/{username}): canonical_profile routes + profile bank account picks.
 	// account-lint: cross-account public profile page resolver
 	// Any canonical route (active, locked or retired) whose profile and account are still live.
@@ -440,6 +449,8 @@ type Querier interface {
 	// account-lint: cross-account platform order KPIs
 	GetOrderStats(ctx context.Context) (GetOrderStatsRow, error)
 	GetOrderStatusNotification(ctx context.Context, arg GetOrderStatusNotificationParams) (Notification, error)
+	// The caller's own employee profile in a company account (none: no rows).
+	GetOwnMemberProfileUUID(ctx context.Context, arg GetOwnMemberProfileUUIDParams) (uuid.UUID, error)
 	// account-lint: cross-account payment provider callback: merchant oid is the provider's reference
 	GetPaymentCardSessionByMerchantOID(ctx context.Context, merchantOid string) (PaymentCardSession, error)
 	// account-lint: cross-account payment provider callback: provider token is the reference
@@ -475,10 +486,17 @@ type Querier interface {
 	GetProductVariantByUUID(ctx context.Context, argUuid uuid.UUID) (ProductVariant, error)
 	GetProfileByUUIDForAccount(ctx context.Context, arg GetProfileByUUIDForAccountParams) (Profile, error)
 	GetProfileIDForAccount(ctx context.Context, arg GetProfileIDForAccountParams) (GetProfileIDForAccountRow, error)
+	// The open switch of a profile in the account, whether it is the caller's own employee profile,
+	// and whether the company keeps employee profiles always open.
+	GetProfileOpenState(ctx context.Context, arg GetProfileOpenStateParams) (GetProfileOpenStateRow, error)
 	// account-lint: cross-account platform /v1/platform/profile-verifications review queue
 	GetProfileVerificationRow(ctx context.Context, argUuid uuid.UUID) (GetProfileVerificationRowRow, error)
 	// Background shown on a public page: the owner account's or a preset.
 	GetPublicBackgroundForAccount(ctx context.Context, arg GetPublicBackgroundForAccountParams) (GetPublicBackgroundForAccountRow, error)
+	// account-lint: cross-account public visitor read: a business page username resolves to its company account
+	// A business page route by path whose account is a live company. Any status; the use case
+	// decides (active = visible, retired = redirect, locked = not found).
+	GetPublicBusinessRoute(ctx context.Context, path string) (GetPublicBusinessRouteRow, error)
 	GetQRLogo(ctx context.Context, arg GetQRLogoParams) (GetQRLogoRow, error)
 	GetRoleByID(ctx context.Context, id int64) (Role, error)
 	GetRoleBySlug(ctx context.Context, slug string) (Role, error)
@@ -545,6 +563,7 @@ type Querier interface {
 	InsertActivityEvent(ctx context.Context, arg InsertActivityEventParams) (ActivityEvent, error)
 	InsertAppLog(ctx context.Context, arg InsertAppLogParams) error
 	InsertBulkChange(ctx context.Context, arg InsertBulkChangeParams) (BulkChange, error)
+	InsertBusinessPageBlock(ctx context.Context, arg InsertBusinessPageBlockParams) error
 	InsertEvent(ctx context.Context, arg InsertEventParams) (InsertEventRow, error)
 	InsertImportChange(ctx context.Context, arg InsertImportChangeParams) (ImportChange, error)
 	InsertNotificationHistory(ctx context.Context, arg InsertNotificationHistoryParams) (NotificationHistory, error)
@@ -627,6 +646,14 @@ type Querier interface {
 	ListBulkJobsForAccount(ctx context.Context, arg ListBulkJobsForAccountParams) ([]BulkJob, error)
 	// Platform /v1/platform/bulk: the caller's own platform jobs (no account).
 	ListBulkJobsForActor(ctx context.Context, arg ListBulkJobsForActorParams) ([]BulkJob, error)
+	// Active bank accounts of the company among the picked uuids.
+	ListBusinessBankAccounts(ctx context.Context, arg ListBusinessBankAccountsParams) ([]ListBusinessBankAccountsRow, error)
+	// Image files of the company library by uuid (header logo and cover).
+	ListBusinessMedia(ctx context.Context, arg ListBusinessMediaParams) ([]ListBusinessMediaRow, error)
+	ListBusinessOffices(ctx context.Context, accountID int64) ([]ListBusinessOfficesRow, error)
+	ListBusinessPageBlocks(ctx context.Context, arg ListBusinessPageBlocksParams) ([]ListBusinessPageBlocksRow, error)
+	// Published, open employee profiles of the company for the "team" block (TEC-1327).
+	ListBusinessTeamProfiles(ctx context.Context, arg ListBusinessTeamProfilesParams) ([]ListBusinessTeamProfilesRow, error)
 	// account-lint: cross-account search index builder: documents carry account_id and searches filter on it
 	ListCardsForSearch(ctx context.Context, argUuid pgtype.UUID) ([]ListCardsForSearchRow, error)
 	ListCompaniesForSearch(ctx context.Context, argUuid pgtype.UUID) ([]ListCompaniesForSearchRow, error)
@@ -692,6 +719,11 @@ type Querier interface {
 	ListPermissionSlugsByRoleID(ctx context.Context, roleID int64) ([]string, error)
 	ListPermissionSlugsByRoleSlug(ctx context.Context, slug string) ([]string, error)
 	ListPermissionsFiltered(ctx context.Context, arg ListPermissionsFilteredParams) ([]Permission, error)
+	// Profile swipe (TEC-1326). A person's profiles are the profiles of their personal account and
+	// the company profiles linked to them as a member (company_member_profiles). Only profiles with
+	// an active public page in an active account take part.
+	// account-lint: cross-account public visitor read: the profiles of the one person behind a resolved public profile (TEC-1326)
+	ListPersonProfileGroup(ctx context.Context, profileID int64) ([]ListPersonProfileGroupRow, error)
 	ListPlanLimitsByPlanID(ctx context.Context, planID int64) ([]ListPlanLimitsByPlanIDRow, error)
 	ListPlanLimitsForPlanID(ctx context.Context, planID int64) ([]ListPlanLimitsForPlanIDRow, error)
 	ListPlanLimitsForPlanSlug(ctx context.Context, slug string) ([]ListPlanLimitsForPlanSlugRow, error)
@@ -738,6 +770,7 @@ type Querier interface {
 	ListRoutes(ctx context.Context, arg ListRoutesParams) ([]ListRoutesRow, error)
 	ListSectors(ctx context.Context, arg ListSectorsParams) ([]Sector, error)
 	ListSharedKeys(ctx context.Context, keys []string) ([]string, error)
+	ListSocialPlatformIconsBySlug(ctx context.Context, slugs []string) ([]ListSocialPlatformIconsBySlugRow, error)
 	ListSocialPlatforms(ctx context.Context, arg ListSocialPlatformsParams) ([]SocialPlatform, error)
 	// Deliveries whose task was lost (Redis down at enqueue, worker crash): due for a while and
 	// never attempted since.
@@ -947,6 +980,7 @@ type Querier interface {
 	ReplaceUserRoles(ctx context.Context, userID int64) error
 	// account-lint: cross-account resend: delivery id from GetWebhookDeliveryByUUID (account-scoped)
 	ResetWebhookDelivery(ctx context.Context, id int64) (WebhookDelivery, error)
+	RetireBusinessPageRoute(ctx context.Context, arg RetireBusinessPageRouteParams) error
 	// account-lint: cross-account route id from LiveRoute of the account's own profile
 	RetireCanonicalRoute(ctx context.Context, id int64) error
 	// account-lint: cross-account platform cancel/refund: retires the cards of that order
@@ -959,6 +993,7 @@ type Querier interface {
 	// account-lint: cross-account platform /v1/platform/profile-verifications approve/reject
 	// Approves or rejects a pending request; no row when it is not pending any more.
 	ReviewProfileVerification(ctx context.Context, arg ReviewProfileVerificationParams) (ProfileVerificationRequest, error)
+	ReviveBusinessPageRoute(ctx context.Context, arg ReviveBusinessPageRouteParams) (int64, error)
 	// account-lint: cross-account route id is a retired route of the same profile (PathOwner check)
 	ReviveCanonicalRoute(ctx context.Context, arg ReviveCanonicalRouteParams) error
 	RevokeAccountInvite(ctx context.Context, arg RevokeAccountInviteParams) (int64, error)
@@ -997,6 +1032,11 @@ type Querier interface {
 	// Stores the key of a freshly rendered thumbnail (TEC-599). The document must still be the one
 	// rendered, so a thumbnail never lands on a newer edit.
 	SetBackgroundThumbnail(ctx context.Context, arg SetBackgroundThumbnailParams) (int64, error)
+	// Mirrors "the page has an enabled lead form button" onto the live route, where the lead module
+	// reads presentation_config.lead_capture.enabled (TEC-552).
+	SetBusinessPageRouteLeadCapture(ctx context.Context, arg SetBusinessPageRouteLeadCaptureParams) error
+	SetBusinessPageRouteStatus(ctx context.Context, arg SetBusinessPageRouteStatusParams) error
+	SetBusinessPageStatus(ctx context.Context, arg SetBusinessPageStatusParams) (int64, error)
 	// account-lint: cross-account route id from LiveRoute of the account's own profile
 	SetCanonicalRouteState(ctx context.Context, arg SetCanonicalRouteStateParams) error
 	// SetCardLock sets the lock of one card of the account and returns the lock it had before, so a
@@ -1019,6 +1059,7 @@ type Querier interface {
 	// UpdateProduct keeps the category when none is given; an import rollback (TEC-596) uses this
 	// to put back exactly the category a product had before, none included.
 	SetProductCategory(ctx context.Context, arg SetProductCategoryParams) error
+	SetProfileOpen(ctx context.Context, arg SetProfileOpenParams) (int64, error)
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetStructureAssignment(ctx context.Context, arg SetStructureAssignmentParams) (int64, error)
 	SetUserEmailVerified(ctx context.Context, id int64) (User, error)
@@ -1117,6 +1158,7 @@ type Querier interface {
 	// Deploy provenance (TEC-1094). One row per (version, git_commit); the server upserts it on
 	// every boot (internal/platform/release.RecordBoot).
 	UpsertAppRelease(ctx context.Context, arg UpsertAppReleaseParams) (AppRelease, error)
+	UpsertBusinessPage(ctx context.Context, arg UpsertBusinessPageParams) (int64, error)
 	UpsertDailyAggregate(ctx context.Context, arg UpsertDailyAggregateParams) (EventAggregatesDaily, error)
 	UpsertHourlyAggregate(ctx context.Context, arg UpsertHourlyAggregateParams) (EventAggregatesHourly, error)
 	UpsertNotificationPreferences(ctx context.Context, arg UpsertNotificationPreferencesParams) (NotificationPreference, error)

@@ -43,5 +43,21 @@
   "tab.bank_accounts": "Bank details",
   "next_language": "Switch language: {{locale}}",
   "copy_account_holder": "Copy account holder",
-  "account_holder_copied": "Account holder copied"
+  "account_holder_copied": "Account holder copied",
+  "not_shared_title": "This profile is not shared right now",
+  "not_shared_body": "The owner has turned this profile off for now. Please try again later.",
+  "swipe.label": "Profiles",
+  "swipe.previous": "Previous profile: {{name}}",
+  "swipe.next": "Next profile: {{name}}",
+  "business.offices": "Our offices",
+  "business.team": "Our team",
+  "business.directions": "Directions",
+  "business.preview_empty": "On the published page this section is filled with your data.",
+  "business.target.url": "Website",
+  "business.target.phone": "Call",
+  "business.target.whatsapp": "WhatsApp",
+  "business.target.email": "Email",
+  "business.target.maps": "Location",
+  "business.target.google_review": "Leave a Google review",
+  "business.target.lead_form": "Get a quote"
 }

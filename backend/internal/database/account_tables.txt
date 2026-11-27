@@ -26,6 +26,8 @@ account_members
 account_monthly_usage
 backgrounds
 bulk_jobs
+business_page_blocks
+business_pages
 company_groups
 company_media
 company_member_assignments

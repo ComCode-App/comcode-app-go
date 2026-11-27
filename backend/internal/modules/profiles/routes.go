@@ -51,6 +51,14 @@ func RegisterRoutes(
 	mux.Handle("PUT /v1/profiles/{uuid}/public-page", middleware.Chain(
 		http.HandlerFunc(h.UpdatePublicPage), authn, require(rbac.PermAppProfilesWrite),
 	))
+	// Open switch (TEC-1326). The write permission is the first layer; the use case allows
+	// owners/admins and the employee on their own company profile.
+	mux.Handle("GET /v1/profiles/{uuid}/open", middleware.Chain(
+		http.HandlerFunc(h.GetOpen), authn, require(rbac.PermAppProfilesRead),
+	))
+	mux.Handle("PUT /v1/profiles/{uuid}/open", middleware.Chain(
+		http.HandlerFunc(h.SetOpen), authn, require(rbac.PermAppProfilesWrite),
+	))
 	// Visitor endpoints for comcode.../{username}: no auth.
 	mux.HandleFunc("GET /v1/public/p/{username}", h.PublicProfile)
 	mux.HandleFunc("GET /v1/public/p/{username}/vcard", h.PublicVCard)

@@ -12,6 +12,8 @@ export const Permission = {
   AppAccountInvitesWrite: "app.account_invites.write",
   AppCompanyBrandingRead: "app.company_branding.read",
   AppCompanyBrandingWrite: "app.company_branding.write",
+  AppBusinessPageRead: "app.business_page.read",
+  AppBusinessPageWrite: "app.business_page.write",
   PlatformSectorsRead: "platform.sectors.read",
   PlatformSectorsWrite: "platform.sectors.write",
   PlatformUsersRead: "platform.users.read",
@@ -255,6 +257,11 @@ export const permissions = {
   companyBranding: {
     read: Permission.AppCompanyBrandingRead,
     write: Permission.AppCompanyBrandingWrite,
+  },
+  /** Company business page (TEC-1327); writes also need an owner/admin role. */
+  businessPage: {
+    read: Permission.AppBusinessPageRead,
+    write: Permission.AppBusinessPageWrite,
   },
   banks: {
     read: Permission.PlatformBanksRead,

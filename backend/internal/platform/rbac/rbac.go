@@ -19,8 +19,12 @@ const (
 	PermAppAccountInvitesWrite = "app.account_invites.write"
 	// PermAppCompanyBranding* guard the company media library and branding (TEC-946); writes
 	// also need an owner/admin account role.
-	PermAppCompanyBrandingRead            = "app.company_branding.read"
-	PermAppCompanyBrandingWrite           = "app.company_branding.write"
+	PermAppCompanyBrandingRead  = "app.company_branding.read"
+	PermAppCompanyBrandingWrite = "app.company_branding.write"
+	// PermAppBusinessPage* guard the company business page (TEC-1327); writes also need an
+	// owner/admin account role.
+	PermAppBusinessPageRead               = "app.business_page.read"
+	PermAppBusinessPageWrite              = "app.business_page.write"
 	PermPlatformSectorsRead               = "platform.sectors.read"
 	PermPlatformSectorsWrite              = "platform.sectors.write"
 	PermPlatformUsersRead                 = "platform.users.read"

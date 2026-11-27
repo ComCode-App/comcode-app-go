@@ -2,6 +2,7 @@ import {
   BarChart3,
   Building,
   Layers,
+  LayoutTemplate,
   MapPin,
   Network,
   Palette,
@@ -61,6 +62,13 @@ export const companyStructureNavGroup = defineNavGroup({
       href: routes.app.company.branding,
       icon: Palette,
       permission: permissions.companyBranding.read,
+    },
+    {
+      id: "company-business-page",
+      titleKey: "layout.nav_company_business_page",
+      href: routes.app.company.businessPage,
+      icon: LayoutTemplate,
+      permission: permissions.businessPage.read,
     },
   ],
 });

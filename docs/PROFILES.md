@@ -150,9 +150,25 @@ Edited from profile detail, "Public page" (`GET/PUT /v1/profiles/{uuid}/public-p
 Creating a profile also creates its username route (`ensureUsername`); if that fails, the next
 `GET .../public-page` retries it.
 
+## Open switch (TEC-1326)
+
+`profiles.is_open` (default `true`) decides whether the profile is shown to visitors and takes part
+in the profile swipe ([PUBLIC_PROFILES.md](./PUBLIC_PROFILES.md#profile-swipe-tec-1326)).
+
+- `GET /v1/profiles/{uuid}/open` returns `is_open` (effective), `open_locked` and `can_toggle_open`.
+- `PUT /v1/profiles/{uuid}/open {is_open}` needs `app.profiles.write` and either an owner/admin role
+  in the active account or the profile being the caller's own employee profile
+  (`company_member_profiles`); anyone else gets 403, other accounts' profiles 404.
+- Company lock: `account_branding.profiles_always_open` (company branding page, "Members cannot
+  close their company profile"). While it is on, every employee profile of the company reads as
+  open and closing one is 409.
+- The list (`GET /v1/profiles`) carries `is_open`, `open_locked` and `can_toggle_open` per row.
+- UI: the switch on each card of Profillerim (`profile-open-switch.tsx`, one click) and on the
+  profile edit screen. Changes are logged as `profile.open_changed`.
+
 ## Caches
 
-Create-time username aside, update, avatar upload and delete call `routeCache.InvalidateProfile`, so
+Create-time username aside, update, avatar upload, delete and the open switch call `routeCache.InvalidateProfile`, so
 `/c/{code}`, `/s/{slug}` and `/{username}` resolution reflects the change without waiting for the 1h TTL.
 
 ## Not implemented

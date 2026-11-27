@@ -11,6 +11,7 @@ import {
   type ProfileTheme,
 } from "@/features/public-profile/lib/themes";
 import { ProfileCompletionBadge } from "@/features/profiles/components/profile-completion-badge";
+import { ProfileOpenSwitch } from "@/features/profiles/components/profile-open-switch";
 import {
   ProfileRowActionsMenu,
   type ProfileRowActionHandlers,
@@ -184,7 +185,18 @@ export function ProfilePreviewCard({
             )}
           </div>
         </div>
-        <ProfileCompletionBadge rate={profile.completion_rate} />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <ProfileCompletionBadge rate={profile.completion_rate} />
+          {/* Open switch (TEC-1326): one click before a meeting. */}
+          <ProfileOpenSwitch
+            profileUuid={profile.uuid}
+            state={{
+              is_open: profile.is_open ?? true,
+              open_locked: profile.open_locked ?? false,
+              can_toggle_open: profile.can_toggle_open ?? false,
+            }}
+          />
+        </div>
         <div className="border-border/60 mt-auto border-t pt-2">
           <ProfileRowActionsMenu profile={profile} handlers={handlers} />
         </div>

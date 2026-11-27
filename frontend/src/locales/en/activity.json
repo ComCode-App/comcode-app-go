@@ -56,6 +56,7 @@
   "actions.accounts.invite_accepted": "Account invite accepted",
   "resources.accounts": "Accounts",
   "actions.profile.username_changed": "Username changed",
+  "actions.profile.open_changed": "Profile opened / closed",
   "actions.route.path_changed": "Smart link path changed",
   "resources.app.company_profiles": "Employee profiles",
   "resources.app.cards": "NFC cards",

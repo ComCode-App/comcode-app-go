@@ -586,16 +586,17 @@ type Account struct {
 }
 
 type AccountBranding struct {
-	AccountID       int64              `json:"account_id"`
-	Theme           string             `json:"theme"`
-	LayoutMode      string             `json:"layout_mode"`
-	PrimaryColor    string             `json:"primary_color"`
-	LogoMediaID     pgtype.Int8        `json:"logo_media_id"`
-	CoverMediaID    pgtype.Int8        `json:"cover_media_id"`
-	Locked          bool               `json:"locked"`
-	UpdatedByUserID pgtype.Int8        `json:"updated_by_user_id"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	AccountID          int64              `json:"account_id"`
+	Theme              string             `json:"theme"`
+	LayoutMode         string             `json:"layout_mode"`
+	PrimaryColor       string             `json:"primary_color"`
+	LogoMediaID        pgtype.Int8        `json:"logo_media_id"`
+	CoverMediaID       pgtype.Int8        `json:"cover_media_id"`
+	Locked             bool               `json:"locked"`
+	UpdatedByUserID    pgtype.Int8        `json:"updated_by_user_id"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	ProfilesAlwaysOpen bool               `json:"profiles_always_open"`
 }
 
 type AccountInvite struct {
@@ -794,6 +795,34 @@ type BulkJob struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	AccountID     pgtype.Int8        `json:"account_id"`
 	ParamsJson    []byte             `json:"params_json"`
+}
+
+type BusinessPage struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	AccountID       int64              `json:"account_id"`
+	Status          string             `json:"status"`
+	Theme           string             `json:"theme"`
+	PrimaryLocale   string             `json:"primary_locale"`
+	Translations    []byte             `json:"translations"`
+	PublishedAt     pgtype.Timestamptz `json:"published_at"`
+	UpdatedByUserID pgtype.Int8        `json:"updated_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type BusinessPageBlock struct {
+	ID           int64              `json:"id"`
+	Uuid         uuid.UUID          `json:"uuid"`
+	AccountID    int64              `json:"account_id"`
+	PageID       int64              `json:"page_id"`
+	Type         string             `json:"type"`
+	Position     int32              `json:"position"`
+	Enabled      bool               `json:"enabled"`
+	Config       []byte             `json:"config"`
+	Translations []byte             `json:"translations"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type CompanyGroup struct {
@@ -2278,6 +2307,7 @@ type Profile struct {
 	DeletedAt      pgtype.Timestamptz `json:"deleted_at"`
 	AccountID      int64              `json:"account_id"`
 	SectorID       pgtype.Int8        `json:"sector_id"`
+	IsOpen         bool               `json:"is_open"`
 }
 
 type ProfileAddress struct {

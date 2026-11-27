@@ -54,6 +54,7 @@ Writes need an owner or admin role in the active account (docs/TENANCY_AND_ACCES
   - `contact.{phone,email,website,whatsapp,address}.click`
   - `social.link.click` (`platform` property)
   - `bank.iban.copy`
+  - `profile.swipe` (`from` property, TEC-1326)
 - Bank accounts (TEC-1314, `public-bank-account.tsx`, `lib/bank-color.ts`): each account is a card in the bank's color, taken from its logo in the browser (dominant non-white, non-grey color of a CORS copy of the logo), else the bank's `brand_color`, else the theme surface. Text is white or ink and the base is darkened or lightened until every text passes 4.5:1 (`bank-color.test.mjs`). The account holder and the IBAN each have a copy button; only the IBAN copy is an analytics event (`bank.iban.copy`).
 - No embedding (TEC-1119): visitor pages (`/{username}`, `/c/*`, `/s/*`, `/share/*`) cannot be shown in an iframe on another site. Every route sends `X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors 'none'` (`config/security-headers.ts`, applied from `next.config.ts`). Only the storage preview responses the app frames itself (`/api/v1/platform/storage/objects/preview`, `/api/v1/public/storage/*`) allow `'self'`. Embedding on partner sites would need an explicit `frame-ancestors` allowlist, an owner decision.
 - The internal Linear feedback widget is not loaded on visitor pages (`components/common/feedback-widget.tsx`).
@@ -61,6 +62,58 @@ Writes need an owner or admin role in the active account (docs/TENANCY_AND_ACCES
   - No session, React Query, step-up, realtime or dialog providers there. Do not call `useAuth`, `usePermission`, `useDialogs` or React Query hooks from visitor components.
   - A `t()` key used on a visitor page must be in a public namespace; panel namespaces (`lib/i18n/app-catalogs.ts`) are not loaded there.
   - Import feature services directly (`@/features/cards/services/cards.service`), not the feature barrel, which pulls panel components.
+
+## Profile swipe (TEC-1326)
+
+A person with several profiles can leave some open and close others (for example only the
+company profile for a meeting). Visitors move between the open ones.
+
+- **Group:** the profiles of the person's personal account, then their employee profiles in
+  company accounts (`company_member_profiles`), each in Profillerim order (primary first, then
+  newest). Only profiles with an active public page in an active account count. Profiles of other
+  people never join the group. A company profile no member is linked to stands alone.
+  Query: `ListPersonProfileGroup` (public read, cross-account by design).
+- **Open:** `profiles.is_open` (see [PROFILES.md](./PROFILES.md#open-switch-tec-1326)). An employee
+  profile is always open while the company has `profiles_always_open` on.
+- **Visitor API:** `GET /v1/public/p/{username}` adds `siblings` (`username`, `profile_uuid`,
+  `short_name` = company name, else the person's name) when two or more profiles are open, the
+  shown one included.
+  - A closed profile answers with the person's first open profile. None of the closed profile's
+    data is in the response or the page.
+  - No open profile: `{username, not_shared: true}` and nothing else. The page says "This profile is
+    not shared right now", with no contact data and no "save contact".
+  - `/vcard` follows the same rule; with nothing open it is 404.
+- Smart links and cards keep working: their target profile goes through the same rule. A smart
+  link's presentation applies only when the shown profile is its own target.
+- **Frontend:** `profile-swipe.tsx` wraps the page when `siblings` has two or more entries. Each
+  profile is its own page with its own theme and layout, so a move is a navigation to
+  `/{username}` (neighbours are prefetched): finger swipe on touch screens, arrow buttons from
+  `md` up, keyboard arrows, and a dot with the short name per profile at the bottom (raised above
+  the Comcode V1 tab bar). The lead form, contact exchange and vCard belong to the profile on
+  screen. `card.view` is recorded for each profile shown, and a move records `profile.swipe` on the
+  new profile with `from` = the previous profile uuid.
+
+## Business pages (TEC-1327)
+
+A company business page shares the `/{username}` namespace with profiles (a `business_page` row
+in the routes registry, see [COMPANIES.md](./COMPANIES.md#business-page-tec-1327)).
+
+- `app/[username]/page.tsx` loads the profile first (same arguments as `renderPublicProfile`, so
+  React cache keeps one upstream call and one QR scan). A username that is no profile is looked
+  up with `GET /v1/public/business/{username}` (`features/business-page/lib/load.ts`); a renamed
+  one redirects (308), a draft or unknown one is the usual 404.
+- `business-page-public.tsx` renders `business-page-view.tsx` (the same view as the panel
+  preview) with a language switch (locales that have texts), the lead form and visitor events.
+- Lead form: an enabled `lead_form` button sets the route's `presentation_config.lead_capture`,
+  so the lead module (`GET /v1/public/leads/form?path=`, `POST /v1/public/leads`) serves it like
+  a profile form. The lead's `source_type` is `business_page` (migration 000093); it reaches the
+  company inbox for owners and admins only (it has no profile). Without a live form (quota 0) the
+  button is left out.
+- Events (subject `{type: "business_page", id: page_uuid}`): `business.page.view`,
+  `business.button.click` (`target` property), and the shared `contact.address.click`,
+  `contact.phone.click`, `social.link.click`, `bank.iban.copy`.
+- Visitor bundle: the page imports the view and the public helpers directly, never the
+  `features/business-page` index (it pulls the panel editor).
 
 ## Backgrounds (TEC-599)
 

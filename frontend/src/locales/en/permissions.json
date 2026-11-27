@@ -123,6 +123,8 @@
   "labels.app.account_invites.write": "Manage account invites",
   "labels.app.company_branding.read": "Read company branding and media",
   "labels.app.company_branding.write": "Manage company branding and media",
+  "labels.app.business_page.read": "Read the business page",
+  "labels.app.business_page.write": "Manage the business page",
   "labels.app.webhooks.read": "Read webhooks",
   "labels.app.webhooks.write": "Manage webhooks",
   "labels.platform.orders.approve": "Approve or reject platform orders"

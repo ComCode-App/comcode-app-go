@@ -384,5 +384,12 @@
   "shared_profiles.title": "Üye profilleri",
   "shared_profiles.description": "Üyelerin bu firmayla paylaşmayı seçtiği kişisel profiller. Görüntüleyebilirsiniz, düzenleyemezsiniz.",
   "shared_profiles.read_only": "Salt okunur",
-  "shared_profiles.shared_by": "Paylaşan: {{name}}"
+  "shared_profiles.shared_by": "Paylaşan: {{name}}",
+  "open_switch.title": "Paylaşım",
+  "open_switch.open": "Açık",
+  "open_switch.off": "Kapalı",
+  "open_switch.hint": "Kapalı profil ziyaretçilere gösterilmez; linki, kartı ve QR'ı ilk açık profilinizi açar. Açık profilleriniz arasında kaydırarak geçilebilir.",
+  "open_switch.locked_hint": "Firma, çalışan profillerini her zaman açık tutuyor.",
+  "open_switch.opened": "Profil açıldı.",
+  "open_switch.closed": "Profil kapatıldı."
 }

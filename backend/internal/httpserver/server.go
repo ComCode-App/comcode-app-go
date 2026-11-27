@@ -60,6 +60,10 @@ import (
 	bulkmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/bulk"
 	bulkhandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/bulk/handler"
 	bulkusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/bulk/usecase"
+	businesspagesmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/businesspages"
+	businesspageshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/businesspages/handler"
+	businesspagesrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/businesspages/repository"
+	businesspagesusecase "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/businesspages/usecase"
 	cardsmodule "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/cards"
 	cardshandler "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/cards/handler"
 	cardsrepo "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/cards/repository"
@@ -392,6 +396,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	exchangeCopyFiles.VCards = profilesSvc
 	profilesSvc.SetQuotas(entitlementSvc)
 	profilesSvc.SetPublicPages(profilesRepo)
+	profilesSvc.SetProfileGroups(profilesRepo) // open switch and swipe group (TEC-1326)
 	profilesSvc.SetRouteCache(routeCache)
 	profilesSvc.SetActivity(activityRec)
 	backgroundsSvc := backgroundsusecase.New(deps.Queries)
@@ -521,6 +526,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		profilesharesusecase.NewService(deps.Queries, activityRec),
 	), tokens, loader)
 	companybrandingmodule.RegisterRoutes(mux, companybrandinghandler.New(companyBrandingSvc), tokens, loader)
+	// ComCode Business pages (TEC-1327).
+	businessPagesSvc := businesspagesusecase.New(businesspagesrepo.NewPostgres(deps.DB, deps.Queries), deps.Storage)
+	businessPagesSvc.SetFeatures(entitlementSvc)
+	businessPagesSvc.SetBranding(companyBrandingSvc)
+	businesspagesmodule.RegisterRoutes(mux, businesspageshandler.New(businessPagesSvc), tokens, loader)
 	sysSvc := settingsusecase.NewSystemService(cfg, deps.DB, deps.Redis, deps.Storage, searchClient)
 	settingsmodule.RegisterRoutes(mux, settingshandler.New(settingsusecase.New(deps.Queries), deps.Storage, sysSvc), tokens, loader)
 	accessmodule.RegisterRoutes(mux, accesshandler.New(stepUpSvc, activityRec), tokens, loader)

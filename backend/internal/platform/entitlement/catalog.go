@@ -21,6 +21,9 @@ const (
 	// FeatureDesignPremium unlocks premium themes and animated backgrounds (TEC-947). Without it
 	// saving one is refused and public pages render the basic theme / background instead.
 	FeatureDesignPremium = "design.premium"
+	// FeatureBusinessPage turns the company business page on (TEC-1327). Without it the page
+	// cannot be saved or published and its public address answers 404.
+	FeatureBusinessPage = "business_page.enabled"
 )
 
 const FreePlanSlug = "free"
@@ -46,5 +49,6 @@ func Catalog() []FeatureDef {
 		{Key: FeatureExchangeMonthlyMax, ValueType: "int", Monthly: true},
 		{Key: FeatureLeadsExportMonthlyMax, ValueType: "int", Monthly: true},
 		{Key: FeatureDesignPremium, ValueType: "bool"},
+		{Key: FeatureBusinessPage, ValueType: "bool"},
 	}
 }
