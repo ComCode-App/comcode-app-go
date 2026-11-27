@@ -7350,6 +7350,97 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/business-page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Business page of the active company
+         * @description TEC-1327. Requires app.business_page.read and a company account (403 otherwise). 404 until the first save.
+         */
+        get: operations["getBusinessPage"];
+        /**
+         * Replace the business page
+         * @description TEC-1327. Requires app.business_page.write, a company account and an owner/admin role, and
+         *     the `business_page.enabled` plan feature (403 `PLAN_LIMIT_EXCEEDED` otherwise). Replaces the
+         *     settings and the whole block list; list order is page order. The first save needs a
+         *     `username` (same rules and the same namespace as profile usernames; 409 when taken). A
+         *     different username renames the page and the old one redirects. A new page starts as a draft.
+         */
+        put: operations["saveBusinessPage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/business-page/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish the business page
+         * @description TEC-1327. Same access as save, including `business_page.enabled`. The page becomes visible at /{username}.
+         */
+        post: operations["publishBusinessPage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/business-page/unpublish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Turn the business page back into a draft
+         * @description TEC-1327. Owner/admin of the company. A draft answers 404 to visitors.
+         */
+        post: operations["unpublishBusinessPage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/business/{username}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Visitor view of a business page
+         * @description TEC-1327. No auth. Only a published page of an active company whose plan has
+         *     `business_page.enabled`; drafts, unknown usernames and suspended companies are 404.
+         *     Disabled blocks are left out. A renamed username returns only `username` and `redirect_to`.
+         *     Logo, cover, theme and color fall back to the company branding.
+         */
+        get: operations["getPublicBusinessPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/company/branding": {
         parameters: {
             query?: never;
@@ -10314,6 +10405,145 @@ export interface components {
             uuid: string;
             url: string;
         };
+        BusinessPageText: {
+            name?: string;
+            tagline?: string;
+        };
+        BusinessBlockText: {
+            title?: string;
+            subtitle?: string;
+        };
+        /** @enum {string} */
+        BusinessBlockType: "header" | "button" | "social" | "offices" | "team" | "bank_accounts";
+        /** @enum {string} */
+        BusinessButtonTarget: "url" | "phone" | "whatsapp" | "email" | "maps" | "google_review" | "lead_form";
+        BusinessPageBlock: {
+            /** Format: uuid */
+            uuid: string;
+            type: components["schemas"]["BusinessBlockType"];
+            enabled: boolean;
+            /** @description By type. header: {logo_media_uuid, cover_media_uuid} (company library images, null = branding). button: {target, value, icon}. social: {links: [{platform, url}]}. bank_accounts: {bank_account_uuids}. offices, team: {} */
+            config: {
+                [key: string]: unknown;
+            };
+            translations: {
+                [key: string]: components["schemas"]["BusinessBlockText"];
+            };
+        };
+        BusinessPage: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            status: "draft" | "published";
+            username: string;
+            /** @description Page theme; empty = the company branding theme */
+            theme: components["schemas"]["PublicTheme"] | "";
+            /** @enum {string} */
+            primary_locale: "tr" | "en";
+            translations: {
+                [key: string]: components["schemas"]["BusinessPageText"];
+            };
+            blocks: components["schemas"]["BusinessPageBlock"][];
+            /** Format: date-time */
+            published_at: string | null;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EnvelopeBusinessPage: {
+            /** @constant */
+            success: true;
+            data: components["schemas"]["BusinessPage"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        SaveBusinessPageBlock: {
+            type: components["schemas"]["BusinessBlockType"];
+            /** @description Omitted = true */
+            enabled?: boolean;
+            /** @description See BusinessPageBlock.config; unknown fields are 400. Button values: url and google_review http(s) addresses, phone/whatsapp a phone number, email an address, maps an address or link, lead_form none */
+            config?: {
+                [key: string]: unknown;
+            };
+            translations?: {
+                [key: string]: components["schemas"]["BusinessBlockText"];
+            };
+        };
+        SaveBusinessPageRequest: {
+            /** @description Required on the first save; a different value renames */
+            username?: string;
+            /** @description A PublicTheme or empty */
+            theme?: string;
+            /** @enum {string} */
+            primary_locale?: "tr" | "en";
+            translations?: {
+                [key: string]: components["schemas"]["BusinessPageText"];
+            };
+            blocks?: components["schemas"]["SaveBusinessPageBlock"][];
+        };
+        PublicBusinessBlock: {
+            type: components["schemas"]["BusinessBlockType"];
+            translations: {
+                [key: string]: components["schemas"]["BusinessBlockText"];
+            };
+            button?: {
+                target: components["schemas"]["BusinessButtonTarget"];
+                value: string;
+                icon: string;
+            };
+            social?: {
+                platform: string;
+                url: string;
+                icon_url: string;
+            }[];
+            offices?: {
+                name: string;
+                city: string;
+                district: string;
+                address: string;
+                phone: string;
+            }[];
+            /** @description Published, open employee profiles */
+            team?: {
+                username: string;
+                first_name: string;
+                last_name: string;
+                title: string;
+                avatar_url: string;
+            }[];
+            bank_accounts?: {
+                bank_name?: string;
+                bank_icon_url?: string;
+                bank_brand_color?: string;
+                account_holder: string;
+                iban: string;
+                currency?: string;
+                title?: string;
+            }[];
+        };
+        PublicBusinessPage: {
+            username: string;
+            /** @description Set when the username was renamed; other fields are empty */
+            redirect_to?: string;
+            /** Format: uuid */
+            page_uuid: string;
+            company_name: string;
+            /** @enum {string} */
+            primary_locale: "tr" | "en";
+            translations: {
+                [key: string]: components["schemas"]["BusinessPageText"];
+            };
+            /** @description Page theme, else the company branding theme, else empty. A premium theme renders its basic stand-in without design.premium */
+            theme: string;
+            primary_color: string;
+            logo_url: string;
+            cover_url: string;
+            blocks: components["schemas"]["PublicBusinessBlock"][];
+        };
+        EnvelopePublicBusinessPage: {
+            /** @constant */
+            success: true;
+            data: components["schemas"]["PublicBusinessPage"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         CompanyBranding: {
             theme: components["schemas"]["PublicTheme"] | "";
             layout_mode: components["schemas"]["PublicLayoutMode"] | "";
@@ -12644,7 +12874,7 @@ export interface components {
             uuid: string;
             path: string;
             /** @enum {string} */
-            route_type: "canonical_profile" | "custom_smart_link" | "card_route" | "legacy_route" | "system_reserved";
+            route_type: "canonical_profile" | "custom_smart_link" | "card_route" | "legacy_route" | "system_reserved" | "business_page";
             /**
              * @description Stored status; a deleted smart link shows `quarantine` while it holds its path, then `retired`
              * @enum {string}
@@ -12990,12 +13220,12 @@ export interface components {
             uuid: string;
             path: string;
             /** @enum {string} */
-            route_type: "canonical_profile" | "custom_smart_link" | "card_route" | "legacy_route" | "system_reserved";
+            route_type: "canonical_profile" | "custom_smart_link" | "card_route" | "legacy_route" | "system_reserved" | "business_page";
             /** @enum {string} */
             status: "reserved" | "active" | "locked" | "retired";
             is_immutable: boolean;
             /** @enum {string} */
-            target_type: "profile" | "direct_url" | "vcard_download" | "social_hub" | "custom_modules";
+            target_type: "profile" | "direct_url" | "vcard_download" | "social_hub" | "custom_modules" | "business_page";
             /** Format: uuid */
             profile_uuid?: string;
             /** Format: uuid */
@@ -13114,12 +13344,12 @@ export interface components {
             uuid: string;
             path: string;
             /** @enum {string} */
-            route_type: "canonical_profile" | "custom_smart_link" | "card_route" | "legacy_route" | "system_reserved";
+            route_type: "canonical_profile" | "custom_smart_link" | "card_route" | "legacy_route" | "system_reserved" | "business_page";
             /** @enum {string} */
             status: "reserved" | "active" | "locked" | "retired";
             is_immutable: boolean;
             /** @enum {string} */
-            target_type: "profile" | "direct_url" | "vcard_download" | "social_hub" | "custom_modules";
+            target_type: "profile" | "direct_url" | "vcard_download" | "social_hub" | "custom_modules" | "business_page";
             /** Format: uuid */
             target_id?: string;
             /** Format: uuid */
@@ -13156,7 +13386,7 @@ export interface components {
         UpdateRouteInput: {
             path?: string;
             /** @enum {string} */
-            target_type?: "profile" | "direct_url" | "vcard_download" | "social_hub" | "custom_modules";
+            target_type?: "profile" | "direct_url" | "vcard_download" | "social_hub" | "custom_modules" | "business_page";
             /** Format: uuid */
             profile_uuid?: string;
             direct_url?: string;
@@ -26289,6 +26519,126 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getBusinessPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBusinessPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    saveBusinessPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveBusinessPageRequest"];
+            };
+        };
+        responses: {
+            /** @description Saved page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBusinessPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    publishBusinessPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBusinessPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unpublishBusinessPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Draft page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBusinessPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPublicBusinessPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePublicBusinessPage"];
+                };
+            };
+            404: components["responses"]["NotFound"];
         };
     };
     getCompanyBranding: {

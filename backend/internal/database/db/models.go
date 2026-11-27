@@ -797,6 +797,34 @@ type BulkJob struct {
 	ParamsJson    []byte             `json:"params_json"`
 }
 
+type BusinessPage struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	AccountID       int64              `json:"account_id"`
+	Status          string             `json:"status"`
+	Theme           string             `json:"theme"`
+	PrimaryLocale   string             `json:"primary_locale"`
+	Translations    []byte             `json:"translations"`
+	PublishedAt     pgtype.Timestamptz `json:"published_at"`
+	UpdatedByUserID pgtype.Int8        `json:"updated_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type BusinessPageBlock struct {
+	ID           int64              `json:"id"`
+	Uuid         uuid.UUID          `json:"uuid"`
+	AccountID    int64              `json:"account_id"`
+	PageID       int64              `json:"page_id"`
+	Type         string             `json:"type"`
+	Position     int32              `json:"position"`
+	Enabled      bool               `json:"enabled"`
+	Config       []byte             `json:"config"`
+	Translations []byte             `json:"translations"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
 type CompanyGroup struct {
 	ID        int64              `json:"id"`
 	Uuid      uuid.UUID          `json:"uuid"`

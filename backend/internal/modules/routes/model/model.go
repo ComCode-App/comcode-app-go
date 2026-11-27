@@ -12,6 +12,8 @@ const (
 	RouteTypeCardRoute        = "card_route"
 	RouteTypeLegacyRoute      = "legacy_route"
 	RouteTypeSystemReserved   = "system_reserved"
+	// RouteTypeBusinessPage is a company business page username (TEC-1327).
+	RouteTypeBusinessPage = "business_page"
 )
 
 const (
@@ -27,6 +29,7 @@ const (
 	TargetTypeVCardDownload = "vcard_download"
 	TargetTypeSocialHub     = "social_hub"
 	TargetTypeCustomModules = "custom_modules"
+	TargetTypeBusinessPage  = "business_page"
 )
 
 // PresentationConfig defines how the target entity is presented without modifying the target.

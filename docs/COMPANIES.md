@@ -270,6 +270,29 @@ closing their employee profile: it always takes part in their profile swipe
 ([PUBLIC_PROFILES.md](./PUBLIC_PROFILES.md#profile-swipe-tec-1326)). Deleting a library file clears the branding pick (FK `ON DELETE SET NULL`),
 but the API refuses that delete first.
 
+## Business page (TEC-1327)
+
+ComCode Business: the company's own link page at `/{username}` (logo, cover, name, a tagline and
+large action buttons). Module `backend/internal/modules/businesspages`; panel and public page come
+in the next parts (B, C).
+
+- Data (migration 000092): `business_pages` (one per company: `status` draft/published, `theme`
+  (`""` = company branding), `primary_locale`, `translations` `{tr|en: {name, tagline}}`) and
+  `business_page_blocks` (ordered, `enabled`, `config`, `translations` `{tr|en: {title, subtitle}}`).
+  Block types: `header` (logo and cover from the media library, else branding), `button`
+  (target `url`, `phone`, `whatsapp`, `email`, `maps`, `google_review` or `lead_form`), `social`,
+  `offices` (all company offices), `team` (published, open employee profiles) and
+  `bank_accounts` (picked active company accounts).
+- Username: a `business_page` route in the routes registry, the same namespace and rules as
+  profile usernames. A rename retires the old route, which redirects. Draft = route `locked`
+  (404), published = `active`.
+- App API: `GET`/`PUT /v1/business-page`, `POST /v1/business-page/publish|unpublish`. Company
+  accounts only; reads need `app.business_page.read`, writes `app.business_page.write` and an
+  owner/admin role; saving and publishing need the `business_page.enabled` plan feature.
+- Visitor API: `GET /v1/public/business/{username}` (published page of an active company whose
+  plan has the feature; disabled blocks left out; theme, color, logo and cover fall back to the
+  branding).
+
 ## Cards & orders (TEC-572)
 
 Company asset APIs live in `backend/internal/modules/companyassets`. They require an active

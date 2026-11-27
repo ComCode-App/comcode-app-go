@@ -41,6 +41,8 @@ servers:
     description: Local development
 
 tags:
+  - name: Business Pages
+    description: "ComCode Business (TEC-1327): a company account's own link page at /{username}"
   - name: Leads
     description: Lead capture forms on public profiles, cards and smart links, and the account's lead inbox
   - name: Webhooks
@@ -11256,6 +11258,100 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+  /v1/business-page:
+    get:
+      tags: ["Business Pages"]
+      operationId: getBusinessPage
+      summary: Business page of the active company
+      description: "TEC-1327. Requires app.business_page.read and a company account (403 otherwise). 404 until the first save."
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeBusinessPage" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: ["Business Pages"]
+      operationId: saveBusinessPage
+      summary: Replace the business page
+      description: |
+        TEC-1327. Requires app.business_page.write, a company account and an owner/admin role, and
+        the `business_page.enabled` plan feature (403 `PLAN_LIMIT_EXCEEDED` otherwise). Replaces the
+        settings and the whole block list; list order is page order. The first save needs a
+        `username` (same rules and the same namespace as profile usernames; 409 when taken). A
+        different username renames the page and the old one redirects. A new page starts as a draft.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveBusinessPageRequest" }
+      responses:
+        "200":
+          description: Saved page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeBusinessPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /v1/business-page/publish:
+    post:
+      tags: ["Business Pages"]
+      operationId: publishBusinessPage
+      summary: Publish the business page
+      description: "TEC-1327. Same access as save, including `business_page.enabled`. The page becomes visible at /{username}."
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Published page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeBusinessPage" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/business-page/unpublish:
+    post:
+      tags: ["Business Pages"]
+      operationId: unpublishBusinessPage
+      summary: Turn the business page back into a draft
+      description: "TEC-1327. Owner/admin of the company. A draft answers 404 to visitors."
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Draft page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeBusinessPage" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/public/business/{username}:
+    get:
+      tags: ["Business Pages"]
+      operationId: getPublicBusinessPage
+      summary: Visitor view of a business page
+      description: |
+        TEC-1327. No auth. Only a published page of an active company whose plan has
+        `business_page.enabled`; drafts, unknown usernames and suspended companies are 404.
+        Disabled blocks are left out. A renamed username returns only `username` and `redirect_to`.
+        Logo, cover, theme and color fall back to the company branding.
+      security: []
+      parameters:
+        - { name: username, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Public page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePublicBusinessPage" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /v1/company/branding:
     get:
       tags: ["App"]
@@ -15850,6 +15946,178 @@ components:
       properties:
         uuid: { type: string, format: uuid }
         url: { type: string }
+    BusinessPageText:
+      type: object
+      properties:
+        name: { type: string, maxLength: 120 }
+        tagline: { type: string, maxLength: 200 }
+    BusinessBlockText:
+      type: object
+      properties:
+        title: { type: string, maxLength: 120 }
+        subtitle: { type: string, maxLength: 200 }
+    BusinessBlockType:
+      type: string
+      enum: [header, button, social, offices, team, bank_accounts]
+    BusinessButtonTarget:
+      type: string
+      enum: [url, phone, whatsapp, email, maps, google_review, lead_form]
+    BusinessPageBlock:
+      type: object
+      required: [uuid, type, enabled, config, translations]
+      properties:
+        uuid: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/BusinessBlockType" }
+        enabled: { type: boolean }
+        config:
+          type: object
+          additionalProperties: true
+          description: "By type. header: {logo_media_uuid, cover_media_uuid} (company library images, null = branding). button: {target, value, icon}. social: {links: [{platform, url}]}. bank_accounts: {bank_account_uuids}. offices, team: {}"
+        translations:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/BusinessBlockText" }
+    BusinessPage:
+      type: object
+      required: [uuid, status, username, theme, primary_locale, translations, blocks, published_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        status: { type: string, enum: [draft, published] }
+        username: { type: string }
+        theme:
+          description: "Page theme; empty = the company branding theme"
+          oneOf:
+            - { $ref: "#/components/schemas/PublicTheme" }
+            - { type: string, const: "" }
+        primary_locale: { type: string, enum: [tr, en] }
+        translations:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/BusinessPageText" }
+        blocks:
+          type: array
+          items: { $ref: "#/components/schemas/BusinessPageBlock" }
+        published_at: { type: [string, "null"], format: date-time }
+        updated_at: { type: string, format: date-time }
+    EnvelopeBusinessPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: "#/components/schemas/BusinessPage" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    SaveBusinessPageBlock:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type: { $ref: "#/components/schemas/BusinessBlockType" }
+        enabled: { type: boolean, description: "Omitted = true" }
+        config:
+          type: object
+          additionalProperties: true
+          description: "See BusinessPageBlock.config; unknown fields are 400. Button values: url and google_review http(s) addresses, phone/whatsapp a phone number, email an address, maps an address or link, lead_form none"
+        translations:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/BusinessBlockText" }
+    SaveBusinessPageRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        username: { type: string, description: "Required on the first save; a different value renames" }
+        theme: { type: string, description: "A PublicTheme or empty" }
+        primary_locale: { type: string, enum: [tr, en] }
+        translations:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/BusinessPageText" }
+        blocks:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/SaveBusinessPageBlock" }
+    PublicBusinessBlock:
+      type: object
+      required: [type, translations]
+      properties:
+        type: { $ref: "#/components/schemas/BusinessBlockType" }
+        translations:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/BusinessBlockText" }
+        button:
+          type: object
+          required: [target, value, icon]
+          properties:
+            target: { $ref: "#/components/schemas/BusinessButtonTarget" }
+            value: { type: string }
+            icon: { type: string }
+        social:
+          type: array
+          items:
+            type: object
+            required: [platform, url, icon_url]
+            properties:
+              platform: { type: string }
+              url: { type: string }
+              icon_url: { type: string }
+        offices:
+          type: array
+          items:
+            type: object
+            required: [name, city, district, address, phone]
+            properties:
+              name: { type: string }
+              city: { type: string }
+              district: { type: string }
+              address: { type: string }
+              phone: { type: string }
+        team:
+          type: array
+          description: Published, open employee profiles
+          items:
+            type: object
+            required: [username, first_name, last_name, title, avatar_url]
+            properties:
+              username: { type: string }
+              first_name: { type: string }
+              last_name: { type: string }
+              title: { type: string }
+              avatar_url: { type: string }
+        bank_accounts:
+          type: array
+          items:
+            type: object
+            required: [account_holder, iban]
+            properties:
+              bank_name: { type: string }
+              bank_icon_url: { type: string }
+              bank_brand_color: { type: string }
+              account_holder: { type: string }
+              iban: { type: string }
+              currency: { type: string }
+              title: { type: string }
+    PublicBusinessPage:
+      type: object
+      required: [username, page_uuid, company_name, primary_locale, translations, theme, primary_color, logo_url, cover_url, blocks]
+      properties:
+        username: { type: string }
+        redirect_to: { type: string, description: "Set when the username was renamed; other fields are empty" }
+        page_uuid: { type: string, format: uuid }
+        company_name: { type: string }
+        primary_locale: { type: string, enum: [tr, en] }
+        translations:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/BusinessPageText" }
+        theme: { type: string, description: "Page theme, else the company branding theme, else empty. A premium theme renders its basic stand-in without design.premium" }
+        primary_color: { type: string }
+        logo_url: { type: string }
+        cover_url: { type: string }
+        blocks:
+          type: array
+          items: { $ref: "#/components/schemas/PublicBusinessBlock" }
+    EnvelopePublicBusinessPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: "#/components/schemas/PublicBusinessPage" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
     CompanyBranding:
       type: object
       required: [theme, layout_mode, primary_color, logo, cover, locked, updated_at]
@@ -18562,7 +18830,7 @@ components:
       properties:
         uuid: { type: string, format: uuid }
         path: { type: string }
-        route_type: { type: string, enum: [canonical_profile, custom_smart_link, card_route, legacy_route, system_reserved] }
+        route_type: { type: string, enum: [canonical_profile, custom_smart_link, card_route, legacy_route, system_reserved, business_page] }
         status:
           type: string
           enum: [reserved, active, locked, retired, quarantine]
@@ -18920,10 +19188,10 @@ components:
       properties:
         uuid: { type: string, format: uuid }
         path: { type: string }
-        route_type: { type: string, enum: [canonical_profile, custom_smart_link, card_route, legacy_route, system_reserved] }
+        route_type: { type: string, enum: [canonical_profile, custom_smart_link, card_route, legacy_route, system_reserved, business_page] }
         status: { type: string, enum: [reserved, active, locked, retired] }
         is_immutable: { type: boolean }
-        target_type: { type: string, enum: [profile, direct_url, vcard_download, social_hub, custom_modules] }
+        target_type: { type: string, enum: [profile, direct_url, vcard_download, social_hub, custom_modules, business_page] }
         profile_uuid: { type: string, format: uuid }
         card_uuid: { type: string, format: uuid }
         direct_url: { type: string }
@@ -19068,10 +19336,10 @@ components:
       properties:
         uuid: { type: string, format: uuid }
         path: { type: string }
-        route_type: { type: string, enum: [canonical_profile, custom_smart_link, card_route, legacy_route, system_reserved] }
+        route_type: { type: string, enum: [canonical_profile, custom_smart_link, card_route, legacy_route, system_reserved, business_page] }
         status: { type: string, enum: [reserved, active, locked, retired] }
         is_immutable: { type: boolean }
-        target_type: { type: string, enum: [profile, direct_url, vcard_download, social_hub, custom_modules] }
+        target_type: { type: string, enum: [profile, direct_url, vcard_download, social_hub, custom_modules, business_page] }
         target_id: { type: string, format: uuid }
         profile_uuid: { type: string, format: uuid }
         profile_avatar_url: { type: string }
@@ -19105,7 +19373,7 @@ components:
       type: object
       properties:
         path: { type: string }
-        target_type: { type: string, enum: [profile, direct_url, vcard_download, social_hub, custom_modules] }
+        target_type: { type: string, enum: [profile, direct_url, vcard_download, social_hub, custom_modules, business_page] }
         profile_uuid: { type: string, format: uuid }
         direct_url: { type: string }
         status: { type: string, enum: [reserved, active, locked, retired] }
