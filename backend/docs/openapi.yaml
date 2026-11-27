@@ -14431,7 +14431,9 @@ components:
         link_clicks: {"type": "integer", "format": "int64", "description": "route.scan on smart links"}
         contact_clicks: {"type": "integer", "format": "int64", "description": "contact.*, social.* and bank.* interactions"}
         leads: {"type": "integer", "format": "int64", "description": "Lead form submissions"}
-      required: ["total_events", "profile_views", "card_taps", "qr_scans", "contact_saves", "link_clicks", "contact_clicks", "leads"]
+        business_page_views: {"type": "integer", "format": "int64", "description": "business.page.view on the company business page (whole-company scope only)"}
+        business_page_clicks: {"type": "integer", "format": "int64", "description": "Every other business page interaction: action buttons, contact, social, IBAN (not in contact_clicks)"}
+      required: ["total_events", "profile_views", "card_taps", "qr_scans", "contact_saves", "link_clicks", "contact_clicks", "leads", "business_page_views", "business_page_clicks"]
     CompanyAnalyticsSummary:
       type: "object"
       properties:
@@ -19049,7 +19051,7 @@ components:
         name: { type: string }
         card_uid: { type: string }
         smart_code: { type: string }
-        target_type: { type: string, enum: [profile, direct_url, vcard_download, social_hub] }
+        target_type: { type: string, enum: [profile, direct_url, vcard_download, social_hub, business_page], description: "business_page (company accounts only) opens the company business page" }
         profile_uuid: { type: string, format: uuid }
         profile_avatar_url: { type: string }
         profile_locale: { type: string }
@@ -19077,7 +19079,7 @@ components:
         card_uid: { type: string }
         activation_code: { type: string }
         smart_code: { type: string }
-        target_type: { type: string, enum: [profile, direct_url, vcard_download, social_hub] }
+        target_type: { type: string, enum: [profile, direct_url, vcard_download, social_hub, business_page], description: "business_page (company accounts only) opens the company business page" }
         profile_uuid: { type: string, format: uuid }
         profile_avatar_url: { type: string }
         profile_locale: { type: string }
@@ -19101,7 +19103,7 @@ components:
       properties:
         name: { type: string }
         card_uid: { type: string }
-        target_type: { type: string, enum: [profile, direct_url, vcard_download, social_hub] }
+        target_type: { type: string, enum: [profile, direct_url, vcard_download, social_hub, business_page], description: "business_page (company accounts only) opens the company business page" }
         profile_uuid: { type: string, format: uuid }
         direct_url: { type: string }
         custom_data: { type: object }
@@ -19351,6 +19353,7 @@ components:
         card_lead_capture_enabled: { type: boolean }
         card_has_passcode: { type: boolean }
         direct_url: { type: string }
+        business_username: { type: string, description: "Username of the account's published business page, for business_page targets" }
         presentation_config: { type: object }
         legacy_metadata: { type: object }
         created_at: { type: string, format: date-time }
@@ -19363,8 +19366,8 @@ components:
         slug: { type: string }
         target_type:
           type: string
-          enum: [profile, direct_url, vcard_download, social_hub]
-          description: "profile, vcard_download and social_hub need profile_uuid; direct_url needs an https direct_url"
+          enum: [profile, direct_url, vcard_download, social_hub, business_page]
+          description: "profile, vcard_download and social_hub need profile_uuid; direct_url needs an https direct_url; business_page (company accounts only) opens the company's published business page"
         profile_uuid: { type: string, format: uuid }
         direct_url: { type: string }
         presentation_config: { $ref: "#/components/schemas/SmartLinkPresentationConfig" }

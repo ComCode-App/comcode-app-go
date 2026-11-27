@@ -18,7 +18,14 @@ SELECT
     c.lead_capture_enabled AS card_lead_capture_enabled,
     c.passcode AS card_passcode,
     c.target_type AS card_target_type,
-    c.direct_url AS card_direct_url
+    c.direct_url AS card_direct_url,
+    -- The username of the account's published business page, for business_page targets (TEC-1327).
+    COALESCE((
+        SELECT br.path FROM routes br
+        WHERE br.account_id = r.account_id AND br.route_type = 'business_page'
+          AND br.status = 'active' AND br.deleted_at IS NULL
+        LIMIT 1
+    ), '')::text AS business_username
 FROM routes r
 LEFT JOIN nfc_cards c ON c.id = r.card_id AND c.deleted_at IS NULL
 -- A card route follows its card's current profile; other routes use their own.

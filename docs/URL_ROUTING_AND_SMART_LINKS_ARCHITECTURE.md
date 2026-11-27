@@ -153,6 +153,8 @@ classDiagram
 - `vcard_download`: Generates and streams standard `.vcf` contact payload.
 - `social_hub`: Renders curated links and contact cards.
 - `custom_modules`: Dynamic custom block layout (bank accounts, catalog, custom buttons).
+- `business_page`: The route account's published company business page (TEC-1327); company
+  accounts only, for cards and smart links. No target while the page is a draft; never cached.
 
 ### 4.2 Presentation Configuration Specification (`presentation_config`)
 The presentation layer dictates client rendering without altering the underlying target entity:
@@ -201,7 +203,8 @@ are rejected), edited in the smart link dialog (`frontend/src/features/smart-lin
 | `security.passcode` | Write-only; stored as an Argon2id `security.passcode_hash`. Owners read `security.passcode_enabled`, visitors never see `security` |
 
 - **Targets:** `profile`, `social_hub` (profile page with social links only), `vcard_download` (need a
-  profile) and `direct_url` (https only). `custom_modules` is not offered for smart links.
+  profile), `direct_url` (https only) and, for company accounts, `business_page` (TEC-1327).
+  `custom_modules` is not offered for smart links.
 - **Presentation:** `profile` and `social_hub` links render the profile in place at `/s/{slug}`; the
   address stays the link's and has no `?via` (TEC-1307). The page loads
   `GET /v1/public/p/{username}?via=s/{slug}` on the server, which applies the link's presentation when

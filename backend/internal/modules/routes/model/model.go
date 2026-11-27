@@ -71,27 +71,30 @@ type RouteSummary struct {
 }
 
 type RouteDetail struct {
-	ID                 int64          `json:"-"`
-	UUID               uuid.UUID      `json:"uuid"`
-	Path               string         `json:"path"`
-	RouteType          string         `json:"route_type"`
-	Status             string         `json:"status"`
-	IsImmutable        bool           `json:"is_immutable"`
-	TargetType         string         `json:"target_type"`
-	TargetID           *uuid.UUID     `json:"target_id,omitempty"`
-	ProfileID          *int64         `json:"-"`
-	ProfileUUID        *uuid.UUID     `json:"profile_uuid,omitempty"`
-	ProfileAvatarURL   string         `json:"profile_avatar_url,omitempty"`
-	ProfileLocale      string         `json:"profile_locale,omitempty"`
-	ProfileUsername    string         `json:"profile_username,omitempty"`
-	CardID             *int64         `json:"-"`
-	CardUUID           *uuid.UUID     `json:"card_uuid,omitempty"`
-	CardName           string         `json:"card_name,omitempty"`
-	CardIsLocked       bool           `json:"card_is_locked,omitempty"`
-	CardIsActive       bool           `json:"card_is_active,omitempty"`
-	CardLeadCapture    bool           `json:"card_lead_capture_enabled,omitempty"`
-	CardHasPasscode    bool           `json:"card_has_passcode,omitempty"`
-	DirectURL          string         `json:"direct_url,omitempty"`
+	ID               int64      `json:"-"`
+	UUID             uuid.UUID  `json:"uuid"`
+	Path             string     `json:"path"`
+	RouteType        string     `json:"route_type"`
+	Status           string     `json:"status"`
+	IsImmutable      bool       `json:"is_immutable"`
+	TargetType       string     `json:"target_type"`
+	TargetID         *uuid.UUID `json:"target_id,omitempty"`
+	ProfileID        *int64     `json:"-"`
+	ProfileUUID      *uuid.UUID `json:"profile_uuid,omitempty"`
+	ProfileAvatarURL string     `json:"profile_avatar_url,omitempty"`
+	ProfileLocale    string     `json:"profile_locale,omitempty"`
+	ProfileUsername  string     `json:"profile_username,omitempty"`
+	CardID           *int64     `json:"-"`
+	CardUUID         *uuid.UUID `json:"card_uuid,omitempty"`
+	CardName         string     `json:"card_name,omitempty"`
+	CardIsLocked     bool       `json:"card_is_locked,omitempty"`
+	CardIsActive     bool       `json:"card_is_active,omitempty"`
+	CardLeadCapture  bool       `json:"card_lead_capture_enabled,omitempty"`
+	CardHasPasscode  bool       `json:"card_has_passcode,omitempty"`
+	DirectURL        string     `json:"direct_url,omitempty"`
+	// BusinessUsername is the published business page of the route's account (TEC-1327); a
+	// business_page target sends the visitor there. Empty when the page is not published.
+	BusinessUsername   string         `json:"business_username,omitempty"`
 	AccountID          *int64         `json:"-"`
 	OwnerUserID        *int64         `json:"-"`
 	PresentationConfig map[string]any `json:"presentation_config"`

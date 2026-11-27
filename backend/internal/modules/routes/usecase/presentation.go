@@ -13,6 +13,7 @@ import (
 
 	profilesmodel "github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/profiles/model"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/modules/routes/model"
+	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/entitlement"
 	"github.com/furkanmeclis/nextjs-go-boilerplate/backend/internal/platform/password"
 )
@@ -29,9 +30,11 @@ const (
 	passcodeMaxLen = 64
 )
 
-// SmartLinkTargets are the target types a customer smart link may use (TEC-556).
+// SmartLinkTargets are the target types a customer smart link may use (TEC-556). business_page
+// (TEC-1327) is for company accounts only (see checkAccountTarget).
 var SmartLinkTargets = []string{
 	model.TargetTypeProfile, model.TargetTypeDirectURL, model.TargetTypeVCardDownload, model.TargetTypeSocialHub,
+	model.TargetTypeBusinessPage,
 }
 
 // presentationInput is the owner-editable part of a smart link's presentation_config.
@@ -194,10 +197,20 @@ func validateTarget(targetType string, hasProfile bool, directURL string) error 
 		if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(directURL)), "https://") {
 			return fmt.Errorf("%w: direct_url must be an https address", ErrInvalidTarget)
 		}
+	case model.TargetTypeBusinessPage:
+		// Resolves to the account's published business page; no profile or URL.
 	default:
 		if !hasProfile {
 			return fmt.Errorf("%w: %s needs a profile", ErrInvalidTarget, targetType)
 		}
+	}
+	return nil
+}
+
+// checkAccountTarget allows the business page target only on company accounts (TEC-1327).
+func checkAccountTarget(account authctx.Account, targetType string) error {
+	if targetType == model.TargetTypeBusinessPage && account.Type != authctx.AccountTypeCompany {
+		return fmt.Errorf("%w: business_page is only available to company accounts", ErrInvalidTarget)
 	}
 	return nil
 }

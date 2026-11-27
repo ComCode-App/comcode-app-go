@@ -44,6 +44,11 @@ func (s *Service) lookupPath(ctx context.Context, path string) (*model.RouteDeta
 	if err != nil || route == nil {
 		return route, err
 	}
+	// A business page target follows the page's publish state and username, which change
+	// without touching this route; it is read fresh every time (TEC-1327).
+	if route.TargetType == model.TargetTypeBusinessPage {
+		return route, nil
+	}
 	if raw, err := json.Marshal(cachedRoute{
 		Detail: *route, ID: route.ID, ProfileID: route.ProfileID, CardID: route.CardID,
 		AccountID: route.AccountID, OwnerUserID: route.OwnerUserID,

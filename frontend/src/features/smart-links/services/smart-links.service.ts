@@ -11,9 +11,9 @@ export type SmartLinkPresentation =
 export type SmartLinkPrimaryAction =
   components["schemas"]["SmartLinkPrimaryAction"];
 
-/** Target types a smart link can point at. */
+/** Target types a smart link can point at; business_page is for company accounts (TEC-1327). */
 export type SmartLinkTarget =
-  "profile" | "direct_url" | "vcard_download" | "social_hub";
+  "profile" | "direct_url" | "vcard_download" | "social_hub" | "business_page";
 
 /** Targets that open the profile page, where the link's presentation and lead form apply. */
 export const PROFILE_PAGE_TARGETS: SmartLinkTarget[] = [

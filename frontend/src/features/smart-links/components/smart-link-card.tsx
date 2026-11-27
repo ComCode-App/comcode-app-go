@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Building2,
   Contact,
   Copy,
   ExternalLink,
@@ -22,6 +23,7 @@ import { TooltipHint } from "@/components/ui/tooltip";
 import type { ProfileSummary } from "@/features/profiles/services/profiles.service";
 import type { SmartLink } from "@/features/smart-links/services/smart-links.service";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/lib/auth/session-store";
 import { useLocale } from "@/providers/locale-provider";
 
 const TARGET_ICONS: Record<string, LucideIcon> = {
@@ -29,6 +31,7 @@ const TARGET_ICONS: Record<string, LucideIcon> = {
   social_hub: Share2,
   vcard_download: Contact,
   direct_url: Globe,
+  business_page: Building2,
 };
 
 /** Background of the preview band, one per target type. */
@@ -37,6 +40,7 @@ const TARGET_GRADIENTS: Record<string, string> = {
   social_hub: "from-sky-500 via-blue-500 to-violet-500",
   vcard_download: "from-emerald-500 via-teal-500 to-cyan-500",
   direct_url: "from-amber-500 via-orange-500 to-rose-500",
+  business_page: "from-slate-600 via-slate-500 to-zinc-400",
 };
 
 type SmartLinkCardProps = {
@@ -121,7 +125,9 @@ export function SmartLinkCard({
             <TargetIcon className="size-3" />
             {t(`smart_links.target.${link.target_type}`)}
           </Badge>
-          {profile && link.target_type !== "direct_url" ? (
+          {profile &&
+          link.target_type !== "direct_url" &&
+          link.target_type !== "business_page" ? (
             <span className="text-muted-foreground truncate">
               {`${profile.first_name} ${profile.last_name}`.trim()}
             </span>
@@ -231,6 +237,7 @@ function SmartLinkPreview({
   locked: boolean;
 }) {
   const { t } = useLocale();
+  const accountName = useAuthStore((s) => s.user?.account?.name ?? "");
   const name = profile
     ? `${profile.first_name} ${profile.last_name}`.trim()
     : t("smart_links.card.no_profile");
@@ -281,6 +288,20 @@ function SmartLinkPreview({
               <p className="truncate text-sm font-semibold">{host || "—"}</p>
               <p className="text-muted-foreground truncate text-xs">
                 {rest || "/"}
+              </p>
+            </div>
+          </div>
+        ) : link.target_type === "business_page" ? (
+          <div className="flex items-center gap-3">
+            <span className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-xl">
+              <Building2 className="text-muted-foreground size-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">
+                {accountName || t("smart_links.target.business_page")}
+              </p>
+              <p className="text-muted-foreground truncate text-xs">
+                {t("smart_links.target.business_page")}
               </p>
             </div>
           </div>

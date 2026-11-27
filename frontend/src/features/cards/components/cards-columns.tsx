@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Share2,
   Sparkles,
+  Building2,
 } from "lucide-react";
 import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +76,9 @@ export function createCardsColumns({
             {card.target_type === "social_hub" && (
               <Sparkles className="text-primary h-3.5 w-3.5" />
             )}
+            {card.target_type === "business_page" && (
+              <Building2 className="text-primary h-3.5 w-3.5" />
+            )}
             <span className="capitalize">
               {card.target_type === "profile" &&
                 t("cards.settings.target_profile")}
@@ -84,6 +88,8 @@ export function createCardsColumns({
                 t("cards.settings.target_vcard")}
               {card.target_type === "social_hub" &&
                 t("cards.settings.target_social")}
+              {card.target_type === "business_page" &&
+                t("cards.settings.target_business")}
             </span>
           </div>
         );

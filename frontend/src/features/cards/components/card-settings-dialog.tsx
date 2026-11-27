@@ -15,7 +15,9 @@ import {
   Trash2,
   Radio,
   FileDown,
+  Building2,
 } from "lucide-react";
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +45,7 @@ import { useCardMutations } from "../hooks/use-cards";
 import { cardFormSchema, type CardFormValues } from "../schemas/card-form";
 import type { CardSummary, CardDetail } from "../services/cards.service";
 import { cn } from "@/lib/utils/index";
+import { useAuthStore } from "@/lib/auth/session-store";
 
 interface CardSettingsDialogProps {
   card: CardSummary | CardDetail | null;
@@ -135,6 +138,7 @@ export function CardSettingsDialog({
   });
 
   const selectedTargetType = watch("target_type");
+  const isCompany = useAuthStore((s) => s.user?.account?.type === "company");
   const selectedMaterial = watch("material");
 
   useEffect(() => {
@@ -173,7 +177,12 @@ export function CardSettingsDialog({
     }
   }, [card, open, reset, t]);
 
-  const onSubmit = async (values: CardFormValues) => {
+  const onSubmit = async (formValues: CardFormValues) => {
+    // The business page is the company's, not a profile's: the card drops its profile.
+    const values =
+      formValues.target_type === "business_page"
+        ? { ...formValues, profile_uuid: null }
+        : formValues;
     try {
       if (isEdit && card?.uuid) {
         await updateMutation.mutateAsync({
@@ -327,8 +336,42 @@ export function CardSettingsDialog({
                       {t("cards.settings.target_social_desc")}
                     </p>
                   </div>
+
+                  {isCompany || selectedTargetType === "business_page" ? (
+                    <div
+                      onClick={() => setValue("target_type", "business_page")}
+                      className={cn(
+                        "col-span-2 flex cursor-pointer flex-col gap-1.5 rounded-xl border p-3 transition-all",
+                        selectedTargetType === "business_page"
+                          ? "border-primary bg-primary/5 text-primary shadow-sm"
+                          : "border-border hover:border-border/80 bg-card text-muted-foreground",
+                      )}
+                    >
+                      <div className="text-foreground flex items-center gap-2 text-sm font-semibold">
+                        <Building2 className="text-primary h-4 w-4" />
+                        {t("cards.settings.target_business")}
+                      </div>
+                      <p className="text-muted-foreground text-xs">
+                        {t("cards.settings.target_business_desc")}
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               </div>
+
+              {selectedTargetType === "business_page" && (
+                <div className="bg-muted/40 space-y-2 rounded-xl border p-3.5">
+                  <p className="text-muted-foreground text-xs">
+                    {t("cards.settings.business_page_hint")}
+                  </p>
+                  <Button asChild type="button" variant="outline" size="sm">
+                    <Link href="/company/business-page">
+                      <Building2 className="h-4 w-4" />
+                      {t("cards.settings.business_page_manage")}
+                    </Link>
+                  </Button>
+                </div>
+              )}
 
               {/* Conditional Inputs Based on Target */}
               {selectedTargetType === "profile" && (

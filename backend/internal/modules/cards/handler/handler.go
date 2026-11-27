@@ -110,6 +110,10 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			response.BadRequest(w, r, response.CodeValidationError, "selected profile is invalid or belongs to another user")
 			return
 		}
+		if errors.Is(err, usecase.ErrInvalidTarget) {
+			response.BadRequest(w, r, response.CodeValidationError, "the business page target is only available to company accounts")
+			return
+		}
 		if writeForbidden(w, r, err) {
 			return
 		}
@@ -142,6 +146,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, usecase.ErrInvalidProfile) {
 			response.BadRequest(w, r, response.CodeValidationError, "selected profile is invalid or belongs to another user")
+			return
+		}
+		if errors.Is(err, usecase.ErrInvalidTarget) {
+			response.BadRequest(w, r, response.CodeValidationError, "the business page target is only available to company accounts")
 			return
 		}
 		if writeForbidden(w, r, err) {

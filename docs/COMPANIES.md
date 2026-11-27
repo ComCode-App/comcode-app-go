@@ -275,8 +275,7 @@ but the API refuses that delete first.
 ComCode Business: the company's own link page at `/{username}` (logo, cover, name, a tagline and
 large action buttons). Module `backend/internal/modules/businesspages`, panel
 `frontend/src/features/business-page`; the public page at `/{username}` (part C) is in
-[PUBLIC_PROFILES.md](./PUBLIC_PROFILES.md#business-pages-tec-1327). Still open: cards, QR codes
-and smart links that target the page, and a "business page" source in company analytics.
+[PUBLIC_PROFILES.md](./PUBLIC_PROFILES.md#business-pages-tec-1327).
 
 - Data (migration 000092): `business_pages` (one per company: `status` draft/published, `theme`
   (`""` = company branding), `primary_locale`, `translations` `{tr|en: {name, tagline}}`) and
@@ -297,6 +296,19 @@ and smart links that target the page, and a "business page" source in company an
   reorder with dnd-kit, switch on/off, edit, delete with a confirm dialog). Right: a live preview
   drawn by `business-page-view.tsx`, the same component part C renders publicly. Publishing saves
   unsaved changes first. Members see the page read-only; personal accounts get no menu item.
+- Cards, QR codes and smart links: target type `business_page` (company accounts only; a
+  personal account gets 400). The card or link has no profile; the resolver (`GetRouteByPath`
+  → `business_username`) sends the visitor to the account's `active` business page route, and to
+  nowhere while the page is a draft. Such routes skip the Redis route cache, so publishing,
+  unpublishing or renaming the page takes effect at once. A card's QR code is its `/c/{code}`
+  URL, so it follows the card. Panel: card settings ("İşletme Sayfası" tile) and the smart link
+  dialog list the target for company accounts.
+- Company analytics: the page is its own source. `CompanyAnalyticsByProfile/Daily/Breakdown`
+  include subject `business_page` (the page uuid) in the whole-company scope only (owners and
+  admins, no office/group filter), never attributed to an employee. Metrics
+  `business_page_views` (`business.page.view`) and `business_page_clicks` (every other event on
+  the page, not in `contact_clicks`); the panel shows them in an "İşletme sayfası" row. Card taps
+  of a card that targets the page stay `card_taps`.
 - Visitor API: `GET /v1/public/business/{username}` (published page of an active company whose
   plan has the feature; disabled blocks left out; theme, color, logo and cover fall back to the
   branding).

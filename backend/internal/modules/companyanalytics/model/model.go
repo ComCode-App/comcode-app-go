@@ -23,6 +23,9 @@ const (
 	RouteTypeCard     = "card_route"
 	RouteTypeLegacy   = "legacy_route"
 	RouteTypeSmartURL = "custom_smart_link"
+	// SubjectBusinessPage is the company business page (TEC-1327); EventBusinessPageView its view.
+	SubjectBusinessPage   = "business_page"
+	EventBusinessPageView = "business.page.view"
 )
 
 // clickPrefixes are the public profile interactions counted as contact clicks.
@@ -38,12 +41,24 @@ type Metrics struct {
 	LinkClicks    int64 `json:"link_clicks"`
 	ContactClicks int64 `json:"contact_clicks"`
 	Leads         int64 `json:"leads"`
+	// The business page source (TEC-1327): page views and every click on the page (action
+	// buttons, contact, social, IBAN). They count only here, not in the profile counters.
+	BusinessPageViews  int64 `json:"business_page_views"`
+	BusinessPageClicks int64 `json:"business_page_clicks"`
 }
 
 // AddEvent adds n aggregated events of one subject/event type. Every event counts towards
 // TotalEvents; the named counters are subsets of it. Leads are not events (see Leads).
 func (m *Metrics) AddEvent(subjectType, routeType, eventType string, n int64) {
 	m.TotalEvents += n
+	if subjectType == SubjectBusinessPage {
+		if eventType == EventBusinessPageView {
+			m.BusinessPageViews += n
+		} else {
+			m.BusinessPageClicks += n
+		}
+		return
+	}
 	switch {
 	case eventType == EventProfileView:
 		m.ProfileViews += n

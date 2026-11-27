@@ -200,3 +200,82 @@ func TestIntegrationSmartLinkRenameWritesRouteHistory(t *testing.T) {
 		t.Fatalf("taking over a renamed link's old path: %v, want ErrRoutePathConflict", err)
 	}
 }
+
+// TestIntegrationBusinessPageTarget: a company card or smart link can send visitors to the
+// company's business page (TEC-1327). The target follows the page: no target while the page is a
+// draft, the current username once it is published, read fresh even with the route cache on.
+func TestIntegrationBusinessPageTarget(t *testing.T) {
+	d, _, svc := newRouteService(t)
+	ctx := context.Background()
+	mr := miniredis.RunT(t)
+	svc.SetCache(routecache.New(redis.NewClient(&redis.Options{Addr: mr.Addr()}), "test", time.Minute))
+	svc.SetQuotas(&stubQuotas{})
+	u := d.CreateUser(t)
+	var companyID int64
+	if err := d.Pool.QueryRow(ctx, `INSERT INTO accounts (type, name, slug) VALUES ('company', 'Biz Co', $1) RETURNING id`,
+		"bizco-"+pgtest.Unique()).Scan(&companyID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Pool.Exec(ctx, `INSERT INTO account_members (account_id, user_id, role) VALUES ($1, $2, 'owner')`, companyID, u.ID); err != nil {
+		t.Fatal(err)
+	}
+	company := authctx.Account{ID: companyID, Type: authctx.AccountTypeCompany, Role: authctx.AccountRoleOwner}
+	personal := authctx.Account{ID: u.AccountID, Type: authctx.AccountTypePersonal, Role: authctx.AccountRoleOwner}
+
+	code := "cc-" + pgtest.Unique()
+	var cardID int64
+	if err := d.Pool.QueryRow(ctx, `INSERT INTO nfc_cards (user_id, account_id, name, smart_code, target_type)
+		VALUES ($1, $2, 'Biz card', $3, 'business_page') RETURNING id`, u.ID, companyID, code).Scan(&cardID); err != nil {
+		t.Fatal(err)
+	}
+	route, err := svc.CreateReservedCardRoute(ctx, cardID, code, &u.ID, &companyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Pool.Exec(ctx, `UPDATE routes SET status = 'active' WHERE id = $1`, route.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	// Draft page: the business page route is locked, so the card has nowhere to go yet.
+	username := "biz-" + pgtest.Unique()
+	var pageRouteID int64
+	if err := d.Pool.QueryRow(ctx, `INSERT INTO routes (path, route_type, status, target_type, account_id)
+		VALUES ($1, 'business_page', 'locked', 'business_page', $2) RETURNING id`, username, companyID).Scan(&pageRouteID); err != nil {
+		t.Fatal(err)
+	}
+	res, err := svc.Resolve(ctx, "c/"+code)
+	if err != nil || res.TargetType != model.TargetTypeBusinessPage || res.TargetURL != "" {
+		t.Fatalf("draft page resolution = %+v, %v", res, err)
+	}
+	// Published: the card opens the page; the change is seen at once, not after the cache TTL.
+	if _, err := d.Pool.Exec(ctx, `UPDATE routes SET status = 'active' WHERE id = $1`, pageRouteID); err != nil {
+		t.Fatal(err)
+	}
+	if res, err = svc.Resolve(ctx, "c/"+code); err != nil || res.TargetURL != "https://comcode.test/"+username {
+		t.Fatalf("published page resolution = %+v, %v", res, err)
+	}
+
+	// Smart links: company accounts only, no profile or URL needed.
+	slug := "biz-" + pgtest.Unique()
+	if _, err := svc.CreateCustomSmartLink(ctx, personal, u.ID, model.CreateSmartLinkInput{Slug: slug, TargetType: model.TargetTypeBusinessPage}); !errors.Is(err, usecase.ErrInvalidTarget) {
+		t.Fatalf("personal business page link: %v, want ErrInvalidTarget", err)
+	}
+	link, err := svc.CreateCustomSmartLink(ctx, company, u.ID, model.CreateSmartLinkInput{Slug: slug, TargetType: model.TargetTypeBusinessPage})
+	if err != nil {
+		t.Fatalf("company business page link: %v", err)
+	}
+	if res, err = svc.Resolve(ctx, "s/"+slug); err != nil || res.TargetURL != "https://comcode.test/"+username {
+		t.Fatalf("smart link resolution = %+v, %v", res, err)
+	}
+	own, err := svc.CreateCustomSmartLink(ctx, personal, u.ID, model.CreateSmartLinkInput{Slug: "own-" + pgtest.Unique(), TargetType: model.TargetTypeDirectURL, DirectURL: "https://example.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Update(ctx, link.UUID, personal, model.UpdateRouteInput{}); !errors.Is(err, usecase.ErrRouteNotFound) {
+		t.Fatalf("personal update of the company link: %v, want ErrRouteNotFound", err)
+	}
+	target := model.TargetTypeBusinessPage
+	if _, err := svc.Update(ctx, own.UUID, personal, model.UpdateRouteInput{TargetType: &target}); !errors.Is(err, usecase.ErrInvalidTarget) {
+		t.Fatalf("personal update to business page: %v, want ErrInvalidTarget", err)
+	}
+}

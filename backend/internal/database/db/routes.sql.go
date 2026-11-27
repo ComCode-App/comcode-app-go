@@ -244,7 +244,14 @@ SELECT
     c.lead_capture_enabled AS card_lead_capture_enabled,
     c.passcode AS card_passcode,
     c.target_type AS card_target_type,
-    c.direct_url AS card_direct_url
+    c.direct_url AS card_direct_url,
+    -- The username of the account's published business page, for business_page targets (TEC-1327).
+    COALESCE((
+        SELECT br.path FROM routes br
+        WHERE br.account_id = r.account_id AND br.route_type = 'business_page'
+          AND br.status = 'active' AND br.deleted_at IS NULL
+        LIMIT 1
+    ), '')::text AS business_username
 FROM routes r
 LEFT JOIN nfc_cards c ON c.id = r.card_id AND c.deleted_at IS NULL
 LEFT JOIN profiles p ON p.id = COALESCE(c.profile_id, r.profile_id) AND p.deleted_at IS NULL
@@ -285,6 +292,7 @@ type GetRouteByPathRow struct {
 	CardPasscode           pgtype.Text        `json:"card_passcode"`
 	CardTargetType         pgtype.Text        `json:"card_target_type"`
 	CardDirectUrl          pgtype.Text        `json:"card_direct_url"`
+	BusinessUsername       string             `json:"business_username"`
 }
 
 // account-lint: cross-account public route resolver (/{path}); paths are globally unique
@@ -325,6 +333,7 @@ func (q *Queries) GetRouteByPath(ctx context.Context, path string) (GetRouteByPa
 		&i.CardPasscode,
 		&i.CardTargetType,
 		&i.CardDirectUrl,
+		&i.BusinessUsername,
 	)
 	return i, err
 }

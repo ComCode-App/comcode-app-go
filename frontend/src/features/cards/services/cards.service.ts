@@ -10,7 +10,12 @@ export type CardSummary = {
   card_uid?: string;
   smart_code: string;
   target_type:
-    "profile" | "direct_url" | "vcard_download" | "social_hub" | string;
+    | "profile"
+    | "direct_url"
+    | "vcard_download"
+    | "social_hub"
+    | "business_page"
+    | string;
   profile_uuid?: string;
   profile_avatar_url?: string;
   profile_locale?: string;
@@ -43,7 +48,12 @@ export type CardDetail = {
   activation_code?: string;
   smart_code: string;
   target_type:
-    "profile" | "direct_url" | "vcard_download" | "social_hub" | string;
+    | "profile"
+    | "direct_url"
+    | "vcard_download"
+    | "social_hub"
+    | "business_page"
+    | string;
   profile_uuid?: string;
   profile_avatar_url?: string;
   profile_locale?: string;

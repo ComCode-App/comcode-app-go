@@ -11,6 +11,7 @@ import {
   RotateCw,
   QrCode as QrCodeIcon,
   Settings,
+  Building2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -247,6 +248,9 @@ export function InteractiveNFCCard({
                   {card.target_type === "vcard_download" && (
                     <Share2 className="h-3 w-3" />
                   )}
+                  {card.target_type === "business_page" && (
+                    <Building2 className="h-3 w-3" />
+                  )}
                   <span
                     className={cn(
                       "truncate",
@@ -262,6 +266,8 @@ export function InteractiveNFCCard({
                       t("cards.target_vcard_label")}
                     {card.target_type === "social_hub" &&
                       t("cards.target_social_label")}
+                    {card.target_type === "business_page" &&
+                      t("cards.target_business_label")}
                   </span>
                 </p>
               </div>
