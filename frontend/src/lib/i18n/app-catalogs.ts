@@ -20,6 +20,7 @@ import enNotifications from "@/locales/en/notifications.json";
 import enAccounts from "@/locales/en/accounts.json";
 import enSectors from "@/locales/en/sectors.json";
 import enCompanyStructure from "@/locales/en/company_structure.json";
+import enBusinessPage from "@/locales/en/business_page.json";
 import enCompanyBranding from "@/locales/en/company_branding.json";
 import enCompanyBulk from "@/locales/en/company_bulk.json";
 import enSmartLinks from "@/locales/en/smart_links.json";
@@ -67,6 +68,7 @@ import trNotifications from "@/locales/tr/notifications.json";
 import trAccounts from "@/locales/tr/accounts.json";
 import trSectors from "@/locales/tr/sectors.json";
 import trCompanyStructure from "@/locales/tr/company_structure.json";
+import trBusinessPage from "@/locales/tr/business_page.json";
 import trCompanyBranding from "@/locales/tr/company_branding.json";
 import trCompanyBulk from "@/locales/tr/company_bulk.json";
 import trSmartLinks from "@/locales/tr/smart_links.json";
@@ -127,6 +129,7 @@ export const appCatalogs: MessageCatalogs = {
     accounts: trAccounts,
     sectors: trSectors,
     company_structure: trCompanyStructure,
+    business_page: trBusinessPage,
     company_branding: trCompanyBranding,
     company_bulk: trCompanyBulk,
     smart_links: trSmartLinks,
@@ -176,6 +179,7 @@ export const appCatalogs: MessageCatalogs = {
     accounts: enAccounts,
     sectors: enSectors,
     company_structure: enCompanyStructure,
+    business_page: enBusinessPage,
     company_branding: enCompanyBranding,
     company_bulk: enCompanyBulk,
     smart_links: enSmartLinks,

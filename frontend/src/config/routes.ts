@@ -66,6 +66,8 @@ export const routes = {
       bulk: "/company/bulk",
       analytics: "/company/analytics",
       branding: "/company/branding",
+      /** ComCode Business page editor (TEC-1327). */
+      businessPage: "/company/business-page",
     },
     billing: {
       /** Subscription tab of the account page (TEC-1311); `/billing` redirects here. */
