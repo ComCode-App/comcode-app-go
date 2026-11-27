@@ -273,8 +273,8 @@ but the API refuses that delete first.
 ## Business page (TEC-1327)
 
 ComCode Business: the company's own link page at `/{username}` (logo, cover, name, a tagline and
-large action buttons). Module `backend/internal/modules/businesspages`; panel and public page come
-in the next parts (B, C).
+large action buttons). Module `backend/internal/modules/businesspages`, panel
+`frontend/src/features/business-page`; the public page comes in part C.
 
 - Data (migration 000092): `business_pages` (one per company: `status` draft/published, `theme`
   (`""` = company branding), `primary_locale`, `translations` `{tr|en: {name, tagline}}`) and
@@ -289,6 +289,12 @@ in the next parts (B, C).
 - App API: `GET`/`PUT /v1/business-page`, `POST /v1/business-page/publish|unpublish`. Company
   accounts only; reads need `app.business_page.read`, writes `app.business_page.write` and an
   owner/admin role; saving and publishing need the `business_page.enabled` plan feature.
+- Panel (part B): company menu → "İşletme Sayfası" (`/company/business-page`). Left: status
+  (draft / published, save, publish, unpublish), page settings (address, main language, the
+  language being edited, name, tagline, template) and the block list (add from a menu, drag to
+  reorder with dnd-kit, switch on/off, edit, delete with a confirm dialog). Right: a live preview
+  drawn by `business-page-view.tsx`, the same component part C renders publicly. Publishing saves
+  unsaved changes first. Members see the page read-only; personal accounts get no menu item.
 - Visitor API: `GET /v1/public/business/{username}` (published page of an active company whose
   plan has the feature; disabled blocks left out; theme, color, logo and cover fall back to the
   branding).
