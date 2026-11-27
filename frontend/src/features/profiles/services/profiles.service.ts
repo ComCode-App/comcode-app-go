@@ -73,9 +73,17 @@ export type ProfileSummary = {
   completion_rate: number;
   /** Public path: comcode.../{username} */
   username?: string;
+  /** Shared on the public page and in the profile swipe (TEC-1326); effective value. */
+  is_open?: boolean;
+  /** The company keeps employee profiles open; the switch cannot close it. */
+  open_locked?: boolean;
+  /** The caller may change the switch (owner/admin, or their own employee profile). */
+  can_toggle_open?: boolean;
   created_at: string;
   updated_at: string;
 };
+
+export type ProfileOpenState = components["schemas"]["ProfileOpenState"];
 
 export type ProfileDetail = {
   id?: number;
@@ -233,6 +241,22 @@ export const profilesService = {
     return platformRequest<{ deleted: boolean }>(
       "DELETE",
       `/v1/profiles/${uuid}`,
+    );
+  },
+
+  /** Open switch of a profile (TEC-1326). */
+  async getOpen(uuid: string) {
+    return platformRequest<ProfileOpenState>(
+      "GET",
+      `/v1/profiles/${uuid}/open`,
+    );
+  },
+
+  async setOpen(uuid: string, isOpen: boolean) {
+    return platformRequest<ProfileOpenState>(
+      "PUT",
+      `/v1/profiles/${uuid}/open`,
+      { body: { is_open: isOpen } },
     );
   },
 

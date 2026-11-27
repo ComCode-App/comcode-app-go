@@ -354,6 +354,7 @@ func (s *Service) branding(ctx context.Context, accountID int64) (*model.Brandin
 	}
 	out := &model.Branding{
 		Theme: row.Theme, LayoutMode: row.LayoutMode, PrimaryColor: row.PrimaryColor, Locked: row.Locked,
+		ProfilesAlwaysOpen: row.ProfilesAlwaysOpen,
 	}
 	if row.UpdatedAt.Valid {
 		t := row.UpdatedAt.Time
@@ -427,9 +428,19 @@ func (s *Service) UpdateBranding(ctx context.Context, p authctx.Principal, in mo
 	if err != nil {
 		return nil, err
 	}
+	alwaysOpen := false
+	if in.ProfilesAlwaysOpen != nil {
+		alwaysOpen = *in.ProfilesAlwaysOpen
+	} else {
+		current, err := s.branding(ctx, p.Account.ID)
+		if err != nil {
+			return nil, err
+		}
+		alwaysOpen = current.ProfilesAlwaysOpen
+	}
 	if err := s.q.UpsertAccountBranding(ctx, db.UpsertAccountBrandingParams{
 		AccountID: p.Account.ID, Theme: in.Theme, LayoutMode: in.LayoutMode, PrimaryColor: in.PrimaryColor,
-		LogoMediaID: logo, CoverMediaID: cover, Locked: in.Locked,
+		LogoMediaID: logo, CoverMediaID: cover, Locked: in.Locked, ProfilesAlwaysOpen: alwaysOpen,
 		UpdatedByUserID: pgtype.Int8{Int64: p.UserInternal, Valid: p.UserInternal > 0},
 	}); err != nil {
 		return nil, err

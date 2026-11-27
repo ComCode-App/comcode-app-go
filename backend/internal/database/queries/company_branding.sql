@@ -55,7 +55,7 @@ ORDER BY p.id
 LIMIT 1000;
 
 -- name: GetAccountBranding :one
-SELECT b.theme, b.layout_mode, b.primary_color, b.locked, b.updated_at,
+SELECT b.theme, b.layout_mode, b.primary_color, b.locked, b.profiles_always_open, b.updated_at,
        lm.uuid AS logo_uuid, lm.object_key AS logo_key,
        cm.uuid AS cover_uuid, cm.object_key AS cover_key
 FROM account_branding b
@@ -64,9 +64,11 @@ LEFT JOIN company_media cm ON cm.account_id = b.account_id AND cm.id = b.cover_m
 WHERE b.account_id = sqlc.arg(account_id);
 
 -- name: UpsertAccountBranding :exec
-INSERT INTO account_branding (account_id, theme, layout_mode, primary_color, logo_media_id, cover_media_id, locked, updated_by_user_id)
+INSERT INTO account_branding (account_id, theme, layout_mode, primary_color, logo_media_id, cover_media_id, locked,
+                              profiles_always_open, updated_by_user_id)
 VALUES (sqlc.arg(account_id), sqlc.arg(theme), sqlc.arg(layout_mode), sqlc.arg(primary_color),
-        sqlc.narg(logo_media_id), sqlc.narg(cover_media_id), sqlc.arg(locked), sqlc.narg(updated_by_user_id))
+        sqlc.narg(logo_media_id), sqlc.narg(cover_media_id), sqlc.arg(locked),
+        sqlc.arg(profiles_always_open), sqlc.narg(updated_by_user_id))
 ON CONFLICT (account_id) DO UPDATE SET
     theme = EXCLUDED.theme,
     layout_mode = EXCLUDED.layout_mode,
@@ -74,4 +76,5 @@ ON CONFLICT (account_id) DO UPDATE SET
     logo_media_id = EXCLUDED.logo_media_id,
     cover_media_id = EXCLUDED.cover_media_id,
     locked = EXCLUDED.locked,
+    profiles_always_open = EXCLUDED.profiles_always_open,
     updated_by_user_id = EXCLUDED.updated_by_user_id;

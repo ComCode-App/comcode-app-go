@@ -43,5 +43,10 @@
   "tab.bank_accounts": "Bank details",
   "next_language": "Switch language: {{locale}}",
   "copy_account_holder": "Copy account holder",
-  "account_holder_copied": "Account holder copied"
+  "account_holder_copied": "Account holder copied",
+  "not_shared_title": "This profile is not shared right now",
+  "not_shared_body": "The owner has turned this profile off for now. Please try again later.",
+  "swipe.label": "Profiles",
+  "swipe.previous": "Previous profile: {{name}}",
+  "swipe.next": "Next profile: {{name}}"
 }

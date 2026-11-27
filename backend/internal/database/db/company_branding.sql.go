@@ -196,7 +196,7 @@ func (q *Queries) DeleteCompanyMedia(ctx context.Context, arg DeleteCompanyMedia
 }
 
 const getAccountBranding = `-- name: GetAccountBranding :one
-SELECT b.theme, b.layout_mode, b.primary_color, b.locked, b.updated_at,
+SELECT b.theme, b.layout_mode, b.primary_color, b.locked, b.profiles_always_open, b.updated_at,
        lm.uuid AS logo_uuid, lm.object_key AS logo_key,
        cm.uuid AS cover_uuid, cm.object_key AS cover_key
 FROM account_branding b
@@ -206,15 +206,16 @@ WHERE b.account_id = $1
 `
 
 type GetAccountBrandingRow struct {
-	Theme        string             `json:"theme"`
-	LayoutMode   string             `json:"layout_mode"`
-	PrimaryColor string             `json:"primary_color"`
-	Locked       bool               `json:"locked"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	LogoUuid     pgtype.UUID        `json:"logo_uuid"`
-	LogoKey      pgtype.Text        `json:"logo_key"`
-	CoverUuid    pgtype.UUID        `json:"cover_uuid"`
-	CoverKey     pgtype.Text        `json:"cover_key"`
+	Theme              string             `json:"theme"`
+	LayoutMode         string             `json:"layout_mode"`
+	PrimaryColor       string             `json:"primary_color"`
+	Locked             bool               `json:"locked"`
+	ProfilesAlwaysOpen bool               `json:"profiles_always_open"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	LogoUuid           pgtype.UUID        `json:"logo_uuid"`
+	LogoKey            pgtype.Text        `json:"logo_key"`
+	CoverUuid          pgtype.UUID        `json:"cover_uuid"`
+	CoverKey           pgtype.Text        `json:"cover_key"`
 }
 
 func (q *Queries) GetAccountBranding(ctx context.Context, accountID int64) (GetAccountBrandingRow, error) {
@@ -225,6 +226,7 @@ func (q *Queries) GetAccountBranding(ctx context.Context, accountID int64) (GetA
 		&i.LayoutMode,
 		&i.PrimaryColor,
 		&i.Locked,
+		&i.ProfilesAlwaysOpen,
 		&i.UpdatedAt,
 		&i.LogoUuid,
 		&i.LogoKey,
@@ -344,9 +346,11 @@ func (q *Queries) ListCompanyMedia(ctx context.Context, arg ListCompanyMediaPara
 }
 
 const upsertAccountBranding = `-- name: UpsertAccountBranding :exec
-INSERT INTO account_branding (account_id, theme, layout_mode, primary_color, logo_media_id, cover_media_id, locked, updated_by_user_id)
+INSERT INTO account_branding (account_id, theme, layout_mode, primary_color, logo_media_id, cover_media_id, locked,
+                              profiles_always_open, updated_by_user_id)
 VALUES ($1, $2, $3, $4,
-        $5, $6, $7, $8)
+        $5, $6, $7,
+        $8, $9)
 ON CONFLICT (account_id) DO UPDATE SET
     theme = EXCLUDED.theme,
     layout_mode = EXCLUDED.layout_mode,
@@ -354,18 +358,20 @@ ON CONFLICT (account_id) DO UPDATE SET
     logo_media_id = EXCLUDED.logo_media_id,
     cover_media_id = EXCLUDED.cover_media_id,
     locked = EXCLUDED.locked,
+    profiles_always_open = EXCLUDED.profiles_always_open,
     updated_by_user_id = EXCLUDED.updated_by_user_id
 `
 
 type UpsertAccountBrandingParams struct {
-	AccountID       int64       `json:"account_id"`
-	Theme           string      `json:"theme"`
-	LayoutMode      string      `json:"layout_mode"`
-	PrimaryColor    string      `json:"primary_color"`
-	LogoMediaID     pgtype.Int8 `json:"logo_media_id"`
-	CoverMediaID    pgtype.Int8 `json:"cover_media_id"`
-	Locked          bool        `json:"locked"`
-	UpdatedByUserID pgtype.Int8 `json:"updated_by_user_id"`
+	AccountID          int64       `json:"account_id"`
+	Theme              string      `json:"theme"`
+	LayoutMode         string      `json:"layout_mode"`
+	PrimaryColor       string      `json:"primary_color"`
+	LogoMediaID        pgtype.Int8 `json:"logo_media_id"`
+	CoverMediaID       pgtype.Int8 `json:"cover_media_id"`
+	Locked             bool        `json:"locked"`
+	ProfilesAlwaysOpen bool        `json:"profiles_always_open"`
+	UpdatedByUserID    pgtype.Int8 `json:"updated_by_user_id"`
 }
 
 func (q *Queries) UpsertAccountBranding(ctx context.Context, arg UpsertAccountBrandingParams) error {
@@ -377,6 +383,7 @@ func (q *Queries) UpsertAccountBranding(ctx context.Context, arg UpsertAccountBr
 		arg.LogoMediaID,
 		arg.CoverMediaID,
 		arg.Locked,
+		arg.ProfilesAlwaysOpen,
 		arg.UpdatedByUserID,
 	)
 	return err

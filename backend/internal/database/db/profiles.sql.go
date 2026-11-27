@@ -88,7 +88,7 @@ INSERT INTO profiles (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9
 )
-RETURNING id, uuid, user_id, primary_locale, birthday, gender, avatar_url, cover_url, is_primary, completion_rate, created_at, updated_at, deleted_at, account_id, sector_id
+RETURNING id, uuid, user_id, primary_locale, birthday, gender, avatar_url, cover_url, is_primary, completion_rate, created_at, updated_at, deleted_at, account_id, sector_id, is_open
 `
 
 type CreateProfileParams struct {
@@ -132,6 +132,7 @@ func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (P
 		&i.DeletedAt,
 		&i.AccountID,
 		&i.SectorID,
+		&i.IsOpen,
 	)
 	return i, err
 }
@@ -454,7 +455,7 @@ func (q *Queries) DeleteProfileTranslations(ctx context.Context, profileID int64
 }
 
 const getPrimaryProfileByAccountID = `-- name: GetPrimaryProfileByAccountID :one
-SELECT id, uuid, user_id, primary_locale, birthday, gender, avatar_url, cover_url, is_primary, completion_rate, created_at, updated_at, deleted_at, account_id, sector_id
+SELECT id, uuid, user_id, primary_locale, birthday, gender, avatar_url, cover_url, is_primary, completion_rate, created_at, updated_at, deleted_at, account_id, sector_id, is_open
 FROM profiles
 WHERE account_id = $1
   AND is_primary = true
@@ -481,12 +482,13 @@ func (q *Queries) GetPrimaryProfileByAccountID(ctx context.Context, accountID in
 		&i.DeletedAt,
 		&i.AccountID,
 		&i.SectorID,
+		&i.IsOpen,
 	)
 	return i, err
 }
 
 const getProfileByUUIDForAccount = `-- name: GetProfileByUUIDForAccount :one
-SELECT id, uuid, user_id, primary_locale, birthday, gender, avatar_url, cover_url, is_primary, completion_rate, created_at, updated_at, deleted_at, account_id, sector_id
+SELECT id, uuid, user_id, primary_locale, birthday, gender, avatar_url, cover_url, is_primary, completion_rate, created_at, updated_at, deleted_at, account_id, sector_id, is_open
 FROM profiles
 WHERE uuid = $1
   AND account_id = $2
@@ -517,6 +519,7 @@ func (q *Queries) GetProfileByUUIDForAccount(ctx context.Context, arg GetProfile
 		&i.DeletedAt,
 		&i.AccountID,
 		&i.SectorID,
+		&i.IsOpen,
 	)
 	return i, err
 }
@@ -771,7 +774,15 @@ SELECT
         WHERE r.profile_id = p.id AND r.route_type = 'canonical_profile'
           AND r.status IN ('active', 'locked') AND r.deleted_at IS NULL
         LIMIT 1
-    ), '')::text AS username
+    ), '')::text AS username,
+    p.is_open,
+    -- TEC-1326: an employee profile stays open while the company keeps them always open.
+    (EXISTS (
+        SELECT 1 FROM company_member_profiles cmp
+        WHERE cmp.account_id = $1 AND cmp.profile_id = p.id
+    ) AND COALESCE((
+        SELECT ab.profiles_always_open FROM account_branding ab WHERE ab.account_id = $1
+    ), false))::boolean AS open_locked
 FROM profiles p
 LEFT JOIN profile_translations pt ON pt.profile_id = p.id AND (pt.locale = p.primary_locale OR pt.is_default = true)
 WHERE p.account_id = $1
@@ -812,6 +823,8 @@ type ListProfilesByAccountIDRow struct {
 	CompanyName    string             `json:"company_name"`
 	Title          string             `json:"title"`
 	Username       string             `json:"username"`
+	IsOpen         bool               `json:"is_open"`
+	OpenLocked     bool               `json:"open_locked"`
 }
 
 // account-lint: cross-account canonical-route subquery is keyed by this account's profile id (display only)
@@ -847,6 +860,8 @@ func (q *Queries) ListProfilesByAccountID(ctx context.Context, arg ListProfilesB
 			&i.CompanyName,
 			&i.Title,
 			&i.Username,
+			&i.IsOpen,
+			&i.OpenLocked,
 		); err != nil {
 			return nil, err
 		}
@@ -902,7 +917,7 @@ SET primary_locale = COALESCE($1, primary_locale),
 WHERE uuid = $8
   AND account_id = $9
   AND deleted_at IS NULL
-RETURNING id, uuid, user_id, primary_locale, birthday, gender, avatar_url, cover_url, is_primary, completion_rate, created_at, updated_at, deleted_at, account_id, sector_id
+RETURNING id, uuid, user_id, primary_locale, birthday, gender, avatar_url, cover_url, is_primary, completion_rate, created_at, updated_at, deleted_at, account_id, sector_id, is_open
 `
 
 type UpdateProfileParams struct {
@@ -946,6 +961,7 @@ func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) (P
 		&i.DeletedAt,
 		&i.AccountID,
 		&i.SectorID,
+		&i.IsOpen,
 	)
 	return i, err
 }

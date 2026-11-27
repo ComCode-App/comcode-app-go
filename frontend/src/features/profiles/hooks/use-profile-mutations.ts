@@ -117,3 +117,26 @@ export function useUploadCover() {
     },
   });
 }
+
+/** Opens or closes a profile for the public page and the profile swipe (TEC-1326). */
+export function useSetProfileOpen() {
+  const qc = useQueryClient();
+  const { t } = useLocale();
+
+  return useMutation({
+    mutationFn: ({ uuid, isOpen }: { uuid: string; isOpen: boolean }) =>
+      profilesService.setOpen(uuid, isOpen),
+    onSuccess: (state, vars) => {
+      qc.setQueryData(profilesKeys.open(vars.uuid), state);
+      void qc.invalidateQueries({ queryKey: profilesKeys.lists() });
+      appToast.success(
+        state.is_open
+          ? t("profiles.open_switch.opened")
+          : t("profiles.open_switch.closed"),
+      );
+    },
+    onError: (err: Error) => {
+      appToast.error(err.message || t("common.error_generic"));
+    },
+  });
+}
