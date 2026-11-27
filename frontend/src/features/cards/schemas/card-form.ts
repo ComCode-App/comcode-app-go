@@ -8,6 +8,7 @@ export const cardFormSchema = z.object({
     "direct_url",
     "vcard_download",
     "social_hub",
+    "business_page",
   ]),
   profile_uuid: z.string().nullable().optional(),
   direct_url: z.string().optional(),

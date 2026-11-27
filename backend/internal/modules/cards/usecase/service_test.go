@@ -222,3 +222,19 @@ func TestCardCreateAndActivationAreBlockedByQuota(t *testing.T) {
 		t.Fatalf("denied writes reached the repository: activated=%v cards=%d", repo.activated, len(repo.cards))
 	}
 }
+
+// TestBusinessPageTargetIsCompanyOnly: only company accounts may point a card at the business
+// page (TEC-1327).
+func TestBusinessPageTargetIsCompanyOnly(t *testing.T) {
+	personal := authctx.Account{ID: 1, Type: authctx.AccountTypePersonal, Role: authctx.AccountRoleOwner}
+	company := authctx.Account{ID: 2, Type: authctx.AccountTypeCompany, Role: authctx.AccountRoleOwner}
+	if err := checkTarget(personal, TargetBusinessPage); !errors.Is(err, ErrInvalidTarget) {
+		t.Fatalf("personal business page target: %v, want ErrInvalidTarget", err)
+	}
+	if err := checkTarget(company, TargetBusinessPage); err != nil {
+		t.Fatalf("company business page target: %v", err)
+	}
+	if err := checkTarget(personal, "profile"); err != nil {
+		t.Fatalf("personal profile target: %v", err)
+	}
+}

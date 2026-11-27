@@ -314,6 +314,11 @@ func (s *Service) buildResolution(route *model.RouteDetail, unlocked bool) *mode
 	switch route.TargetType {
 	case model.TargetTypeDirectURL:
 		resolution.TargetURL = route.DirectURL
+	case model.TargetTypeBusinessPage:
+		// The company's business page (TEC-1327); none while the page is a draft.
+		if route.BusinessUsername != "" {
+			resolution.TargetURL = fmt.Sprintf("%s/%s", s.frontendURL, route.BusinessUsername)
+		}
 	case model.TargetTypeVCardDownload:
 		if route.ProfileUsername != "" {
 			resolution.TargetURL = fmt.Sprintf("%s/api/v1/public/p/%s/vcard", s.frontendURL, route.ProfileUsername)
@@ -438,6 +443,9 @@ func (s *Service) CreateCustomSmartLink(ctx context.Context, account authctx.Acc
 	if err := validateTarget(targetType, profileID != nil, input.DirectURL); err != nil {
 		return nil, err
 	}
+	if err := checkAccountTarget(account, targetType); err != nil {
+		return nil, err
+	}
 	presentation, err := normalizePresentation(input.PresentationConfig, nil)
 	if err != nil {
 		return nil, err
@@ -514,6 +522,12 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, account authctx.Acco
 	existing, err := s.getWritable(ctx, id, account)
 	if err != nil {
 		return nil, err
+	}
+
+	if input.TargetType != nil {
+		if err := checkAccountTarget(account, *input.TargetType); err != nil {
+			return nil, err
+		}
 	}
 
 	// Lifecycle status is driven by activation, lock toggle and retirement flows, not by direct edits.

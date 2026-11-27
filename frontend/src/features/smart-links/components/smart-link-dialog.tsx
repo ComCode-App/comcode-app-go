@@ -44,6 +44,7 @@ import {
   type SmartLinkTarget,
 } from "@/features/smart-links/services/smart-links.service";
 import { isApiError, isPlanLimitError } from "@/lib/api";
+import { useAuthStore } from "@/lib/auth/session-store";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
@@ -166,7 +167,12 @@ function SmartLinkForm({
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const needsProfile = target !== "direct_url";
+  const isCompany = useAuthStore((s) => s.user?.account?.type === "company");
+  const targets: SmartLinkTarget[] =
+    isCompany || target === "business_page"
+      ? [...TARGETS, "business_page"]
+      : TARGETS;
+  const needsProfile = target !== "direct_url" && target !== "business_page";
   const opensProfilePage = PROFILE_PAGE_TARGETS.includes(target);
 
   const presentation = (): SmartLinkPresentation => {
@@ -281,16 +287,16 @@ function SmartLinkForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {TARGETS.map((tt) => (
+              {targets.map((tt) => (
                 <SelectItem key={tt} value={tt}>
                   {t(`smart_links.target.${tt}`)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {target === "social_hub" ? (
+          {target === "social_hub" || target === "business_page" ? (
             <p className="text-muted-foreground text-xs">
-              {t("smart_links.target_hint.social_hub")}
+              {t(`smart_links.target_hint.${target}`)}
             </p>
           ) : null}
         </div>
@@ -309,7 +315,7 @@ function SmartLinkForm({
               disabled={save.isPending}
             />
           </div>
-        ) : (
+        ) : target === "business_page" ? null : (
           <div className="grid gap-1.5">
             <Label htmlFor="smart-link-url">{t("smart_links.url")}</Label>
             <Input

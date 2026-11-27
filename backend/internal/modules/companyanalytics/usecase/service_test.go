@@ -449,3 +449,53 @@ func TestHandlerStatusAndValidation(t *testing.T) {
 	w := call(f.owner, handler.New(f.svc).Summary, "/v1/company/analytics/summary")
 	require.Equal(t, "30", w.Header().Get(handler.HistoryHeader))
 }
+
+// TestBusinessPageSource: the company business page is its own source (TEC-1327). Its views and
+// clicks reach owners and admins in the whole-company scope only, never an employee row.
+func TestBusinessPageSource(t *testing.T) {
+	f := setup(t)
+	var page, otherPage uuid.UUID
+	f.scan(`INSERT INTO business_pages(account_id) VALUES ($1) RETURNING uuid`, []any{f.account}, &page)
+	var otherAccount int64
+	f.scan(`SELECT account_id FROM profiles WHERE uuid=$1`, []any{f.otherProfile}, &otherAccount)
+	f.scan(`INSERT INTO business_pages(account_id) VALUES ($1) RETURNING uuid`, []any{otherAccount}, &otherPage)
+	f.agg("2026-10-10", "business_page", page, "business.page.view", 7, map[string]int64{"TR": 7})
+	f.agg("2026-10-10", "business_page", page, "business.button.click", 3, nil)
+	f.agg("2026-10-12", "business_page", page, "contact.phone.click", 2, nil)
+	f.agg("2026-10-10", "business_page", otherPage, "business.page.view", 900, nil)
+
+	s, err := f.svc.Summary(f.ctx, f.owner, defaultFilter())
+	require.NoError(t, err)
+	require.Equal(t, model.Metrics{TotalEvents: 12, BusinessPageViews: 7, BusinessPageClicks: 5}, s.Totals,
+		"business page clicks do not count as profile contact clicks")
+
+	series, err := f.svc.TimeSeries(f.ctx, f.admin, defaultFilter())
+	require.NoError(t, err)
+	var views int64
+	for _, p := range series.Points {
+		views += p.BusinessPageViews
+	}
+	require.EqualValues(t, 7, views)
+
+	f2 := defaultFilter()
+	f2.Dimension, f2.TopN = "country", 5
+	b, err := f.svc.Breakdown(f.ctx, f.owner, f2)
+	require.NoError(t, err)
+	require.EqualValues(t, 7, b.Total)
+
+	// An office manager and an office filter only see employee profiles.
+	s, err = f.svc.Summary(f.ctx, f.manager, defaultFilter())
+	require.NoError(t, err)
+	require.Zero(t, s.Totals.BusinessPageViews)
+	east := defaultFilter()
+	east.OfficeUUID = &f.east
+	s, err = f.svc.Summary(f.ctx, f.owner, east)
+	require.NoError(t, err)
+	require.Zero(t, s.Totals.BusinessPageViews)
+
+	items, _, err := f.svc.Employees(f.ctx, f.owner, defaultFilter())
+	require.NoError(t, err)
+	for _, e := range items {
+		require.Zero(t, e.Metrics.TotalEvents)
+	}
+}

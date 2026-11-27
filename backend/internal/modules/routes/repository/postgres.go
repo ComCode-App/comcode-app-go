@@ -404,6 +404,7 @@ func (r *PostgresRepository) mapRouteByPathRowToDetail(row db.GetRouteByPathRow)
 		ProfileAvatarURL:   pgtypeToString(row.ProfileAvatarUrl),
 		ProfileLocale:      pgtypeToString(row.ProfilePrimaryLocale),
 		ProfileUsername:    row.ProfileUsername,
+		BusinessUsername:   row.BusinessUsername,
 		CardID:             cardID,
 		CardUUID:           cardUUID,
 		CardName:           pgtypeToString(row.CardName),

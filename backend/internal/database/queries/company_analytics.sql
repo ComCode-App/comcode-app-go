@@ -38,6 +38,10 @@ WITH sp AS (
     UNION ALL
     SELECT 'card'::text, c.uuid::text, c.profile_id, ''::text
     FROM nfc_cards c WHERE c.account_id = sqlc.arg(account_id) AND c.deleted_at IS NULL
+    UNION ALL
+    -- The company business page (TEC-1327): not an employee's, so whole-company scope only.
+    SELECT 'business_page'::text, bp.uuid::text, NULL::bigint, ''::text
+    FROM business_pages bp WHERE bp.account_id = sqlc.arg(account_id)
 ), scoped AS (
     SELECT subj.subject_type, subj.subject_id, subj.route_type, sp.id AS profile_id
     FROM subj LEFT JOIN sp ON sp.id = subj.profile_id
@@ -76,6 +80,10 @@ WITH sp AS (
     UNION ALL
     SELECT 'card'::text, c.uuid::text, c.profile_id, ''::text
     FROM nfc_cards c WHERE c.account_id = sqlc.arg(account_id) AND c.deleted_at IS NULL
+    UNION ALL
+    -- The company business page (TEC-1327): not an employee's, so whole-company scope only.
+    SELECT 'business_page'::text, bp.uuid::text, NULL::bigint, ''::text
+    FROM business_pages bp WHERE bp.account_id = sqlc.arg(account_id)
 ), scoped AS (
     SELECT subj.subject_type, subj.subject_id, subj.route_type
     FROM subj LEFT JOIN sp ON sp.id = subj.profile_id
@@ -116,6 +124,9 @@ WITH sp AS (
     UNION ALL
     SELECT 'card'::text, c.uuid::text, c.profile_id
     FROM nfc_cards c WHERE c.account_id = sqlc.arg(account_id) AND c.deleted_at IS NULL
+    UNION ALL
+    SELECT 'business_page'::text, bp.uuid::text, NULL::bigint
+    FROM business_pages bp WHERE bp.account_id = sqlc.arg(account_id)
 ), scoped AS (
     SELECT subj.subject_type, subj.subject_id
     FROM subj LEFT JOIN sp ON sp.id = subj.profile_id

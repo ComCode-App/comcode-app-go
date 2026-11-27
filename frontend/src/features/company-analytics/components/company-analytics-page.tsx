@@ -57,7 +57,13 @@ const SERIES = [
   "card_taps",
   "contact_saves",
   "link_clicks",
+  "business_page_views",
 ] as const;
+/** The company business page (TEC-1327): its own source, whole-company scope only. */
+const BUSINESS_METRICS = [
+  "business_page_views",
+  "business_page_clicks",
+] as const satisfies readonly (keyof CompanyAnalyticsMetrics)[];
 
 function isoDay(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -180,6 +186,11 @@ function CompanyAnalyticsContent({ isAdmin }: { isAdmin: boolean }) {
         : "–",
     },
   ];
+
+  const businessKpis = BUSINESS_METRICS.map((key) => ({
+    key,
+    value: totals ? fmt.format(totals[key]) : "–",
+  }));
 
   const chartData = useMemo(
     () =>
@@ -379,6 +390,31 @@ function CompanyAnalyticsContent({ isAdmin }: { isAdmin: boolean }) {
           </li>
         ))}
       </ul>
+
+      {office === ALL && group === ALL ? (
+        <section className="space-y-2">
+          <div>
+            <h2 className="text-sm font-semibold">
+              {t("analytics.company.business_title")}
+            </h2>
+            <p className="text-muted-foreground text-xs">
+              {t("analytics.company.business_hint")}
+            </p>
+          </div>
+          <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {businessKpis.map((k) => (
+              <li key={k.key} className="bg-card rounded-xl border p-4">
+                <p className="text-muted-foreground text-xs">
+                  {t(`analytics.company.metric.${k.key}`)}
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {summary.isLoading ? "–" : k.value}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <AppChart
         type="line"

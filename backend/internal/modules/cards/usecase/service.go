@@ -25,6 +25,8 @@ var (
 	ErrInvalidProfile    = errors.New("invalid profile selected")
 	ErrUnauthorizedCard  = errors.New("unauthorized to access card")
 	ErrForbidden         = errors.New("account role cannot modify cards")
+	// ErrInvalidTarget: a target only company accounts can use, e.g. the business page (TEC-1327).
+	ErrInvalidTarget = errors.New("card target is not available for this account")
 )
 
 // Cards belong to the active account. Every member can read them; creating, editing, locking,
@@ -96,7 +98,13 @@ func (s *Service) Create(ctx context.Context, account authctx.Account, creatorUs
 	if input.TargetType == "" {
 		input.TargetType = "profile"
 	}
+	if err := checkTarget(account, input.TargetType); err != nil {
+		return nil, err
+	}
 
+	if input.TargetType == TargetBusinessPage {
+		input.ProfileUUID = nil // the page is the company's, not a profile's
+	}
 	var profileID *int64
 	if input.ProfileUUID != nil {
 		pid, err := s.repo.GetProfileIDByUUID(ctx, *input.ProfileUUID, account.ID)
@@ -119,6 +127,12 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, account authctx.Acco
 	if _, err := s.getWritable(ctx, id, account); err != nil {
 		return nil, err
 	}
+	if err := checkTarget(account, input.TargetType); err != nil {
+		return nil, err
+	}
+	if input.TargetType == TargetBusinessPage {
+		input.ProfileUUID = nil // the page is the company's, not a profile's
+	}
 
 	var profileID *int64
 	setProfileID := false
@@ -139,6 +153,18 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, account authctx.Acco
 		s.cache.InvalidateCard(ctx, id)
 	}
 	return s.indexed(ctx, card, err)
+}
+
+// TargetBusinessPage sends the card to the company's business page (TEC-1327).
+const TargetBusinessPage = "business_page"
+
+// checkTarget allows the business page target only on company accounts; the page itself is
+// resolved when the card is tapped (an unpublished page leaves the card without a target).
+func checkTarget(account authctx.Account, targetType string) error {
+	if targetType == TargetBusinessPage && account.Type != authctx.AccountTypeCompany {
+		return ErrInvalidTarget
+	}
+	return nil
 }
 
 func (s *Service) ToggleLock(ctx context.Context, id uuid.UUID, account authctx.Account) (bool, error) {

@@ -9289,6 +9289,16 @@ export interface components {
              * @description Lead form submissions
              */
             leads: number;
+            /**
+             * Format: int64
+             * @description business.page.view on the company business page (whole-company scope only)
+             */
+            business_page_views: number;
+            /**
+             * Format: int64
+             * @description Every other business page interaction: action buttons, contact, social, IBAN (not in contact_clicks)
+             */
+            business_page_clicks: number;
         };
         CompanyAnalyticsSummary: {
             /**
@@ -13084,8 +13094,11 @@ export interface components {
             name: string;
             card_uid?: string;
             smart_code: string;
-            /** @enum {string} */
-            target_type: "profile" | "direct_url" | "vcard_download" | "social_hub";
+            /**
+             * @description business_page (company accounts only) opens the company business page
+             * @enum {string}
+             */
+            target_type: "profile" | "direct_url" | "vcard_download" | "social_hub" | "business_page";
             /** Format: uuid */
             profile_uuid?: string;
             profile_avatar_url?: string;
@@ -13121,8 +13134,11 @@ export interface components {
             card_uid?: string;
             activation_code?: string;
             smart_code: string;
-            /** @enum {string} */
-            target_type: "profile" | "direct_url" | "vcard_download" | "social_hub";
+            /**
+             * @description business_page (company accounts only) opens the company business page
+             * @enum {string}
+             */
+            target_type: "profile" | "direct_url" | "vcard_download" | "social_hub" | "business_page";
             /** Format: uuid */
             profile_uuid?: string;
             profile_avatar_url?: string;
@@ -13149,8 +13165,11 @@ export interface components {
         UpsertCardInput: {
             name: string;
             card_uid?: string;
-            /** @enum {string} */
-            target_type: "profile" | "direct_url" | "vcard_download" | "social_hub";
+            /**
+             * @description business_page (company accounts only) opens the company business page
+             * @enum {string}
+             */
+            target_type: "profile" | "direct_url" | "vcard_download" | "social_hub" | "business_page";
             /** Format: uuid */
             profile_uuid?: string;
             direct_url?: string;
@@ -13364,6 +13383,8 @@ export interface components {
             card_lead_capture_enabled?: boolean;
             card_has_passcode?: boolean;
             direct_url?: string;
+            /** @description Username of the account's published business page, for business_page targets */
+            business_username?: string;
             presentation_config: Record<string, never>;
             legacy_metadata?: Record<string, never>;
             /** Format: date-time */
@@ -13374,10 +13395,10 @@ export interface components {
         CreateSmartLinkInput: {
             slug: string;
             /**
-             * @description profile, vcard_download and social_hub need profile_uuid; direct_url needs an https direct_url
+             * @description profile, vcard_download and social_hub need profile_uuid; direct_url needs an https direct_url; business_page (company accounts only) opens the company's published business page
              * @enum {string}
              */
-            target_type?: "profile" | "direct_url" | "vcard_download" | "social_hub";
+            target_type?: "profile" | "direct_url" | "vcard_download" | "social_hub" | "business_page";
             /** Format: uuid */
             profile_uuid?: string;
             direct_url?: string;
