@@ -6,6 +6,7 @@ import {
   CreditCard,
   Eye,
   Link2,
+  Store,
   Lock,
   Mail,
   Phone,
@@ -27,6 +28,7 @@ const SOURCE_META: Record<LeadSource, { labelKey: string; icon: LucideIcon }> =
     profile: { labelKey: "leads.source.profile", icon: UserRound },
     card: { labelKey: "leads.source.card", icon: CreditCard },
     smart_link: { labelKey: "leads.source.smart_link", icon: Link2 },
+    business_page: { labelKey: "leads.source.business_page", icon: Store },
   };
 
 interface LeadsColumnOptions {

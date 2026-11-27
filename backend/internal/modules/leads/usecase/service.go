@@ -355,6 +355,9 @@ func captureSource(route *repository.CaptureRoute) (string, bool) {
 		return model.SourceProfile, enabled
 	case "custom_smart_link":
 		return model.SourceSmartLink, enabled
+	case "business_page":
+		// On while the published page has an enabled lead form button (TEC-1327).
+		return model.SourceBusinessPage, enabled
 	case "card_route":
 		if route.CardID == nil || !route.CardIsActive || route.CardIsLocked {
 			return "", false

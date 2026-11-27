@@ -1032,6 +1032,9 @@ type Querier interface {
 	// Stores the key of a freshly rendered thumbnail (TEC-599). The document must still be the one
 	// rendered, so a thumbnail never lands on a newer edit.
 	SetBackgroundThumbnail(ctx context.Context, arg SetBackgroundThumbnailParams) (int64, error)
+	// Mirrors "the page has an enabled lead form button" onto the live route, where the lead module
+	// reads presentation_config.lead_capture.enabled (TEC-552).
+	SetBusinessPageRouteLeadCapture(ctx context.Context, arg SetBusinessPageRouteLeadCaptureParams) error
 	SetBusinessPageRouteStatus(ctx context.Context, arg SetBusinessPageRouteStatusParams) error
 	SetBusinessPageStatus(ctx context.Context, arg SetBusinessPageStatusParams) (int64, error)
 	// account-lint: cross-account route id from LiveRoute of the account's own profile

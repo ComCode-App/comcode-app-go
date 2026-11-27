@@ -517,6 +517,25 @@ func (q *Queries) ReviveBusinessPageRoute(ctx context.Context, arg ReviveBusines
 	return result.RowsAffected(), nil
 }
 
+const setBusinessPageRouteLeadCapture = `-- name: SetBusinessPageRouteLeadCapture :exec
+UPDATE routes
+SET presentation_config = jsonb_set(presentation_config, '{lead_capture}', jsonb_build_object('enabled', $1::boolean), true)
+WHERE account_id = $2::bigint AND route_type = 'business_page'
+  AND status IN ('active', 'locked') AND deleted_at IS NULL
+`
+
+type SetBusinessPageRouteLeadCaptureParams struct {
+	Enabled   bool  `json:"enabled"`
+	AccountID int64 `json:"account_id"`
+}
+
+// Mirrors "the page has an enabled lead form button" onto the live route, where the lead module
+// reads presentation_config.lead_capture.enabled (TEC-552).
+func (q *Queries) SetBusinessPageRouteLeadCapture(ctx context.Context, arg SetBusinessPageRouteLeadCaptureParams) error {
+	_, err := q.db.Exec(ctx, setBusinessPageRouteLeadCapture, arg.Enabled, arg.AccountID)
+	return err
+}
+
 const setBusinessPageRouteStatus = `-- name: SetBusinessPageRouteStatus :exec
 UPDATE routes SET status = $1
 WHERE id = $2 AND account_id = $3::bigint AND route_type = 'business_page'

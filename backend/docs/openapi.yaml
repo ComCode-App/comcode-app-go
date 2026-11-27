@@ -17499,7 +17499,7 @@ components:
 
     LeadSource:
       type: string
-      enum: [profile, card, smart_link]
+      enum: [profile, card, smart_link, business_page]
 
     LeadKind:
       type: string

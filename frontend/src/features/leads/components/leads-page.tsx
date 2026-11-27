@@ -65,6 +65,7 @@ const SOURCE_KEYS: Record<LeadSource, string> = {
   profile: "leads.source.profile",
   card: "leads.source.card",
   smart_link: "leads.source.smart_link",
+  business_page: "leads.source.business_page",
 };
 
 /**

@@ -177,6 +177,12 @@ func (s *Service) Save(ctx context.Context, p authctx.Principal, in model.SaveIn
 			return nil, err
 		}
 		save.Blocks = append(save.Blocks, nb)
+		if nb.Enabled && nb.Type == model.BlockButton {
+			var c model.ButtonConfig
+			if json.Unmarshal(nb.Config, &c) == nil && c.Target == model.TargetLeadForm {
+				save.LeadForm = true
+			}
+		}
 	}
 
 	current, err := s.store.LiveRoute(ctx, p.Account.ID)
