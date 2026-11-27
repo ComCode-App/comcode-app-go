@@ -44,11 +44,13 @@ Defined in code (`entitlement/catalog.go`, `Catalog()`) and in the DB (`feature_
 | `exchange.monthly_max` | int, monthly | Contact exchanges this month | `leads` use case, `Exchange` / `ShareProfile`: same as leads | 20 / 1000 |
 | `leads.export.monthly_max` | int, monthly | Lead exports this month | `exports` handler via `leads` `PrepareExport`: 403 past the quota | 2 / 100 |
 | `design.premium` | bool | not a quota | Premium themes and animated backgrounds (TEC-947), see [below](#premium-design-tec-947) | false / true |
+| `business_page.enabled` | bool | not a quota | `businesspages` use case: saving and publishing the company business page (TEC-1327); without it the public page answers 404 | true / true |
 
 Migrations: 000022 (`cards.max`, plans), 000039 (the other three, and a value for every existing plan), 000057
 (TEC-942: removes `nfc.enabled`, since NFC cards work on every plan, and backfills 0/false for any plan missing a feature),
 000061 (TEC-941: the three monthly features; free gets the free value, every other plan the paid one),
-000068 (TEC-947: `design.premium`, false for `free` and true for every other existing plan).
+000068 (TEC-947: `design.premium`, false for `free` and true for every other existing plan),
+000092 (TEC-1327: `business_page.enabled`, true for every existing plan; only company accounts can use it).
 Pro values apply to `pro-monthly` and `pro-yearly`. Physical cards bought through an order are provisioned
 without a quota check; the quota applies when the customer activates the card.
 
